@@ -1,1 +1,1 @@
-from dagster_modal.resources import ModalClient
+from dagster_modal.resources import ModalClient as ModalClient

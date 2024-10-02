@@ -9,3 +9,8 @@ dependencies = [
     "dagster>=1.7.0",
     "modal>=0.64.163",
 ]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff>=0.6.8",
+]
