@@ -1,6 +1,10 @@
-# Community Integrations
+<div align="center">
+    <img alt="Cover Image" src=".github/cover.png">
+</div>
 
-Home to all of the great Dagster integrations supported by our community members.
+---
+
+Community built and maintained integrations in the Dagster ecosystem.
 
 ## Contributing
 
