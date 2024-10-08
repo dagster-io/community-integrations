@@ -1,8 +1,6 @@
 [project]
 name = "dagster-hightouch"
 version = "0.1.5"
-author = "Pedram Navid"
-author_email = "pedram@hightouch.io"
 description = "Dagster library for Hightouch"
 readme = "README.md"
 requires-python = ">=3.8"
