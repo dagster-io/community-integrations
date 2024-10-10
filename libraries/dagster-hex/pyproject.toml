@@ -22,3 +22,6 @@ dev-dependencies = [
     "pytest-mock",
     "requests-mock",
 ]
+
+[tool.setuptools]
+packages = ["dagster_hex"]

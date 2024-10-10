@@ -15,3 +15,6 @@ dev-dependencies = [
     "ruff>=0.6.8",
     "pytest",
 ]
+
+[tool.setuptools]
+packages = ["dagster_modal"]
