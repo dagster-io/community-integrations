@@ -1,4 +1,4 @@
-# Build and deployment for `dagster-hex`
+name: Build and release dagster-hex
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - 'dagster-hex-v*.*.*'
 
 jobs:
-  build-and-deploy:
+  build-and-release-dagster-hex:
     uses: .github/workflows/template-release.yml
     with:
       library_name: dagster-hex

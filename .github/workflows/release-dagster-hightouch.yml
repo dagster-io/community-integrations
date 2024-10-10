@@ -1,4 +1,4 @@
-name: Build and Deploy dagster-hightouch
+name: Build and release dagster-hightouch
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - 'dagster-hightouch-v*.*.*'
 
 jobs:
-  build-and-deploy:
+  build-and-release-dagster-hightouch:
     uses: .github/workflows/template-release.yml
     with:
       library_name: dagster-hightouch

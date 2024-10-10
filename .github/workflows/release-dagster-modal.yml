@@ -1,4 +1,4 @@
-name: Build and Deploy dagster-modal
+name: Build and release dagster-modal
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - 'dagster-modal-v*.*.*'
 
 jobs:
-  build-and-deploy:
+  build-and-release-dagster-modal:
     uses: .github/workflows/template-release.yml
     with:
       library_name: dagster-modal
