@@ -1,43 +1,14 @@
-# Build and deployment for `dagster-modal`
-#
-# References
-#
-#     https://docs.astral.sh/uv/guides/integration/github/
-#     https://docs.astral.sh/uv/guides/publish/#preparing-your-project-for-packaging
-#     https://docs.pypi.org/trusted-publishers/adding-a-publisher/
-#
+name: Build and Deploy dagster-modal
 
 on:
   push:
     tags:
       - 'dagster-modal-v*.*.*'
 
-defaults:
-  run:
-    working-directory: ./libraries/dagster-modal
-
 jobs:
-  build:
-    name: python
-    runs-on: ubuntu-latest
-    environment: production
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-
-      - name: Install Python
-        run: uv python install
-
-      - name: Build
-        run: uv build
-
-      - name: Publish
-        # NOTE: we can add GitHub as a trusted publisher to avoid setting credentials manually (see reference above)
-        run: uv publish
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.UV_PUBLISH_TOKEN }}
-          UV_PUBLISH_URL: ${{ vars.UV_PUBLISH_URL }}
+  build-and-deploy:
+    uses: .github/workflows/template-release.yml
+    with:
+      library_name: dagster-modal
+      working_directory: ./libraries/dagster-modal
+    secrets: inherit

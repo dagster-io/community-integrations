@@ -1,0 +1,48 @@
+# Build and deployment for `dagster-modal`
+#
+# References
+#
+#     https://docs.astral.sh/uv/guides/integration/github/
+#     https://docs.astral.sh/uv/guides/publish/#preparing-your-project-for-packaging
+#     https://docs.pypi.org/trusted-publishers/adding-a-publisher/
+#
+
+name: Library build and release
+
+on:
+  workflow_call:
+    inputs:
+      library_name:
+        required: true
+        type: string
+      working_directory:
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: python
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install Python
+        run: uv python install
+        working-directory: ${{ inputs.working_directory }}
+
+      - name: Build
+        run: uv build
+        working-directory: ${{ inputs.working_directory }}
+
+      - name: Publish
+        run: uv publish
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.UV_PUBLISH_TOKEN }}
+          UV_PUBLISH_URL: ${{ vars.UV_PUBLISH_URL }}
