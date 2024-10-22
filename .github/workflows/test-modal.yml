@@ -22,5 +22,5 @@ jobs:
         working-directory: 'libraries/dagster-modal'
 
       - name: Run tests
-        working-directory: path/to/your/directory
+        working-directory: 'libraries/dagster-modal'
         run: uv run pytest
