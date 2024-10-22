@@ -21,6 +21,10 @@ jobs:
         run: uv python install
         working-directory: 'libraries/dagster-modal'
 
+      - name: Sync dependencies
+        run: uv sync
+        working-directory: 'libraries/dagster-modal'
+
       - name: Ruff check
         working-directory: 'libraries/dagster-modal'
         run: ruff check
