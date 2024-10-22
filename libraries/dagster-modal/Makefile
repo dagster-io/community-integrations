@@ -6,3 +6,7 @@ build:
 
 test:
 	uv run pytest
+
+ruff:
+	-ruff check --fix .
+	ruff format .
