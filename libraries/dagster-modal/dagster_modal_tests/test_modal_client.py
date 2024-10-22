@@ -18,7 +18,3 @@ class TestModalClient(unittest.TestCase):
             extras=None,
             env=None,
         )
-
-
-def test_intentional_failure():
-    assert 1 == 2
