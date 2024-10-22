@@ -27,7 +27,7 @@ jobs:
 
       - name: Ruff check
         working-directory: 'libraries/dagster-modal'
-        run: ruff check
+        run: uv run ruff check
 
       - name: Run pytest
         working-directory: 'libraries/dagster-modal'
