@@ -7,7 +7,7 @@
 #     https://docs.pypi.org/trusted-publishers/adding-a-publisher/
 #
 
-name: Library build and release
+name: Build and release
 
 on:
   workflow_call:
@@ -33,16 +33,16 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Install Python
-        run: uv python install
         working-directory: ${{ inputs.working_directory }}
+        run: uv python install
 
       - name: Build
-        run: uv build
         working-directory: ${{ inputs.working_directory }}
+        run: uv build
 
       - name: Publish
-        run: uv publish
         working-directory: ${{ inputs.working_directory }}
+        run: uv publish
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.UV_PUBLISH_TOKEN }}
           UV_PUBLISH_URL: ${{ vars.UV_PUBLISH_URL }}
