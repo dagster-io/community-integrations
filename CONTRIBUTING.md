@@ -28,25 +28,25 @@ This project aims to foster growth and collaboration within the Dagster ecosyste
 
 ## Adding an integration
 
-Integrations live in the `libraries/` folder of this repository. We recommend using `uv` for project scaffolding, and management.
+Integrations live in the `libraries/` folder of this repository. We recommend using `uv` for project management.
 
 1. Navigate to the `libraries/` directory
     ```sh
     cd libraries
     ```
-2. Scaffold a new project using `uv`
+2. Copy the `_template` integration
     ```sh
-    uv init <name of integration>
+    cp -r _template my-integration
     ```
-3. Include a README file in your integration directory with:
+3. Replace the references of `example-integration` with the name of your module
+3. Update the README to include:
     * A clear description of what your integration does
     * Installation instructions
     * Usage examples
     * Any dependencies or prerequisites
 4. Add your integration code, ensuring it follows Dagster's best practices and coding standards.
 5. Include tests for your integration to ensure reliability.
-6. Create a GitHub action workflow using the template at `.github/workflows/template-release.yml`
-
+6. Create GitHub action workflows using the templates located at `.github/workflows/template-*`
 
 ## Code review process
 
