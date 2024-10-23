@@ -1,0 +1,18 @@
+[project]
+name = "example_integration"
+version = "0.0.1"
+description = "<insert description here>"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "dagster>=1.8.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest",
+]
+
+[tool.setuptools]
+packages = ["example_integration"]
