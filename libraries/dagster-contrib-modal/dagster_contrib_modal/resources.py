@@ -1,3 +1,5 @@
+# pyright: reportIncompatibleMethodOverride=false
+
 from pathlib import Path
 from typing import Mapping, Optional, Union
 
