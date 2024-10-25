@@ -4,6 +4,8 @@ We're excited that you're interested in contributing to the Dagster community in
 
 This project aims to foster growth and collaboration within the Dagster ecosystem by providing a space for users to share their custom integrations, without needing to manage the build or release process of their packages.
 
+Need help or want to talk to someone first? Join us in our [Slack](https://dagster.io/slack) in the `#community-contributions` channel.
+
 ## Getting started
 
 1. Fork the `dagster-io/community-integrations` repository on GitHub.
