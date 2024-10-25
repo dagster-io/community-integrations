@@ -3,7 +3,7 @@ name: build-and-release-dagster-contrib-modal
 on:
   push:
     tags:
-      - 'dagster_modal-*.*.*'
+      - 'dagster_contrib_modal-*.*.*'
 
 jobs:
   build-and-release-dagster-contrib-modal:
