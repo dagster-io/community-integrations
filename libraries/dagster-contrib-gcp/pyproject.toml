@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
     "dagster>=1.7.0",
+    "google-cloud-run>=0.10.10",
 ]
 
 [tool.uv]
