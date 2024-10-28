@@ -1,0 +1,14 @@
+name: build-and-release-dagster-contrib-gcp
+
+on:
+  push:
+    tags:
+      - 'dagster_contrib_gcp-*.*.*'
+
+jobs:
+  build-and-release-dagster-contrib-gcp:
+    uses: ./.github/workflows/template-release.yml
+    with:
+      library_name: dagster-contrib-gcp
+      working_directory: ./libraries/dagster-contrib-gcp
+    secrets: inherit
