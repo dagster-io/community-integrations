@@ -17,4 +17,4 @@ dev-dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["dagster_notdiamond"]
+packages = ["dagster_contrib_notdiamond"]
