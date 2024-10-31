@@ -67,7 +67,7 @@ def with_usage_metadata(
                 define_asset_job,
                 multi_asset,
             )
-            from dagster_notdiamond import NotDiamondResource, with_usage_metadata
+            from dagster_contrib_notdiamond import NotDiamondResource, with_usage_metadata
 
 
             @asset(compute_kind="NotDiamond")
@@ -154,7 +154,7 @@ class NotDiamondResource(ConfigurableResource):
             import os
 
             from dagster import AssetExecutionContext, Definitions, EnvVar, asset, define_asset_job
-            from dagster_notdiamond import NotDiamondResource
+            from dagster_contrib_notdiamond import NotDiamondResource
 
 
             @asset(compute_kind="NotDiamond")
@@ -241,7 +241,7 @@ class NotDiamondResource(ConfigurableResource):
                     define_asset_job,
                     op,
                 )
-                from dagster_notdiamond import NotDiamondResource
+                from dagster_contrib_notdiamond import NotDiamondResource
 
 
                 @op
@@ -311,7 +311,7 @@ class NotDiamondResource(ConfigurableResource):
                     define_asset_job,
                     multi_asset,
                 )
-                from dagster_notdiamond import NotDiamondResource
+                from dagster_contrib_notdiamond import NotDiamondResource
 
 
                 @asset(compute_kind="NotDiamond")
