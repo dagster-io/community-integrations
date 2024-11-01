@@ -18,7 +18,7 @@ from dagster._core.errors import DagsterInvariantViolationError
 from dagster._core.execution.context.init import build_init_resource_context
 from dagster._utils.test import wrap_op_in_graph_and_execute
 from dagster_contrib_notdiamond import NotDiamondResource, with_usage_metadata
-from mock import ANY, MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 
 @patch("dagster_contrib_notdiamond.resources.NotDiamond")
@@ -62,7 +62,7 @@ def test_notdiamond_resource_with_op(mock_client, mock_context, mock_wrapper):
             )
 
         assert mock_client.called
-        assert mock_wrapper.not_called
+        assert not mock_wrapper.called
 
     result = wrap_op_in_graph_and_execute(
         notdiamond_op,

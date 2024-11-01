@@ -358,7 +358,7 @@ wheels = [
 ]
 
 [[package]]
-name = "dagster-notdiamond"
+name = "dagster-contrib-notdiamond"
 version = "0.0.1"
 source = { virtual = "." }
 dependencies = [
