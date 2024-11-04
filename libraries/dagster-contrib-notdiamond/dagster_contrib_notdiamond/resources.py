@@ -2,6 +2,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from enum import Enum
 from functools import wraps
+from importlib import metadata
 from typing import Generator, Optional, Union
 from weakref import WeakKeyDictionary
 
@@ -76,7 +77,7 @@ def with_usage_metadata(
                     client.model_select = with_usage_metadata(
                         context=context, output_name="some_output_name", func=client.fine_tuning.jobs.create
                     )
-                    client.model_select(models=["openai/gpt-4o", "openai/gpt-4o-mini"], messages=[{"role": "user", "content": "Say this is a test"}])
+                    client.model_select(model=["openai/gpt-4o", "openai/gpt-4o-mini"], messages=[{"role": "user", "content": "Say this is a test"}])
 
 
             notdiamond_asset_job = define_asset_job(name="notdiamond_asset_job", selection="notdiamond_asset")
@@ -90,10 +91,11 @@ def with_usage_metadata(
             )
             def notdiamond_multi_asset(context: AssetExecutionContext, notdiamond: NotDiamondResource):
                 with notdiamond.get_client(context, asset_key=AssetKey("my_asset1")) as client:
-                    client.model_select(
-                        models=["openai/gpt-4o", "openai/gpt-4o-mini"],
+                    session_id, best_llm = client.model_select(
+                        model=["openai/gpt-4o", "openai/gpt-4o-mini"],
                         messages=[{"role": "user", "content": "Say this is a test"}]
                     )
+                return session_id, str(best_llm)
 
                 # The materialization of `my_asset1` will include both NotDiamond usage metadata
                 # and the metadata added when calling `MaterializeResult`.
@@ -160,10 +162,11 @@ class NotDiamondResource(ConfigurableResource):
             @asset(compute_kind="NotDiamond")
             def notdiamond_asset(context: AssetExecutionContext, nd: NotDiamondResource):
                 with notdiamond.get_client(context) as client:
-                    client.model_select(
-                        models=["openai/gpt-4o", "openai/gpt-4o-mini"],
+                    session_id, best_llm = client.model_select(
+                        model=["openai/gpt-4o", "openai/gpt-4o-mini"],
                         messages=[{"role": "user", "content": "Say this is a test"}]
                     )
+                return session_id, str(best_llm)
 
             notdiamond_asset_job = define_asset_job(name="notdiamond_asset_job", selection="notdiamond_asset")
 
@@ -211,6 +214,7 @@ class NotDiamondResource(ConfigurableResource):
         # Set up a Not Diamond client based on the API key.
         self._client = NotDiamond(
             api_key=self.api_key,
+            user_agent=f"dagster-contrib-notdiamond/{metadata.version('dagster-contrib-notdiamond')}",
         )
 
     @public
@@ -243,27 +247,25 @@ class NotDiamondResource(ConfigurableResource):
                 )
                 from dagster_contrib_notdiamond import NotDiamondResource
 
-
                 @op
-                def notdiamond_op(context: OpExecutionContext, notdiamond: NotDiamondResource):
+                def notdiamond_op(context: OpExecutionContext, notdiamond: NotDiamondResource) -> Tuple[str, str]:
                     with notdiamond.get_client(context) as client:
-                        client.model_select(
-                            models=["openai/gpt-4o", "openai/gpt-4o-mini"],
+                        session_id, best_llm = client.model_select(
+                            model=["openai/gpt-4o", "openai/gpt-4o-mini"],
                             messages=[{"role": "user", "content": "Say this is a test"}]
                         )
-
+                    return session_id, str(best_llm)
 
                 notdiamond_op_job = GraphDefinition(name="notdiamond_op_job", node_defs=[notdiamond_op]).to_job()
 
-
                 @asset(compute_kind="NotDiamond")
-                def notdiamond_asset(context: AssetExecutionContext, notdiamond: NotDiamondResource):
+                def notdiamond_asset(context: AssetExecutionContext, notdiamond: NotDiamondResource) -> Tuple[str, str]:
                     with notdiamond.get_client(context) as client:
-                        client.model_select(
-                            models=["openai/gpt-4o", "openai/gpt-4o-mini"],
+                        session_id, best_llm = client.model_select(
+                            model=["openai/gpt-4o", "openai/gpt-4o-mini"],
                             messages=[{"role": "user", "content": "Say this is a test"}]
                         )
-
+                    return session_id, str(best_llm)
 
                 notdiamond_asset_job = define_asset_job(name="notdiamond_asset_job", selection="notdiamond_asset")
 
@@ -315,22 +317,21 @@ class NotDiamondResource(ConfigurableResource):
 
 
                 @asset(compute_kind="NotDiamond")
-                def notdiamond_asset(context: AssetExecutionContext, notdiamond: NotDiamondResource):
+                def notdiamond_asset(context: AssetExecutionContext, notdiamond: NotDiamondResource) -> Tuple[str, str]:
                     with notdiamond.get_client_for_asset(context, context.asset_key) as client:
-                        client.model_select(
-                            models=["openai/gpt-4o", "openai/gpt-4o-mini"],
+                        session_id, best_llm = client.model_select(
+                            model=["openai/gpt-4o", "openai/gpt-4o-mini"],
                             messages=[{"role": "user", "content": "Say this is a test"}]
                         )
-
+                    return session_id, str(best_llm)
 
                 notdiamond_asset_job = define_asset_job(name="notdiamond_asset_job", selection="notdiamond_asset")
-
 
                 @multi_asset(specs=[AssetSpec("my_asset1"), AssetSpec("my_asset2")], compute_kind="NotDiamond")
                 def notdiamond_multi_asset(context: AssetExecutionContext, notdiamond_resource: NotDiamondResource):
                     with notdiamond_resource.get_client_for_asset(context, asset_key=AssetKey("my_asset1")) as client:
-                        client.model_select(
-                            models=["openai/gpt-4o", "openai/gpt-4o-mini"],
+                        session_id, best_llm = client.model_select(
+                            model=["openai/gpt-4o", "openai/gpt-4o-mini"],
                             messages=[{"role": "user", "content": "Say this is a test"}]
                         )
                     return (
@@ -379,7 +380,3 @@ class NotDiamondResource(ConfigurableResource):
                     output_name=output_name,
                 )
         yield self._client
-
-    def teardown_after_execution(self, context: InitResourceContext) -> None:
-        # Close NotDiamond client.
-        self._client.close()
