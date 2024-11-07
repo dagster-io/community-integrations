@@ -19,5 +19,9 @@ dev-dependencies = [
     "pyright>=1.1.386",
 ]
 
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
 [tool.setuptools]
 packages = ["dagster_hex"]
