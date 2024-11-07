@@ -23,7 +23,9 @@ from unittest.mock import ANY, MagicMock, patch
 
 @patch("dagster_contrib_notdiamond.resources.NotDiamond")
 def test_notdiamond_client(mock_client) -> None:
-    notdiamond_resource = NotDiamondResource(api_key="xoxp-1234123412341234-12341234-1234")
+    notdiamond_resource = NotDiamondResource(
+        api_key="xoxp-1234123412341234-12341234-1234"
+    )
     notdiamond_resource.setup_for_execution(build_init_resource_context())
 
     mock_context = MagicMock()
@@ -47,7 +49,9 @@ def test_notdiamond_client_with_config(mock_client) -> None:
         )
 
 
-@patch("dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata")
+@patch(
+    "dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata"
+)
 @patch("dagster.OpExecutionContext", autospec=OpExecutionContext)
 @patch("dagster_contrib_notdiamond.resources.NotDiamond")
 def test_notdiamond_resource_with_op(mock_client, mock_context, mock_wrapper):
@@ -67,13 +71,17 @@ def test_notdiamond_resource_with_op(mock_client, mock_context, mock_wrapper):
     result = wrap_op_in_graph_and_execute(
         notdiamond_op,
         resources={
-            "notdiamond_resource": NotDiamondResource(api_key="xoxp-1234123412341234-12341234-1234")
+            "notdiamond_resource": NotDiamondResource(
+                api_key="xoxp-1234123412341234-12341234-1234"
+            )
         },
     )
     assert result.success
 
 
-@patch("dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata")
+@patch(
+    "dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata"
+)
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
 @patch("dagster_contrib_notdiamond.resources.NotDiamond")
 def test_notdiamond_resource_with_asset(mock_client, mock_context, mock_wrapper):
@@ -93,17 +101,23 @@ def test_notdiamond_resource_with_asset(mock_client, mock_context, mock_wrapper)
     result = materialize_to_memory(
         [notdiamond_asset],
         resources={
-            "notdiamond_resource": NotDiamondResource(api_key="xoxp-1234123412341234-12341234-1234")
+            "notdiamond_resource": NotDiamondResource(
+                api_key="xoxp-1234123412341234-12341234-1234"
+            )
         },
     )
 
     assert result.success
 
 
-@patch("dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata")
+@patch(
+    "dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata"
+)
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
 @patch("dagster_contrib_notdiamond.resources.NotDiamond")
-def test_notdiamond_resource_with_graph_backed_asset(mock_client, mock_context, mock_wrapper):
+def test_notdiamond_resource_with_graph_backed_asset(
+    mock_client, mock_context, mock_wrapper
+):
     @op
     def model_version_op():
         return ["openai/gpt-4o-mini", "openai/gpt-4o"]
@@ -129,14 +143,18 @@ def test_notdiamond_resource_with_graph_backed_asset(mock_client, mock_context, 
     result = materialize_to_memory(
         [notdiamond_asset],
         resources={
-            "notdiamond_resource": NotDiamondResource(api_key="xoxp-1234123412341234-12341234-1234")
+            "notdiamond_resource": NotDiamondResource(
+                api_key="xoxp-1234123412341234-12341234-1234"
+            )
         },
     )
 
     assert result.success
 
 
-@patch("dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata")
+@patch(
+    "dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata"
+)
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
 @patch("dagster_contrib_notdiamond.resources.NotDiamond")
 def test_notdiamond_resource_with_multi_asset(mock_client, mock_context, mock_wrapper):
@@ -181,17 +199,23 @@ def test_notdiamond_resource_with_multi_asset(mock_client, mock_context, mock_wr
     result = materialize_to_memory(
         [notdiamond_multi_asset],
         resources={
-            "notdiamond_resource": NotDiamondResource(api_key="xoxp-1234123412341234-12341234-1234")
+            "notdiamond_resource": NotDiamondResource(
+                api_key="xoxp-1234123412341234-12341234-1234"
+            )
         },
     )
 
     assert result.success
 
 
-@patch("dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata")
+@patch(
+    "dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata"
+)
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
 @patch("dagster_contrib_notdiamond.resources.NotDiamond")
-def test_notdiamond_resource_with_partitioned_asset(mock_client, mock_context, mock_wrapper):
+def test_notdiamond_resource_with_partitioned_asset(
+    mock_client, mock_context, mock_wrapper
+):
     notdiamond_partitions_def = StaticPartitionsDefinition([str(j) for j in range(5)])
 
     notdiamond_partitioned_assets = []
@@ -234,18 +258,20 @@ def test_notdiamond_resource_with_partitioned_asset(mock_client, mock_context, m
             )
         ],
         resources={
-            "notdiamond_resource": NotDiamondResource(api_key="xoxp-1234123412341234-12341234-1234")
+            "notdiamond_resource": NotDiamondResource(
+                api_key="xoxp-1234123412341234-12341234-1234"
+            )
         },
     )
 
     for partition_key in notdiamond_partitions_def.get_partition_keys():
-        result = defs.get_job_def("notdiamond_partitioned_asset_job").execute_in_process(
-            partition_key=partition_key
-        )
+        result = defs.get_job_def(
+            "notdiamond_partitioned_asset_job"
+        ).execute_in_process(partition_key=partition_key)
         assert result.success
 
-    expected_wrapper_call_counts = (
-        len(notdiamond_partitioned_assets) * len(notdiamond_partitions_def.get_partition_keys())
+    expected_wrapper_call_counts = len(notdiamond_partitioned_assets) * len(
+        notdiamond_partitions_def.get_partition_keys()
     )
     assert mock_wrapper.call_count == expected_wrapper_call_counts
 
@@ -268,13 +294,17 @@ def test_notdiamond_wrapper_with_op(mock_client, mock_context):
     result = wrap_op_in_graph_and_execute(
         notdiamond_op,
         resources={
-            "notdiamond_resource": NotDiamondResource(api_key="xoxp-1234123412341234-12341234-1234")
+            "notdiamond_resource": NotDiamondResource(
+                api_key="xoxp-1234123412341234-12341234-1234"
+            )
         },
     )
     assert result.success
 
 
-@patch("dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata")
+@patch(
+    "dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata"
+)
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
 @patch("dagster_contrib_notdiamond.resources.NotDiamond")
 def test_notdiamond_wrapper_with_asset(mock_client, mock_context, mock_wrapper):
@@ -297,7 +327,8 @@ def test_notdiamond_wrapper_with_asset(mock_client, mock_context, mock_wrapper):
                 func=client.fine_tuning.jobs.create,
             )
             client.fine_tuning.jobs.create(
-                model=["openai/gpt-4o-mini", "openai/gpt-4o"], training_file="some_training_file"
+                model=["openai/gpt-4o-mini", "openai/gpt-4o"],
+                training_file="some_training_file",
             )
 
             mock_context.add_output_metadata.assert_called_with(
@@ -313,17 +344,23 @@ def test_notdiamond_wrapper_with_asset(mock_client, mock_context, mock_wrapper):
     result = materialize_to_memory(
         [notdiamond_asset],
         resources={
-            "notdiamond_resource": NotDiamondResource(api_key="xoxp-1234123412341234-12341234-1234")
+            "notdiamond_resource": NotDiamondResource(
+                api_key="xoxp-1234123412341234-12341234-1234"
+            )
         },
     )
 
     assert result.success
 
 
-@patch("dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata")
+@patch(
+    "dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata"
+)
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
 @patch("dagster_contrib_notdiamond.resources.NotDiamond")
-def test_notdiamond_wrapper_with_graph_backed_asset(mock_client, mock_context, mock_wrapper):
+def test_notdiamond_wrapper_with_graph_backed_asset(
+    mock_client, mock_context, mock_wrapper
+):
     @op
     def model_version_op():
         return "openai/gpt-4o-mini"
@@ -333,7 +370,9 @@ def test_notdiamond_wrapper_with_graph_backed_asset(mock_client, mock_context, m
         return "some_training_file"
 
     @op
-    def notdiamond_op(notdiamond_resource: NotDiamondResource, model_version, training_file):
+    def notdiamond_op(
+        notdiamond_resource: NotDiamondResource, model_version, training_file
+    ):
         assert notdiamond_resource
 
         mock_completion = MagicMock()
@@ -350,7 +389,9 @@ def test_notdiamond_wrapper_with_graph_backed_asset(mock_client, mock_context, m
                 output_name="notdiamond_asset",
                 func=client.fine_tuning.jobs.create,
             )
-            client.fine_tuning.jobs.create(model=model_version, training_file=training_file)
+            client.fine_tuning.jobs.create(
+                model=model_version, training_file=training_file
+            )
 
             mock_context.add_output_metadata.assert_called_with(
                 metadata={
@@ -369,14 +410,18 @@ def test_notdiamond_wrapper_with_graph_backed_asset(mock_client, mock_context, m
     result = materialize_to_memory(
         [notdiamond_asset],
         resources={
-            "notdiamond_resource": NotDiamondResource(api_key="xoxp-1234123412341234-12341234-1234")
+            "notdiamond_resource": NotDiamondResource(
+                api_key="xoxp-1234123412341234-12341234-1234"
+            )
         },
     )
 
     assert result.success
 
 
-@patch("dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata")
+@patch(
+    "dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata"
+)
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
 @patch("dagster_contrib_notdiamond.resources.NotDiamond")
 def test_notdiamond_wrapper_with_multi_asset(mock_client, mock_context, mock_wrapper):
@@ -403,7 +448,8 @@ def test_notdiamond_wrapper_with_multi_asset(mock_client, mock_context, mock_wra
                 func=client.fine_tuning.jobs.create,
             )
             client.fine_tuning.jobs.create(
-                model=["openai/gpt-4o-mini", "openai/gpt-4o"], training_file="some_training_file"
+                model=["openai/gpt-4o-mini", "openai/gpt-4o"],
+                training_file="some_training_file",
             )
 
             mock_context.add_output_metadata.assert_called_with(
@@ -420,14 +466,18 @@ def test_notdiamond_wrapper_with_multi_asset(mock_client, mock_context, mock_wra
     result = materialize_to_memory(
         [notdiamond_multi_asset],
         resources={
-            "notdiamond_resource": NotDiamondResource(api_key="xoxp-1234123412341234-12341234-1234")
+            "notdiamond_resource": NotDiamondResource(
+                api_key="xoxp-1234123412341234-12341234-1234"
+            )
         },
     )
 
     assert result.success
 
 
-@patch("dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata")
+@patch(
+    "dagster_contrib_notdiamond.resources.NotDiamondResource._wrap_with_usage_metadata"
+)
 @patch("dagster_contrib_notdiamond.resources.NotDiamond")
 def test_notdiamond_wrapper_with_partitioned_asset(mock_client, mock_wrapper):
     notdiamond_partitions_def = StaticPartitionsDefinition([str(j) for j in range(5)])
@@ -453,7 +503,9 @@ def test_notdiamond_wrapper_with_partitioned_asset(mock_client, mock_wrapper):
             mock_usage.total_tokens = 1
             mock_usage.completion_tokens = 1
             mock_completion.usage = mock_usage
-            mock_client.return_value.fine_tuning.jobs.create.return_value = mock_completion
+            mock_client.return_value.fine_tuning.jobs.create.return_value = (
+                mock_completion
+            )
 
             with notdiamond_resource.get_client(context=mock_context) as client:
                 client.fine_tuning.jobs.create = with_usage_metadata(
@@ -487,12 +539,14 @@ def test_notdiamond_wrapper_with_partitioned_asset(mock_client, mock_wrapper):
             )
         ],
         resources={
-            "notdiamond_resource": NotDiamondResource(api_key="xoxp-1234123412341234-12341234-1234")
+            "notdiamond_resource": NotDiamondResource(
+                api_key="xoxp-1234123412341234-12341234-1234"
+            )
         },
     )
 
     for partition_key in notdiamond_partitions_def.get_partition_keys():
-        result = defs.get_job_def("notdiamond_partitioned_asset_job").execute_in_process(
-            partition_key=partition_key
-        )
+        result = defs.get_job_def(
+            "notdiamond_partitioned_asset_job"
+        ).execute_in_process(partition_key=partition_key)
         assert result.success

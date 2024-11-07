@@ -47,7 +47,9 @@ def _add_to_asset_metadata(
 @public
 @experimental
 def with_usage_metadata(
-    context: Union[AssetExecutionContext, OpExecutionContext], output_name: Optional[str], func
+    context: Union[AssetExecutionContext, OpExecutionContext],
+    output_name: Optional[str],
+    func,
 ):
     """This wrapper can be used on any endpoint of the
     `notdiamond library <https://github.com/notdiamond/notdiamond-python>`
@@ -179,7 +181,9 @@ class NotDiamondResource(ConfigurableResource):
             )
     """
 
-    api_key: str = Field(description=("NotDiamond API key. See https://app.notdiamond.ai/keys"))
+    api_key: str = Field(
+        description=("NotDiamond API key. See https://app.notdiamond.ai/keys")
+    )
 
     _client: NotDiamond = PrivateAttr()
 
@@ -193,7 +197,9 @@ class NotDiamondResource(ConfigurableResource):
         context: AssetExecutionContext,
         output_name: Optional[str],
     ):
-        for attribute_names in API_ENDPOINT_CLASSES_TO_ENDPOINT_METHODS_MAPPING[api_endpoint_class]:
+        for attribute_names in API_ENDPOINT_CLASSES_TO_ENDPOINT_METHODS_MAPPING[
+            api_endpoint_class
+        ]:
             curr = self._client.__getattribute__(api_endpoint_class.value)
             # Get the second to last attribute from the attribute list to reach the method.
             i = 0
