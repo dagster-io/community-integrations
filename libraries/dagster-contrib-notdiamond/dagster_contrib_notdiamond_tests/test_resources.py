@@ -29,7 +29,7 @@ def test_notdiamond_client(mock_client) -> None:
     mock_context = MagicMock()
     with notdiamond_resource.get_client(mock_context):
         mock_client.assert_called_once_with(
-            api_key="xoxp-1234123412341234-12341234-1234",
+            api_key="xoxp-1234123412341234-12341234-1234", user_agent=ANY
         )
 
 
@@ -43,7 +43,7 @@ def test_notdiamond_client_with_config(mock_client) -> None:
     mock_context = MagicMock()
     with notdiamond_resource.get_client(mock_context):
         mock_client.assert_called_once_with(
-            api_key="xoxp-1234123412341234-12341234-1234",
+            api_key="xoxp-1234123412341234-12341234-1234", user_agent=ANY
         )
 
 
