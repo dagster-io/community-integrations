@@ -71,8 +71,11 @@ def job() -> JobDefinition:
 def code_location_fixture(workspace):
     return workspace.get_code_location("repo_loc")
 
+
 @pytest.fixture
-def run(instance: DagsterInstance, job: JobDefinition, external_job: RemoteJob) -> DagsterRun:
+def run(
+    instance: DagsterInstance, job: JobDefinition, external_job: RemoteJob
+) -> DagsterRun:
     return instance.create_run_for_job(
         job,
         remote_job_origin=external_job.get_remote_origin(),
@@ -119,8 +122,8 @@ def mock_executions_client(executions):
 
         yield mock_executions_client
 
+
 @pytest.fixture
 def external_job(workspace: WorkspaceRequestContext) -> RemoteJob:
     location = workspace.get_code_location(workspace.code_location_names[0])
     return location.get_repository(repo.repository.name).get_full_job(repo.job.name)
-

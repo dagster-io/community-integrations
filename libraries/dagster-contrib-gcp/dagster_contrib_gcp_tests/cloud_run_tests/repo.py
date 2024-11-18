@@ -13,4 +13,4 @@ def job():
 
 @dagster.repository
 def repository():
-    return {"jobs": {"job": job}}
+    return [job]

@@ -18,6 +18,7 @@ def test_launch_run(
     run: DagsterRun,
     workspace: BaseWorkspaceRequestContext,
     mock_jobs_client,
+    mock_executions_client,
 ):
     instance.launch_run(run.run_id, workspace)
     run = check.not_none(instance.get_run_by_id(run.run_id))

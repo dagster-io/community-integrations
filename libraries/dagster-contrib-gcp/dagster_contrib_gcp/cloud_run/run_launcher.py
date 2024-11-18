@@ -12,11 +12,11 @@ from dagster import (
 from dagster._core.events import EngineEventData
 from dagster._core.launcher.base import (
     CheckRunHealthResult,
-    DagsterRun,
     LaunchRunContext,
     RunLauncher,
     WorkerStatus,
 )
+from dagster._core.storage.dagster_run import DagsterRun
 from dagster._grpc.types import ExecuteRunArgs
 from dagster._serdes import ConfigurableClass, ConfigurableClassData
 from google.api_core.exceptions import Conflict, ResourceExhausted, ServerError
@@ -60,7 +60,9 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         repository_origin = job_origin.repository_origin
 
         stripped_repository_origin = repository_origin._replace(container_context={})
-        stripped_job_origin = job_origin._replace(repository_origin=stripped_repository_origin)
+        stripped_job_origin = job_origin._replace(
+            repository_origin=stripped_repository_origin
+        )
 
         args = ExecuteRunArgs(
             job_origin=stripped_job_origin,
@@ -71,7 +73,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         command_args = args.get_command_args()
 
         operation = self.create_execution(current_code_location, command_args)
-        execution_id = operation.metadata.name.split("/")[-1]
+        execution_id = operation.metadata.name.split("/")[-1]  # pyright: ignore
 
         instance: DagsterInstance = self._instance
         instance.report_engine_event(
@@ -88,7 +90,9 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         try:
             job_name = self.job_name_by_code_location[code_location_name]
         except KeyError:
-            raise Exception(f"No run launcher defined for code location: {code_location_name}")
+            raise Exception(
+                f"No run launcher defined for code location: {code_location_name}"
+            )
         return f"projects/{self.project}/locations/{self.region}/jobs/{job_name}"
 
     def create_execution(self, code_location_name: str, args: Sequence[str]):
@@ -115,7 +119,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         container_overrides = [RunJobRequest.Overrides.ContainerOverride(**overrides)]
 
         request.overrides.container_overrides.extend(container_overrides)
-        request.overrides.timeout = timeout
+        request.overrides.timeout = timeout  # pyright: ignore
 
         @tenacity.retry(
             wait=tenacity.wait_fixed(self.run_job_retry_wait),
