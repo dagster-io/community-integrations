@@ -23,7 +23,7 @@ def instance_cm() -> Callable[..., ContextManager[DagsterInstance]]:
     def cm(config=None):
         overrides = {
             "run_launcher": {
-                "module": "dagster_gcp.cloud_run.run_launcher",
+                "module": "dagster_contrib_gcp.cloud_run.run_launcher",
                 "class": "CloudRunRunLauncher",
                 "config": config or {},
             }
@@ -75,7 +75,7 @@ def code_location_fixture(workspace):
 def run(instance: DagsterInstance, job: JobDefinition, external_job: RemoteJob) -> DagsterRun:
     return instance.create_run_for_job(
         job,
-        external_job_origin=external_job.get_external_origin(),
+        remote_job_origin=external_job.get_remote_origin(),
         job_code_origin=external_job.get_python_origin(),
     )
 
@@ -122,5 +122,5 @@ def mock_executions_client(executions):
 @pytest.fixture
 def external_job(workspace: WorkspaceRequestContext) -> RemoteJob:
     location = workspace.get_code_location(workspace.code_location_names[0])
-    return location.get_repository(repo.repository.name).get_full_external_job(repo.job.name)
+    return location.get_repository(repo.repository.name).get_full_job(repo.job.name)
 

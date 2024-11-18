@@ -53,8 +53,8 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         self.executions_client = run_v2.ExecutionsClient()
 
     def launch_run(self, context: LaunchRunContext) -> None:
-        external_job_origin = check.not_none(context.dagster_run.external_job_origin)
-        current_code_location = external_job_origin.location_name
+        remote_job_origin = check.not_none(context.dagster_run.remote_job_origin)
+        current_code_location = remote_job_origin.location_name
 
         job_origin = check.not_none(context.job_code_origin)
         repository_origin = job_origin.repository_origin
@@ -143,10 +143,10 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
             return False
 
         instance.report_run_canceling(run)
-        external_job_origin = check.not_none(run.external_job_origin)
+        remote_job_origin = check.not_none(run.remote_job_origin)
         try:
             fully_qualified_execution_name = (
-                f"{self.fully_qualified_job_name(external_job_origin.location_name)}"
+                f"{self.fully_qualified_job_name(remote_job_origin.location_name)}"
                 f"/executions/{execution_id}"
             )
             request = run_v2.CancelExecutionRequest(
@@ -229,10 +229,10 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         if not execution_id:
             return CheckRunHealthResult(WorkerStatus.UNKNOWN)
 
-        external_job_origin = check.not_none(run.external_job_origin)
+        remote_job_origin = check.not_none(run.remote_job_origin)
         try:
             fully_qualified_execution_name = (
-                f"{self.fully_qualified_job_name(external_job_origin.location_name)}"
+                f"{self.fully_qualified_job_name(remote_job_origin.location_name)}"
                 f"/executions/{execution_id}"
             )
             request = run_v2.GetExecutionRequest(name=fully_qualified_execution_name)
