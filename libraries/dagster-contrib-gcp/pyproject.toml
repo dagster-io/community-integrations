@@ -1,6 +1,6 @@
 [project]
 name = "dagster_contrib_gcp"
-version = "0.0.1"
+version = "0.0.2"
 description = "Community contributed Google Cloud Platform integration"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -17,5 +17,9 @@ dev-dependencies = [
     "pyright>=1.1.386",
 ]
 
-[tool.setuptools]
-packages = ["dagster_contrib_gcp"]
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages]
+find = {exclude= ['dagster_contrib_gcp_tests*']}
