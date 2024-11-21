@@ -3,9 +3,9 @@ name = "dagster_contrib_gcp"
 version = "0.0.1"
 description = "Community contributed Google Cloud Platform integration"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
-    "dagster>=1.7.0",
+    "dagster>=1.9.0",
     "google-cloud-run>=0.10.10",
     "tenacity>=8.0.0"
 ]
