@@ -1,4 +1,4 @@
-# Hex Dagster Library
+# Dagster Hex Integration
 
 ### Installation
 
@@ -8,41 +8,76 @@ To install the library, use pip alongside your existing Dagster environment.
 pip install dagster-hex
 ```
 
-### Configuration
+### Usage
 
-First, you'll need to specify your Hex API Token key as a resource.
+Create a `HexResource` specifying the `api_key`, then, use that resource in our assets.
 
 ```python
-# resources.py
-from dagster_hex.resources import hex_resource 
 import os
+import dagster as dg
 
-API_KEY = os.getenv['DAGSTER_PROD_API']
-my_resource = hex_resource.configured({'api_key': API_KEY})
+from dagster_hex.resources import HexResource 
+
+
+@dg.asset
+def custom_hex_asset(
+    context: dg.AssetExecutionContext,
+    hex: HexResource
+) -> dg.MaterializeResult:
+    project_id = "abcdefgh-1234-abcd-1234-abcdefghijkl"
+    context.log.info(f"Running Hex project {project_id}")
+    response = hex.run_project(
+        project_id,
+        inputs={
+            "message": "Hello, World!"
+        }
+    )
+    return dg.MaterializeResult(
+        metadata={
+            "data": response.get("data")
+        }
+    )
+
+
+defs = Definitions(
+    assets=[custom_hex_asset],
+    resources={
+        "hex": HexResource(
+            api_key=dg.EnvVar("HEX_API_KEY")
+        )
+    }
+)
 ```
 
-### Ops
+#### Legacy
+
+##### Ops
 
 The `hex_project_op` will call the Hex API to run a project until it completes.
 
 ```python
-from dagster_hex.resources import hex_resource
-from dagster import job
+import os
+import dagster as dg
+
 from dagster_hex.ops import hex_project_op
+from dagster_hex.resources import hex_resource
 
-API_KEY = 'abc123'
-PROJ_ID = 'i-love-uuids'
 
-my_resource = hex_resource.configured({'api_key': API_KEY})
-run_hex_op = hex_project_op.configured({"project_id": PROJ_ID},
-                                       name='run_job')
+hex_resource = HexResource(
+    api_key=dg.EnvVar("HEX_API_KEY")
+)
+
+run_hex_op = hex_project_op.configured({
+    "name": "run_hex_project_op",
+    "project_id": "abcdefgh-1234-abcd-1234-abcdefghijkl"
+})
 
 @job(resource_defs={"hex": my_resource})
 def hex_job():
     run_hex_op()
 ```
 
-### Asset Materializations
+##### Asset Materializations
 
 Ops will return an `AssetMaterialization`  with the following keys:
 
