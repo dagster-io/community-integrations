@@ -8,6 +8,8 @@ import requests
 import dagster as dg
 from pydantic import Field, PrivateAttr
 
+from dagster._annotations import deprecated
+
 from dagster_hex.types import (
     HexOutput,
     NotificationDetails,
@@ -283,3 +285,47 @@ class HexResource(dg.ConfigurableResource):
 
             time.sleep(poll_interval)
         return HexOutput(run_response=run_response, status_response=run_status)
+
+
+@deprecated(
+    breaking_version="1.9",
+    subject="hex_resource function has been replaced with the configurable HexResource",
+    emit_runtime_warning=True,
+)
+@dg.resource(
+    config_schema={
+        "api_key": dg.Field(
+            dg.StringSource,
+            is_required=True,
+            description="Hex API Key. You can find this on the Hex settings page",
+        ),
+        "base_url": dg.Field(
+            dg.StringSource,
+            default_value="https://app.hex.tech",
+            description="Hex Base URL for API requests.",
+        ),
+        "request_max_retries": dg.Field(
+            int,
+            default_value=3,
+            description="The maximum times requests to the Hex API should be retried "
+            "before failing.",
+        ),
+        "request_retry_delay": dg.Field(
+            float,
+            default_value=0.25,
+            description="Time (in seconds) to wait between each request retry.",
+        ),
+    },
+    description="This resource helps manage Hex",
+)
+def hex_resource(context) -> HexResource:
+    """
+    This resource allows users to programmatically interface with the Hex REST API
+    """
+    return HexResource(
+        api_key=context.resource_config["api_key"],
+        base_url=context.resource_config["base_url"],
+        log=context.log,
+        request_max_retries=context.resource_config["request_max_retries"],
+        request_retry_delay=context.resource_config["request_retry_delay"],
+    )

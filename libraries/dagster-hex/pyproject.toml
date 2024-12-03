@@ -17,3 +17,10 @@ dev-dependencies = [
     "ruff",
     "types-requests",
 ]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_hex"]

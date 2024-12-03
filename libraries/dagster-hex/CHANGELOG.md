@@ -3,9 +3,9 @@
 
 ## 0.1.4 - UNRELEASED
 
-### Removed
+### Added
 
-- The `hex_resource` has been deprecated with recommendation to use `HexResource`
+- Mark `hex_resource` with deprecation warning and recommendation to use `HexResource`
 - `HexResource` has been refactored from instantiation a `hex_resource` function to a `ConfigurableResource`
 
 ## [0.1.3] - 2023-06-20
