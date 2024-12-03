@@ -1,9 +1,8 @@
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Optional
 
 
 import dagster as dg
 from dagster._annotations import experimental
-
 
 
 """
@@ -13,6 +12,7 @@ HexWorkspace
 Figure out _inputs_
 
 """
+
 
 class HexWorkspace(dg.ConfigurableResource):
     api_key: str
@@ -50,6 +50,5 @@ def hex_project_asset(
                 yield from hex.run_and_poll(project_id, inputs)
 
     """
-
 
     return dg.asset(name=name, group_name=group_name)

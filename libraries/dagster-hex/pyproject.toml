@@ -12,7 +12,8 @@ dependencies = [
 [tool.uv]
 dev-dependencies = [
     "pytest",
-    "types-requests",
     "pytest-mock",
     "requests-mock",
+    "ruff",
+    "types-requests",
 ]
