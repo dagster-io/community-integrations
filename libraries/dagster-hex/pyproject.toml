@@ -13,6 +13,7 @@ dependencies = [
 dev-dependencies = [
     "pytest",
     "pytest-mock",
+    "pyright",
     "requests-mock",
     "ruff",
     "types-requests",

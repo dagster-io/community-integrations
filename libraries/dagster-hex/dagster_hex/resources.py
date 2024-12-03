@@ -325,7 +325,6 @@ def hex_resource(context) -> HexResource:
     return HexResource(
         api_key=context.resource_config["api_key"],
         base_url=context.resource_config["base_url"],
-        log=context.log,
         request_max_retries=context.resource_config["request_max_retries"],
         request_retry_delay=context.resource_config["request_retry_delay"],
     )
