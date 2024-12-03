@@ -1,6 +1,13 @@
 # Changelog
 ---
 
+## [UNRELEASED]
+
+### Removed
+
+- The `hex_resource` has been deprecated with recommendation to use `HexResource`
+- `HexResource` has been refactored from instantiation a `hex_resource` function to a `ConfigurableResource`
+
 ## [0.1.3] - 2023-06-20
 
 ### Added
@@ -12,6 +19,5 @@
 ### Fixed
 
 - Don't sell input parameters when they are null
-
 
 ## [0.1.0] - Initial Release

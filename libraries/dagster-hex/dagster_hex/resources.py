@@ -1,12 +1,12 @@
 import datetime
-import logging
 import time
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urljoin
 
 import requests
-from dagster import Failure, Field, StringSource, get_dagster_logger, resource
+import dagster as dg
+from pydantic import Field, PrivateAttr
 
 from dagster_hex.types import (
     HexOutput,
@@ -14,8 +14,9 @@ from dagster_hex.types import (
     RunResponse,
     StatusResponse,
 )
+from logging import Logger
 
-from .consts import (
+from dagster_hex.consts import (
     COMPLETE,
     DEFAULT_POLL_INTERVAL,
     DEFAULT_POLL_TIMEOUT,
@@ -25,30 +26,28 @@ from .consts import (
 )
 
 
-class HexResource:
-    """
-    This class exposes methods on top of the Hex REST API.
+class HexResource(dg.ConfigurableResource):
+    api_key: str = Field(
+        ...,
+        description="Hex API Key. You can find this on the Hex settings page",
+    )
 
-    Args:
-        api_key (str): Hex API Token to use for authentication
-        base_url (str): Base URL for the API
-        request_max_retries (int): Number of times to retry a failed request
-        request_retry_delay (int): Time, in seconds, to wait between retries
-    """
+    base_url: str = Field(
+        default=HEX_API_BASE,
+        description="Hex Base URL for API requests.",
+    )
 
-    def __init__(
-        self,
-        api_key: str,
-        base_url: str = HEX_API_BASE,
-        log: logging.Logger = get_dagster_logger(),
-        request_max_retries: int = 3,
-        request_retry_delay: float = 0.25,
-    ):
-        self._log = log
-        self._api_key = api_key
-        self._request_max_retries = request_max_retries
-        self._request_retry_delay = request_retry_delay
-        self.api_base_url = base_url
+    request_max_retries: int = Field(
+        default=3,
+        description="The maximum times requests to the Hex API should be retried before failing.",
+    )
+
+    request_retry_delay: float = Field(
+        default=0.25,
+        description="Time (in seconds) to wait between each request retry.",
+    )
+
+    _log: Logger = PrivateAttr(dg.get_dagster_logger())
 
     def make_request(
         self, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None
@@ -70,8 +69,8 @@ class HexResource:
             __version__ = "UnknownVersion"
 
         user_agent = "HexDagsterOp/" + __version__
-        headers = {"Authorization": f"Bearer {self._api_key}", "User-Agent": user_agent}
-        url = urljoin(self.api_base_url, endpoint)
+        headers = {"Authorization": f"Bearer {self.api_key}", "User-Agent": user_agent}
+        url = urljoin(self.base_url, endpoint)
 
         num_retries = 0
         while True:
@@ -104,7 +103,7 @@ class HexResource:
                         msg = response.json()
                     except requests.exceptions.JSONDecodeError:
                         msg = response.text
-                    raise Failure(f"Received 422 status from Hex: {msg}")
+                    raise dg.Failure(f"Received 422 status from Hex: {msg}")
 
                 response.raise_for_status()
                 if response.headers.get("Content-Type", "").startswith(
@@ -115,18 +114,18 @@ class HexResource:
                     except requests.exceptions.JSONDecodeError:
                         self._log.error("Failed to decode response from API.")
                         self._log.error("API returned: %s", response.text)
-                        raise Failure(
+                        raise dg.Failure(
                             "Unexpected response from Hex API.Failed to decode to JSON."
                         )
                     return response_json
             except requests.RequestException as e:
                 self._log.error("Request to Hex API failed: %s", e)
-                if num_retries == self._request_max_retries:
+                if num_retries == self.request_max_retries:
                     break
                 num_retries += 1
-                time.sleep(self._request_retry_delay)
+                time.sleep(self.request_retry_delay)
 
-        raise Failure("Exceeded max number of retries.")
+        raise dg.Failure("Exceeded max number of retries.")
 
     def run_project(
         self,
@@ -255,7 +254,7 @@ class HexResource:
             )
 
             if project_status not in VALID_STATUSES:
-                raise Failure(
+                raise dg.Failure(
                     f"Received an unexpected status from the API: {project_status}"
                 )
 
@@ -263,7 +262,7 @@ class HexResource:
                 break
 
             if project_status in TERMINAL_STATUSES:
-                raise Failure(
+                raise dg.Failure(
                     f"Project Run failed with status {project_status}. "
                     f"See Run URL for more info {run_response['runUrl']}"
                 )
@@ -275,7 +274,7 @@ class HexResource:
             ):
                 if kill_on_timeout:
                     self.cancel_run(project_id, run_id)
-                raise Failure(
+                raise dg.Failure(
                     f"Project {project_id} for run: {run_id}' timed out after "
                     f"{datetime.datetime.now() - poll_start}. "
                     f"Last status was {project_status}. "
@@ -284,42 +283,3 @@ class HexResource:
 
             time.sleep(poll_interval)
         return HexOutput(run_response=run_response, status_response=run_status)
-
-
-@resource(
-    config_schema={
-        "api_key": Field(
-            StringSource,
-            is_required=True,
-            description="Hex API Key. You can find this on the Hex settings page",
-        ),
-        "base_url": Field(
-            StringSource,
-            default_value="https://app.hex.tech",
-            description="Hex Base URL for API requests.",
-        ),
-        "request_max_retries": Field(
-            int,
-            default_value=3,
-            description="The maximum times requests to the Hex API should be retried "
-            "before failing.",
-        ),
-        "request_retry_delay": Field(
-            float,
-            default_value=0.25,
-            description="Time (in seconds) to wait between each request retry.",
-        ),
-    },
-    description="This resource helps manage Hex",
-)
-def hex_resource(context) -> HexResource:
-    """
-    This resource allows users to programmatically interface with the Hex REST API
-    """
-    return HexResource(
-        api_key=context.resource_config["api_key"],
-        base_url=context.resource_config["base_url"],
-        log=context.log,
-        request_max_retries=context.resource_config["request_max_retries"],
-        request_retry_delay=context.resource_config["request_retry_delay"],
-    )
