@@ -11,7 +11,6 @@ from dagster import (
     AssetCheckResult,
 )
 
-import pytest
 from dagster_pipes import PipesAssetCheckSeverity
 from typing import Dict, Any, Optional, List, cast
 from pathlib import Path

@@ -223,11 +223,11 @@ public class PipesContext {
     }
 
     public void reportAssetMaterialization(
-        final Object simpleMetadataValue,
+        final Object metadataMapping,
         final String dataVersion,
         final String assetKey
     ) throws DagsterPipesException {
-        reportAssetMaterialization(MetadataBuilder.buildFrom(simpleMetadataValue), dataVersion, assetKey);
+        reportAssetMaterialization(MetadataBuilder.buildFrom(metadataMapping), dataVersion, assetKey);
     }
 
     public void reportAssetMaterialization(
@@ -252,12 +252,12 @@ public class PipesContext {
     public void reportAssetCheck(
         String checkName,
         boolean passed,
-        Object simpleMetadataValue,
+        Object metadataMapping,
         String assetKey
     ) throws DagsterPipesException {
         reportAssetCheck(
             checkName, passed, PipesAssetCheckSeverity.ERROR,
-            MetadataBuilder.buildFrom(simpleMetadataValue), assetKey
+            MetadataBuilder.buildFrom(metadataMapping), assetKey
         );
     }
 
@@ -276,7 +276,7 @@ public class PipesContext {
         final String checkName,
         final boolean passed,
         final PipesAssetCheckSeverity severity,
-        Object simpleMetadataValue,
+        Object metadataMapping,
         final String assetKey
     ) throws DagsterPipesException {
         System.out.println("was: " + checkName + " " + passed + " " + assetKey);
@@ -287,7 +287,7 @@ public class PipesContext {
             Method.REPORT_ASSET_CHECK,
             this.createMap(
                 actualAssetKey, checkName, passed, severity,
-                MetadataBuilder.buildFrom(simpleMetadataValue)
+                MetadataBuilder.buildFrom(metadataMapping)
             )
         );
     }
