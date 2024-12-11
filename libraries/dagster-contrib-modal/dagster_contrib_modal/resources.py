@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Mapping, Optional, Union
 
-from dagster import OpExecutionContext, PipesSubprocessClient
+from dagster import AssetExecutionContext, OpExecutionContext, PipesSubprocessClient
 from dagster._annotations import public
 from dagster._core.pipes.client import PipesClientCompletedInvocation
 from dagster_pipes import PipesExtras
@@ -46,7 +46,7 @@ class ModalClient(PipesSubprocessClient):
         self,
         *,
         func_ref: str,
-        context: OpExecutionContext,
+        context: Union[AssetExecutionContext, OpExecutionContext],
         extras: Optional[PipesExtras] = None,
         env: Optional[Mapping[str, str]] = None,
     ) -> PipesClientCompletedInvocation:
