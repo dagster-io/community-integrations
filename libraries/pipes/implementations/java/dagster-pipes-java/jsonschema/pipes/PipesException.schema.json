@@ -1,0 +1,28 @@
+{
+  "title": "PipesException",
+  "type": "object",
+  "properties": {
+    "message": {
+      "type": "string"
+    },
+    "stack": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "name": {
+      "type": ["null", "string"],
+      "description": "class name of Exception object"
+    },
+    "cause": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#" }],
+      "description": "exception that explicitly led to this exception"
+    },
+    "context": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#" }],
+      "$ref": "#",
+      "description": "exception that being handled when this exception was raised"
+    }
+  }
+}

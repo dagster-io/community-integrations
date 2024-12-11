@@ -1,0 +1,37 @@
+[project]
+name = "dagster-pipes-java"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dagster-aws>=0.25.0",
+    "dagster>=1.8.9",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "dagster-webserver>=1.8.9",
+    "hypothesis>=4.57.1",
+    "hypothesis-jsonschema>=0.11.0",
+    "pyright>=1.1.383",
+    "pytest>=8.3.3",
+    "ruff>=0.6.8",
+    "pytest-cases>=3.8.6",
+    "moto[server,s3]>=5.0.21",
+    "boto3[s3]>=1.35.67",
+    "boto3-stubs[s3]>=1.35.67",
+]
+
+[tool.dagster]
+module_name = "dagster_pipes_java.definitions"  ## name of project's Python module and where to find the definitions
+code_location_name = "Java Pipes"  ## optional, name of code location to display in the Dagster UI
+
+[tool.pytest.ini_options]
+addopts = "-s "
+color = "yes"
+testpaths = ["tests"]

@@ -1,0 +1,51 @@
+plugins {
+    id 'java'
+    id 'pmd'
+}
+
+group = 'org.example'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.18.0'
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.18.0'
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.18.0'
+    implementation 'info.picocli:picocli:4.7.6'
+    annotationProcessor 'info.picocli:picocli-codegen:4.7.6'
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
+    implementation 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
+    implementation group: 'org.mockito', name: 'mockito-core', version: '2.7.5'
+    implementation group: 'software.amazon.awssdk', name: 's3', version: '2.29.17'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'pipes.MainTest'
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } +
+        sourceSets.test.output
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    dependsOn compileTestJava // Ensure test classes are compiled before creating the JAR
+}
+
+pmd {
+    toolVersion = "6.48.0"
+    ignoreFailures = true
+}
+
+tasks.withType(Pmd) {
+    // Exclude specific folders from analysis
+    exclude 'types/**'
+    ruleSetFiles = files('config/pmd-ruleset.xml')
+    ruleSets = [] // Disable default rulesets
+}
