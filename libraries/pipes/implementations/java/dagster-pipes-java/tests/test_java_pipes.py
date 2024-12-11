@@ -38,6 +38,14 @@ from dagster._core.pipes.client import PipesMessageReader
 from dagster_aws.pipes import PipesS3ContextInjector, PipesS3MessageReader
 
 
+BASE_ARGS = [
+    "java",
+    "-cp",
+    "build/libs/dagster-pipes-java-1.0-SNAPSHOT.jar",
+    "pipes.MainTest",
+]
+
+
 @contextmanager
 def read_messages(
     self: PipesFileMessageReader,
@@ -132,10 +140,7 @@ def test_java_pipes_reconstruction(
     ) -> MaterializeResult:
         job_name = context.dagster_run.job_name
 
-        args = [
-            "java",
-            "-jar",
-            str(ROOT_DIR / "build/libs/dagster-pipes-java-1.0-SNAPSHOT.jar"),
+        args = BASE_ARGS + [
             "--env",
             f"--extras={str(extras_path)}",
             f"--jobName={job_name}",
@@ -166,10 +171,7 @@ def test_java_pipes_components(
     def java_asset(
         context: AssetExecutionContext, pipes_subprocess_client: PipesSubprocessClient
     ) -> MaterializeResult:
-        args = [
-            "java",
-            "-jar",
-            str(ROOT_DIR / "build/libs/dagster-pipes-java-1.0-SNAPSHOT.jar"),
+        args = BASE_ARGS + [
             "--env",
             "--full",
         ]
@@ -228,10 +230,7 @@ def test_java_pipes_extras(
     ) -> MaterializeResult:
         job_name = context.dagster_run.job_name
 
-        args = [
-            "java",
-            "-jar",
-            str(ROOT_DIR / "build/libs/dagster-pipes-java-1.0-SNAPSHOT.jar"),
+        args = BASE_ARGS + [
             "--full",
             "--env",
             f"--extras={metadata_path}",
@@ -279,10 +278,7 @@ def test_java_pipes_exception_logging(
     def java_asset(
         context: AssetExecutionContext, pipes_subprocess_client: PipesSubprocessClient
     ):
-        args = [
-            "java",
-            "-jar",
-            str(ROOT_DIR / "build/libs/dagster-pipes-java-1.0-SNAPSHOT.jar"),
+        args = BASE_ARGS + [
             "--full",
             "--throw-error",
         ]
@@ -339,9 +335,7 @@ def test_java_pipes_logging(
     def java_asset(
         context: AssetExecutionContext, pipes_subprocess_client: PipesSubprocessClient
     ):
-        args = [
-            "java",
-            "-jar",
+        args = BASE_ARGS + [
             str(ROOT_DIR / "build/libs/dagster-pipes-java-1.0-SNAPSHOT.jar"),
             "--full",
             "--logging",
@@ -402,10 +396,7 @@ def test_java_pipes_custom_message(
     ) -> MaterializeResult:
         job_name = context.dagster_run.job_name
 
-        args = [
-            "java",
-            "-jar",
-            str(ROOT_DIR / "build/libs/dagster-pipes-java-1.0-SNAPSHOT.jar"),
+        args = BASE_ARGS + [
             "--full",
             "--env",
             f"--jobName={job_name}",
@@ -503,10 +494,7 @@ def test_java_pipes_report_asset_materialization(
     ) -> MaterializeResult:
         job_name = context.dagster_run.job_name
 
-        args = [
-            "java",
-            "-jar",
-            str(ROOT_DIR / "build/libs/dagster-pipes-java-1.0-SNAPSHOT.jar"),
+        args = BASE_ARGS + [
             "--full",
             "--env",
             f"--jobName={job_name}",
@@ -591,10 +579,7 @@ def test_java_pipes_report_asset_check(
     ):
         job_name = context.dagster_run.job_name
 
-        args = [
-            "java",
-            "-jar",
-            str(ROOT_DIR / "build/libs/dagster-pipes-java-1.0-SNAPSHOT.jar"),
+        args = BASE_ARGS + [
             "--full",
             "--env",
             f"--jobName={job_name}",

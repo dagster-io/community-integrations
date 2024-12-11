@@ -29,7 +29,7 @@ test {
 jar {
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } +
-            sourceSets.main.output
+            sourceSets.main.output + sourceSets.test.output
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     dependsOn compileJava, compileTestJava
