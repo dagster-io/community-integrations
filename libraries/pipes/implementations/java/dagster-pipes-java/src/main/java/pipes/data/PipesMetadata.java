@@ -18,11 +18,12 @@ public class PipesMetadata {
     private Type type;
 
     public static final List<Class<?>> ALLOWED_VALUE_TYPES = Arrays.asList(
-        Integer.class, Long.class, Double.class, Map.class, Boolean.class, String.class
+        Float.class, Integer.class, Long.class, Double.class,
+        Map.class, Boolean.class, String.class, List.class
     );
 
     public PipesMetadata(Object value, Type type) {
-        if (value != null && ALLOWED_VALUE_TYPES.stream().noneMatch(vt -> vt.isInstance(value))) {
+        if (value != null && ALLOWED_VALUE_TYPES.stream().noneMatch(vt -> vt.isInstance(value)) && !value.getClass().isArray()) {
             throw new IllegalArgumentException(String.format(
                 "Wrong metadata value type: %s", value.getClass().getTypeName()
             ));

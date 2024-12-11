@@ -27,15 +27,12 @@ test {
 }
 
 jar {
-    manifest {
-        attributes 'Main-Class': 'pipes.MainTest'
-    }
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } +
-        sourceSets.test.output
+            sourceSets.main.output
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    dependsOn compileTestJava // Ensure test classes are compiled before creating the JAR
+    dependsOn compileJava, compileTestJava
 }
 
 pmd {
