@@ -1,7 +1,6 @@
 package pipes;
 
 import pipes.logger.PipesLogger;
-import pipes.utils.MetadataBuilder;
 import types.*;
 import pipes.data.*;
 import pipes.loaders.PipesContextLoader;
@@ -227,15 +226,12 @@ public class PipesContext {
         final String dataVersion,
         final String assetKey
     ) throws DagsterPipesException {
-        if (metadataMapping.values().stream().anyMatch(v -> !(v instanceof PipesMetadata))) {
-            reportAssetMaterializationInner(MetadataBuilder.buildFrom((Map<String, Object>) metadataMapping), dataVersion, assetKey);
-        } else {
-            reportAssetMaterializationInner(metadataMapping, dataVersion, assetKey);
-        }
+        final Map<String, PipesMetadata> resolvedMetadata = PipesUtils.resolveMetadataMapping(metadataMapping);
+        processAssetMaterialization(resolvedMetadata, dataVersion, assetKey);
     }
 
-    private void reportAssetMaterializationInner(
-        final Map<String, ?> pipesMetadata,
+    private void processAssetMaterialization(
+        final Map<String, PipesMetadata> pipesMetadata,
         final String dataVersion,
         final String assetKey
     ) throws DagsterPipesException {
@@ -248,7 +244,7 @@ public class PipesContext {
         System.out.println("writing message...");
         this.writeMessage(
             Method.REPORT_ASSET_MATERIALIZATION,
-            this.createMap(actualAssetKey, dataVersion, (Map<String, PipesMetadata>) pipesMetadata)
+            this.createMap(actualAssetKey, dataVersion, pipesMetadata)
         );
         materializedAssets.add(actualAssetKey);
     }
@@ -269,21 +265,16 @@ public class PipesContext {
         Map<String, ?> metadataMapping,
         String assetKey
     ) throws DagsterPipesException {
-        if (metadataMapping.values().stream().anyMatch(v -> !(v instanceof PipesMetadata))) {
-            reportAssetCheckInner(
-                checkName, passed, severity,
-                MetadataBuilder.buildFrom((Map<String, Object>) metadataMapping), assetKey
-            );
-        } else {
-            reportAssetCheckInner(checkName, passed, severity, metadataMapping, assetKey);
-        }
+        final Map<String, PipesMetadata> resolvedMetadata = PipesUtils
+            .resolveMetadataMapping(metadataMapping);
+        processAssetCheck(checkName, passed, severity, resolvedMetadata, assetKey);
     }
 
-    private void reportAssetCheckInner(
+    private void processAssetCheck(
         final String checkName,
         final boolean passed,
         final PipesAssetCheckSeverity severity,
-        final Map<String, ?> pipesMetadata,
+        final Map<String, PipesMetadata> pipesMetadata,
         final String assetKey
     ) throws DagsterPipesException {
         System.out.println("was: " + checkName + " " + passed + " " + assetKey);
@@ -292,7 +283,7 @@ public class PipesContext {
         System.out.println("resolved:" + actualAssetKey);
         this.writeMessage(
             Method.REPORT_ASSET_CHECK,
-            this.createMap(actualAssetKey, checkName, passed, severity, (Map<String, PipesMetadata>) pipesMetadata)
+            this.createMap(actualAssetKey, checkName, passed, severity, pipesMetadata)
         );
     }
 

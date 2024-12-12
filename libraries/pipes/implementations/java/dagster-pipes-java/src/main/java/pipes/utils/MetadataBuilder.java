@@ -8,7 +8,7 @@ import java.util.function.Function;
 
 public class MetadataBuilder {
 
-    private static final Map<Class<?>, Function<Map.Entry<String, Object>, Map<String, PipesMetadata>>>
+    private static final Map<Class<?>, Function<Map.Entry<String, ?>, Map<String, PipesMetadata>>>
         TYPE_ACTIONS = new HashMap<>();
 
     static {
@@ -20,9 +20,9 @@ public class MetadataBuilder {
         TYPE_ACTIONS.put(List.class, entry -> buildMetadata(entry, Type.JSON));
     }
 
-    public static Map<String, PipesMetadata> buildFrom(final Map<String, Object> mapping) {
+    public static Map<String, PipesMetadata> buildFrom(final Map<String, ?> mapping) {
         final Map<String, PipesMetadata> result = new HashMap<>();
-        for (final Map.Entry<String, Object> entry: mapping.entrySet()) {
+        for (final Map.Entry<String, ?> entry: mapping.entrySet()) {
             final Object value = entry.getValue();
             if (value == null) {
                 throw new IllegalArgumentException(
@@ -35,8 +35,8 @@ public class MetadataBuilder {
                 break;
             }
 
-            Function<Map.Entry<String, Object>, Map<String, PipesMetadata>> action = null;
-            for (final Map.Entry<Class<?>, Function<Map.Entry<String, Object>, Map<String, PipesMetadata>>> actionEntry:
+            Function<Map.Entry<String, ?>, Map<String, PipesMetadata>> action = null;
+            for (final Map.Entry<Class<?>, Function<Map.Entry<String, ?>, Map<String, PipesMetadata>>> actionEntry:
                 TYPE_ACTIONS.entrySet()
             ) {
                 if (actionEntry.getKey().isAssignableFrom(entry.getValue().getClass())) {
@@ -60,7 +60,7 @@ public class MetadataBuilder {
     }
 
     private static Map<String, PipesMetadata> buildMetadata(
-        final Map.Entry<String, Object> entry, final Type type
+        final Map.Entry<String, ?> entry, final Type type
     ) {
         return buildMetadata(entry.getValue(), entry.getKey(), type);
     }

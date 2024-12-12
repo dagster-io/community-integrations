@@ -2,6 +2,7 @@ package pipes.utils;
 
 import pipes.DagsterPipesException;
 import pipes.data.PipesConstants;
+import pipes.data.PipesMetadata;
 import pipes.writers.PipesMessage;
 import types.Method;
 
@@ -38,5 +39,14 @@ public final class PipesUtils {
 
     public static PipesMessage makeMessage(Method method, Map<String, ?> params) {
         return new PipesMessage(PipesConstants.PIPES_PROTOCOL_VERSION.toString(), method.toValue(), params);
+    }
+
+    public static <T> Map<String, PipesMetadata> resolveMetadataMapping(final Map<String, T> metadataMapping) {
+        boolean containsNonPipesMetadata = metadataMapping.values().stream()
+            .anyMatch(value -> !(value instanceof PipesMetadata));
+
+        return containsNonPipesMetadata
+            ? MetadataBuilder.buildFrom(metadataMapping)
+            : (Map<String, PipesMetadata>) metadataMapping;
     }
 }
