@@ -335,8 +335,8 @@ def test_java_pipes_logging(
     def java_asset(
         context: AssetExecutionContext, pipes_subprocess_client: PipesSubprocessClient
     ):
+
         args = BASE_ARGS + [
-            str(ROOT_DIR / "build/libs/dagster-pipes-java-1.0-SNAPSHOT.jar"),
             "--full",
             "--logging",
         ]
