@@ -1,0 +1,33 @@
+[project]
+name = "dagster-pipes-tests"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "danielgafni", email = "danielgafni16@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "dagster>=1.9.0",
+    "pytest>=8.3.4",
+    "pyserde[toml]>=0.22.3",
+    "pytest-cases>=3.8.6",
+    "moto[server,s3]>=5.0.21",
+    "boto3[s3]>=1.35.67",
+    "boto3-stubs[s3]>=1.35.67",
+    "hypothesis>=6.122.3",
+    "hypothesis-jsonschema>=0.23.1",
+]
+
+[project.scripts]
+dagster-pipes-tests = "dagster_pipes_tests:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.entry-points.pytest11]
+dagster-pipes-tests = "dagster_pipes_tests"
+
+[tool.ruff.lint]
+extend-select = ["I"]

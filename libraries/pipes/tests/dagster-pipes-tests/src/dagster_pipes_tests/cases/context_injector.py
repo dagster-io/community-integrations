@@ -1,13 +1,18 @@
-from typing_extensions import TYPE_CHECKING
 import pytest_cases
+from typing_extensions import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client
 
 
-@pytest_cases.case(tags="default")
-def case_default():
-    return {"type": "default"}
+@pytest_cases.case(tags="env")
+def case_env():
+    return {"type": "env"}
+
+
+@pytest_cases.case(tags="tempfile")
+def case_tempfile():
+    return {"type": "tempfile"}
 
 
 @pytest_cases.case(tags="s3")

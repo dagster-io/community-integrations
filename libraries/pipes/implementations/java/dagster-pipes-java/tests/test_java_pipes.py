@@ -177,7 +177,7 @@ def test_java_pipes_components(
         ]
 
         if isinstance(context_injector, PipesS3ContextInjector):
-            args.append("--s3-context")
+            args.extend(["--context-loader", "s3"])
 
         if isinstance(message_reader, PipesS3MessageReader):
             args.extend(["--message-writer", "s3"])
