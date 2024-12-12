@@ -1,5 +1,5 @@
 *   @cmpadden
 
 /libraries/pipes/   @danielgafni
-/libraries/pipes/implementations/java   @GingerYouth
+/libraries/pipes/implementations/java   @GingerYouth @danielgafni
 /libraries/pipes/implementations/rust  @cmpadden @christeefy @marijncv
