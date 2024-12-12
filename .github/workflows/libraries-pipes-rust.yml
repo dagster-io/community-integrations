@@ -3,12 +3,12 @@ name: dagster-pipes-rust
 on:
   pull_request:
   paths:
-    - "libraries/pipes/implementations/rust/**"
+    - "./libraries/pipes/implementations/rust/**"
     - ".github/workflows/libraries-pipes-rust.yml"
 
 defaults:
   run:
-    working-directory: "libraries/pipes/implementations/rust/**"
+    working-directory: ./libraries/pipes/implementations/rust/
 
 env:
   CARGO_INCREMENTAL: 0
