@@ -16,48 +16,62 @@ class MetadataBuilderTest {
 
     @Test
     void testBuildFromFloat() {
-        final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(123F);
-        assertTrue(meta.containsKey("float"));
-        assertEquals(meta.get("float").getType(), Type.FLOAT);
+        final Map<String, Object> testMap = new HashMap<>();
+        testMap.put("test", 123F);
+        final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(testMap);
+        assertTrue(meta.containsKey("test"));
+        assertEquals(meta.get("test").getType(), Type.FLOAT);
     }
 
     @Test
     void testBuildFromInt() {
-        final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(123);
-        assertTrue(meta.containsKey("int"));
-        assertEquals(meta.get("int").getType(), Type.INT);
+        final Map<String, Object> testMap = new HashMap<>();
+        testMap.put("test", 123);
+        final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(testMap);
+        assertTrue(meta.containsKey("test"));
+        assertEquals(meta.get("test").getType(), Type.INT);
     }
 
     @Test
     void testBuildFromString() {
-        final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom("123");
-        assertTrue(meta.containsKey("text"));
-        assertEquals(meta.get("text").getType(), Type.TEXT);
+        final Map<String, Object> testMap = new HashMap<>();
+        testMap.put("test", "123");
+        final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(testMap);
+        assertTrue(meta.containsKey("test"));
+        assertEquals(meta.get("test").getType(), Type.TEXT);
     }
     @Test
     void testBuildFromBoolean() {
-        final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(true);
-        assertTrue(meta.containsKey("boolean"));
-        assertEquals(meta.get("boolean").getType(), Type.BOOL);
+        final Map<String, Object> testMap = new HashMap<>();
+        testMap.put("test", true);
+        final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(testMap);
+        assertTrue(meta.containsKey("test"));
+        assertEquals(meta.get("test").getType(), Type.BOOL);
     }
     @Test
     void testBuildFromMap() {
-        final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(new HashMap<>());
-        assertTrue(meta.containsKey("json"));
-        assertEquals(meta.get("json").getType(), Type.JSON);
+        final Map<String, Object> testMap = new HashMap<>();
+        testMap.put("test", new HashMap<>());
+        final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(testMap);
+        assertTrue(meta.containsKey("test"));
+        assertEquals(meta.get("test").getType(), Type.JSON);
     }
     @Test
     void testBuildFromList() {
-        final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(new ArrayList<>());
-        assertTrue(meta.containsKey("json"));
-        assertEquals(meta.get("json").getType(), Type.JSON);
+        final Map<String, Object> testMap = new HashMap<>();
+        testMap.put("test", new ArrayList<>());
+        final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(testMap);
+        assertTrue(meta.containsKey("test"));
+        assertEquals(meta.get("test").getType(), Type.JSON);
     }
 
     @Test
     void testBuildFromArray() {
-        final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(new int[]{1, 2, 3});
-        assertTrue(meta.containsKey("json"));
-        assertEquals(meta.get("json").getType(), Type.JSON);
+        final Map<String, Object> testMap = new HashMap<>();
+        testMap.put("test", new int[]{});
+        final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(testMap);
+        assertTrue(meta.containsKey("test"));
+        assertEquals(meta.get("test").getType(), Type.JSON);
     }
 
 }

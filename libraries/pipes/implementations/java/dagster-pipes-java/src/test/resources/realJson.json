@@ -1,0 +1,22 @@
+{
+  "asset_keys": [
+    "count_adult_users"
+  ],
+  "code_version_by_asset_key": {
+    "count_adult_users": null
+  },
+  "provenance_by_asset_key": {
+    "count_adult_users": {
+      "code_version": "9f708985-0a7e-4cfa-886d-46428c9ae5eb",
+      "input_data_versions": {},
+      "is_user_provided": false
+    }
+  },
+  "partition_key": null,
+  "partition_key_range": null,
+  "partition_time_window": null,
+  "run_id": "48d2bb8c-b906-4ecf-80b9-b020aa87ec00",
+  "job_name": "__ASSET_JOB",
+  "retry_number": 0,
+  "extras": {}
+}

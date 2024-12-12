@@ -43,9 +43,11 @@ public class Example {
         int adults = (int) people.values().stream()
             .filter(age -> age >= 18)
             .count();
+        final Map<String, Integer> metaMap = new HashMap<>();
+        metaMap.put("Number of adults", adults);
 
         context.reportAssetMaterialization(
-            adults, null, null
+            metaMap, null, null
         );
     }
 }

@@ -3,6 +3,7 @@ package pipes.data;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import types.PartitionKeyRange;
 import types.PartitionTimeWindow;
+import types.ProvenanceByAssetKey;
 
 import java.util.List;
 import java.util.Map;
@@ -17,7 +18,7 @@ public class PipesContextData {
     private Map<String, String> codeVersionByAssetKey;
 
     @JsonProperty("provenance_by_asset_key")
-    private Map<String, PipesDataProvenance> provenanceByAssetKey;
+    private Map<String, ProvenanceByAssetKey> provenanceByAssetKey;
 
     @JsonProperty("partition_key")
     private String partitionKey;
@@ -59,11 +60,11 @@ public class PipesContextData {
         this.codeVersionByAssetKey = codeVersionByAssetKey;
     }
 
-    public Map<String, PipesDataProvenance> getProvenanceByAssetKey() {
+    public Map<String, ProvenanceByAssetKey> getProvenanceByAssetKey() {
         return provenanceByAssetKey;
     }
 
-    public void setProvenanceByAssetKey(Map<String, PipesDataProvenance> provenanceByAssetKey) {
+    public void setProvenanceByAssetKey(Map<String, ProvenanceByAssetKey> provenanceByAssetKey) {
         this.provenanceByAssetKey = provenanceByAssetKey;
     }
 

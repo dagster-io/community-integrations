@@ -32,7 +32,7 @@ jar {
             sourceSets.main.output + sourceSets.test.output
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    dependsOn compileJava, compileTestJava
+    dependsOn compileJava, compileTestJava, processTestResources
 }
 
 pmd {

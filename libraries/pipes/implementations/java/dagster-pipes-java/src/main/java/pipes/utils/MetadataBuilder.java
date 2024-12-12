@@ -8,49 +8,61 @@ import java.util.function.Function;
 
 public class MetadataBuilder {
 
-    private static final Map<Class<?>, Function<Object, Map<String, PipesMetadata>>> TYPE_ACTIONS
-        = new HashMap<>();
+    private static final Map<Class<?>, Function<Map.Entry<String, Object>, Map<String, PipesMetadata>>>
+        TYPE_ACTIONS = new HashMap<>();
 
     static {
-        TYPE_ACTIONS.put(Float.class, object -> buildMetadata(object, "float", Type.FLOAT));
-        TYPE_ACTIONS.put(Integer.class, object -> buildMetadata(object, "int", Type.INT));
-        TYPE_ACTIONS.put(String.class, object -> buildMetadata(object, "text", Type.TEXT));
-        TYPE_ACTIONS.put(Boolean.class, object -> buildMetadata(object, "boolean", Type.BOOL));
-        TYPE_ACTIONS.put(Map.class, object -> buildMetadata(object, "json", Type.JSON));
-        TYPE_ACTIONS.put(List.class, object -> buildMetadata(object, "json", Type.JSON));
+        TYPE_ACTIONS.put(Float.class, entry -> buildMetadata(entry, Type.FLOAT));
+        TYPE_ACTIONS.put(Integer.class, entry -> buildMetadata(entry, Type.INT));
+        TYPE_ACTIONS.put(String.class, entry -> buildMetadata(entry, Type.TEXT));
+        TYPE_ACTIONS.put(Boolean.class, entry -> buildMetadata(entry, Type.BOOL));
+        TYPE_ACTIONS.put(Map.class, entry -> buildMetadata(entry, Type.JSON));
+        TYPE_ACTIONS.put(List.class, entry -> buildMetadata(entry, Type.JSON));
     }
 
-    public static Map<String, PipesMetadata> buildFrom(final Object object) {
-        if (object == null) {
-            throw new IllegalArgumentException(
-                "Automatic metadata builder doesn't support null values!"
-            );
-        }
+    public static Map<String, PipesMetadata> buildFrom(final Map<String, Object> mapping) {
+        final Map<String, PipesMetadata> result = new HashMap<>();
+        for (final Map.Entry<String, Object> entry: mapping.entrySet()) {
+            final Object value = entry.getValue();
+            if (value == null) {
+                throw new IllegalArgumentException(
+                    "Automatic metadata builder doesn't support null values!"
+                );
+            }
 
-        if (object.getClass().isArray()) {
-            return buildMetadata(object, "json", Type.JSON);
-        }
-
-        Function<Object, Map<String, PipesMetadata>> action = null;
-        for (final Map.Entry<Class<?>, Function<Object, Map<String, PipesMetadata>>> entry:
-            TYPE_ACTIONS.entrySet()
-        ) {
-            if (entry.getKey().isAssignableFrom(object.getClass())) {
-                action = entry.getValue();
+            if (value.getClass().isArray()) {
+                result.putAll(buildMetadata(value, entry.getKey(), Type.JSON));
                 break;
             }
-        }
 
-        if (action == null) {
-            throw new UnsupportedOperationException(
-                String.format(
-                    "Automatic metadata builder doesn't support: %s",
-                    object.getClass().getName()
-                )
-            );
-        }
+            Function<Map.Entry<String, Object>, Map<String, PipesMetadata>> action = null;
+            for (final Map.Entry<Class<?>, Function<Map.Entry<String, Object>, Map<String, PipesMetadata>>> actionEntry:
+                TYPE_ACTIONS.entrySet()
+            ) {
+                if (actionEntry.getKey().isAssignableFrom(entry.getValue().getClass())) {
+                    action = actionEntry.getValue();
+                    break;
+                }
+            }
 
-        return action.apply(object);
+            if (action == null) {
+                throw new UnsupportedOperationException(
+                    String.format(
+                        "Automatic metadata builder doesn't support: %s",
+                        mapping.getClass().getName()
+                    )
+                );
+            }
+
+            result.putAll(action.apply(entry));
+        }
+        return result;
+    }
+
+    private static Map<String, PipesMetadata> buildMetadata(
+        final Map.Entry<String, Object> entry, final Type type
+    ) {
+        return buildMetadata(entry.getValue(), entry.getKey(), type);
     }
 
     private static Map<String, PipesMetadata> buildMetadata(
