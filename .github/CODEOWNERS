@@ -1,5 +1,5 @@
 *   @cmpadden
 
-# Pipes codeowners
 /libraries/pipes/   @danielgafni
 /libraries/pipes/implementations/java   @GingerYouth
+/libraries/pipes/implementations/rust  @christeefy @marijncv

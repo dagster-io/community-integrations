@@ -1,6 +1,3 @@
-> [!WARNING]
-> This project is under active development and is subject to change!
-
 # dagster-pipes-rust
 
 Get full observability into your Rust workloads when orchestrating through Dagster. With this light weight interface, you can retrieve data directly from the Dagster context, report asset materializations, report asset checks, provide structured logging, end more.
