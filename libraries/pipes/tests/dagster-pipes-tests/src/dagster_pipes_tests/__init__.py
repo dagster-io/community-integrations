@@ -20,7 +20,7 @@ from typing_extensions import TYPE_CHECKING
 import dagster_pipes_tests.cases.context_injector as context_injector_cases
 import dagster_pipes_tests.cases.message_reader as message_reader_cases
 from dagster_pipes_tests.pipes_config import PipesConfig
-from dagster_pipes_tests.suite import PipesSuite as PipesSuite
+from dagster_pipes_tests.suite import PipesTestSuite
 
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client
@@ -114,5 +114,5 @@ __all__ = [
     "s3_bucket",
     "context_injector",
     "message_reader",
-    "PipesSuite",
+    "PipesTestSuite",
 ]

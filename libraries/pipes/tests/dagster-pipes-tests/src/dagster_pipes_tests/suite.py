@@ -95,7 +95,7 @@ def assert_known_metadata(metadata: Dict[str, MetadataValue]):
     assert metadata.get("notebook") == MetadataValue.notebook("notebook.ipynb")
 
 
-class PipesSuite:
+class PipesTestSuite:
     # this should point to the base args which will be used
     # to run all the tests
     BASE_ARGS = ["change", "me"]
