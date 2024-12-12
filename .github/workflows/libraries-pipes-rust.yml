@@ -1,10 +1,7 @@
 name: dagster-pipes-rust
 
 on:
-  push:
-    branches: [main]
   pull_request:
-  workflow_dispatch:
   paths:
     - "libraries/pipes/implementations/rust/**"
     - ".github/workflows/libraries-pipes-rust.yml"
