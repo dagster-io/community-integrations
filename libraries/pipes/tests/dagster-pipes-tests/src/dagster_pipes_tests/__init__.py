@@ -1,36 +1,48 @@
-from typing_extensions import TYPE_CHECKING
-import pytest
-from moto.server import ThreadedMotoServer
+import os
+from pathlib import Path
 from typing import Iterator, Optional
+
 import boto3
-import subprocess
+import moto
+import moto.s3.responses
+import pytest
 import pytest_cases
-from dagster_aws.pipes import PipesS3ContextInjector
+from dagster._core.pipes.client import PipesContextInjector, PipesMessageReader
 from dagster._core.pipes.utils import (
     PipesEnvContextInjector,
     PipesTempFileContextInjector,
 )
-from dagster_aws.pipes import PipesS3MessageReader
-from dagster._core.pipes.client import PipesContextInjector, PipesMessageReader
+from dagster_aws.pipes import PipesS3ContextInjector, PipesS3MessageReader
+from moto.server import ThreadedMotoServer
+from serde.toml import from_toml
+from typing_extensions import TYPE_CHECKING
 
 import dagster_pipes_tests.cases.context_injector as context_injector_cases
 import dagster_pipes_tests.cases.message_reader as message_reader_cases
-
-import os
-import moto
-import moto.s3.responses
+from dagster_pipes_tests.pipes_config import PipesConfig
 
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client
 
 
-@pytest.fixture(scope="session", autouse=True)
-def built_jar():
-    subprocess.run(["./gradlew", "build"], check=True)
+DEFAULT_PIPES_CONFIG_PATH = "pipes.toml"
+
+
+PIPES_CONFIG_PATH = Path(os.getenv("PIPES_CONFIG_PATH", DEFAULT_PIPES_CONFIG_PATH))
+
+PIPES_CONFIG = from_toml(PipesConfig, PIPES_CONFIG_PATH.read_text())
+
+
+@pytest.fixture(scope="session")
+def pipes_config() -> PipesConfig:
+    return PIPES_CONFIG
 
 
 @pytest.fixture(scope="module")
-def aws_endpoint_url() -> Iterator[str]:
+def aws_endpoint_url(pipes_config: PipesConfig) -> Iterator[str]:
+    if not pipes_config.s3:
+        pytest.skip("S3 tests are not enabled in pipes.toml")
+
     """Fixture to run a mocked AWS server for testing."""
     # Note: pass `port=0` to get a random free port.
     server = ThreadedMotoServer(port=0)
@@ -61,7 +73,7 @@ def s3_client(aws_endpoint_url: str) -> "S3Client":
     return boto3.client("s3", endpoint_url=aws_endpoint_url)
 
 
-BUCKET_NAME = "pies-testing"
+BUCKET_NAME = "pipes-testing"
 
 
 @pytest.fixture

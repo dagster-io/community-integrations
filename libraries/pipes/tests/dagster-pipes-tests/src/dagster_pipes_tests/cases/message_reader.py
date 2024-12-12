@@ -1,5 +1,5 @@
-from typing_extensions import TYPE_CHECKING
 import pytest_cases
+from typing_extensions import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client
