@@ -2,9 +2,10 @@ name: dagster-pipes-rust
 
 on:
   pull_request:
-  paths:
-    - "./libraries/pipes/implementations/rust/**"
-    - ".github/workflows/libraries-pipes-rust.yml"
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - "./libraries/pipes/implementations/rust/**"
+      - ".github/workflows/libraries-pipes-rust.yml"
 
 defaults:
   run:
