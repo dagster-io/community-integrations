@@ -11,7 +11,8 @@ This project provides a Java implementation of the Dagster Pipes protocol. It ca
 uvx --with dagster-webserver dagster dev -f examples/local/definitions.py
 ```
 
-3. Open the Dagster UI at [http://localhost:3000](http://localhost:3000) Materialize the Dagster asset and observe Pipes events produced by the external Java process.
+3. Open the Dagster UI at [http://localhost:3000](http://localhost:3000) 
+4. Materialize the Dagster asset and observe Pipes events produced by the external Java process
 
 # Development
 
