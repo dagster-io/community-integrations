@@ -335,7 +335,6 @@ def test_java_pipes_logging(
     def java_asset(
         context: AssetExecutionContext, pipes_subprocess_client: PipesSubprocessClient
     ):
-
         args = BASE_ARGS + [
             "--full",
             "--logging",

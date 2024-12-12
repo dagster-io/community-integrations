@@ -1,6 +1,6 @@
 # Dagster Pipes Tests
 
-This is a "golden" test suite for the Dagster Pipes protocol. It is designed to test the protocol implementation in various languages, ensuring that the protocol is implemented correctly and consistently across all them.
+This is a "golden" test suite for the Dagster Pipes protocol. It is designed to test the protocol implementation in various languages, ensuring that the protocol is implemented correctly and consistently across all of them.
 
 # Usage
 

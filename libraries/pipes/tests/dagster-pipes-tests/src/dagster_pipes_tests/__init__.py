@@ -20,6 +20,7 @@ from typing_extensions import TYPE_CHECKING
 import dagster_pipes_tests.cases.context_injector as context_injector_cases
 import dagster_pipes_tests.cases.message_reader as message_reader_cases
 from dagster_pipes_tests.pipes_config import PipesConfig
+from dagster_pipes_tests.suite import PipesSuite as PipesSuite
 
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client
@@ -104,3 +105,14 @@ def message_reader(params) -> Optional[PipesMessageReader]:
         return PipesS3MessageReader(client=params["client"], bucket=params["bucket"])
     else:
         raise ValueError(f"Unknown type: {params['type']}")
+
+
+__all__ = [
+    "pipes_config",
+    "aws_endpoint_url",
+    "s3_client",
+    "s3_bucket",
+    "context_injector",
+    "message_reader",
+    "PipesSuite",
+]
