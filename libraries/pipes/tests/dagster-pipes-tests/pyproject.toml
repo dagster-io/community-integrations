@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "dagster>=1.9.0",
+    "dagster-aws>=0.25.0",
     "pytest>=8.3.4",
     "pyserde[toml]>=0.22.3",
     "pytest-cases>=3.8.6",

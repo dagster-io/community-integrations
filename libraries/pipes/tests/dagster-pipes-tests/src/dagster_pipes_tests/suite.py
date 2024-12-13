@@ -1,6 +1,14 @@
 import json
-from typing import Any, Dict, List, Optional, cast
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    cast,
+)
 
+import dagster._check as check
+import pytest
 from dagster import (
     AssetCheckResult,
     AssetCheckSpec,
@@ -13,6 +21,7 @@ from dagster import (
     asset,
     materialize,
 )
+from dagster._core.definitions.metadata import normalize_metadata_value
 from dagster._core.pipes.client import PipesContextInjector, PipesMessageReader
 from dagster._core.pipes.utils import (
     PipesEnvContextInjector,
@@ -21,78 +30,75 @@ from dagster._core.pipes.utils import (
 )
 from dagster_aws.pipes import PipesS3ContextInjector, PipesS3MessageReader
 from dagster_pipes import (
+    PIPES_METADATA_TYPE_INFER,
     PipesAssetCheckSeverity,
+    PipesMetadataType,
 )
 from pytest_cases import parametrize
+
+from dagster_pipes_tests.constants import (
+    CUSTOM_PAYLOAD_CASES_PATH,
+    METADATA_CASES_PATH,
+    METADATA_PATH,
+    PIPES_CONFIG,
+)
+from dagster_pipes_tests.utils.message_reader import PipesTestingFileMessageReader
 
 # todo: make PipesFileMessageReader more test-friendly (currently it deletes the file after reading)
 
 
 # metadata must have string keys
-METADATA_LIST = [
-    {
-        "foo": "bar",
-    },
-    {
-        "foo": "bar",
-        "baz": 1,
-    },
-    {
-        "foo": "bar",
-        "baz": 1,
-        "qux": [1, 2, 3],
-    },
-    {
-        "foo": "bar",
-        "baz": 1,
-        "qux": [1, 2, 3],
-        "quux": {"a": 1, "b": 2},
-    },
-    {
-        "foo": "bar",
-        "baz": 1,
-        "qux": [1, 2, 3],
-        "quux": {"a": 1, "b": 2},
-        "corge": None,
-    },
-]
-
-
+METADATA_CASES = json.loads(METADATA_CASES_PATH.read_text())
+METADATA_CASES[4]["corge"] = None  # json can't represent None, so we add it manually
 # this is just any json
-CUSTOM_MESSAGE_PAYLOADS = METADATA_LIST.copy() + [
-    1,
-    1.0,
-    "foo",
-    [1, 2, 3],
-]
+CUSTOM_MESSAGE_CASES = json.loads(CUSTOM_PAYLOAD_CASES_PATH.read_text())
+
+METADATA = json.loads(METADATA_PATH.read_text())
+
+
+def _resolve_metadata_value(
+    value: Any, metadata_type: PipesMetadataType
+) -> MetadataValue:
+    # TODO: make this a @staticmethod in Pipes and reuse here
+    if metadata_type == PIPES_METADATA_TYPE_INFER:
+        return normalize_metadata_value(value)
+    elif metadata_type == "text":
+        return MetadataValue.text(value)
+    elif metadata_type == "url":
+        return MetadataValue.url(value)
+    elif metadata_type == "path":
+        return MetadataValue.path(value)
+    elif metadata_type == "notebook":
+        return MetadataValue.notebook(value)
+    elif metadata_type == "json":
+        return MetadataValue.json(value)
+    elif metadata_type == "md":
+        return MetadataValue.md(value)
+    elif metadata_type == "float":
+        return MetadataValue.float(value)
+    elif metadata_type == "int":
+        return MetadataValue.int(value)
+    elif metadata_type == "bool":
+        return MetadataValue.bool(value)
+    elif metadata_type == "dagster_run":
+        return MetadataValue.dagster_run(value)
+    elif metadata_type == "asset":
+        return MetadataValue.asset(AssetKey.from_user_string(value))
+    elif metadata_type == "table":
+        return MetadataValue.table(value)
+    elif metadata_type == "null":
+        return MetadataValue.null()
+    else:
+        check.failed(f"Unexpected metadata type {metadata_type}")
 
 
 def assert_known_metadata(metadata: Dict[str, MetadataValue]):
     assert metadata is not None
 
-    assert metadata.get("bool_true") == MetadataValue.bool(True)
-    assert metadata.get("bool_false") == MetadataValue.bool(False)
-    assert metadata.get("float") == MetadataValue.float(0.1)
-    assert metadata.get("int") == MetadataValue.int(1)
-    assert metadata.get("url") == MetadataValue.url("https://dagster.io")
-    assert metadata.get("path") == MetadataValue.path("/dev/null")
-    assert metadata.get("null") == MetadataValue.null()
-    assert metadata.get("md") == MetadataValue.md("**markdown**")
-    assert metadata.get("json") == MetadataValue.json(
-        {
-            "quux": {"a": 1, "b": 2},
-            "corge": None,
-            "qux": [1, 2, 3],
-            "foo": "bar",
-            "baz": 1,
-        }
-    )
-    assert metadata.get("text") == MetadataValue.text("hello")
-    assert metadata.get("asset") == MetadataValue.asset(AssetKey(["foo", "bar"]))
-    assert metadata.get("dagster_run") == MetadataValue.dagster_run(
-        "db892d7f-0031-4747-973d-22e8b9095d9d"
-    )
-    assert metadata.get("notebook") == MetadataValue.notebook("notebook.ipynb")
+    for key in METADATA:
+        assert metadata.get(key) == _resolve_metadata_value(
+            METADATA[key]["raw_value"], METADATA[key]["type"]
+        )
 
 
 class PipesTestSuite:
@@ -100,13 +106,15 @@ class PipesTestSuite:
     # to run all the tests
     BASE_ARGS = ["change", "me"]
 
-    @parametrize("metadata", METADATA_LIST)
-    def test_pipes_reconstruction(
+    @parametrize("metadata", METADATA_CASES)
+    def test_context_reconstruction(
         self,
         metadata: Dict[str, Any],
         tmpdir_factory,
         capsys,
     ):
+        """This test doesn't test anything in Dagster. Instead, it provides parameters to the external process, which should check if they are loaded correctly."""
+
         work_dir = tmpdir_factory.mktemp("work_dir")
 
         extras_path = work_dir / "extras.json"
@@ -115,7 +123,7 @@ class PipesTestSuite:
             json.dump(metadata, f)
 
         @asset
-        def java_asset(
+        def my_asset(
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
@@ -134,14 +142,14 @@ class PipesTestSuite:
             ).get_materialize_result()
 
         result = materialize(
-            [java_asset],
+            [my_asset],
             resources={"pipes_subprocess_client": PipesSubprocessClient()},
             raise_on_error=False,
         )
 
         assert result.success
 
-    def test_pipes_components(
+    def test_components(
         self,
         context_injector: PipesContextInjector,
         message_reader: PipesMessageReader,
@@ -149,7 +157,7 @@ class PipesTestSuite:
         capsys,
     ):
         @asset
-        def java_asset(
+        def my_asset(
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
@@ -172,12 +180,12 @@ class PipesTestSuite:
             custom_messages = invocation.get_custom_messages()
 
             assert len(custom_messages) == 1
-            assert custom_messages[0] == "Hello from Java!"
+            assert custom_messages[0] == "Hello from external process!"
 
             return invocation.get_materialize_result()
 
         result = materialize(
-            [java_asset],
+            [my_asset],
             resources={
                 "pipes_subprocess_client": PipesSubprocessClient(
                     context_injector=context_injector, message_reader=message_reader
@@ -188,17 +196,19 @@ class PipesTestSuite:
 
         assert result.success
 
-    @parametrize("metadata", METADATA_LIST)
+    @parametrize("metadata", METADATA_CASES)
     @parametrize(
         "context_injector", [PipesEnvContextInjector(), PipesTempFileContextInjector()]
     )
-    def test_pipes_extras(
+    def test_extras(
         self,
         context_injector: PipesContextInjector,
         metadata: Dict[str, Any],
         tmpdir_factory,
         capsys,
     ):
+        """This test doesn't test anything in Dagster. Instead, it provides extras to the external process, which should check if they are loaded correctly."""
+
         work_dir = tmpdir_factory.mktemp("work_dir")
 
         metadata_path = work_dir / "metadata.json"
@@ -207,7 +217,7 @@ class PipesTestSuite:
             json.dump(metadata, f)
 
         @asset
-        def java_asset(
+        def my_asset(
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
@@ -231,7 +241,7 @@ class PipesTestSuite:
             return materialization
 
         result = materialize(
-            [java_asset],
+            [my_asset],
             resources={
                 "pipes_subprocess_client": PipesSubprocessClient(
                     context_injector=context_injector
@@ -249,17 +259,24 @@ class PipesTestSuite:
             not in captured.err
         )
 
-    def test_pipes_exception_logging(
+    def test_error_reporting(
         self,
         tmpdir_factory,
         capsys,
     ):
+        """This test checks if the external process sends an exception message correctly."""
+
+        if not PIPES_CONFIG.general.error_reporting:
+            pytest.skip("general.error_reporting is not enabled in pipes.toml")
+
         work_dir = tmpdir_factory.mktemp("work_dir")
 
         messages_file = work_dir / "messages"
 
+        message_reader = PipesTestingFileMessageReader(str(messages_file))
+
         @asset
-        def java_asset(
+        def my_asset(
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ):
@@ -276,10 +293,10 @@ class PipesTestSuite:
             yield from invocation_result.get_results()
 
         result = materialize(
-            [java_asset],
+            [my_asset],
             resources={
                 "pipes_subprocess_client": PipesSubprocessClient(
-                    message_reader=PipesFileMessageReader(str(messages_file))
+                    message_reader=message_reader
                 )
             },
             raise_on_error=False,
@@ -293,8 +310,8 @@ class PipesTestSuite:
                 if method == "closed":
                     exception = message["params"]["exception"]
 
-                    assert exception["name"] == "pipes.DagsterPipesException"
-                    assert exception["message"] == "Very bad Java exception happened!"
+                    assert exception["name"] is not None
+                    assert exception["message"] == "Very bad error has happened!"
                     assert exception["stack"] is not None
 
         result.all_events
@@ -306,19 +323,24 @@ class PipesTestSuite:
         assert (
             "[pipes] did not receive any messages from external process"
             not in captured.err
-        )
+        ), captured.err
 
-    def test_pipes_logging(
+    def test_message_log(
         self,
         tmpdir_factory,
         capsys,
     ):
+        """This test checks if the external process sends log messages (like info and warning) correctly."""
+
+        if not PIPES_CONFIG.messages.log:
+            pytest.skip("messages.log is not enabled in pipes.toml")
+
         work_dir = tmpdir_factory.mktemp("work_dir")
 
         messages_file = work_dir / "messages"
 
         @asset
-        def java_asset(
+        def my_asset(
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ):
@@ -335,7 +357,7 @@ class PipesTestSuite:
             yield from invocation_result.get_results()
 
         result = materialize(
-            [java_asset],
+            [my_asset],
             resources={
                 "pipes_subprocess_client": PipesSubprocessClient(
                     message_reader=PipesFileMessageReader(str(messages_file))
@@ -352,7 +374,7 @@ class PipesTestSuite:
 
         for level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
             # example log line we are looking for:
-            # 2024-11-13 16:54:55 +0100 - dagster - WARNING - __ephemeral_asset_job__ - 2716d101-cf11-4baa-b22d-d2530cb8b121 - java_asset - Warning message
+            # 2024-11-13 16:54:55 +0100 - dagster - WARNING - __ephemeral_asset_job__ - 2716d101-cf11-4baa-b22d-d2530cb8b121 - my_asset - Warning message
 
             for line in err.split("\n"):
                 if f"{level.lower().capitalize()} message" in line:
@@ -363,13 +385,18 @@ class PipesTestSuite:
             not in captured.err
         )
 
-    @parametrize("custom_message_payload", CUSTOM_MESSAGE_PAYLOADS)
-    def test_pipes_custom_message(
+    @parametrize("custom_message_payload", CUSTOM_MESSAGE_CASES)
+    def test_message_report_custom_message(
         self,
         custom_message_payload: Any,
         tmpdir_factory,
         capsys,
     ):
+        """This test checks if the external process sends custom messages correctly."""
+
+        if not PIPES_CONFIG.messages.report_custom_message:
+            pytest.skip("messages.report_custom_message is not enabled in pipes.toml")
+
         work_dir = tmpdir_factory.mktemp("work_dir")
 
         custom_payload_path = work_dir / "custom_payload.json"
@@ -378,7 +405,7 @@ class PipesTestSuite:
             json.dump({"payload": custom_message_payload}, f)
 
         @asset
-        def java_asset(
+        def my_asset(
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
@@ -404,7 +431,7 @@ class PipesTestSuite:
             return materialization
 
         result = materialize(
-            [java_asset],
+            [my_asset],
             resources={"pipes_subprocess_client": PipesSubprocessClient()},
             raise_on_error=False,
         )
@@ -419,14 +446,20 @@ class PipesTestSuite:
         )
 
     @parametrize("data_version", [None, "alpha"])
-    @parametrize("asset_key", [None, ["java_asset"]])
-    def test_pipes_report_asset_materialization(
+    @parametrize("asset_key", [None, ["my_asset"]])
+    def test_message_report_asset_materialization(
         self,
         data_version: Optional[str],
         asset_key: Optional[List[str]],
         tmpdir_factory,
         capsys,
     ):
+        """This test checks if the external process sends asset materialization correctly."""
+        if not PIPES_CONFIG.messages.report_asset_materialization:
+            pytest.skip(
+                "messages.report_asset_materialization is not enabled in pipes.toml"
+            )
+
         work_dir = tmpdir_factory.mktemp("work_dir")
 
         messages_file = work_dir / "messages"
@@ -448,7 +481,7 @@ class PipesTestSuite:
             json.dump(asset_materialization_dict, f)
 
         @asset
-        def java_asset(
+        def my_asset(
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
@@ -478,14 +511,14 @@ class PipesTestSuite:
                 assert materialization.data_version is None
 
             if materialization.metadata is not None:
-                assert_known_metadata(materialization.metadata)
+                assert_known_metadata(materialization.metadata)  # type: ignore
 
             # assert materialization.metadata is not None
 
             return materialization
 
         result = materialize(
-            [java_asset],
+            [my_asset],
             resources={
                 "pipes_subprocess_client": PipesSubprocessClient(
                     message_reader=PipesFileMessageReader(str(messages_file))
@@ -505,8 +538,8 @@ class PipesTestSuite:
 
     @parametrize("passed", [True, False])
     @parametrize("severity", ["WARN", "ERROR"])
-    @parametrize("asset_key", [None, ["java_asset"]])
-    def test_pipes_report_asset_check(
+    @parametrize("asset_key", [None, ["my_asset"]])
+    def test_message_report_asset_check(
         self,
         passed: bool,
         asset_key: Optional[List[str]],
@@ -514,6 +547,13 @@ class PipesTestSuite:
         tmpdir_factory,
         capsys,
     ):
+        """This test checks if the external process sends asset checks correctly."""
+
+        if not PIPES_CONFIG.messages.report_asset_materialization:
+            pytest.skip(
+                "messages.report_asset_materialization is not enabled in pipes.toml"
+            )
+
         work_dir = tmpdir_factory.mktemp("work_dir")
 
         messages_file = work_dir / "messages"
@@ -536,11 +576,9 @@ class PipesTestSuite:
             json.dump(report_asset_check_dict, f)
 
         @asset(
-            check_specs=[
-                AssetCheckSpec(name="my_check", asset=AssetKey(["java_asset"]))
-            ]
+            check_specs=[AssetCheckSpec(name="my_check", asset=AssetKey(["my_asset"]))]
         )
-        def java_asset(
+        def my_asset(
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ):
@@ -568,12 +606,12 @@ class PipesTestSuite:
             assert check_result.passed == passed
 
             if check_result.metadata is not None:
-                assert_known_metadata(check_result.metadata)
+                assert_known_metadata(check_result.metadata)  # type: ignore
 
             yield from results
 
         result = materialize(
-            [java_asset],
+            [my_asset],
             resources={
                 "pipes_subprocess_client": PipesSubprocessClient(
                     message_reader=PipesFileMessageReader(str(messages_file))

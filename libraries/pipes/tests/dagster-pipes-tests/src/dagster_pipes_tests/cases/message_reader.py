@@ -1,4 +1,8 @@
+from typing import Optional
+
 import pytest_cases
+from dagster._core.pipes.client import PipesMessageReader
+from dagster_aws.pipes import PipesS3MessageReader
 from typing_extensions import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -6,10 +10,21 @@ if TYPE_CHECKING:
 
 
 @pytest_cases.case(tags="default")
-def case_default():
+def case_message_reader_default():
     return {"type": "default"}
 
 
 @pytest_cases.case(tags="s3")
-def case_s3(s3_client: "S3Client", s3_bucket: str):
+def case_message_reader_s3(s3_client: "S3Client", s3_bucket: str):
     return {"type": "s3", "bucket": s3_bucket, "client": s3_client}
+
+
+@pytest_cases.fixture
+@pytest_cases.parametrize_with_cases("params", cases=".")
+def message_reader(params) -> Optional[PipesMessageReader]:
+    if params["type"] == "default":
+        return None
+    elif params["type"] == "s3":
+        return PipesS3MessageReader(client=params["client"], bucket=params["bucket"])
+    else:
+        raise ValueError(f"Unknown type: {params['type']}")

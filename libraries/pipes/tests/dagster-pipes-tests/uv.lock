@@ -121,6 +121,33 @@ s3 = [
 ]
 
 [[package]]
+name = "boto3-stubs-lite"
+version = "1.35.70"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "botocore-stubs" },
+    { name = "types-s3transfer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ca/e3/e600bab50c0df4917a638b6a656f54be84f72615b43805d6d8dd04e520ff/boto3_stubs_lite-1.35.70.tar.gz", hash = "sha256:c65069cbb0096368c6eb022891a2d27535fb1e1f9cdb47d704cf1dfca4622479", size = 70045 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c0/5a/669bdc5260189e9096ca434a0e10dbfc91c133379779c23bb4259bf08b84/boto3_stubs_lite-1.35.70-py3-none-any.whl", hash = "sha256:da2a6eeec7897613e7eae2bce79154635e664491df25b2f51f07c9661cb5f266", size = 40414 },
+]
+
+[package.optional-dependencies]
+ecs = [
+    { name = "mypy-boto3-ecs" },
+]
+emr = [
+    { name = "mypy-boto3-emr" },
+]
+emr-serverless = [
+    { name = "mypy-boto3-emr-serverless" },
+]
+glue = [
+    { name = "mypy-boto3-glue" },
+]
+
+[[package]]
 name = "botocore"
 version = "1.35.79"
 source = { registry = "https://pypi.org/simple" }
@@ -375,6 +402,22 @@ wheels = [
 ]
 
 [[package]]
+name = "dagster-aws"
+version = "0.25.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "boto3" },
+    { name = "boto3-stubs-lite", extra = ["ecs", "emr", "emr-serverless", "glue"] },
+    { name = "dagster" },
+    { name = "packaging" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0a/60/26441c945f8f57340f8fad6cba71356a1801cb3c2ddb4cdbb1ec85be90bd/dagster-aws-0.25.4.tar.gz", hash = "sha256:e959606bce86fdb46242100691e1d1047d5f6fc5114ecca481681e18d07e974f", size = 108062 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/b6/6897f2603ec4854b59bcaa0dd978f0515264e03047d3c00348946f7ad717/dagster_aws-0.25.4-py3-none-any.whl", hash = "sha256:c02039c08be20a65c9c37d89db2e5ea6414fcc57c3b69db0071d44c37b38c71f", size = 133805 },
+]
+
+[[package]]
 name = "dagster-pipes"
 version = "1.9.4"
 source = { registry = "https://pypi.org/simple" }
@@ -391,6 +434,7 @@ dependencies = [
     { name = "boto3" },
     { name = "boto3-stubs", extra = ["s3"] },
     { name = "dagster" },
+    { name = "dagster-aws" },
     { name = "hypothesis" },
     { name = "hypothesis-jsonschema" },
     { name = "moto", extra = ["s3", "server"] },
@@ -404,6 +448,7 @@ requires-dist = [
     { name = "boto3", extras = ["s3"], specifier = ">=1.35.67" },
     { name = "boto3-stubs", extras = ["s3"], specifier = ">=1.35.67" },
     { name = "dagster", specifier = ">=1.9.0" },
+    { name = "dagster-aws", specifier = ">=0.25.0" },
     { name = "hypothesis", specifier = ">=6.122.3" },
     { name = "hypothesis-jsonschema", specifier = ">=0.23.1" },
     { name = "moto", extras = ["server", "s3"], specifier = ">=5.0.21" },
@@ -905,6 +950,42 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e0/47/dd32fa426cc72114383ac549964eecb20ecfd886d1e5ccf5340b55b02f57/mpmath-1.3.0.tar.gz", hash = "sha256:7a28eb2a9774d00c7bc92411c19a89209d5da7c4c9a9e227be8330a23a25b91f", size = 508106 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl", hash = "sha256:a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c", size = 536198 },
+]
+
+[[package]]
+name = "mypy-boto3-ecs"
+version = "1.35.77"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/00/6c16519627e9fbbf6e77cc208be6418596947dfde47b489b01303fb74f6c/mypy_boto3_ecs-1.35.77.tar.gz", hash = "sha256:83612133ff7fa2a1c32544d7a2c5ec38b421a303c4225d1798d1a4b658d408bf", size = 47135 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b1/df/420d4fb29a43de2e0d2a7d5f2933c24ca0df0c83b9fdd3e0945bc727f0b4/mypy_boto3_ecs-1.35.77-py3-none-any.whl", hash = "sha256:bf080831fcba1916bb4e2c88ffdc188fbbf2024ad1f747d86707a6c4a4df0947", size = 54031 },
+]
+
+[[package]]
+name = "mypy-boto3-emr"
+version = "1.35.68"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/2d/57/f7670e9fe385e3c8d7dada44ded19d351b3b218b068b00ffb7bb91ad8ffc/mypy_boto3_emr-1.35.68.tar.gz", hash = "sha256:af162c54755e6f807e0b8e49055402ed5eec8127365bd5e9fa622dd63949ce9e", size = 41749 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f9/57/a7794bf774a25bad69967c9ae62699ab103b16237b99643e570b9ffab246/mypy_boto3_emr-1.35.68-py3-none-any.whl", hash = "sha256:e6a2539826ea8bad53ec3ea8b0f26d83f73a9449085cae3dd2116bc5f97da997", size = 48873 },
+]
+
+[[package]]
+name = "mypy-boto3-emr-serverless"
+version = "1.35.79"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/dc/96/c6389b12f5b5b130371efec2a4218f7f698f27acbd862f41b43b4c5e58cb/mypy_boto3_emr_serverless-1.35.79.tar.gz", hash = "sha256:509878895fb388bfb40aff101833c330842443a12c90fa93037b5cf6accfab13", size = 19984 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6c/44/e7829c148e42499f86a0647666826bd22ed3b36878b890c9f0862641eddf/mypy_boto3_emr_serverless-1.35.79-py3-none-any.whl", hash = "sha256:1685078b543594ca03b5dfa75b4db9f5f1f14b9169c327e2978bc219b2acc9ab", size = 27121 },
+]
+
+[[package]]
+name = "mypy-boto3-glue"
+version = "1.35.80"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/37/f3/a55bf65ff4e408f4b9b27ca53b93894fb1411aed4842d35413e2e33bf01a/mypy_boto3_glue-1.35.80.tar.gz", hash = "sha256:e3db79a3d8f9b04286101a064226d04e0365e006f4ed582044516d8358ef0166", size = 121035 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8f/ac/adab0ff40fd5a90986d3460930e2479280fdd8f29e646d663261ca27b14c/mypy_boto3_glue-1.35.80-py3-none-any.whl", hash = "sha256:f0b31a524741155245d81a01d179df9b4fb5430674bc46206f537b03e0d88d0d", size = 128507 },
 ]
 
 [[package]]

@@ -31,7 +31,7 @@ public class Example {
     }
 
     private static void userMethodExample(PipesContext context) throws DagsterPipesException {
-        context.reportCustomMessage("Hello from Java!");
+        context.reportCustomMessage("Hello from external process!");
 
         final Map<String, Integer> people = new HashMap<>();
         people.put("Alice", 25);

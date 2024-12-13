@@ -1,0 +1,63 @@
+{
+  "bool_true": {
+    "type": "bool",
+    "raw_value": true
+  },
+  "bool_false": {
+    "type": "bool",
+    "raw_value": false
+  },
+  "float": {
+    "type": "float",
+    "raw_value": 0.1
+  },
+  "int": {
+    "type": "int",
+    "raw_value": 1
+  },
+  "url": {
+    "type": "url",
+    "raw_value": "https://dagster.io"
+  },
+  "path": {
+    "type": "path",
+    "raw_value": "/dev/null"
+  },
+  "null": {
+    "type": "null",
+    "raw_value": null
+  },
+  "md": {
+    "type": "md",
+    "raw_value": "**markdown**"
+  },
+  "json": {
+    "type": "json",
+    "raw_value": {
+      "quux": {
+        "a": 1,
+        "b": 2
+      },
+      "corge": null,
+      "qux": [1, 2, 3],
+      "foo": "bar",
+      "baz": 1
+    }
+  },
+  "text": {
+    "type": "text",
+    "raw_value": "hello"
+  },
+  "asset": {
+    "type": "asset",
+    "raw_value": "foo/bar"
+  },
+  "dagster_run": {
+    "type": "dagster_run",
+    "raw_value": "db892d7f-0031-4747-973d-22e8b9095d9d"
+  },
+  "notebook": {
+    "type": "notebook",
+    "raw_value": "notebook.ipynb"
+  }
+}

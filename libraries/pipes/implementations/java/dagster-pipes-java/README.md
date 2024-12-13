@@ -4,15 +4,22 @@ This project provides a Java implementation of the Dagster Pipes protocol. It ca
 
 # Examples
 
-1. Set the `DAGSTER_HOME` environment variable
-2. Run the Dagster example with [uvx](https://docs.astral.sh/uv/guides/tools/) (alternatively, use the method of preference to install the Python `dagster` package):
+We provide a simple example of how to interact with Dagster from Java. The example is a simple Java application that sends events to Dagster, which can be observer in the Dagster UI.
+
+- [Java code](src/main/java/pipes/utils/Example.java)
+- [Dagster code](examples/local/definitions.py)
+
+In order to run the example, follow these steps:
+
+1. Set the `DAGSTER_HOME` environment variable. It should point to any existing directory.
+2. Run the Dagster example with [uvx](https://docs.astral.sh/uv/guides/tools/). (alternatively, use the method of preference to install the Python `dagster` package):
 
 ```
 uvx --with dagster-webserver dagster dev -f examples/local/definitions.py
 ```
 
-3. Open the Dagster UI at [http://localhost:3000](http://localhost:3000) 
-4. Materialize the Dagster asset and observe Pipes events produced by the external Java process
+3. Open the Dagster UI at [http://localhost:3000](http://localhost:3000).
+4. Materialize the Dagster asset and observe Pipes events produced by the external Java process.
 
 # Development
 

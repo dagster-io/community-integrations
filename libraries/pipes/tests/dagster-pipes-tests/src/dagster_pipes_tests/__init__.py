@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 from typing import Iterator, Optional
 
 import boto3
@@ -14,35 +13,22 @@ from dagster._core.pipes.utils import (
 )
 from dagster_aws.pipes import PipesS3ContextInjector, PipesS3MessageReader
 from moto.server import ThreadedMotoServer
-from serde.toml import from_toml
 from typing_extensions import TYPE_CHECKING
 
-import dagster_pipes_tests.cases.context_injector as context_injector_cases
-import dagster_pipes_tests.cases.message_reader as message_reader_cases
-from dagster_pipes_tests.pipes_config import PipesConfig
+import dagster_pipes_tests.cases
+import dagster_pipes_tests.cases.context_injector
+import dagster_pipes_tests.cases.message_reader
+from dagster_pipes_tests.constants import PIPES_CONFIG
 from dagster_pipes_tests.suite import PipesTestSuite
 
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client
 
 
-DEFAULT_PIPES_CONFIG_PATH = "pipes.toml"
-
-
-PIPES_CONFIG_PATH = Path(os.getenv("PIPES_CONFIG_PATH", DEFAULT_PIPES_CONFIG_PATH))
-
-PIPES_CONFIG = from_toml(PipesConfig, PIPES_CONFIG_PATH.read_text())
-
-
-@pytest.fixture(scope="session")
-def pipes_config() -> PipesConfig:
-    return PIPES_CONFIG
-
-
 @pytest.fixture(scope="module")
-def aws_endpoint_url(pipes_config: PipesConfig) -> Iterator[str]:
-    if not pipes_config.s3:
-        pytest.skip("S3 tests are not enabled in pipes.toml")
+def aws_endpoint_url() -> Iterator[str]:
+    if not PIPES_CONFIG.message_channel.s3:
+        pytest.skip("message_channel.s3 is not enabled in pipes.toml")
 
     """Fixture to run a mocked AWS server for testing."""
     # Note: pass `port=0` to get a random free port.
@@ -84,7 +70,9 @@ def s3_bucket(s3_client: "S3Client") -> str:
 
 
 @pytest_cases.fixture
-@pytest_cases.parametrize_with_cases("params", cases=context_injector_cases)
+@pytest_cases.parametrize_with_cases(
+    "params", cases=dagster_pipes_tests.cases.context_injector
+)
 def context_injector(params) -> PipesContextInjector:
     if params["type"] == "env":
         return PipesEnvContextInjector()
@@ -97,7 +85,9 @@ def context_injector(params) -> PipesContextInjector:
 
 
 @pytest_cases.fixture
-@pytest_cases.parametrize_with_cases("params", cases=message_reader_cases)
+@pytest_cases.parametrize_with_cases(
+    "params", cases=dagster_pipes_tests.cases.message_reader
+)
 def message_reader(params) -> Optional[PipesMessageReader]:
     if params["type"] == "default":
         return None
@@ -108,7 +98,7 @@ def message_reader(params) -> Optional[PipesMessageReader]:
 
 
 __all__ = [
-    "pipes_config",
+    "PIPES_CONFIG",
     "aws_endpoint_url",
     "s3_client",
     "s3_bucket",

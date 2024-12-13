@@ -106,7 +106,7 @@ public class PipesTests {
     }
 
     private void fullTest(PipesContext context) throws DagsterPipesException {
-        context.reportCustomMessage("Hello from Java!");
+        context.reportCustomMessage("Hello from external process!");
 
         if (this.payload != null) {
             context.reportCustomMessage(this.payload);
@@ -130,7 +130,7 @@ public class PipesTests {
     @Test
     void testRunPipesSessionWithException() throws DagsterPipesException {
         getTestSession().runDagsterPipes((context) -> {
-            throw new DagsterPipesException("Very bad Java exception happened!");
+            throw new DagsterPipesException("Very bad error has happened!");
         });
     }
 

@@ -1,2 +1,6 @@
+[general]
+error_reporting = true
+
+[message_channel]
 s3 = true
 databricks = false
