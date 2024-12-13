@@ -1,4 +1,5 @@
 import datetime
+import logging
 import time
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any, Dict, List, Optional, cast
@@ -6,7 +7,7 @@ from urllib.parse import urljoin
 
 import requests
 import dagster as dg
-from pydantic import Field, PrivateAttr
+from pydantic import Field
 
 from dagster._annotations import deprecated
 
@@ -16,7 +17,6 @@ from dagster_hex.types import (
     RunResponse,
     StatusResponse,
 )
-from logging import Logger
 
 from dagster_hex.consts import (
     COMPLETE,
@@ -48,8 +48,10 @@ class HexResource(dg.ConfigurableResource):
         default=0.25,
         description="Time (in seconds) to wait between each request retry.",
     )
-
-    _log: Logger = PrivateAttr(dg.get_dagster_logger())
+    log: dg.ResourceDependency[logging.Logger] = Field(
+        default_factory=dg.get_dagster_logger,
+        description="Optional logger to be used from within the HexResource (default: `get_dagster_logger()`",
+    )
 
     def make_request(
         self, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None
@@ -114,14 +116,14 @@ class HexResource(dg.ConfigurableResource):
                     try:
                         response_json = response.json()
                     except requests.exceptions.JSONDecodeError:
-                        self._log.error("Failed to decode response from API.")
-                        self._log.error("API returned: %s", response.text)
+                        self.log.error("Failed to decode response from API.")
+                        self.log.error("API returned: %s", response.text)
                         raise dg.Failure(
                             "Unexpected response from Hex API.Failed to decode to JSON."
                         )
                     return response_json
             except requests.RequestException as e:
-                self._log.error("Request to Hex API failed: %s", e)
+                self.log.error("Request to Hex API failed: %s", e)
                 if num_retries == self.request_max_retries:
                     break
                 num_retries += 1
@@ -250,8 +252,8 @@ class HexResource(dg.ConfigurableResource):
             run_status = self.run_status(project_id, run_id)
             project_status = run_status["status"]
 
-            self._log.debug(run_status)
-            self._log.info(
+            self.log.debug(run_status)
+            self.log.info(
                 f"Polling Hex Project {project_id}. Current status: {project_status}."
             )
 
