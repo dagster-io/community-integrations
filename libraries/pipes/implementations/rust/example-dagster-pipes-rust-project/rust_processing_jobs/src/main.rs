@@ -14,10 +14,7 @@ fn main() -> Result<(), DagsterPipesError> {
 
     let check_metadata = HashMap::from([(
         "quality".to_string(),
-        PipesMetadataValue {
-            raw_value: Some(RawValue::Integer(100)),
-            pipes_metadata_value_type: Some(Type::Int),
-        },
+        PipesMetadataValue::new(RawValue::Integer(100), Type::Int),
     )]);
     context.report_asset_check(
         "example_rust_subprocess_check",
