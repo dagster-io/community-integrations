@@ -2,7 +2,10 @@ package types;
 
 import com.fasterxml.jackson.annotation.*;
 
-public class PipesLog {
+/**
+ * exception that being handled when this exception was raised
+ */
+public class ContextClass {
     private PipesException cause;
     private ContextClass context;
     private String message;

@@ -2,8 +2,8 @@ package types;
 
 import com.fasterxml.jackson.annotation.*;
 
-public class PipesLog {
-    private PipesException cause;
+public class PipesExceptionClass {
+    private PipesExceptionClass cause;
     private ContextClass context;
     private String message;
     private String name;
@@ -13,9 +13,9 @@ public class PipesLog {
      * exception that explicitly led to this exception
      */
     @JsonProperty("cause")
-    public PipesException getCause() { return cause; }
+    public PipesExceptionClass getCause() { return cause; }
     @JsonProperty("cause")
-    public void setCause(PipesException value) { this.cause = value; }
+    public void setCause(PipesExceptionClass value) { this.cause = value; }
 
     /**
      * exception that being handled when this exception was raised

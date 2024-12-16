@@ -11,7 +11,7 @@
 //     let model: PipesContextData = serde_json::from_str(&json).unwrap();
 // }
 
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
 /// The serializable data passed from the orchestration process to the external process. This

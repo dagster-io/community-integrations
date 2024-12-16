@@ -10,12 +10,12 @@ import java.util.Map;
 @JsonDeserialize(using = RawValue.Deserializer.class)
 @JsonSerialize(using = RawValue.Serializer.class)
 public class RawValue {
-    public Long integerValue;
     public Double doubleValue;
-    public Map<String, Object> anythingMapValue;
-    public Object[] anythingArrayValue;
+    public Long integerValue;
     public Boolean boolValue;
     public String stringValue;
+    public Object[] anythingArrayValue;
+    public Map<String, Object> anythingMapValue;
 
     static class Deserializer extends JsonDeserializer<RawValue> {
         @Override
@@ -53,20 +53,12 @@ public class RawValue {
     static class Serializer extends JsonSerializer<RawValue> {
         @Override
         public void serialize(RawValue obj, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
-            if (obj.integerValue != null) {
-                jsonGenerator.writeObject(obj.integerValue);
-                return;
-            }
             if (obj.doubleValue != null) {
                 jsonGenerator.writeObject(obj.doubleValue);
                 return;
             }
-            if (obj.anythingMapValue != null) {
-                jsonGenerator.writeObject(obj.anythingMapValue);
-                return;
-            }
-            if (obj.anythingArrayValue != null) {
-                jsonGenerator.writeObject(obj.anythingArrayValue);
+            if (obj.integerValue != null) {
+                jsonGenerator.writeObject(obj.integerValue);
                 return;
             }
             if (obj.boolValue != null) {
@@ -75,6 +67,14 @@ public class RawValue {
             }
             if (obj.stringValue != null) {
                 jsonGenerator.writeObject(obj.stringValue);
+                return;
+            }
+            if (obj.anythingArrayValue != null) {
+                jsonGenerator.writeObject(obj.anythingArrayValue);
+                return;
+            }
+            if (obj.anythingMapValue != null) {
+                jsonGenerator.writeObject(obj.anythingMapValue);
                 return;
             }
             jsonGenerator.writeNull();
