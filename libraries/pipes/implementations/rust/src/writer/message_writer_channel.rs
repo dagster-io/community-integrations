@@ -1,5 +1,7 @@
 use std::{ffi::OsString, fs::OpenOptions, io::Write};
 
+use thiserror::Error;
+
 use crate::types::PipesMessage;
 
 use super::StdStream;
@@ -8,7 +10,21 @@ use super::StdStream;
 /// To be used in conjunction with [`MessageWriter`](crate::MessageWriter).
 pub trait MessageWriterChannel {
     /// Write a message to the orchestration process
-    fn write_message(&mut self, message: PipesMessage);
+    fn write_message(&mut self, message: PipesMessage) -> Result<(), MessageWriteError>;
+}
+
+#[derive(Debug, Error)]
+#[non_exhaustive]
+pub enum MessageWriteError {
+    #[error("io error at destination {}: {}", .dst, .source)]
+    #[non_exhaustive]
+    IO {
+        dst: String, // Write destination
+        source: std::io::Error,
+    },
+
+    #[error(transparent)]
+    Invalid(#[from] serde_json::Error),
 }
 
 #[derive(Debug, PartialEq)]
@@ -23,10 +39,20 @@ impl FileChannel {
 }
 
 impl MessageWriterChannel for FileChannel {
-    fn write_message(&mut self, message: PipesMessage) {
-        let mut file = OpenOptions::new().append(true).open(&self.path).unwrap();
-        let json = serde_json::to_string(&message).unwrap();
-        writeln!(file, "{json}").unwrap();
+    fn write_message(&mut self, message: PipesMessage) -> Result<(), MessageWriteError> {
+        let mut file = OpenOptions::new()
+            .append(true)
+            .open(&self.path)
+            .map_err(|source| MessageWriteError::IO {
+                dst: self.path.to_string_lossy().into_owned(),
+                source,
+            })?;
+        let json = serde_json::to_string(&message)?;
+        writeln!(file, "{json}").map_err(|source| MessageWriteError::IO {
+            dst: self.path.to_string_lossy().into_owned(),
+            source,
+        })?;
+        Ok(())
     }
 }
 
@@ -40,20 +66,27 @@ impl StreamChannel {
         Self { stream }
     }
 
-    fn _format_message(message: &PipesMessage) -> Vec<u8> {
-        format!("{}\n", serde_json::to_string(message).unwrap()).into_bytes()
+    fn _format_message(message: &PipesMessage) -> Result<Vec<u8>, serde_json::Error> {
+        let msg = format!("{}\n", serde_json::to_string(message)?).into_bytes();
+        Ok(msg)
     }
 }
 
 impl MessageWriterChannel for StreamChannel {
-    fn write_message(&mut self, message: PipesMessage) {
+    fn write_message(&mut self, message: PipesMessage) -> Result<(), MessageWriteError> {
         match self.stream {
             StdStream::Out => std::io::stdout()
-                .write_all(&Self::_format_message(&message))
-                .unwrap(),
+                .write_all(&Self::_format_message(&message)?)
+                .map_err(|source| MessageWriteError::IO {
+                    dst: "stdout".to_string(),
+                    source,
+                }),
             StdStream::Err => std::io::stderr()
-                .write_all(&Self::_format_message(&message))
-                .unwrap(),
+                .write_all(&Self::_format_message(&message)?)
+                .map_err(|source| MessageWriteError::IO {
+                    dst: "stderr".to_string(),
+                    source,
+                }),
         }
     }
 }
@@ -74,24 +107,32 @@ impl BufferedStreamChannel {
 
     /// Flush messages in the buffer to the stream
     /// <div class="warning">This class will called once on `Drop`</div>
-    fn flush(&mut self) {
+    fn flush(&mut self) -> Result<(), MessageWriteError> {
         let _: Vec<_> = self
             .buffer
             .iter()
             .map(|msg| match self.stream {
                 StdStream::Out => std::io::stdout()
-                    .write(&Self::_format_message(msg))
-                    .unwrap(),
+                    .write(&Self::_format_message(msg)?)
+                    .map_err(|source| MessageWriteError::IO {
+                        dst: "stdout".to_string(),
+                        source,
+                    }),
                 StdStream::Err => std::io::stderr()
-                    .write(&Self::_format_message(msg))
-                    .unwrap(),
+                    .write(&Self::_format_message(msg)?)
+                    .map_err(|source| MessageWriteError::IO {
+                        dst: "stderr".to_string(),
+                        source,
+                    }),
             })
             .collect();
         self.buffer.clear();
+        Ok(())
     }
 
-    fn _format_message(message: &PipesMessage) -> Vec<u8> {
-        format!("{}\n", serde_json::to_string(message).unwrap()).into_bytes()
+    fn _format_message(message: &PipesMessage) -> Result<Vec<u8>, serde_json::Error> {
+        let msg = format!("{}\n", serde_json::to_string(message)?).into_bytes();
+        Ok(msg)
     }
 }
 
@@ -99,13 +140,16 @@ impl Drop for BufferedStreamChannel {
     /// Flush the data when out of scope or panicked.
     /// <div class="warning">Panic aborting will prevent `Drop` and this function from running</div>
     fn drop(&mut self) {
-        self.flush();
+        if let Err(e) = self.flush() {
+            eprintln!("Failed to flush buffer: {e}")
+        }
     }
 }
 
 impl MessageWriterChannel for BufferedStreamChannel {
-    fn write_message(&mut self, message: PipesMessage) {
+    fn write_message(&mut self, message: PipesMessage) -> Result<(), MessageWriteError> {
         self.buffer.push(message);
+        Ok(())
     }
 }
 
@@ -118,7 +162,7 @@ pub enum DefaultChannel {
 }
 
 impl MessageWriterChannel for DefaultChannel {
-    fn write_message(&mut self, message: PipesMessage) {
+    fn write_message(&mut self, message: PipesMessage) -> Result<(), MessageWriteError> {
         match self {
             Self::File(channel) => channel.write_message(message),
             Self::Stream(channel) => channel.write_message(message),
@@ -140,7 +184,9 @@ mod tests_file_channel {
         let file = NamedTempFile::new().expect("Failed to create tempfile for testing");
         let mut channel = FileChannel::new(file.path().into());
         let message = PipesMessage::new(Method::Opened, None);
-        channel.write_message(message.clone());
+        channel
+            .write_message(message.clone())
+            .expect("Failed to write message");
 
         let file_content =
             std::fs::read_to_string(file.path()).expect("Failed to read from tempfile");
