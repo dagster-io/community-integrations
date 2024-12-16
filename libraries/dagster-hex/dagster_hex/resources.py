@@ -10,6 +10,8 @@ import dagster as dg
 from pydantic import Field
 
 from dagster._annotations import deprecated
+from dagster._utils.cached_method import cached_method
+
 
 from dagster_hex.types import (
     HexOutput,
@@ -48,10 +50,15 @@ class HexResource(dg.ConfigurableResource):
         default=0.25,
         description="Time (in seconds) to wait between each request retry.",
     )
-    log: dg.ResourceDependency[logging.Logger] = Field(
-        default_factory=dg.get_dagster_logger,
+    log: dg.ResourceDependency[Optional[logging.Logger]] = Field(
+        default=None,
         description="Optional logger to be used from within the HexResource (default: `get_dagster_logger()`",
     )
+
+    @property
+    @cached_method
+    def _log(self) -> logging.Logger:
+        return self.log if self.log else dg.get_dagster_logger()
 
     def make_request(
         self, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None
@@ -116,14 +123,14 @@ class HexResource(dg.ConfigurableResource):
                     try:
                         response_json = response.json()
                     except requests.exceptions.JSONDecodeError:
-                        self.log.error("Failed to decode response from API.")
-                        self.log.error("API returned: %s", response.text)
+                        self._log.error("Failed to decode response from API.")
+                        self._log.error("API returned: %s", response.text)
                         raise dg.Failure(
                             "Unexpected response from Hex API.Failed to decode to JSON."
                         )
                     return response_json
             except requests.RequestException as e:
-                self.log.error("Request to Hex API failed: %s", e)
+                self._log.error("Request to Hex API failed: %s", e)
                 if num_retries == self.request_max_retries:
                     break
                 num_retries += 1
@@ -252,8 +259,8 @@ class HexResource(dg.ConfigurableResource):
             run_status = self.run_status(project_id, run_id)
             project_status = run_status["status"]
 
-            self.log.debug(run_status)
-            self.log.info(
+            self._log.debug(run_status)
+            self._log.info(
                 f"Polling Hex Project {project_id}. Current status: {project_status}."
             )
 
