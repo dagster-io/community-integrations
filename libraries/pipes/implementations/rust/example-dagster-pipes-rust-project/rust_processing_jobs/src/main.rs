@@ -10,7 +10,7 @@ fn main() -> Result<(), DagsterPipesError> {
         "row_count".to_string(),
         PipesMetadataValue::new(RawValue::Integer(100), Type::Int),
     )]);
-    context.report_asset_materialization("example_rust_subprocess_asset", asset_metadata);
+    context.report_asset_materialization("example_rust_subprocess_asset", asset_metadata)?;
 
     let check_metadata = HashMap::from([(
         "quality".to_string(),
@@ -22,6 +22,6 @@ fn main() -> Result<(), DagsterPipesError> {
         "example_rust_subprocess_asset",
         &AssetCheckSeverity::Warn,
         check_metadata,
-    );
+    )?;
     Ok(())
 }
