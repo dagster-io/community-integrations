@@ -12,7 +12,7 @@
       }
     },
     "name": {
-      "type": ["null", "string"],
+      "type": "string",
       "description": "class name of Exception object"
     },
     "cause": {

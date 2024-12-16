@@ -4,13 +4,13 @@
   "description": "The serializable data passed from the orchestration process to the external process. This gets wrapped in a PipesContext.",
   "properties": {
     "asset_keys": {
-      "type": ["null", "array"],
+      "type": "array",
       "items": {
         "type": "string"
       }
     },
     "code_version_by_asset_key": {
-      "type": ["null", "object"],
+      "type": "object",
       "additionalProperties": {
         "type": ["null", "string"]
       }
@@ -36,10 +36,10 @@
       }
     },
     "partition_key": {
-      "type": ["null", "string"]
+      "type": "string"
     },
     "partition_key_range": {
-      "type": ["null", "object"],
+      "type": "object",
       "properties": {
         "start": {
           "type": "string"
@@ -50,7 +50,7 @@
       }
     },
     "partition_time_window": {
-      "type": ["null", "object"],
+      "type": "object",
       "properties": {
         "start": {
           "type": "string"
@@ -64,7 +64,7 @@
       "type": "string"
     },
     "job_name": {
-      "type": ["null", "string"]
+      "type": "string"
     },
     "retry_number": {
       "type": "integer"
