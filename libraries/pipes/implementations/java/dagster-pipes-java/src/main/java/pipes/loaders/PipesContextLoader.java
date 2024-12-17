@@ -1,7 +1,7 @@
 package pipes.loaders;
 
 import pipes.DagsterPipesException;
-import types.PipesContextData;
+import pipes.data.PipesContextData;
 
 import java.util.Map;
 

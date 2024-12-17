@@ -1,14 +1,13 @@
 package types;
 
 import com.fasterxml.jackson.annotation.*;
-import java.util.List;
 
 public class PipesException {
     private PipesExceptionClass cause;
     private ContextClass context;
     private String message;
     private String name;
-    private List<String> stack;
+    private String[] stack;
 
     /**
      * exception that explicitly led to this exception
@@ -40,7 +39,7 @@ public class PipesException {
     public void setName(String value) { this.name = value; }
 
     @JsonProperty("stack")
-    public List<String> getStack() { return stack; }
+    public String[] getStack() { return stack; }
     @JsonProperty("stack")
-    public void setStack(List<String> value) { this.stack = value; }
+    public void setStack(String[] value) { this.stack = value; }
 }

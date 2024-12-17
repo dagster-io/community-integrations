@@ -2,7 +2,7 @@ package pipes.loaders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import pipes.DagsterPipesException;
-import types.PipesContextData;
+import pipes.data.PipesContextData;
 import pipes.utils.PipesUtils;
 
 import java.io.File;

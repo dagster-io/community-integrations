@@ -3,7 +3,6 @@ package pipes;
 import pipes.logger.PipesLogger;
 import types.*;
 import pipes.data.*;
-import pipes.data.PipesException;
 import pipes.loaders.PipesContextLoader;
 import pipes.loaders.PipesParamsLoader;
 import pipes.utils.PipesUtils;
@@ -164,14 +163,14 @@ public class PipesContext {
     }
 
     public String getRunId() {
-        return this.data.getRunID();
+        return this.data.getRunId();
     }
 
     public String getJobName() {
         return this.data.getJobName();
     }
 
-    public long getRetryNumber() {
+    public int getRetryNumber() {
         return this.data.getRetryNumber();
     }
 

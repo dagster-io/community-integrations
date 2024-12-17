@@ -1,6 +1,6 @@
 package pipes;
 
-import types.PipesContextData;
+import pipes.data.PipesContextData;
 import pipes.loaders.PipesDefaultContextLoader;
 import pipes.loaders.PipesEnvVarParamsLoader;
 import pipes.loaders.PipesMappingParamsLoader;

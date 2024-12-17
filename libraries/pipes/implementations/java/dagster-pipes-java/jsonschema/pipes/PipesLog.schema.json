@@ -1,0 +1,7 @@
+{
+    "title": "PipesLogLevel",
+    "type": "string",
+    "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+    "additionalProperties": false
+  }
+  

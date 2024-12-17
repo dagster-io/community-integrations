@@ -2,7 +2,7 @@ package pipes.loaders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import pipes.DagsterPipesException;
-import types.PipesContextData;
+import pipes.data.PipesContextData;
 import pipes.utils.PipesUtils;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.S3Client;

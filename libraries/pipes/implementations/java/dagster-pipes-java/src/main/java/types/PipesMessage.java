@@ -6,7 +6,7 @@ import java.util.Map;
 public class PipesMessage {
     private String dagsterPipesVersion;
     private Method method;
-    private Map<String, Object> params;
+    private Map<String, Map<String, Object>> params;
 
     /**
      * The version of the Dagster Pipes protocol
@@ -28,7 +28,7 @@ public class PipesMessage {
      * Event parameters
      */
     @JsonProperty("params")
-    public Map<String, Object> getParams() { return params; }
+    public Map<String, Map<String, Object>> getParams() { return params; }
     @JsonProperty("params")
-    public void setParams(Map<String, Object> value) { this.params = value; }
+    public void setParams(Map<String, Map<String, Object>> value) { this.params = value; }
 }

@@ -1,7 +1,6 @@
 package types;
 
 import com.fasterxml.jackson.annotation.*;
-import java.util.List;
 import java.util.Map;
 
 public class PipesMetadataValue {
