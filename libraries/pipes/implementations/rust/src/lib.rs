@@ -147,6 +147,11 @@ mod tests {
     #[test]
     fn test_write_pipes_metadata() {
         let asset_metadata = HashMap::from([
+            ("int", PipesMetadataValue::from(100)),
+            ("float", PipesMetadataValue::from(100.0)),
+            ("bool", PipesMetadataValue::from(true)),
+            ("none", PipesMetadataValue::none()),
+            ("timestamp", PipesMetadataValue::from_timestamp(1000.0)),
             ("text", PipesMetadataValue::from("hello".to_string())),
             (
                 "url",
@@ -181,11 +186,6 @@ mod tests {
                 PipesMetadataValue::from_asset("some_asset".to_string()),
             ),
             ("job", PipesMetadataValue::from_job("some_job".to_string())),
-            ("timestamp", PipesMetadataValue::from_timestamp(1000.0)),
-            ("int", PipesMetadataValue::from(100)),
-            ("float", PipesMetadataValue::from(100.0)),
-            ("bool", PipesMetadataValue::from(true)),
-            ("none", PipesMetadataValue::none()),
         ]);
 
         let file = NamedTempFile::new().unwrap();
@@ -212,6 +212,26 @@ mod tests {
                     (
                         "metadata".to_string(),
                         Some(json!({
+                            "int": {
+                                "raw_value": 100,
+                                "type": "int"
+                            },
+                            "float": {
+                                "raw_value": 100.0,
+                                "type": "float"
+                            },
+                            "bool": {
+                                "raw_value": true,
+                                "type": "bool"
+                            },
+                            "none": {
+                                "raw_value": null,
+                                "type": null
+                            },
+                            "timestamp": {
+                                "raw_value": 1000.0,
+                                "type": "timestamp"
+                            },
                             "text": {
                                 "raw_value": "hello",
                                 "type": "text"
@@ -251,26 +271,6 @@ mod tests {
                             "job": {
                                 "raw_value": "some_job",
                                 "type": "job"
-                            },
-                            "timestamp": {
-                                "raw_value": 1000.0,
-                                "type": "timestamp"
-                            },
-                            "int": {
-                                "raw_value": 100,
-                                "type": "int"
-                            },
-                            "float": {
-                                "raw_value": 100.0,
-                                "type": "float"
-                            },
-                            "bool": {
-                                "raw_value": true,
-                                "type": "bool"
-                            },
-                            "none": {
-                                "raw_value": null,
-                                "type": null
                             }
                         }))
                     ),
