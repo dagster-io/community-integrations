@@ -41,3 +41,133 @@ impl PipesMessage {
         }
     }
 }
+
+/////////////////////////////////////////////////
+///// From<T> traits for PipesMetadataValue /////
+/////////////////////////////////////////////////
+
+impl From<i64> for PipesMetadataValue {
+    fn from(value: i64) -> Self {
+        PipesMetadataValue {
+            raw_value: Some(RawValue::Integer(value)),
+            pipes_metadata_value_type: Some(Type::Int),
+        }
+    }
+}
+
+impl From<f64> for PipesMetadataValue {
+    fn from(value: f64) -> Self {
+        PipesMetadataValue {
+            raw_value: Some(RawValue::Double(value)),
+            pipes_metadata_value_type: Some(Type::Float),
+        }
+    }
+}
+
+impl From<bool> for PipesMetadataValue {
+    fn from(value: bool) -> Self {
+        PipesMetadataValue {
+            raw_value: Some(RawValue::Bool(value)),
+            pipes_metadata_value_type: Some(Type::Bool),
+        }
+    }
+}
+
+impl From<String> for PipesMetadataValue {
+    fn from(value: String) -> Self {
+        PipesMetadataValue {
+            raw_value: Some(RawValue::String(value)),
+            pipes_metadata_value_type: Some(Type::Text),
+        }
+    }
+}
+
+impl From<HashMap<String, Option<serde_json::Value>>> for PipesMetadataValue {
+    fn from(value: HashMap<String, Option<serde_json::Value>>) -> Self {
+        PipesMetadataValue {
+            raw_value: Some(RawValue::AnythingMap(value)),
+            pipes_metadata_value_type: Some(Type::Json),
+        }
+    }
+}
+
+impl From<Vec<Option<serde_json::Value>>> for PipesMetadataValue {
+    fn from(value: Vec<Option<serde_json::Value>>) -> Self {
+        PipesMetadataValue {
+            raw_value: Some(RawValue::AnythingArray(value)),
+            pipes_metadata_value_type: Some(Type::Json),
+        }
+    }
+}
+
+impl PipesMetadataValue {
+    pub fn new(raw_value: RawValue, pipes_metadata_value_type: Type) -> Self {
+        Self {
+            raw_value: Some(raw_value),
+            pipes_metadata_value_type: Some(pipes_metadata_value_type),
+        }
+    }
+
+    pub fn from_url(url: String) -> Self {
+        PipesMetadataValue {
+            raw_value: Some(RawValue::String(url)),
+            pipes_metadata_value_type: Some(Type::Url),
+        }
+    }
+
+    pub fn from_path(path: String) -> Self {
+        PipesMetadataValue {
+            raw_value: Some(RawValue::String(path)),
+            pipes_metadata_value_type: Some(Type::Path),
+        }
+    }
+
+    pub fn from_notebook(notebook: String) -> Self {
+        PipesMetadataValue {
+            raw_value: Some(RawValue::String(notebook)),
+            pipes_metadata_value_type: Some(Type::Notebook),
+        }
+    }
+
+    pub fn from_md(md: String) -> Self {
+        PipesMetadataValue {
+            raw_value: Some(RawValue::String(md)),
+            pipes_metadata_value_type: Some(Type::Md),
+        }
+    }
+
+    pub fn from_timestamp(timestamp: f64) -> Self {
+        PipesMetadataValue {
+            raw_value: Some(RawValue::Double(timestamp)),
+            pipes_metadata_value_type: Some(Type::Timestamp),
+        }
+    }
+
+    pub fn from_asset(asset: String) -> Self {
+        PipesMetadataValue {
+            raw_value: Some(RawValue::String(asset)),
+            pipes_metadata_value_type: Some(Type::Asset),
+        }
+    }
+
+    pub fn from_job(job: String) -> Self {
+        PipesMetadataValue {
+            raw_value: Some(RawValue::String(job)),
+            pipes_metadata_value_type: Some(Type::Job),
+        }
+    }
+
+    pub fn from_dagster_run(dagster_run: String) -> Self {
+        PipesMetadataValue {
+            raw_value: Some(RawValue::String(dagster_run)),
+            pipes_metadata_value_type: Some(Type::DagsterRun),
+        }
+    }
+
+    pub fn none() -> Self {
+        PipesMetadataValue {
+            raw_value: None,
+            pipes_metadata_value_type: None, // TODO: Should this be `Some(Type::Null)`?
+        }
+    }
+}
