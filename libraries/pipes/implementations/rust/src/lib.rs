@@ -1,6 +1,6 @@
 mod context_loader;
 mod params_loader;
-pub mod types;
+mod types;
 mod types_ext;
 mod writer;
 
@@ -30,15 +30,6 @@ use crate::writer::message_writer_channel::{MessageWriteError, MessageWriterChan
 pub enum AssetCheckSeverity {
     Warn,
     Error,
-}
-
-impl PipesMetadataValue {
-    pub fn new(raw_value: types::RawValue, pipes_metadata_value_type: types::Type) -> Self {
-        Self {
-            raw_value: Some(raw_value),
-            pipes_metadata_value_type: Some(pipes_metadata_value_type),
-        }
-    }
 }
 
 // partial translation of
@@ -156,105 +147,45 @@ mod tests {
     #[test]
     fn test_write_pipes_metadata() {
         let asset_metadata = HashMap::from([
-            (
-                "text",
-                PipesMetadataValue::new(
-                    types::RawValue::String("hello".to_string()),
-                    types::Type::Text,
-                ),
-            ),
+            ("text", PipesMetadataValue::from("hello".to_string())),
             (
                 "url",
-                PipesMetadataValue::new(
-                    types::RawValue::String("http://someurl.com".to_string()),
-                    types::Type::Url,
-                ),
+                PipesMetadataValue::from_url("http://someurl.com".to_string()),
             ),
             (
                 "path",
-                PipesMetadataValue::new(
-                    types::RawValue::String("file://some/path".to_string()),
-                    types::Type::Path,
-                ),
+                PipesMetadataValue::from_path("file://some/path".to_string()),
             ),
             (
                 "notebook",
-                PipesMetadataValue::new(
-                    types::RawValue::String("notebook".to_string()),
-                    types::Type::Notebook,
-                ),
+                PipesMetadataValue::from_notebook("notebook".to_string()),
             ),
             (
                 "json_object",
-                PipesMetadataValue::new(
-                    types::RawValue::AnythingMap(HashMap::from([(
-                        "key".to_string(),
-                        Some(json!("value")),
-                    )])),
-                    types::Type::Json,
-                ),
+                PipesMetadataValue::from(HashMap::from([(
+                    "key".to_string(),
+                    Some(json!("value")),
+                )])),
             ),
             (
                 "json_array",
-                PipesMetadataValue::new(
-                    types::RawValue::AnythingArray(vec![Some(json!({"key": "value"}))]),
-                    types::Type::Json,
-                ),
+                PipesMetadataValue::from(vec![Some(json!({"key": "value"}))]),
             ),
-            (
-                "md",
-                PipesMetadataValue::new(
-                    types::RawValue::String("## markdown".to_string()),
-                    types::Type::Md,
-                ),
-            ),
+            ("md", PipesMetadataValue::from_md("## markdown".to_string())),
             (
                 "dagster_run",
-                PipesMetadataValue::new(
-                    types::RawValue::String("1234".to_string()),
-                    types::Type::DagsterRun,
-                ),
+                PipesMetadataValue::from_dagster_run("1234".to_string()),
             ),
             (
                 "asset",
-                PipesMetadataValue::new(
-                    types::RawValue::String("some_asset".to_string()),
-                    types::Type::Asset,
-                ),
+                PipesMetadataValue::from_asset("some_asset".to_string()),
             ),
-            (
-                "job",
-                PipesMetadataValue::new(
-                    types::RawValue::String("some_job".to_string()),
-                    types::Type::Job,
-                ),
-            ),
-            (
-                "timestamp",
-                PipesMetadataValue::new(
-                    types::RawValue::String("2012-04-23T18:25:43.511Z".to_string()),
-                    types::Type::Timestamp,
-                ),
-            ),
-            (
-                "int",
-                PipesMetadataValue::new(types::RawValue::Integer(100), types::Type::Int),
-            ),
-            (
-                "float",
-                PipesMetadataValue::new(types::RawValue::Double(100.0), types::Type::Float),
-            ),
-            (
-                "bool",
-                PipesMetadataValue::new(types::RawValue::Bool(true), types::Type::Bool),
-            ),
-            (
-                "none",
-                PipesMetadataValue {
-                    raw_value: None,
-                    pipes_metadata_value_type: None,
-                },
-            ),
+            ("job", PipesMetadataValue::from_job("some_job".to_string())),
+            ("timestamp", PipesMetadataValue::from_timestamp(1000.0)),
+            ("int", PipesMetadataValue::from(100)),
+            ("float", PipesMetadataValue::from(100.0)),
+            ("bool", PipesMetadataValue::from(true)),
+            ("none", PipesMetadataValue::none()),
         ]);
 
         let file = NamedTempFile::new().unwrap();
@@ -322,7 +253,7 @@ mod tests {
                                 "type": "job"
                             },
                             "timestamp": {
-                                "raw_value": "2012-04-23T18:25:43.511Z",
+                                "raw_value": 1000.0,
                                 "type": "timestamp"
                             },
                             "int": {
