@@ -112,6 +112,24 @@ pub struct PipesExceptionClass {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum PipesLogLevel {
+    #[serde(rename = "CRITICAL")]
+    Critical,
+
+    #[serde(rename = "DEBUG")]
+    Debug,
+
+    #[serde(rename = "ERROR")]
+    Error,
+
+    #[serde(rename = "INFO")]
+    Info,
+
+    #[serde(rename = "WARNING")]
+    Warning,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PipesMessage {
     /// The version of the Dagster Pipes protocol
     #[serde(rename = "__dagster_pipes_version")]

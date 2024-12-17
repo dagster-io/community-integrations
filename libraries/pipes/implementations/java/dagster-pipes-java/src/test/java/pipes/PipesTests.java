@@ -3,7 +3,7 @@ package pipes;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import pipes.data.PipesContextData;
+import types.PipesContextData;
 import pipes.data.PipesMetadata;
 import pipes.loaders.*;
 import pipes.writers.*;

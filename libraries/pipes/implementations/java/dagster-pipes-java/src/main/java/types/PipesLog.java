@@ -1,45 +1,30 @@
 package types;
 
+import java.io.IOException;
 import com.fasterxml.jackson.annotation.*;
 
-public class PipesLog {
-    private PipesException cause;
-    private ContextClass context;
-    private String message;
-    private String name;
-    private String[] stack;
+public enum PipesLog {
+    CRITICAL, DEBUG, ERROR, INFO, WARNING;
 
-    /**
-     * exception that explicitly led to this exception
-     */
-    @JsonProperty("cause")
-    public PipesException getCause() { return cause; }
-    @JsonProperty("cause")
-    public void setCause(PipesException value) { this.cause = value; }
+    @JsonValue
+    public String toValue() {
+        switch (this) {
+            case CRITICAL: return "CRITICAL";
+            case DEBUG: return "DEBUG";
+            case ERROR: return "ERROR";
+            case INFO: return "INFO";
+            case WARNING: return "WARNING";
+        }
+        return null;
+    }
 
-    /**
-     * exception that being handled when this exception was raised
-     */
-    @JsonProperty("context")
-    public ContextClass getContext() { return context; }
-    @JsonProperty("context")
-    public void setContext(ContextClass value) { this.context = value; }
-
-    @JsonProperty("message")
-    public String getMessage() { return message; }
-    @JsonProperty("message")
-    public void setMessage(String value) { this.message = value; }
-
-    /**
-     * class name of Exception object
-     */
-    @JsonProperty("name")
-    public String getName() { return name; }
-    @JsonProperty("name")
-    public void setName(String value) { this.name = value; }
-
-    @JsonProperty("stack")
-    public String[] getStack() { return stack; }
-    @JsonProperty("stack")
-    public void setStack(String[] value) { this.stack = value; }
+    @JsonCreator
+    public static PipesLog forValue(String value) throws IOException {
+        if (value.equals("CRITICAL")) return CRITICAL;
+        if (value.equals("DEBUG")) return DEBUG;
+        if (value.equals("ERROR")) return ERROR;
+        if (value.equals("INFO")) return INFO;
+        if (value.equals("WARNING")) return WARNING;
+        throw new IOException("Cannot deserialize PipesLog");
+    }
 }

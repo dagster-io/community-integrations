@@ -1,6 +1,7 @@
 package types;
 
 import com.fasterxml.jackson.annotation.*;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -8,7 +9,7 @@ import java.util.Map;
  * gets wrapped in a PipesContext.
  */
 public class PipesContextData {
-    private String[] assetKeys;
+    private List<String> assetKeys;
     private Map<String, String> codeVersionByAssetKey;
     private Map<String, Object> extras;
     private String jobName;
@@ -20,9 +21,9 @@ public class PipesContextData {
     private String runID;
 
     @JsonProperty("asset_keys")
-    public String[] getAssetKeys() { return assetKeys; }
+    public List<String> getAssetKeys() { return assetKeys; }
     @JsonProperty("asset_keys")
-    public void setAssetKeys(String[] value) { this.assetKeys = value; }
+    public void setAssetKeys(List<String> value) { this.assetKeys = value; }
 
     @JsonProperty("code_version_by_asset_key")
     public Map<String, String> getCodeVersionByAssetKey() { return codeVersionByAssetKey; }

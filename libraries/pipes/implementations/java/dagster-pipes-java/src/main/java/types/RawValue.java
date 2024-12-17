@@ -5,6 +5,8 @@ import java.io.IOException;
 import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.*;
+import com.fasterxml.jackson.core.type.*;
+import java.util.List;
 import java.util.Map;
 
 @JsonDeserialize(using = RawValue.Deserializer.class)
@@ -14,7 +16,7 @@ public class RawValue {
     public Long integerValue;
     public Boolean boolValue;
     public String stringValue;
-    public Object[] anythingArrayValue;
+    public List<Object> anythingArrayValue;
     public Map<String, Object> anythingMapValue;
 
     static class Deserializer extends JsonDeserializer<RawValue> {
@@ -39,7 +41,7 @@ public class RawValue {
                     value.stringValue = string;
                     break;
                 case START_ARRAY:
-                    value.anythingArrayValue = jsonParser.readValueAs(Object[].class);
+                    value.anythingArrayValue = jsonParser.readValueAs(new TypeReference<List>() {});
                     break;
                 case START_OBJECT:
                     value.anythingMapValue = jsonParser.readValueAs(Map.class);
