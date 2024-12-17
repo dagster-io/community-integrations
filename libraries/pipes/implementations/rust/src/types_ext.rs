@@ -3,10 +3,12 @@
 //! 1. `quicktype` does not support these additional traits
 //! 2. Manual changes made in `types.rs` will be overwritten by future calls to `quicktype.sh`.
 #![allow(clippy::derivable_impls)]
-use crate::PipesContextData;
-
-use crate::{Method, PipesMessage};
 use std::collections::HashMap;
+
+use crate::{
+    types::{RawValue, Type},
+    Method, PipesContextData, PipesMessage, PipesMetadataValue,
+};
 
 impl Default for PipesContextData {
     fn default() -> Self {
@@ -26,11 +28,16 @@ impl Default for PipesContextData {
 }
 
 impl PipesMessage {
-    pub fn new(method: Method, params: Option<HashMap<String, Option<serde_json::Value>>>) -> Self {
+    pub fn new(method: Method, params: Option<HashMap<&str, Option<serde_json::Value>>>) -> Self {
         Self {
             dagster_pipes_version: "0.1".to_string(), // TODO: Make `const`
             method,
-            params,
+            params: params.map(|hashmap| {
+                hashmap
+                    .into_iter()
+                    .map(|(k, v)| (k.to_string(), v))
+                    .collect::<HashMap<String, Option<serde_json::Value>>>()
+            }),
         }
     }
 }

@@ -141,7 +141,7 @@ impl Drop for BufferedStreamChannel {
     /// <div class="warning">Panic aborting will prevent `Drop` and this function from running</div>
     fn drop(&mut self) {
         if let Err(e) = self.flush() {
-            eprintln!("Failed to flush buffer: {e}")
+            eprintln!("Failed to flush buffer: {e}");
         }
     }
 }
