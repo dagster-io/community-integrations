@@ -14,54 +14,53 @@ Make sure you have followed the steps in the [Quickstart docs][quickstart], and 
 
 ## Usage
 
-Define a resource for Not Diamond, then create the asset or ops:
+Define a resource for Not Diamond, then create the asset:
 
 ```python
 from dagster import (
-    AssetExecutionContext,
     Definitions,
     EnvVar,
-    GraphDefinition,
-    OpExecutionContext,
+    ScheduleDefinition,
+    AssetSelection,
+    AssetExecutionContext,
+    MaterializeResult,
     asset,
-    define_asset_job,
-    op,
 )
 from dagster_contrib_notdiamond import NotDiamondResource
 
-@op
-def notdiamond_op(context: OpExecutionContext, notdiamond: NotDiamondResource):
-    with notdiamond.get_client(context) as client:
-        session_id, best_llm = client.model_select(
-            models=["openai/gpt-4o", "openai/gpt-4o-mini"],
-            messages=[{"role": "user", "content": "Say this is a test"}]
-        )
-    return session_id, str(best_llm)
 
-notdiamond_op_job = GraphDefinition(name="notdiamond_op_job", node_defs=[notdiamond_op]).to_job()
-
-# Or if creating an asset:
-@asset(compute_kind="NotDiamond")
-def notdiamond_asset(context: AssetExecutionContext, notdiamond: NotDiamondResource) -> Tuple[str, str]:
+@asset
+def notdiamond_asset(context: AssetExecutionContext, notdiamond: NotDiamondResource) -> MaterializeResult:
     with notdiamond.get_client(context) as client:
         session_id, best_llm = client.model_select(
             model=["openai/gpt-4o", "openai/gpt-4o-mini"],
             messages=[{"role": "user", "content": "Say this is a test"}]
         )
-    return session_id, str(best_llm)
+    return MaterializeResult(metadata={"session_id": session_id, "best_llm": str(best_llm)})
 
-notdiamond_asset_job = define_asset_job(name="notdiamond_asset_job", selection="notdiamond_asset")
+notdiamond_schedule = ScheduleDefinition(
+    name="notdiamond_schedule",
+    target=AssetSelection.all(),
+    cron_schedule="17 * * * *",
+)
 
 defs = Definitions(
     assets=[notdiamond_asset],
-    jobs=[notdiamond_asset_job, notdiamond_op_job],
     resources={
         "notdiamond": NotDiamondResource(api_key=EnvVar("NOTDIAMOND_API_KEY")),
     },
+    schedules=[notdiamond_schedule],
 )
 ```
 
-Please refer to `example_job/example_notdiamond.py` for an example script.
+Please refer to `example_job/example_notdiamond.py` for an example script which you can test by updating
+your pyproject.toml as follows (replacing `$PROJECT_HOME` with the path to this project):
+
+```toml
+[tool.dagster]
+module_name = "example_job.example_notdiamond"
+working_directory = "$PROJECT_HOME/libraries/dagster-contrib-notdiamond/"
+```
 
 ## Support
 
