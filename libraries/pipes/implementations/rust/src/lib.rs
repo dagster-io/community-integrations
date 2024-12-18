@@ -25,6 +25,8 @@ pub use crate::writer::message_writer::{DefaultWriter, MessageWriter};
 pub use crate::writer::message_writer_channel::{DefaultChannel, FileChannel};
 use crate::writer::message_writer_channel::{MessageWriteError, MessageWriterChannel};
 
+const DAGSTER_PIPES_VERSION: &str = "0.1";
+
 #[derive(Serialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum AssetCheckSeverity {
@@ -64,7 +66,7 @@ where
         let mut message_channel = message_writer.open(message_params);
         let opened_payload = get_opened_payload(message_writer);
         let opened_message = PipesMessage {
-            dagster_pipes_version: "0.1".to_string(), // TODO: Convert to `const`
+            dagster_pipes_version: DAGSTER_PIPES_VERSION.to_string(),
             method: Method::Opened,
             params: Some(opened_payload),
         };
@@ -274,7 +276,7 @@ mod tests {
             serde_json::from_str::<PipesMessage>(&fs::read_to_string(file.path()).unwrap())
                 .unwrap(),
             PipesMessage {
-                dagster_pipes_version: "0.1".to_string(),
+                dagster_pipes_version: DAGSTER_PIPES_VERSION.to_string(),
                 method: Method::ReportAssetMaterialization,
                 params: Some(HashMap::from([
                     ("asset_key".to_string(), Some(json!("asset1"))),
