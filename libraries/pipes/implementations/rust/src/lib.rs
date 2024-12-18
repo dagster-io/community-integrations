@@ -18,11 +18,11 @@ use crate::context_loader::PayloadErrorKind;
 use crate::params_loader::EnvVarLoader as PipesEnvVarParamsLoader;
 pub use crate::params_loader::LoadParams;
 use crate::params_loader::ParamsError;
-pub use crate::types::{Method, PipesContextData, PipesMessage, PipesMetadataValue};
+pub use crate::types::PipesMetadataValue;
+use crate::types::{Method, PipesContextData, PipesMessage};
 use crate::writer::message_writer::get_opened_payload;
 use crate::writer::message_writer::DefaultWriter as PipesDefaultMessageWriter;
 pub use crate::writer::message_writer::{DefaultWriter, MessageWriter};
-pub use crate::writer::message_writer_channel::{DefaultChannel, FileChannel};
 use crate::writer::message_writer_channel::{MessageWriteError, MessageWriterChannel};
 
 #[derive(Serialize)]
@@ -141,6 +141,7 @@ mod tests {
     use std::collections::HashMap;
     use std::fs;
     use tempfile::NamedTempFile;
+    use writer::message_writer_channel::{DefaultChannel, FileChannel};
 
     use super::*;
 
