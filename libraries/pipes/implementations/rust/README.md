@@ -1,5 +1,7 @@
 # dagster-pipes-rust
 
+A pipes implementation for the [Rust](https://www.rust-lang.org/) programming language.
+
 Get full observability into your Rust workloads when orchestrating through Dagster. With this light weight interface, you can retrieve data directly from the Dagster context, report asset materializations, report asset checks, provide structured logging, end more.
 
 [![Crates.io](https://img.shields.io/crates/v/dagster_pipes_rust.svg)](https://crates.io/crates/dagster_pipes_rust)
@@ -76,5 +78,6 @@ We use [jsonschema](https://json-schema.org/) to define the pipes protocol and [
 To generate the Rust structs, make sure to install quicktype with `npm install -g quicktype`. Then run:
 
 ```bash
-./quicktype.sh
+cd community-integrations/pipes
+make jsonschema_rust
 ```
