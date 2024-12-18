@@ -1,4 +1,3 @@
-from collections import defaultdict
 from contextlib import contextmanager
 from enum import Enum
 from importlib import metadata

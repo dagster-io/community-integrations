@@ -13,15 +13,24 @@ from dagster_contrib_notdiamond import NotDiamondResource
 
 
 @asset
-def notdiamond_asset(context: AssetExecutionContext, notdiamond: NotDiamondResource) -> MaterializeResult:
+def notdiamond_asset(
+    context: AssetExecutionContext, notdiamond: NotDiamondResource
+) -> MaterializeResult:
     with notdiamond.get_client(context) as client:
         start = time.time()
         session_id, best_llm = client.model_select(
             model=["openai/gpt-4o", "openai/gpt-4o-mini"],
-            messages=[{"role": "user", "content": "Say this is a test"}]
+            messages=[{"role": "user", "content": "Say this is a test"}],
         )
         duration = time.time() - start
-    return MaterializeResult(metadata={"session_id": session_id, "best_llm": str(best_llm), "routing_latency": duration})
+    return MaterializeResult(
+        metadata={
+            "session_id": session_id,
+            "best_llm": str(best_llm),
+            "routing_latency": duration,
+        }
+    )
+
 
 notdiamond_schedule = ScheduleDefinition(
     name="notdiamond_schedule",
