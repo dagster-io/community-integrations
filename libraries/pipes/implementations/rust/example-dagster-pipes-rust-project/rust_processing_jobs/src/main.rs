@@ -1,5 +1,5 @@
-use dagster_pipes_rust::types::{PipesMetadataValue, RawValue, Type};
-use dagster_pipes_rust::{open_dagster_pipes, AssetCheckSeverity, DagsterPipesError};
+use dagster_pipes_rust::types::{AssetCheckSeverity, PipesMetadataValue, RawValue, Type};
+use dagster_pipes_rust::{open_dagster_pipes, DagsterPipesError};
 
 use std::collections::HashMap;
 
