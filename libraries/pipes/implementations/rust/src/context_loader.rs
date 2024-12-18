@@ -5,6 +5,7 @@ use thiserror::Error;
 
 use crate::PipesContextData;
 
+/// Load context data injected by the orchestration process.
 pub trait LoadContext {
     fn load_context(
         &self,

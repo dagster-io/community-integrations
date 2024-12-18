@@ -11,7 +11,7 @@ mod private {
     pub struct Token; // To seal certain trait methods
 }
 
-/// Write messages back to Dagster, via its associated [`Self::Channel`].
+/// Write messages back to Dagster, via its associated [`MessageWriterChannel`](crate::MessageWriterChannel).
 pub trait MessageWriter {
     type Channel: MessageWriterChannel;
 
