@@ -6,7 +6,6 @@ mod writer;
 
 use std::collections::HashMap;
 
-use serde::Serialize;
 use serde_json::json;
 use serde_json::Map;
 use serde_json::Value;
@@ -18,19 +17,12 @@ use crate::context_loader::PayloadErrorKind;
 use crate::params_loader::EnvVarLoader as PipesEnvVarParamsLoader;
 pub use crate::params_loader::LoadParams;
 use crate::params_loader::ParamsError;
-pub use crate::types::{Method, PipesContextData, PipesMessage, PipesMetadataValue};
+pub use crate::types::{Method, PipesContextData, PipesMessage, PipesMetadataValue, AssetCheckSeverity};
 use crate::writer::message_writer::get_opened_payload;
 use crate::writer::message_writer::DefaultWriter as PipesDefaultMessageWriter;
 pub use crate::writer::message_writer::{DefaultWriter, MessageWriter};
 pub use crate::writer::message_writer_channel::{DefaultChannel, FileChannel};
 use crate::writer::message_writer_channel::{MessageWriteError, MessageWriterChannel};
-
-#[derive(Serialize)]
-#[serde(rename_all = "UPPERCASE")]
-pub enum AssetCheckSeverity {
-    Warn,
-    Error,
-}
 
 impl PipesMetadataValue {
     pub fn new(raw_value: types::RawValue, pipes_metadata_value_type: types::Type) -> Self {
