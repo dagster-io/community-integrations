@@ -142,7 +142,7 @@ mod tests {
             ("int", PipesMetadataValue::from(100)),
             ("float", PipesMetadataValue::from(100.0)),
             ("bool", PipesMetadataValue::from(true)),
-            ("none", PipesMetadataValue::none()),
+            ("none", PipesMetadataValue::null()),
             ("timestamp", PipesMetadataValue::from_timestamp(1000.0)),
             ("text", PipesMetadataValue::from("hello".to_string())),
             (
@@ -217,7 +217,7 @@ mod tests {
                             },
                             "none": {
                                 "raw_value": null,
-                                "type": null
+                                "type": "null"
                             },
                             "timestamp": {
                                 "raw_value": 1000.0,
