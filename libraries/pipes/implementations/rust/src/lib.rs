@@ -6,7 +6,6 @@ mod writer;
 
 use std::collections::HashMap;
 
-use serde::Serialize;
 use serde_json::json;
 use serde_json::Map;
 use serde_json::Value;
@@ -22,16 +21,11 @@ use crate::writer::message_writer_channel::MessageWriteError;
 
 pub use crate::context_loader::LoadContext;
 pub use crate::params_loader::LoadParams;
-pub use crate::types::PipesMetadataValue;
+pub use crate::types::{AssetCheckSeverity, PipesMetadataValue};
 pub use crate::writer::message_writer::{DefaultWriter, MessageWriter};
 pub use crate::writer::message_writer_channel::MessageWriterChannel;
 
-#[derive(Serialize)]
-#[serde(rename_all = "UPPERCASE")]
-pub enum AssetCheckSeverity {
-    Warn,
-    Error,
-}
+const DAGSTER_PIPES_VERSION: &str = "0.1";
 
 // partial translation of
 // https://github.com/dagster-io/dagster/blob/258d9ca0db/python_modules/dagster-pipes/dagster_pipes/__init__.py#L859-L871
@@ -55,11 +49,7 @@ where
     ) -> Result<Self, MessageWriteError> {
         let mut message_channel = message_writer.open(message_params);
         let opened_payload = get_opened_payload(message_writer);
-        let opened_message = PipesMessage {
-            dagster_pipes_version: "0.1".to_string(), // TODO: Convert to `const`
-            method: Method::Opened,
-            params: Some(opened_payload),
-        };
+        let opened_message = PipesMessage::new(Method::Opened, Some(opened_payload));
         message_channel.write_message(opened_message)?;
 
         Ok(Self {
@@ -206,13 +196,12 @@ mod tests {
         assert_eq!(
             serde_json::from_str::<PipesMessage>(&fs::read_to_string(file.path()).unwrap())
                 .unwrap(),
-            PipesMessage {
-                dagster_pipes_version: "0.1".to_string(),
-                method: Method::ReportAssetMaterialization,
-                params: Some(HashMap::from([
-                    ("asset_key".to_string(), Some(json!("asset1"))),
+            PipesMessage::new(
+                Method::ReportAssetMaterialization,
+                Some(HashMap::from([
+                    ("asset_key", Some(json!("asset1"))),
                     (
-                        "metadata".to_string(),
+                        "metadata",
                         Some(json!({
                             "int": {
                                 "raw_value": 100,
@@ -276,9 +265,9 @@ mod tests {
                             }
                         }))
                     ),
-                    ("data_version".to_string(), None),
+                    ("data_version", None),
                 ])),
-            }
+            )
         );
     }
 }
