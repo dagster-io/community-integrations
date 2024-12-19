@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
     paths:
-      - "./libraries/pipes/implementations/rust/**"
+      - "libraries/pipes/implementations/rust/**"
       - ".github/workflows/libraries-pipes-rust.yml"
 
 defaults:
@@ -45,7 +45,7 @@ jobs:
 
       - name: "Doctests"
         run: cargo test --doc
-  
+
   integration:
     name: "integration"
     runs-on: ubuntu-latest
