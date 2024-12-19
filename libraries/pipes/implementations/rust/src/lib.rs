@@ -65,11 +65,7 @@ where
     ) -> Result<Self, MessageWriteError> {
         let mut message_channel = message_writer.open(message_params);
         let opened_payload = get_opened_payload(message_writer);
-        let opened_message = PipesMessage {
-            dagster_pipes_version: DAGSTER_PIPES_VERSION.to_string(),
-            method: Method::Opened,
-            params: Some(opened_payload),
-        };
+        let opened_message = PipesMessage::new(Method::Opened, Some(opened_payload));
         message_channel.write_message(opened_message)?;
 
         Ok(Self {
