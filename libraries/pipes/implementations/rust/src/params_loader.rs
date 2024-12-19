@@ -10,8 +10,8 @@ const DAGSTER_PIPES_CONTEXT_ENV_VAR: &str = "DAGSTER_PIPES_CONTEXT";
 const DAGSTER_PIPES_MESSAGES_ENV_VAR: &str = "DAGSTER_PIPES_MESSAGES";
 
 /// Load params passed from the orchestration process by the context injector and
-/// message reader. These params are used to respectively bootstrap
-/// [`LoadContext`](crate::LoadContext) and [`PipesMessageWriter`].
+/// message reader. These params are used to respectively bootstrap implementations of
+/// [`LoadContext`](crate::LoadContext) and [`PipesMessageWriter`](crate::MessageWriter).
 pub trait LoadParams {
     /// Whether or not this process has been provided with provided with information
     /// to create a `PipesContext` or should instead return a mock.
