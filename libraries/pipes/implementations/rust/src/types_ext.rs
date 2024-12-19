@@ -164,10 +164,10 @@ impl PipesMetadataValue {
         }
     }
 
-    pub fn none() -> Self {
+    pub fn null() -> Self {
         PipesMetadataValue {
             raw_value: None,
-            pipes_metadata_value_type: None, // TODO: Should this be `Some(Type::Null)`?
+            pipes_metadata_value_type: Some(Type::Null),
         }
     }
 }
