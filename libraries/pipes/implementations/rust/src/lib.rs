@@ -271,13 +271,12 @@ mod tests {
         assert_eq!(
             serde_json::from_str::<PipesMessage>(&fs::read_to_string(file.path()).unwrap())
                 .unwrap(),
-            PipesMessage {
-                dagster_pipes_version: DAGSTER_PIPES_VERSION.to_string(),
-                method: Method::ReportAssetMaterialization,
-                params: Some(HashMap::from([
-                    ("asset_key".to_string(), Some(json!("asset1"))),
+            PipesMessage::new(
+                Method::ReportAssetMaterialization,
+                Some(HashMap::from([
+                    ("asset_key", Some(json!("asset1"))),
                     (
-                        "metadata".to_string(),
+                        "metadata",
                         Some(json!({
                             "text": {
                                 "raw_value": "hello",
@@ -341,9 +340,9 @@ mod tests {
                             }
                         }))
                     ),
-                    ("data_version".to_string(), None),
+                    ("data_version", None),
                 ])),
-            }
+            )
         );
     }
 }
