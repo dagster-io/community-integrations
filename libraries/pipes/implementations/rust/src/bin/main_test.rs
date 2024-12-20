@@ -2,28 +2,66 @@ use dagster_pipes_rust::types::{PipesMetadataValue, RawValue, Type};
 use dagster_pipes_rust::{open_dagster_pipes, AssetCheckSeverity, DagsterPipesError};
 
 use std::collections::HashMap;
+use clap::ArgAction;
 
 use clap::Parser;
 
 #[derive(Parser)]
 struct Cli {
-    context: String,
-    messages: String,
-    #[arg(default_value_t = false)]
+    #[arg(long)]
+    context: Option<String>,
+    #[arg(long)]
+    messages: Option<String>,
+    #[arg(
+        long,
+        action = ArgAction::Set,
+        default_value_t = false,
+        default_missing_value = "false",
+        num_args=(0..=1),
+        require_equals = false,
+    )]
     env: bool,
+    #[arg(long="jobName")]
     job_name: String,
-    extras: String,
-    #[arg(default_value_t = false)]
+    #[arg(long)]
+    extras: Option<String>,
+    #[arg(
+        long,
+        action = ArgAction::Set,
+        default_value_t = false,
+        default_missing_value = "false",
+        num_args=(0..=1),
+        require_equals = false,
+    )]
     full: bool,
-    custom_payload_path: String,
-    report_asset_check: String,
-    report_asset_materialization: String,
-    #[arg(default_value_t = false)]
+    #[arg(long)]
+    custom_payload_path: Option<String>,
+    #[arg(long)]
+    report_asset_check: Option<String>,
+    #[arg(long)]
+    report_asset_materialization: Option<String>,
+    #[arg(
+        long,
+        action = ArgAction::Set,
+        default_value_t = false,
+        default_missing_value = "false",
+        num_args=(0..=1),
+        require_equals = false,
+    )]
     throw_error: bool,
-    #[arg(default_value_t = false)]
+    #[arg(
+        long,
+        action = ArgAction::Set,
+        default_value_t = false,
+        default_missing_value = "false",
+        num_args=(0..=1),
+        require_equals = false,
+    )]
     logging: bool,
-    message_writer: String,
-    context_loader: String,
+    #[arg(long)]
+    message_writer: Option<String>,
+    #[arg(long)]
+    context_loader: Option<String>,
 }
 
 fn main() -> Result<(), DagsterPipesError> {
@@ -31,22 +69,5 @@ fn main() -> Result<(), DagsterPipesError> {
 
     let mut context = open_dagster_pipes()?;
 
-    let asset_metadata = HashMap::from([(
-        "row_count",
-        PipesMetadataValue::new(RawValue::Integer(100), Type::Int),
-    )]);
-    context.report_asset_materialization("example_rust_subprocess_asset", asset_metadata)?;
-
-    let check_metadata = HashMap::from([(
-        "quality",
-        PipesMetadataValue::new(RawValue::Integer(100), Type::Int),
-    )]);
-    context.report_asset_check(
-        "example_rust_subprocess_check",
-        true,
-        "example_rust_subprocess_asset",
-        &AssetCheckSeverity::Warn,
-        check_metadata,
-    )?;
     Ok(())
 }
