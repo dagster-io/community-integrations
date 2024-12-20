@@ -46,6 +46,9 @@ jobs:
       - name: "Doctests"
         run: cargo test --doc
 
+      - name: "Python tests"
+        run: uv run pytest
+
   integration:
     name: "integration"
     runs-on: ubuntu-latest
