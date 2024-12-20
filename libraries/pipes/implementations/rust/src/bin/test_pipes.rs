@@ -1,10 +1,9 @@
-use dagster_pipes_rust::types::{PipesMetadataValue, RawValue, Type};
-use dagster_pipes_rust::{open_dagster_pipes, AssetCheckSeverity, DagsterPipesError};
-
-use std::collections::HashMap;
 use clap::ArgAction;
-
 use clap::Parser;
+use dagster_pipes_rust::{open_dagster_pipes, DagsterPipesError};
+use dagster_pipes_rust::{DAGSTER_PIPES_CONTEXT_ENV_VAR, DAGSTER_PIPES_MESSAGES_ENV_VAR};
+use std::collections::HashMap;
+use std::fs::File;
 
 #[derive(Parser)]
 struct Cli {
@@ -17,12 +16,12 @@ struct Cli {
         action = ArgAction::Set,
         default_value_t = false,
         default_missing_value = "false",
-        num_args=(0..=1),
+        num_args=0..=1,
         require_equals = false,
     )]
     env: bool,
-    #[arg(long="jobName")]
-    job_name: String,
+    #[arg(long = "jobName")]
+    job_name: Option<String>,
     #[arg(long)]
     extras: Option<String>,
     #[arg(
@@ -30,7 +29,7 @@ struct Cli {
         action = ArgAction::Set,
         default_value_t = false,
         default_missing_value = "false",
-        num_args=(0..=1),
+        num_args=0..=1,
         require_equals = false,
     )]
     full: bool,
@@ -45,7 +44,7 @@ struct Cli {
         action = ArgAction::Set,
         default_value_t = false,
         default_missing_value = "false",
-        num_args=(0..=1),
+        num_args=0..=1,
         require_equals = false,
     )]
     throw_error: bool,
@@ -54,7 +53,7 @@ struct Cli {
         action = ArgAction::Set,
         default_value_t = false,
         default_missing_value = "false",
-        num_args=(0..=1),
+        num_args=0..=1,
         require_equals = false,
     )]
     logging: bool,
@@ -64,10 +63,26 @@ struct Cli {
     context_loader: Option<String>,
 }
 
-fn main() -> Result<(), DagsterPipesError> {
+pub fn main() -> Result<(), DagsterPipesError> {
     let args = Cli::parse();
+    if let Some(context) = args.context {
+        std::env::set_var(DAGSTER_PIPES_CONTEXT_ENV_VAR, &context);
+    }
+    if let Some(messages) = args.messages {
+        std::env::set_var(DAGSTER_PIPES_MESSAGES_ENV_VAR, &messages);
+    }
 
-    let mut context = open_dagster_pipes()?;
+    let context = open_dagster_pipes()?;
 
+    if let Some(job_name) = args.job_name {
+        assert_eq!(context.data.job_name, Some(job_name));
+    }
+
+    if let Some(extras) = args.extras {
+        let file = File::open(extras).expect("extras could not be opened");
+        let json: HashMap<std::string::String, std::option::Option<serde_json::Value>> =
+            serde_json::from_reader(file).expect("extras could not be parsed");
+        assert_eq!(context.data.extras, Some(json));
+    }
     Ok(())
 }
