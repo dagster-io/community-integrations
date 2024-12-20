@@ -4,15 +4,24 @@
 // extern crate serde_derive;
 // extern crate serde_json;
 //
-// use generated_module::PipesContextData;
+// use generated_module::AssetCheckSeverity;
 //
 // fn main() {
 //     let json = r#"{"answer": 42}"#;
-//     let model: PipesContextData = serde_json::from_str(&json).unwrap();
+//     let model: AssetCheckSeverity = serde_json::from_str(&json).unwrap();
 // }
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum AssetCheckSeverity {
+    #[serde(rename = "ERROR")]
+    Error,
+
+    #[serde(rename = "WARN")]
+    Warn,
+}
 
 /// The serializable data passed from the orchestration process to the external process. This
 /// gets wrapped in a PipesContext.

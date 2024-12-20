@@ -11,7 +11,7 @@ mod private {
     pub struct Token; // To seal certain trait methods
 }
 
-/// Write messages back to Dagster, via its associated [`Self::Channel`].
+/// Write messages back to Dagster, via its associated [`MessageWriterChannel`](crate::MessageWriterChannel).
 pub trait MessageWriter {
     type Channel: MessageWriterChannel;
 
@@ -54,12 +54,9 @@ pub trait MessageWriter {
     ///
     /// MyMessageWriter(42).get_opened_payload(private::Token); // use of undeclared crate or module `private`
     /// ```
-    fn get_opened_payload(&self, _: private::Token) -> HashMap<String, Option<Value>> {
+    fn get_opened_payload(&self, _: private::Token) -> HashMap<&str, Option<Value>> {
         let mut extras = HashMap::new();
-        extras.insert(
-            "extras".to_string(),
-            Some(Value::Object(self.get_opened_extras())),
-        );
+        extras.insert("extras", Some(Value::Object(self.get_opened_extras())));
         extras
     }
 
@@ -71,7 +68,7 @@ pub trait MessageWriter {
 }
 
 /// Public accessor to the sealed method
-pub fn get_opened_payload(writer: &impl MessageWriter) -> HashMap<String, Option<Value>> {
+pub fn get_opened_payload(writer: &impl MessageWriter) -> HashMap<&str, Option<Value>> {
     writer.get_opened_payload(private::Token)
 }
 

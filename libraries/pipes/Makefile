@@ -6,5 +6,6 @@ jsonschema_rust:
 	quicktype -s schema -l rust \
 		--visibility public --derive-debug --derive-clone --derive-partial-eq -o \
 		implementations/rust/src/types.rs
+	cd implementations/rust && cargo fmt
 
 jsonschema: jsonschema_rust

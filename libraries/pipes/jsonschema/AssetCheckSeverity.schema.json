@@ -1,0 +1,6 @@
+{
+  "title": "AssetCheckSeverity",
+  "type": "string",
+  "enum": ["WARN", "ERROR"],
+  "additionalProperties": false
+}
