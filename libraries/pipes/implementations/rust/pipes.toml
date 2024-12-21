@@ -1,0 +1,13 @@
+[general]
+error_reporting = false
+
+[messages]
+log = false
+report_custom_message = false
+report_asset_materialization = false
+report_asset_check = false
+log_external_stream = false
+
+[message_channel]
+s3 = false
+databricks = false

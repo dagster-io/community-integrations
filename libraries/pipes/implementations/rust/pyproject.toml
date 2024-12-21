@@ -1,0 +1,26 @@
+[project]
+name = "dagster-pipes-rust"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dagster>=1.8.9",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "dagster-webserver>=1.8.9",
+    "pyright>=1.1.383",
+    "pytest>=8.3.3",
+    "ruff>=0.6.8",
+    "dagster-pipes-tests",
+]
+
+[tool.uv.sources]
+dagster-pipes-tests = { path = "../../tests/dagster-pipes-tests", editable = true }
+
+[tool.pytest.ini_options]
+addopts = "-s "
+color = "yes"
+testpaths = ["tests"]

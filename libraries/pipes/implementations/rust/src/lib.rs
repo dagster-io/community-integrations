@@ -20,7 +20,9 @@ use crate::writer::message_writer::{
 use crate::writer::message_writer_channel::MessageWriteError;
 
 pub use crate::context_loader::LoadContext;
-pub use crate::params_loader::LoadParams;
+pub use crate::params_loader::{
+    LoadParams, DAGSTER_PIPES_CONTEXT_ENV_VAR, DAGSTER_PIPES_MESSAGES_ENV_VAR,
+};
 pub use crate::types::{AssetCheckSeverity, PipesMetadataValue};
 pub use crate::writer::message_writer::{DefaultWriter, MessageWriter};
 pub use crate::writer::message_writer_channel::MessageWriterChannel;
@@ -34,7 +36,7 @@ pub struct PipesContext<W>
 where
     W: MessageWriter,
 {
-    data: PipesContextData,
+    pub data: PipesContextData,
     message_channel: W::Channel,
 }
 

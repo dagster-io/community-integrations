@@ -6,8 +6,8 @@ use std::fmt;
 use std::io::Read;
 use thiserror::Error;
 
-const DAGSTER_PIPES_CONTEXT_ENV_VAR: &str = "DAGSTER_PIPES_CONTEXT";
-const DAGSTER_PIPES_MESSAGES_ENV_VAR: &str = "DAGSTER_PIPES_MESSAGES";
+pub const DAGSTER_PIPES_CONTEXT_ENV_VAR: &str = "DAGSTER_PIPES_CONTEXT";
+pub const DAGSTER_PIPES_MESSAGES_ENV_VAR: &str = "DAGSTER_PIPES_MESSAGES";
 
 /// Load params passed from the orchestration process by the context injector and
 /// message reader. These params are used to respectively bootstrap implementations of
