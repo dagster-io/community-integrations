@@ -3,7 +3,7 @@ error_reporting = false
 
 [messages]
 log = false
-report_custom_message = false
+report_custom_message = true
 report_asset_materialization = false
 report_asset_check = false
 log_external_stream = false
