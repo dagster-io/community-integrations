@@ -549,9 +549,9 @@ class PipesTestSuite:
     ):
         """This test checks if the external process sends asset checks correctly."""
 
-        if not PIPES_CONFIG.messages.report_asset_materialization:
+        if not PIPES_CONFIG.messages.report_asset_check:
             pytest.skip(
-                "messages.report_asset_materialization is not enabled in pipes.toml"
+                "messages.report_asset_check is not enabled in pipes.toml"
             )
 
         work_dir = tmpdir_factory.mktemp("work_dir")
