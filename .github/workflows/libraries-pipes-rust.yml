@@ -49,7 +49,7 @@ jobs:
       - name: "Doctests"
         run: cargo test --doc
 
-      - name: "Python tests"
+      - name: "Dagster integration tests"
         run: uv run pytest
 
   integration:
