@@ -72,7 +72,7 @@ pub fn main() -> Result<(), DagsterPipesError> {
         std::env::set_var(DAGSTER_PIPES_MESSAGES_ENV_VAR, &messages);
     }
 
-    let context = open_dagster_pipes()?;
+    let mut context = open_dagster_pipes()?;
 
     if let Some(job_name) = args.job_name {
         assert_eq!(context.data.job_name, Some(job_name));
@@ -84,5 +84,19 @@ pub fn main() -> Result<(), DagsterPipesError> {
             serde_json::from_reader(file).expect("extras could not be parsed");
         assert_eq!(context.data.extras, Some(json));
     }
+
+    if let Some(custom_payload_path) = args.custom_payload_path {
+        let file =
+            File::open(custom_payload_path).expect("custom_payload_path could not be opened");
+        let payload: serde_json::Value = serde_json::from_reader(file)
+            .expect("custom_payload_path could not be parsed")
+            .as_object()
+            .expect("custom payload must be an object")
+            .get("payload")
+            .expect("custom payload must have a 'payload' key")
+            .clone();
+        context.report_custom_message(Some(payload))?
+    }
+
     Ok(())
 }

@@ -94,6 +94,17 @@ where
         let msg = PipesMessage::new(Method::ReportAssetCheck, Some(params));
         self.message_channel.write_message(msg)
     }
+
+    pub fn report_custom_message(
+        &mut self,
+        payload: Option<serde_json::Value>,
+    ) -> Result<(), MessageWriteError> {
+        let params: HashMap<&str, Option<serde_json::Value>> =
+            HashMap::from([("payload", payload)]);
+
+        let msg = PipesMessage::new(Method::ReportCustomMessage, Some(params));
+        self.message_channel.write_message(msg)
+    }
 }
 
 #[derive(Debug, Error)]
@@ -269,6 +280,31 @@ mod tests {
                     ),
                     ("data_version", None),
                 ])),
+            )
+        );
+    }
+
+    #[test]
+    fn test_report_custom_message() {
+        let file = NamedTempFile::new().unwrap();
+        let mut context: PipesContext<DefaultWriter> = PipesContext {
+            message_channel: DefaultChannel::File(FileChannel::new(file.path().into())),
+            data: PipesContextData {
+                asset_keys: Some(vec!["asset1".to_string()]),
+                run_id: "012345".to_string(),
+                ..Default::default()
+            },
+        };
+        context
+            .report_custom_message(Some(json!({"key": "value"})))
+            .expect("Failed to report custom message");
+
+        assert_eq!(
+            serde_json::from_str::<PipesMessage>(&fs::read_to_string(file.path()).unwrap())
+                .unwrap(),
+            PipesMessage::new(
+                Method::ReportCustomMessage,
+                Some(HashMap::from([("payload", Some(json!({"key": "value"})))])),
             )
         );
     }
