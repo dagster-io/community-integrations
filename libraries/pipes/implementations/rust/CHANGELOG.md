@@ -4,6 +4,7 @@
 
 ### Added
 
+- (pull/70) Added `report_custom_message` method to the `PipesContext`
 - (pull/60) Added `AssetCheckSeverity` to the jsonschema definitions
 - (pull/59) Moved dagster pipes version into a constant
 - (pull/61) Simplify construction of `PipesMetadataValue`
