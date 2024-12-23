@@ -64,11 +64,12 @@ where
         &mut self,
         asset_key: &str,
         metadata: HashMap<&str, PipesMetadataValue>,
+        data_version: Option<&str>,
     ) -> Result<(), MessageWriteError> {
         let params: HashMap<&str, Option<serde_json::Value>> = HashMap::from([
             ("asset_key", Some(json!(asset_key))),
             ("metadata", Some(json!(metadata))),
-            ("data_version", None), // TODO - support data versions
+            ("data_version", data_version.map(|version| json!(version))),
         ]);
 
         let msg = PipesMessage::new(Method::ReportAssetMaterialization, Some(params));
@@ -192,7 +193,7 @@ mod tests {
             },
         };
         context
-            .report_asset_materialization("asset1", asset_metadata)
+            .report_asset_materialization("asset1", asset_metadata, Some("v1"))
             .expect("Failed to report asset materialization");
 
         assert_eq!(
@@ -267,7 +268,7 @@ mod tests {
                             }
                         }))
                     ),
-                    ("data_version", None),
+                    ("data_version", Some(json!("v1"))),
                 ])),
             )
         );
