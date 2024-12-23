@@ -372,14 +372,19 @@ class PipesTestSuite:
 
         err = captured.err
 
-        for level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
+        expected_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        logged_levels = set()
+
+        for level in expected_levels:
             # example log line we are looking for:
             # 2024-11-13 16:54:55 +0100 - dagster - WARNING - __ephemeral_asset_job__ - 2716d101-cf11-4baa-b22d-d2530cb8b121 - my_asset - Warning message
 
             for line in err.split("\n"):
                 if f"{level.lower().capitalize()} message" in line:
                     assert level in line
-
+                    logged_levels.add(level)
+                    
+        assert logged_levels == expected_levels
         assert (
             "[pipes] did not receive any messages from external process"
             not in captured.err
