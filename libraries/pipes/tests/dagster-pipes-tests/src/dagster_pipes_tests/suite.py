@@ -56,6 +56,10 @@ CUSTOM_MESSAGE_CASES = json.loads(CUSTOM_PAYLOAD_CASES_PATH.read_text())
 METADATA = json.loads(METADATA_PATH.read_text())
 
 
+
+def _get_current_test_name(request):
+    return request.node.name.split("[")[0]
+
 def _resolve_metadata_value(
     value: Any, metadata_type: PipesMetadataType
 ) -> MetadataValue:
@@ -139,7 +143,7 @@ class PipesTestSuite:
                 "--job-name",
                 context.dagster_run.job_name,
                 "--test-name",
-                request.node.name,
+                _get_current_test_name(request),
             ]
 
             if isinstance(context_injector, PipesS3ContextInjector):
@@ -201,7 +205,7 @@ class PipesTestSuite:
                 "--extras",
                 metadata_path,
                 "--test-name",
-                request.node.name,
+                _get_current_test_name(request),
             ]
 
             invocation_result = pipes_subprocess_client.run(
@@ -256,7 +260,7 @@ class PipesTestSuite:
         ):
             args = self.BASE_ARGS + [
                 "--test-name",
-                request.node.name,
+                _get_current_test_name(request),
             ]
 
             invocation_result = pipes_subprocess_client.run(
@@ -321,7 +325,7 @@ class PipesTestSuite:
         ):
             args = self.BASE_ARGS + [
                 "--test-name",
-                request.node.name,
+                _get_current_test_name(request),
             ]
 
             invocation_result = pipes_subprocess_client.run(
@@ -394,7 +398,7 @@ class PipesTestSuite:
                 "--custom-payload",
                 str(custom_payload_path),
                 "--test-name",
-                request.node.name,
+                _get_current_test_name(request),
             ]
 
             invocation_result = pipes_subprocess_client.run(
@@ -468,7 +472,7 @@ class PipesTestSuite:
                 "--report-asset-materialization",
                 str(asset_materialization_path),
                 "--test-name",
-                request.node.name,
+                _get_current_test_name(request),
             ]
 
             invocation_result = pipes_subprocess_client.run(
@@ -561,7 +565,7 @@ class PipesTestSuite:
                 "--report-asset-check",
                 str(report_asset_check_path),
                 "--test-name",
-                request.node.name,
+                _get_current_test_name(request),
             ]
 
             invocation_result = pipes_subprocess_client.run(
