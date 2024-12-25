@@ -4,6 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
     paths:
+      - "libraries/pipes/tests/dagster-pipes-tests/**"
       - "libraries/pipes/implementations/rust/**"
       - ".github/workflows/libraries-pipes-rust.yml"
 
@@ -71,7 +72,7 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: "Lint"
-        run: uv run make ruff 
+        run: uv run make ruff
 
       - name: "Tests"
         run: uv run pytest example_dagster_pipes_rust_project_tests

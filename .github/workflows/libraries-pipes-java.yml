@@ -4,6 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
     paths:
+      - "libraries/pipes/tests/dagster-pipes-tests/**"
       - "libraries/pipes/implementations/java/**"
       - ".github/workflows/libraries-pipes-java.yml"
 
