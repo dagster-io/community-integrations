@@ -127,7 +127,7 @@ class PipesTestSuite:
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
-            job_name = context.dagster_run.job_name
+            job_name = context.run.job_name
 
             args = self.BASE_ARGS + [
                 "--env",
@@ -221,7 +221,7 @@ class PipesTestSuite:
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
-            job_name = context.dagster_run.job_name
+            job_name = context.run.job_name
 
             args = self.BASE_ARGS + [
                 "--full",
@@ -414,7 +414,7 @@ class PipesTestSuite:
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
-            job_name = context.dagster_run.job_name
+            job_name = context.run.job_name
 
             args = self.BASE_ARGS + [
                 "--full",
@@ -490,7 +490,7 @@ class PipesTestSuite:
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
-            job_name = context.dagster_run.job_name
+            job_name = context.run.job_name
 
             args = self.BASE_ARGS + [
                 "--full",
@@ -587,7 +587,7 @@ class PipesTestSuite:
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ):
-            job_name = context.dagster_run.job_name
+            job_name = context.run.job_name
 
             args = self.BASE_ARGS + [
                 "--full",
