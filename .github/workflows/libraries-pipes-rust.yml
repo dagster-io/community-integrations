@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened, closed]
     paths:
       - "libraries/pipes/implementations/rust/**"
+      - "libraries/pipes/tests/**"
       - ".github/workflows/libraries-pipes-rust.yml"
 
 defaults:
