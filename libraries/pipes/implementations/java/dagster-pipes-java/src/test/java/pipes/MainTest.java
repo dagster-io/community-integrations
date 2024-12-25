@@ -48,7 +48,7 @@ public class MainTest implements Runnable {
     private boolean env = false;
 
     @CommandLine.Option(
-        names = {"--jobName"},
+        names = {"--job-name"},
         description = "Provide value of 'jobName' for testing"
     )
     private String jobName;
