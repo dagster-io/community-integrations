@@ -28,24 +28,12 @@ public class MainTest implements Runnable {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private Map<String, Object> cachedJson = new ConcurrentHashMap<>();
 
-    @CommandLine.Option(
-        names = {"--context"},
-        description = "Provide DAGSTER_PIPES_CONTEXT value for testing"
-    )
-    private String context;
-
-    @CommandLine.Option(
-        names = {"--messages"},
-        description = "Provide DAGSTER_PIPES_MESSAGES value for testing"
-    )
-    private String messages;
-
-    @CommandLine.Option(
-        names = {"--env"},
-        description = "Get DAGSTER_PIPES_MESSAGES & DAGSTER_PIPES_CONTEXT values " +
-            "from environmental variables"
-    )
-    private boolean env = false;
+//    @CommandLine.Option(
+//        names = {"--env"},
+//        description = "Get DAGSTER_PIPES_MESSAGES & DAGSTER_PIPES_CONTEXT values " +
+//            "from environmental variables"
+//    )
+//    private boolean env = false;
 
     @CommandLine.Option(
         names = {"--job-name"},
@@ -59,14 +47,14 @@ public class MainTest implements Runnable {
     )
     private String extras;
 
-    @CommandLine.Option(
-        names = {"--full"},
-        description = "Flag to test full PipesContext usage"
-    )
-    private boolean full = false;
+//    @CommandLine.Option(
+//        names = {"--full"},
+//        description = "Flag to test full PipesContext usage"
+//    )
+//    private boolean full = false;
 
     @CommandLine.Option(
-        names = {"--custom-payload-path"},
+        names = {"--custom-payload"},
         description = "Specify custom payload path"
     )
     private String customPayloadPath;
@@ -83,17 +71,17 @@ public class MainTest implements Runnable {
     )
     private String reportAssetMaterializationJson;
 
-    @CommandLine.Option(
-        names = {"--throw-error"},
-        description = "Throw exception in PipesSession with specified message"
-    )
-    private boolean throwException = false;
+//    @CommandLine.Option(
+//        names = {"--throw-error"},
+//        description = "Throw exception in PipesSession with specified message"
+//    )
+//    private boolean throwException = false;
 
-    @CommandLine.Option(
-        names = {"--logging"},
-        description = "Flag to test logging"
-    )
-    private boolean logging = false;
+//    @CommandLine.Option(
+//        names = {"--logging"},
+//        description = "Flag to test logging"
+//    )
+//    private boolean logging = false;
 
     @CommandLine.Option(
         names = {"--message-writer"},
@@ -107,47 +95,34 @@ public class MainTest implements Runnable {
     )
     private String contextLoaderType;
 
+    @CommandLine.Option(
+        names = {"--test-name"},
+        description = "Specify the name of the test"
+    )
+    private String testName;
+
     @Override
     public void run() {
-        Map<String, String> input = new HashMap<>();
         PipesTests pipesTests = new PipesTests();
         try {
-            if (this.context != null) {
-                input.put(PipesConstants.CONTEXT_ENV_VAR.name, context);
-            }
-            if (this.messages != null) {
-                input.put(PipesConstants.MESSAGES_ENV_VAR.name, this.messages);
-            }
-            pipesTests.setInput(input);
-
             final PipesContextLoader loader;
             if (this.contextLoaderType != null && !this.contextLoaderType.isEmpty()) {
-                switch (this.contextLoaderType) {
-                    case "s3":
-                        S3Client amazonS3Client = S3Client.builder().build();
-                        loader = new PipesS3ContextLoader(amazonS3Client);
-                        break;
-                    case "default":
-                        loader = new PipesDefaultContextLoader();
-                        break;
-                    default:
-                        throw new IllegalArgumentException("Specified unknown context loader type!");
+                if (this.contextLoaderType.equals("s3")) {
+                    S3Client amazonS3Client = S3Client.builder().build();
+                    loader = new PipesS3ContextLoader(amazonS3Client);
+                } else {
+                    loader = new PipesDefaultContextLoader();
                 }
                 pipesTests.setContextLoader(loader);
             }
 
             final PipesMessageWriter<? extends PipesMessageWriterChannel> writer;
             if (this.messageWriter != null && !this.messageWriter.isEmpty()) {
-                switch (this.messageWriter) {
-                    case "s3":
-                        S3Client amazonS3Client = S3Client.builder().build();
-                        writer = new PipesS3MessageWriter(amazonS3Client);
-                        break;
-                    case "default":
-                        writer = new PipesDefaultMessageWriter();
-                        break;
-                    default:
-                        throw new IllegalArgumentException("Specified unknown message writer!");
+                if (this.messageWriter.equals("s3")) {
+                    S3Client amazonS3Client = S3Client.builder().build();
+                    writer = new PipesS3MessageWriter(amazonS3Client);
+                } else {
+                    writer = new PipesDefaultMessageWriter();
                 }
                 pipesTests.setMessageWriter(writer);
             }
@@ -159,12 +134,12 @@ public class MainTest implements Runnable {
                 pipesTests.setPayload(payload);
             }
 
-            if (this.throwException) {
+            if (this.testName != null && this.testName.equals("test_error_reporting")) {
                 pipesTests.testRunPipesSessionWithException();
                 return;
             }
 
-            if (this.logging) {
+            if (this.testName != null && this.testName.equals("test_message_log")) {
                 pipesTests.testLogging();
                 return;
             }
@@ -186,27 +161,20 @@ public class MainTest implements Runnable {
                 pipesTests.setCheck(checkName, passed, assetKey);
             }
 
-            if (this.full) {
-                pipesTests.fullTest();
-                return;
-            } else {
-                pipesTests.setContextData();
-            }
-
             if (this.extras != null) {
                 File jsonFile = new File(this.extras);
                 ObjectMapper objectMapper = new ObjectMapper();
                 Map<String, Object> extrasMap = objectMapper.readValue(
-                    jsonFile, new TypeReference<Map<String, Object>>() {}
+                    jsonFile, new TypeReference<Map<String,Object>>() {}
                 );
                 pipesTests.setExtras(extrasMap);
-                pipesTests.testExtras();
             }
 
             if (this.jobName != null) {
                 pipesTests.setJobName(this.jobName);
-                pipesTests.testJobName();
             }
+
+            pipesTests.fullTest();
         } catch (IOException | DagsterPipesException exception) {
             throw new RuntimeException(exception);
         }

@@ -51,10 +51,6 @@ public class PipesTests {
         this.jobName = jobName;
     }
 
-    void setContextData() throws DagsterPipesException {
-        this.contextData = DataLoader.getData(input);
-    }
-
     void setContextLoader(PipesContextLoader contextLoader) throws DagsterPipesException {
         this.contextLoader = contextLoader;
     }
@@ -82,31 +78,29 @@ public class PipesTests {
     }
 
     @Test
-    void testExtras() {
-        Assertions.assertTrue(
-            contextData.getExtras().entrySet().containsAll(this.extras.entrySet()),
-            "Extras does not contain all provided entries."
-        );
-        System.out.println("Extras are correct.");
-    }
-
-    @Test
-    void testJobName() {
-        Assertions.assertEquals(
-            this.jobName,
-            contextData.getJobName(),
-            "JobName is incorrect."
-        );
-        System.out.println("JobName is correct.");
-    }
-
-    @Test
     void fullTest() throws DagsterPipesException {
         getTestSession().runDagsterPipes(this::fullTest);
     }
 
     private void fullTest(PipesContext context) throws DagsterPipesException {
         context.reportCustomMessage("Hello from external process!");
+
+        if (this.extras != null) {
+            Assertions.assertTrue(
+                context.getExtras().entrySet().containsAll(this.extras.entrySet()),
+                "Extras does not contain all provided entries."
+            );
+            System.out.println("Extras are correct.");
+        }
+
+        if (this.jobName != null) {
+            Assertions.assertEquals(
+                this.jobName,
+                context.getJobName(),
+                "JobName is incorrect."
+            );
+            System.out.println("JobName is correct.");
+        }
 
         if (this.payload != null) {
             context.reportCustomMessage(this.payload);
