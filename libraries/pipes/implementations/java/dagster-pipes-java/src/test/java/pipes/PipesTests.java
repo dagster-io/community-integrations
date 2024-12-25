@@ -3,6 +3,7 @@ package pipes;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import pipes.data.PipesAssetCheckSeverity;
 import pipes.data.PipesContextData;
 import pipes.data.PipesMetadata;
 import pipes.loaders.*;
@@ -35,6 +36,7 @@ public class PipesTests {
     private String checkName;
     private boolean passed;
     private String checkAssetKey;
+    private PipesAssetCheckSeverity severity;
 
     //Message writer
     private PipesMessageWriter<? extends PipesMessageWriterChannel> pipesMessageWriter;
@@ -70,11 +72,12 @@ public class PipesTests {
         this.materializationAssetKey = assetKey;
     }
 
-    void setCheck(String checkName, boolean passed, String assetKey) {
+    void setCheck(String checkName, boolean passed, String assetKey, PipesAssetCheckSeverity severity) {
         this.check = true;
         this.checkName = checkName;
         this.passed = passed;
         this.checkAssetKey = assetKey;
+        this.severity = severity;
     }
 
     void setMessageWriter(PipesMessageWriter<? extends PipesMessageWriterChannel> writer) {
@@ -122,7 +125,7 @@ public class PipesTests {
         if (this.check) {
             buildTestMetadata();
             context.reportAssetCheck(
-                this.checkName, this.passed, this.metadata, this.checkAssetKey
+                this.checkName, this.passed, this.severity, this.metadata, this.checkAssetKey
             );
         }
     }
