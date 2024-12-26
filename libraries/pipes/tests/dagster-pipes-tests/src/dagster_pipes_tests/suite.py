@@ -11,6 +11,7 @@ import dagster._check as check
 import pytest
 from dagster import (
     AssetCheckResult,
+    AssetCheckSeverity,
     AssetCheckSpec,
     AssetExecutionContext,
     AssetKey,
@@ -127,12 +128,12 @@ class PipesTestSuite:
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
-            job_name = context.dagster_run.job_name
+            job_name = context.run.job_name
 
             args = self.BASE_ARGS + [
                 "--env",
                 f"--extras={str(extras_path)}",
-                f"--jobName={job_name}",
+                f"--job-name={job_name}",
             ]
 
             return pipes_subprocess_client.run(
@@ -221,13 +222,13 @@ class PipesTestSuite:
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
-            job_name = context.dagster_run.job_name
+            job_name = context.run.job_name
 
             args = self.BASE_ARGS + [
                 "--full",
                 "--env",
                 f"--extras={metadata_path}",
-                f"--jobName={job_name}",
+                f"--job-name={job_name}",
             ]
 
             invocation_result = pipes_subprocess_client.run(
@@ -414,12 +415,12 @@ class PipesTestSuite:
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
-            job_name = context.dagster_run.job_name
+            job_name = context.run.job_name
 
             args = self.BASE_ARGS + [
                 "--full",
                 "--env",
-                f"--jobName={job_name}",
+                f"--job-name={job_name}",
                 "--custom-payload-path",
                 str(custom_payload_path),
             ]
@@ -490,12 +491,12 @@ class PipesTestSuite:
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
-            job_name = context.dagster_run.job_name
+            job_name = context.run.job_name
 
             args = self.BASE_ARGS + [
                 "--full",
                 "--env",
-                f"--jobName={job_name}",
+                f"--job-name={job_name}",
                 "--report-asset-materialization",
                 str(asset_materialization_path),
             ]
@@ -587,12 +588,12 @@ class PipesTestSuite:
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ):
-            job_name = context.dagster_run.job_name
+            job_name = context.run.job_name
 
             args = self.BASE_ARGS + [
                 "--full",
                 "--env",
-                f"--jobName={job_name}",
+                f"--job-name={job_name}",
                 "--report-asset-check",
                 str(report_asset_check_path),
             ]
@@ -612,6 +613,8 @@ class PipesTestSuite:
 
             if check_result.metadata is not None:
                 assert_known_metadata(check_result.metadata)  # type: ignore
+
+            assert check_result.severity == AssetCheckSeverity(severity)
 
             yield from results
 

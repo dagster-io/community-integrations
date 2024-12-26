@@ -20,7 +20,7 @@ struct Cli {
         require_equals = false,
     )]
     env: bool,
-    #[arg(long = "jobName")]
+    #[arg(long = "job-name")]
     job_name: Option<String>,
     #[arg(long)]
     extras: Option<String>,

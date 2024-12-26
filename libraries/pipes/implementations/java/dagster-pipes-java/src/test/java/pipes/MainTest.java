@@ -3,6 +3,7 @@ package pipes;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import picocli.CommandLine;
+import pipes.data.PipesAssetCheckSeverity;
 import pipes.data.PipesConstants;
 import pipes.loaders.PipesContextLoader;
 import pipes.loaders.PipesDefaultContextLoader;
@@ -48,7 +49,7 @@ public class MainTest implements Runnable {
     private boolean env = false;
 
     @CommandLine.Option(
-        names = {"--jobName"},
+        names = {"--job-name"},
         description = "Provide value of 'jobName' for testing"
     )
     private String jobName;
@@ -183,7 +184,8 @@ public class MainTest implements Runnable {
                 String checkName = loadParamByWrapperKey("checkName", String.class);
                 boolean passed = loadParamByWrapperKey("passed", Boolean.class);
                 String assetKey = loadParamByWrapperKey("assetKey", String.class);
-                pipesTests.setCheck(checkName, passed, assetKey);
+		PipesAssetCheckSeverity severity = PipesAssetCheckSeverity.valueOf(loadParamByWrapperKey("severity", String.class));
+                pipesTests.setCheck(checkName, passed, assetKey, severity);
             }
 
             if (this.full) {
