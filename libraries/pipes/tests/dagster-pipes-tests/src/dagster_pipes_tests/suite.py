@@ -11,6 +11,7 @@ import dagster._check as check
 import pytest
 from dagster import (
     AssetCheckResult,
+    AssetCheckSeverity,
     AssetCheckSpec,
     AssetExecutionContext,
     AssetKey,
@@ -127,12 +128,12 @@ class PipesTestSuite:
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
-            job_name = context.dagster_run.job_name
+            job_name = context.run.job_name
 
             args = self.BASE_ARGS + [
                 "--env",
                 f"--extras={str(extras_path)}",
-                f"--jobName={job_name}",
+                f"--job-name={job_name}",
             ]
 
             return pipes_subprocess_client.run(
@@ -221,13 +222,13 @@ class PipesTestSuite:
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
-            job_name = context.dagster_run.job_name
+            job_name = context.run.job_name
 
             args = self.BASE_ARGS + [
                 "--full",
                 "--env",
                 f"--extras={metadata_path}",
-                f"--jobName={job_name}",
+                f"--job-name={job_name}",
             ]
 
             invocation_result = pipes_subprocess_client.run(
@@ -372,14 +373,19 @@ class PipesTestSuite:
 
         err = captured.err
 
-        for level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
+        expected_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        logged_levels = set()
+
+        for level in expected_levels:
             # example log line we are looking for:
             # 2024-11-13 16:54:55 +0100 - dagster - WARNING - __ephemeral_asset_job__ - 2716d101-cf11-4baa-b22d-d2530cb8b121 - my_asset - Warning message
 
             for line in err.split("\n"):
                 if f"{level.lower().capitalize()} message" in line:
                     assert level in line
-
+                    logged_levels.add(level)
+                    
+        assert logged_levels == expected_levels
         assert (
             "[pipes] did not receive any messages from external process"
             not in captured.err
@@ -409,12 +415,12 @@ class PipesTestSuite:
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
-            job_name = context.dagster_run.job_name
+            job_name = context.run.job_name
 
             args = self.BASE_ARGS + [
                 "--full",
                 "--env",
-                f"--jobName={job_name}",
+                f"--job-name={job_name}",
                 "--custom-payload-path",
                 str(custom_payload_path),
             ]
@@ -485,12 +491,12 @@ class PipesTestSuite:
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ) -> MaterializeResult:
-            job_name = context.dagster_run.job_name
+            job_name = context.run.job_name
 
             args = self.BASE_ARGS + [
                 "--full",
                 "--env",
-                f"--jobName={job_name}",
+                f"--job-name={job_name}",
                 "--report-asset-materialization",
                 str(asset_materialization_path),
             ]
@@ -549,9 +555,9 @@ class PipesTestSuite:
     ):
         """This test checks if the external process sends asset checks correctly."""
 
-        if not PIPES_CONFIG.messages.report_asset_materialization:
+        if not PIPES_CONFIG.messages.report_asset_check:
             pytest.skip(
-                "messages.report_asset_materialization is not enabled in pipes.toml"
+                "messages.report_asset_check is not enabled in pipes.toml"
             )
 
         work_dir = tmpdir_factory.mktemp("work_dir")
@@ -582,12 +588,12 @@ class PipesTestSuite:
             context: AssetExecutionContext,
             pipes_subprocess_client: PipesSubprocessClient,
         ):
-            job_name = context.dagster_run.job_name
+            job_name = context.run.job_name
 
             args = self.BASE_ARGS + [
                 "--full",
                 "--env",
-                f"--jobName={job_name}",
+                f"--job-name={job_name}",
                 "--report-asset-check",
                 str(report_asset_check_path),
             ]
@@ -607,6 +613,8 @@ class PipesTestSuite:
 
             if check_result.metadata is not None:
                 assert_known_metadata(check_result.metadata)  # type: ignore
+
+            assert check_result.severity == AssetCheckSeverity(severity)
 
             yield from results
 
