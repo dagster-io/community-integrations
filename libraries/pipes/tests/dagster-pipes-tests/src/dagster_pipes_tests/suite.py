@@ -57,9 +57,9 @@ CUSTOM_MESSAGE_CASES = json.loads(CUSTOM_PAYLOAD_CASES_PATH.read_text())
 METADATA = json.loads(METADATA_PATH.read_text())
 
 
-
 def _get_current_test_name(request):
     return request.node.name.split("[")[0]
+
 
 def _resolve_metadata_value(
     value: Any, metadata_type: PipesMetadataType
@@ -111,6 +111,7 @@ class PipesTestSuite:
     # to run all the tests
     BASE_ARGS = ["change", "me"]
 
+    @parametrize("metadata", METADATA_CASES)
     def test_components(
         self,
         request,
