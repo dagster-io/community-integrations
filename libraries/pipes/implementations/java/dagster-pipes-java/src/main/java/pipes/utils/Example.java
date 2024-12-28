@@ -3,7 +3,6 @@ package pipes.utils;
 import pipes.DagsterPipesException;
 import pipes.PipesContext;
 import pipes.PipesSession;
-import pipes.data.PipesMetadata;
 import pipes.loaders.PipesContextLoader;
 import pipes.loaders.PipesDefaultContextLoader;
 import pipes.loaders.PipesEnvVarParamsLoader;
@@ -11,7 +10,6 @@ import pipes.loaders.PipesParamsLoader;
 import pipes.writers.PipesDefaultMessageWriter;
 import pipes.writers.PipesMessageWriter;
 import pipes.writers.PipesMessageWriterChannel;
-import types.Type;
 
 import java.util.HashMap;
 import java.util.Map;
