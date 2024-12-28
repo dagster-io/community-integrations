@@ -29,13 +29,6 @@ public class MainTest implements Runnable {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private Map<String, Object> cachedJson = new ConcurrentHashMap<>();
 
-//    @CommandLine.Option(
-//        names = {"--env"},
-//        description = "Get DAGSTER_PIPES_MESSAGES & DAGSTER_PIPES_CONTEXT values " +
-//            "from environmental variables"
-//    )
-//    private boolean env = false;
-
     @CommandLine.Option(
         names = {"--job-name"},
         description = "Provide value of 'jobName' for testing"
@@ -47,12 +40,6 @@ public class MainTest implements Runnable {
         description = "Provide path to 'extras' JSON for testing"
     )
     private String extras;
-
-//    @CommandLine.Option(
-//        names = {"--full"},
-//        description = "Flag to test full PipesContext usage"
-//    )
-//    private boolean full = false;
 
     @CommandLine.Option(
         names = {"--custom-payload"},
@@ -71,18 +58,6 @@ public class MainTest implements Runnable {
         description = "Specify path to JSON with parameters to test reportAssetMaterialization"
     )
     private String reportAssetMaterializationJson;
-
-//    @CommandLine.Option(
-//        names = {"--throw-error"},
-//        description = "Throw exception in PipesSession with specified message"
-//    )
-//    private boolean throwException = false;
-
-//    @CommandLine.Option(
-//        names = {"--logging"},
-//        description = "Flag to test logging"
-//    )
-//    private boolean logging = false;
 
     @CommandLine.Option(
         names = {"--message-writer"},
@@ -159,7 +134,9 @@ public class MainTest implements Runnable {
                 String checkName = loadParamByWrapperKey("checkName", String.class);
                 boolean passed = loadParamByWrapperKey("passed", Boolean.class);
                 String assetKey = loadParamByWrapperKey("assetKey", String.class);
-		PipesAssetCheckSeverity severity = PipesAssetCheckSeverity.valueOf(loadParamByWrapperKey("severity", String.class));
+		        PipesAssetCheckSeverity severity = PipesAssetCheckSeverity.valueOf(
+                    loadParamByWrapperKey("severity", String.class)
+                );
                 pipesTests.setCheck(checkName, passed, assetKey, severity);
             }
 

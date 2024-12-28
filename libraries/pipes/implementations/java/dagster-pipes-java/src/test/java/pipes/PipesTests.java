@@ -17,9 +17,7 @@ import java.util.Map;
 @Disabled
 public class PipesTests {
 
-    private Map<String, String> input;
     private PipesContextLoader contextLoader;
-    private PipesContextData contextData;
     private Map<String, Object> extras;
     private String jobName;
     private Object payload;
@@ -41,10 +39,6 @@ public class PipesTests {
     //Message writer
     private PipesMessageWriter<? extends PipesMessageWriterChannel> pipesMessageWriter;
 
-    void setInput(Map<String, String> input) {
-        this.input = input;
-    }
-
     void setExtras(Map<String, Object> extras) {
         this.extras = extras;
     }
@@ -56,7 +50,6 @@ public class PipesTests {
     void setContextLoader(PipesContextLoader contextLoader) throws DagsterPipesException {
         this.contextLoader = contextLoader;
     }
-
 
     void setPayload(Object payload) {
         this.payload = payload;
