@@ -11,6 +11,7 @@ import dagster._check as check
 import pytest
 from dagster import (
     AssetCheckResult,
+    AssetCheckSeverity,
     AssetCheckSpec,
     AssetExecutionContext,
     AssetKey,
@@ -141,7 +142,11 @@ class PipesTestSuite:
                 "--extras",
                 str(extras_path),
                 "--job-name",
+<<<<<<< HEAD
                 context.dagster_run.job_name,
+=======
+                context.run.job_name,
+>>>>>>> 385428e01c9c1362d518bf15340e21ff015b882a
                 "--test-name",
                 _get_current_test_name(request),
             ]
@@ -583,6 +588,8 @@ class PipesTestSuite:
 
             if check_result.metadata is not None:
                 assert_known_metadata(check_result.metadata)  # type: ignore
+
+            assert check_result.severity == AssetCheckSeverity(severity)
 
             yield from results
 
