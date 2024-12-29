@@ -113,10 +113,10 @@ where
 
     pub fn report_custom_message(
         &mut self,
-        payload: Option<serde_json::Value>,
+        payload: serde_json::Value,
     ) -> Result<(), MessageWriteError> {
         let params: HashMap<&str, Option<serde_json::Value>> =
-            HashMap::from([("payload", payload)]);
+            HashMap::from([("payload", Some(payload))]);
 
         let msg = PipesMessage::new(Method::ReportCustomMessage, Some(params));
         self.message_channel.write_message(msg)
@@ -396,16 +396,19 @@ mod tests {
             },
         };
         context
-            .report_custom_message(Some(json!({"key": "value"})))
+            .report_custom_message(json!({"key": "value"}))
             .expect("Failed to report custom message");
 
         assert_eq!(
-            serde_json::from_str::<PipesMessage>(&fs::read_to_string(file.path()).unwrap())
+            serde_json::from_str::<serde_json::Value>(&fs::read_to_string(file.path()).unwrap())
                 .unwrap(),
-            PipesMessage::new(
-                Method::ReportCustomMessage,
-                Some(HashMap::from([("payload", Some(json!({"key": "value"})))])),
-            )
+            json!({
+                "__dagster_pipes_version": "0.1",
+                "method": "report_custom_message",
+                "params": {
+                    "payload": {"key": "value"}
+                },
+            })
         );
     }
 }
