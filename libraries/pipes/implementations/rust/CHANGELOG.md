@@ -2,7 +2,9 @@
 
 ## [UNRELEASED]
 
-### Added
+- 
+
+## 0.1.7
 
 - (pull/71) Added the `close` method to `PipesContext`
 - (pull/67) Added the `data_version` parameter to `report_asset_materialization`
@@ -24,8 +26,6 @@
 
 ## 0.1.6
 
-### Added
-
 - (pull/5) Setup `jsonschema` and `quicktype` to generate types shared with `dagster-pipes-java`
 - (pull/4) Added ability to report asset check via `context.report_asset_check`
 - (pull/4) Added `AssetCheckSeverity` `enum` for specifying check severity
@@ -35,8 +35,6 @@
 - (pull/3) Define `PipesEnvVarParamsLoader` to implement `PipesParamsLoader` with logic refactored from lib.rs
 
 ## 0.1.5
-
-### Added
 
 - Implemented temporary file based message writing
 - Added the `context.report_asset_materialization` method
