@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import picocli.CommandLine;
 import pipes.data.PipesAssetCheckSeverity;
-import pipes.data.PipesConstants;
 import pipes.loaders.PipesContextLoader;
 import pipes.loaders.PipesDefaultContextLoader;
 import pipes.loaders.PipesS3ContextLoader;
@@ -16,7 +15,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
