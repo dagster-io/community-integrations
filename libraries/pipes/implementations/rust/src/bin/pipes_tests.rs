@@ -95,7 +95,7 @@ pub fn main() -> Result<(), DagsterPipesError> {
             .get("payload")
             .expect("custom payload must have a 'payload' key")
             .clone();
-        context.report_custom_message(Some(payload))?
+        context.report_custom_message(payload)?
     }
 
     Ok(())

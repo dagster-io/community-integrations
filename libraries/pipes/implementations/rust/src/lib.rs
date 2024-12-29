@@ -167,7 +167,7 @@ pub fn open_dagster_pipes() -> Result<PipesContext<PipesDefaultMessageWriter>, D
 
 #[cfg(test)]
 mod tests {
-    use rstest::rstest;
+    use rstest::{fixture, rstest};
     use std::collections::HashMap;
     use std::fs;
     use tempfile::NamedTempFile;
@@ -175,8 +175,24 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn test_write_pipes_metadata() {
+    #[fixture]
+    fn file_and_context() -> (NamedTempFile, PipesContext<DefaultWriter>) {
+        let file = NamedTempFile::new().unwrap();
+        let context: PipesContext<DefaultWriter> = PipesContext {
+            message_channel: DefaultChannel::File(FileChannel::new(file.path().into())),
+            data: PipesContextData {
+                asset_keys: Some(vec!["asset1".to_string()]),
+                run_id: "012345".to_string(),
+                ..Default::default()
+            },
+        };
+        (file, context)
+    }
+
+    #[rstest]
+    fn test_write_pipes_metadata(
+        #[from(file_and_context)] (file, mut context): (NamedTempFile, PipesContext<DefaultWriter>),
+    ) {
         let asset_metadata = HashMap::from([
             ("int", PipesMetadataValue::from(100)),
             ("float", PipesMetadataValue::from(100.0)),
@@ -219,15 +235,6 @@ mod tests {
             ("job", PipesMetadataValue::from_job("some_job".to_string())),
         ]);
 
-        let file = NamedTempFile::new().unwrap();
-        let mut context: PipesContext<DefaultWriter> = PipesContext {
-            message_channel: DefaultChannel::File(FileChannel::new(file.path().into())),
-            data: PipesContextData {
-                asset_keys: Some(vec!["asset1".to_string()]),
-                run_id: "012345".to_string(),
-                ..Default::default()
-            },
-        };
         context
             .report_asset_materialization("asset1", asset_metadata, Some("v1"))
             .expect("Failed to report asset materialization");
@@ -340,18 +347,10 @@ mod tests {
         })
     )]
     fn test_close_pipes_context(
+        #[from(file_and_context)] (file, mut context): (NamedTempFile, PipesContext<DefaultWriter>),
         #[case] exc: Option<PipesException>,
         #[case] expected_message: serde_json::Value,
     ) {
-        let file = NamedTempFile::new().unwrap();
-        let mut context: PipesContext<DefaultWriter> = PipesContext {
-            message_channel: DefaultChannel::File(FileChannel::new(file.path().into())),
-            data: PipesContextData {
-                asset_keys: Some(vec!["asset1".to_string()]),
-                run_id: "012345".to_string(),
-                ..Default::default()
-            },
-        };
         context.close(exc).expect("Failed to close context");
         assert_eq!(
             serde_json::from_str::<serde_json::Value>(&fs::read_to_string(file.path()).unwrap())
@@ -384,17 +383,10 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_report_custom_message() {
-        let file = NamedTempFile::new().unwrap();
-        let mut context: PipesContext<DefaultWriter> = PipesContext {
-            message_channel: DefaultChannel::File(FileChannel::new(file.path().into())),
-            data: PipesContextData {
-                asset_keys: Some(vec!["asset1".to_string()]),
-                run_id: "012345".to_string(),
-                ..Default::default()
-            },
-        };
+    #[rstest]
+    fn test_report_custom_message(
+        #[from(file_and_context)] (file, mut context): (NamedTempFile, PipesContext<DefaultWriter>),
+    ) {
         context
             .report_custom_message(json!({"key": "value"}))
             .expect("Failed to report custom message");
