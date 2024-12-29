@@ -2,7 +2,7 @@
 
 ## [UNRELEASED]
 
-- 
+- (pull/70) Added `report_custom_message` method to the `PipesContext`
 
 ## 0.1.7
 
