@@ -1,0 +1,13 @@
+[general]
+error_reporting = true
+
+[message_channel]
+s3 = true
+databricks = true
+
+[messages]
+log = true
+report_custom_message = true
+report_asset_materialization = true
+report_asset_check = true
+log_external_stream = true
