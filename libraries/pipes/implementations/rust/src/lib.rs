@@ -1,4 +1,5 @@
 mod context_loader;
+mod logger;
 mod params_loader;
 mod types;
 mod types_ext;
@@ -13,6 +14,7 @@ use thiserror::Error;
 use types::PipesException;
 
 use crate::context_loader::{DefaultLoader as PipesDefaultContextLoader, PayloadErrorKind};
+use crate::logger::PipesLogger;
 use crate::params_loader::{EnvVarLoader as PipesEnvVarParamsLoader, ParamsError};
 use crate::types::{Method, PipesContextData, PipesMessage};
 use crate::writer::message_writer::{
@@ -39,6 +41,7 @@ where
 {
     pub data: PipesContextData,
     message_channel: W::Channel,
+    pub logger: PipesLogger<W>,
 }
 
 impl<W> PipesContext<W>
@@ -51,13 +54,15 @@ where
         message_writer: &W,
     ) -> Result<Self, MessageWriteError> {
         let mut message_channel = message_writer.open(message_params);
+        let logger = PipesLogger::new(message_channel.clone());
+
         let opened_payload = get_opened_payload(message_writer);
         let opened_message = PipesMessage::new(Method::Opened, Some(opened_payload));
         message_channel.write_message(opened_message)?;
-
         Ok(Self {
             data: context_data,
             message_channel,
+            logger,
         })
     }
 
@@ -209,13 +214,15 @@ mod tests {
         ]);
 
         let file = NamedTempFile::new().unwrap();
+        let channel = DefaultChannel::File(FileChannel::new(file.path().into()));
         let mut context: PipesContext<DefaultWriter> = PipesContext {
-            message_channel: DefaultChannel::File(FileChannel::new(file.path().into())),
+            message_channel: channel.clone(),
             data: PipesContextData {
                 asset_keys: Some(vec!["asset1".to_string()]),
                 run_id: "012345".to_string(),
                 ..Default::default()
             },
+            logger: PipesLogger::new(channel),
         };
         context
             .report_asset_materialization("asset1", asset_metadata, Some("v1"))
@@ -333,13 +340,15 @@ mod tests {
         #[case] expected_message: serde_json::Value,
     ) {
         let file = NamedTempFile::new().unwrap();
+        let channel = DefaultChannel::File(FileChannel::new(file.path().into()));
         let mut context: PipesContext<DefaultWriter> = PipesContext {
-            message_channel: DefaultChannel::File(FileChannel::new(file.path().into())),
+            message_channel: channel.clone(),
             data: PipesContextData {
                 asset_keys: Some(vec!["asset1".to_string()]),
                 run_id: "012345".to_string(),
                 ..Default::default()
             },
+            logger: PipesLogger::new(channel),
         };
         context.close(exc).expect("Failed to close context");
         assert_eq!(
@@ -353,13 +362,15 @@ mod tests {
     fn test_close_pipes_context_when_out_of_scope() {
         let file = NamedTempFile::new().unwrap();
         {
+            let channel = DefaultChannel::File(FileChannel::new(file.path().into()));
             let _: PipesContext<DefaultWriter> = PipesContext {
-                message_channel: DefaultChannel::File(FileChannel::new(file.path().into())),
+                message_channel: channel.clone(),
                 data: PipesContextData {
                     asset_keys: Some(vec!["asset1".to_string()]),
                     run_id: "012345".to_string(),
                     ..Default::default()
                 },
+                logger: PipesLogger::new(channel),
             };
         }
         assert_eq!(
