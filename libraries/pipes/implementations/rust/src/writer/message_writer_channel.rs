@@ -8,7 +8,7 @@ use super::StdStream;
 
 /// Write messages back to the Dagster orchestration process.
 /// To be used in conjunction with [`MessageWriter`](crate::MessageWriter).
-pub trait MessageWriterChannel {
+pub trait MessageWriterChannel: Clone {
     /// Write a message to the orchestration process
     fn write_message(&mut self, message: PipesMessage) -> Result<(), MessageWriteError>;
 }
@@ -27,7 +27,7 @@ pub enum MessageWriteError {
     Invalid(#[from] serde_json::Error),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct FileChannel {
     path: OsString,
 }
@@ -56,7 +56,7 @@ impl MessageWriterChannel for FileChannel {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct StreamChannel {
     stream: StdStream,
 }
@@ -91,7 +91,7 @@ impl MessageWriterChannel for StreamChannel {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct BufferedStreamChannel {
     buffer: Vec<PipesMessage>,
     stream: StdStream,
@@ -153,7 +153,7 @@ impl MessageWriterChannel for BufferedStreamChannel {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 #[non_exhaustive]
 pub enum DefaultChannel {
     File(FileChannel),
