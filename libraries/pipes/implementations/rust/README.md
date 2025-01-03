@@ -75,7 +75,7 @@ defs = dg.Definitions(
 - [uv](https://docs.astral.sh/uv/)
 - [Rust](https://www.rust-lang.org/tools/install)
 
-For `nix` users, these dependencies can be installed with `nix develop`.
+For `nix` users, these dependencies can be installed with `nix develop ../..#rust`.
 
 ### Installation
 
