@@ -18,7 +18,7 @@
       # You must provide our flake inputs to Snowfall Lib.
       inherit inputs;
 
-      overlays = with inputs; [ (import rust-overlay) ];
+      overlays = with inputs; [(import rust-overlay)];
 
       # The `src` must be the root of the flake. See configuration
       # in the next section for information on how you can move your
