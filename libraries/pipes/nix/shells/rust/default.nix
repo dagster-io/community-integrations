@@ -6,7 +6,7 @@
   mkShell,
   ...
 }:
-let python = pkgs.python312; in
+let python = pkgs.python310; in
 mkShell {
   packages = with pkgs; [
     zsh

@@ -28,7 +28,7 @@ uvx --with dagster-webserver dagster dev -f examples/local/definitions.py
 - [uv](https://docs.astral.sh/uv/)
 - [Java 8](https://www.oracle.com/java/technologies/javase-jdk8-downloads.html)
 
-For `nix` users, these dependencies can be installed with `nix develop`.
+For `nix` users, these dependencies can be installed with `nix develop .#java`.
 
 ## Installation
 

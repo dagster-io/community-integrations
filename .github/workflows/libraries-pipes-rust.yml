@@ -28,19 +28,19 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: rustfmt
         run: |
-          nix develop ../..#rust --command \
+          nix develop .#rust --command \
             bash -c "cargo fmt --all --check"
       - name: test
         run: |
-          nix develop ../..#rust --command \
+          nix develop .#rust --command \
             bash -c "cargo nextest run"
       - name: doctest
         run: |
-          nix develop ../..#rust --command \
+          nix develop .#rust --command \
             bash -c "cargo test --doc"
       - name: pipes-tests
         run: |
-          nix develop ../..#rust --command \
+          nix develop .#rust --command \
             uv run pytest
 
   integration:

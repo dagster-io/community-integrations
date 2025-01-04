@@ -22,5 +22,5 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Run tests
         run: |
-          nix develop --command \
+          nix develop .#java --command \
             bash -c "uv run pytest"
