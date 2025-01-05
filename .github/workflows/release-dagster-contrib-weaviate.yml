@@ -1,0 +1,14 @@
+name: build-and-release-dagster-contrib-weaviate
+
+on:
+  push:
+    tags:
+      - 'dagster_contrib_weaviate-*.*.*'
+
+jobs:
+  build-and-release-dagster-contrib-weaviate:
+    uses: ./.github/workflows/template-release.yml
+    with:
+      library_name: dagster-contrib-weaviate
+      working_directory: ./libraries/dagster-contrib-weaviate
+    secrets: inherit
