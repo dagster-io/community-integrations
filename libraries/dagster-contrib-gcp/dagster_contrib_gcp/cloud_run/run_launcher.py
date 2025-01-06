@@ -39,6 +39,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         region: str,
         job_name_by_code_location: "dict[str, str]",
         run_job_retry: "dict[str, int]",
+        run_timeout: int,
         inst_data: Optional[ConfigurableClassData] = None,
     ):
         self._inst_data = inst_data
@@ -48,6 +49,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
 
         self.run_job_retry_wait = run_job_retry["wait"]
         self.run_job_retry_timeout = run_job_retry["timeout"]
+        self.run_timeout = run_timeout
 
         self.jobs_client = run_v2.JobsClient()
         self.executions_client = run_v2.ExecutionsClient()
@@ -102,7 +104,6 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
     def execute_job(
         self,
         fully_qualified_job_name: str,
-        timeout: str = "3600s",
         args: Optional[Sequence[str]] = None,
         env: Optional["dict[str, str]"] = None,
     ) -> Operation:
@@ -119,7 +120,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         container_overrides = [RunJobRequest.Overrides.ContainerOverride(**overrides)]
 
         request.overrides.container_overrides.extend(container_overrides)
-        request.overrides.timeout = timeout  # pyright: ignore
+        request.overrides.timeout = f"{self.run_timeout}s"  # pyright: ignore
 
         @tenacity.retry(
             wait=tenacity.wait_fixed(self.run_job_retry_wait),
@@ -214,6 +215,12 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
                     "Retry configuration for run job requests. Note that the default Cloud Run "
                     "Admin API quota is quite low, which makes retries more likely."
                 ),
+            ),
+            "run_timeout": Field(
+                int,
+                is_required=False,
+                default_value=3600,
+                description="Timeout for the Cloud Run job execution in seconds",
             ),
         }
 
