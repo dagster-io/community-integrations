@@ -1,14 +1,75 @@
 from contextlib import contextmanager
-from typing import Any, Dict, Optional, Generator
+from typing import Any, Dict, Optional, Generator, Union
+from pydantic import Field
 
 import weaviate
 
 from dagster import ConfigurableResource
 from dagster._utils.backoff import backoff
-from pydantic import Field
+
+from .config import LocalConfig, CloudConfig
 
 
-class WeaviateBaseResource(ConfigurableResource):
+class WeaviateResource(ConfigurableResource):
+    """Resource for interacting with a Weaviate database.
+    
+    Examples:
+        .. code-block:: python
+            from dagster import Definitions, asset
+            from dagster_contrib_weaviate import WeaviateResource, LocalConfig
+
+            @asset
+            def my_table(weaviate: WeaviateResource):
+                with weaviate.get_client() as weaviate_client:
+                    questions = weaviate_client.collections.get("Question")
+                    questions.query.near_text(query="biology", limit=2)
+
+            defs = Definitions(
+                assets=[my_table],
+                resources={
+                    "weaviate": WeaviateResource(
+                        connection_config=LocalConfig(
+                            host="192.168.0.10", 
+                            port=8080, 
+                        )
+                    ),
+                },
+            )
+
+        .. code-block:: python
+            from dagster import Definitions, asset
+            from dagster_contrib_weaviate import WeaviateResource, CloudConfig
+
+            @asset
+            def my_table(weaviate: WeaviateResource):
+                with weaviate.get_client() as weaviate_client:
+                    questions = weaviate_client.collections.get("Question")
+                    questions.query.near_text(query="biology", limit=2)
+
+            defs = Definitions(
+                assets=[my_table],
+                resources={
+                    "weaviate": WeaviateResource(
+                        connection_config=CloudConfig(
+                            cluster_url=wcd_url
+                        ),
+                        auth_credentials={
+                            "api_key": wcd_apikey
+                        },
+                        headers={
+                            "X-Cohere-Api-Key": cohere_apikey,
+                        }
+                    ),
+                },
+            )
+    """
+
+    connection_config: Union[LocalConfig, CloudConfig] = Field(
+        discriminator="provider",
+        description=("Specifies whether to connect to a local (self-hosted) instance,"
+                     " or a Weaviate cloud instance. Use LocalConfig or CloudConfig, respectively")
+    )
+
     headers: Optional[Dict[str, str]] = Field(
         description=(
             "Additional headers to include in the requests,"
@@ -59,129 +120,37 @@ class WeaviateBaseResource(ConfigurableResource):
             "One of the following must be provided in auth_credentials configuration:"
             " api_key / access_token / username+password / client_secret"
         )
-
-
-class WeaviateCloudResource(WeaviateBaseResource):
-    """Resource for interacting with a Weaviate Cloud database.
-
-    Use WeaviateLocalResource to interact with a self hosted Weaviate resource.
-
-    Examples:
-        .. code-block:: python
-
-            from dagster import Definitions, asset
-            from dagster_contrib_weaviate import WeaviateCloudResource
-
-            @asset
-            def my_table(weaviate: WeaviateCloudResource):
-                with weaviate.get_client() as weaviate_client:
-                    questions = weaviate_client.collections.get("Question")
-                    questions.query.near_text(query="biology", limit=2)
-
-            defs = Definitions(
-                assets=[my_table],
-                resources={
-                    "weaviate": WeaviateCloudResource(
-                        cluster_url=wcd_url,
-                        auth_credentials={
-                            "api_key": wcd_apikey
-                        },
-                        headers={
-                            "X-Cohere-Api-Key": cohere_apikey,
-                        }
-                    ),
+    
+    @contextmanager
+    def get_client(self) -> Generator[weaviate.WeaviateClient, None, None]:
+        if self.connection_config.provider == "local": # LocalConfig
+            conn = backoff(
+                fn=weaviate.connect_to_local,
+                retry_on=(weaviate.exceptions.WeaviateConnectionError,),
+                kwargs={
+                    "host": self.connection_config.host,
+                    "port": self.connection_config.port,
+                    "grpc_port": self.connection_config.grpc_port,
+                    "headers": self.headers,
+                    "skip_init_checks": self.skip_init_checks,
+                    "auth_credentials": self._weaviate_auth_credentials(),
                 },
+                max_retries=10,
             )
-
-    """
-
-    cluster_url: str = Field(
-        description=(
-            "The WCD cluster URL or hostname to connect to. Usually in the form: rAnD0mD1g1t5.something.weaviate.cloud"
-        )
-    )
-
-    @classmethod
-    def _is_dagster_maintained(cls) -> bool:
-        return False
-
-    @contextmanager
-    def get_client(self) -> Generator[weaviate.WeaviateClient, None, None]:
-        conn = backoff(
-            fn=weaviate.connect_to_weaviate_cloud,
-            retry_on=(weaviate.exceptions.WeaviateConnectionError,),
-            kwargs={
-                "cluster_url": self.cluster_url,
-                "headers": self.headers,
-                "skip_init_checks": self.skip_init_checks,
-                "auth_credentials": self._weaviate_auth_credentials(),
-            },
-            max_retries=10,
-        )
-
-        try:
-            yield conn
-        finally:
-            conn.close()
-
-
-class WeaviateLocalResource(WeaviateBaseResource):
-    """Resource for interacting with a local (self-hosted) Weaviate database.
-
-    Use WeaviateCloudResource to interact with a Weaviate Cloud instance.
-
-    Examples:
-        .. code-block:: python
-
-            from dagster import Definitions, asset
-            from dagster_contrib_weaviate import WeaviateLocalResource
-
-            @asset
-            def my_table(weaviate: WeaviateLocalResource):
-                with weaviate.get_client() as weaviate_client:
-                    questions = weaviate_client.collections.get("Question")
-                    questions.query.near_text(query="biology", limit=2)
-
-            defs = Definitions(
-                assets=[my_table],
-                resources={"weaviate": WeaviateLocalResource(host="192.168.0.10")}
+        elif self.connection_config.provider == "cloud": # CloudConfig
+            conn = backoff(
+                fn=weaviate.connect_to_weaviate_cloud,
+                retry_on=(weaviate.exceptions.WeaviateConnectionError,),
+                kwargs={
+                    "cluster_url": self.connection_config.cluster_url,
+                    "headers": self.headers,
+                    "skip_init_checks": self.skip_init_checks,
+                    "auth_credentials": self._weaviate_auth_credentials(),
+                },
+                max_retries=10,
             )
-
-    """
-
-    host: str = Field(
-        description=("The host to use for the underlying REST and GraphQL API calls"),
-        default="localhost",
-    )
-
-    port: int = Field(
-        description=("The port to use for the underlying REST and GraphQL API calls"),
-        default=8080,
-    )
-
-    grpc_port: int = Field(
-        description=("The port to use for the underlying gRPC API"), default=50051
-    )
-
-    @classmethod
-    def _is_dagster_maintained(cls) -> bool:
-        return False
-
-    @contextmanager
-    def get_client(self) -> Generator[weaviate.WeaviateClient, None, None]:
-        conn = backoff(
-            fn=weaviate.connect_to_local,
-            retry_on=(weaviate.exceptions.WeaviateConnectionError,),
-            kwargs={
-                "host": self.host,
-                "port": self.port,
-                "grpc_port": self.grpc_port,
-                "headers": self.headers,
-                "skip_init_checks": self.skip_init_checks,
-                "auth_credentials": self._weaviate_auth_credentials(),
-            },
-            max_retries=10,
-        )
+        else:
+            raise Exception("Invalid connection_config type - use one of LocalConfig/CloudConfig")
 
         try:
             yield conn

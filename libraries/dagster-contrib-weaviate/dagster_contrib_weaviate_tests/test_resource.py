@@ -7,13 +7,13 @@ import os
 import weaviate
 
 from dagster import asset, materialize
-from dagster_contrib_weaviate import WeaviateLocalResource
+from dagster_contrib_weaviate import WeaviateResource
+from dagster_contrib_weaviate import LocalConfig
 
 WEAVIATE_PORT = 8079
 WEAVIATE_GRPC_PORT = 50050
 
 DATA_DIR = Path(os.path.dirname(__file__))
-
 
 def read_data_vector_from_file() -> List[Any]:
     with open(Path(DATA_DIR, "data_vector.json")) as f:
@@ -68,7 +68,7 @@ def test_local_resource():
     """
 
     @asset
-    def query_weaviate_asset(weaviate_resource: WeaviateLocalResource):
+    def query_weaviate_asset(weaviate_resource: WeaviateResource):
         with create_embedded_weaviate_and_add_data():
             with weaviate_resource.get_client() as client:
                 questions = client.collections.get("Question")
@@ -85,8 +85,12 @@ def test_local_resource():
     result = materialize(
         [query_weaviate_asset],
         resources={
-            "weaviate_resource": WeaviateLocalResource(
-                host="localhost", port=WEAVIATE_PORT, grpc_port=WEAVIATE_GRPC_PORT
+            "weaviate_resource": WeaviateResource(
+                connection_config=LocalConfig(
+                    host="localhost", 
+                    port=WEAVIATE_PORT, 
+                    grpc_port=WEAVIATE_GRPC_PORT
+                )
             )
         },
     )
