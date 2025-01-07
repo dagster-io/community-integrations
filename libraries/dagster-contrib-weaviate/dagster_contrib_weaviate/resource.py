@@ -12,7 +12,7 @@ from .config import LocalConfig, CloudConfig
 
 class WeaviateResource(ConfigurableResource):
     """Resource for interacting with a Weaviate database.
-    
+
     Examples:
         .. code-block:: python
             from dagster import Definitions, asset
@@ -29,8 +29,8 @@ class WeaviateResource(ConfigurableResource):
                 resources={
                     "weaviate": WeaviateResource(
                         connection_config=LocalConfig(
-                            host="192.168.0.10", 
-                            port=8080, 
+                            host="192.168.0.10",
+                            port=8080,
                         )
                     ),
                 },
@@ -66,8 +66,10 @@ class WeaviateResource(ConfigurableResource):
 
     connection_config: Union[LocalConfig, CloudConfig] = Field(
         discriminator="provider",
-        description=("Specifies whether to connect to a local (self-hosted) instance,"
-                     " or a Weaviate cloud instance. Use LocalConfig or CloudConfig, respectively")
+        description=(
+            "Specifies whether to connect to a local (self-hosted) instance,"
+            " or a Weaviate cloud instance. Use LocalConfig or CloudConfig, respectively"
+        ),
     )
 
     headers: Optional[Dict[str, str]] = Field(
@@ -120,10 +122,10 @@ class WeaviateResource(ConfigurableResource):
             "One of the following must be provided in auth_credentials configuration:"
             " api_key / access_token / username+password / client_secret"
         )
-    
+
     @contextmanager
     def get_client(self) -> Generator[weaviate.WeaviateClient, None, None]:
-        if self.connection_config.provider == "local": # LocalConfig
+        if self.connection_config.provider == "local":  # LocalConfig
             conn = backoff(
                 fn=weaviate.connect_to_local,
                 retry_on=(weaviate.exceptions.WeaviateConnectionError,),
@@ -137,7 +139,7 @@ class WeaviateResource(ConfigurableResource):
                 },
                 max_retries=10,
             )
-        elif self.connection_config.provider == "cloud": # CloudConfig
+        elif self.connection_config.provider == "cloud":  # CloudConfig
             conn = backoff(
                 fn=weaviate.connect_to_weaviate_cloud,
                 retry_on=(weaviate.exceptions.WeaviateConnectionError,),
@@ -150,7 +152,9 @@ class WeaviateResource(ConfigurableResource):
                 max_retries=10,
             )
         else:
-            raise Exception("Invalid connection_config type - use one of LocalConfig/CloudConfig")
+            raise Exception(
+                "Invalid connection_config type - use one of LocalConfig/CloudConfig"
+            )
 
         try:
             yield conn

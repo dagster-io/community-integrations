@@ -9,9 +9,10 @@ DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8080
 DEFAULT_GRPC_PORT = 50051
 
+
 class LocalConfig(Config):
     """Connection parameters for a local (self-hosted) database."""
-    
+
     provider: Literal["local"] = "local"
 
     host: str = DEFAULT_HOST
@@ -25,12 +26,13 @@ class LocalConfig(Config):
     """The port to use for the underlying gRPC API. 
      Defaults to 50051 (the default grpc-port a weaviate instance runs on)"""
 
+
 class CloudConfig(Config):
     """Connection parameters for a cloud Weaviate database."""
 
     provider: Literal["cloud"] = "cloud"
 
-    cluster_url: str 
+    cluster_url: str
     """The WCD cluster URL or hostname to connect to. 
     Usually in the form: rAnD0mD1g1t5.something.weaviate.cloud
     """
