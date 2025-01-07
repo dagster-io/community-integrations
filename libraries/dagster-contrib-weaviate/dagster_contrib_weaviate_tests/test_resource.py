@@ -1,14 +1,17 @@
-import time
 import json
 from typing import List, Any
 from pathlib import Path
+from unittest import mock
+from unittest.mock import MagicMock, AsyncMock
 import os
+import httpx
+import pytest
+import time
 
 import weaviate
 
 from dagster import asset, materialize
-from dagster_contrib_weaviate import WeaviateResource
-from dagster_contrib_weaviate import LocalConfig
+from dagster_contrib_weaviate import WeaviateResource, LocalConfig, CloudConfig
 
 WEAVIATE_PORT = 8079
 WEAVIATE_GRPC_PORT = 50050
@@ -68,9 +71,9 @@ def test_local_resource():
     """
 
     @asset
-    def query_weaviate_asset(weaviate_resource: WeaviateResource):
+    def query_local_weaviate_asset(weaviate_local: WeaviateResource):
         with create_embedded_weaviate_and_add_data():
-            with weaviate_resource.get_client() as client:
+            with weaviate_local.get_client() as client:
                 questions = client.collections.get("Question")
                 response = questions.query.near_vector(
                     near_vector=read_query_vector_from_file(),
@@ -83,9 +86,9 @@ def test_local_resource():
                 assert len(response.objects) == 2
 
     result = materialize(
-        [query_weaviate_asset],
+        [query_local_weaviate_asset],
         resources={
-            "weaviate_resource": WeaviateResource(
+            "weaviate_local": WeaviateResource(
                 connection_config=LocalConfig(
                     host="localhost", 
                     port=WEAVIATE_PORT, 
@@ -96,3 +99,94 @@ def test_local_resource():
     )
 
     assert result.success
+
+
+
+WCD_URL = "https://rand0md1g1t5.something.weaviate.cloud"
+WCD_APIKEY = "FakeWeaviateCloudApiKey"
+COHERE_APIKEY = "FakeCohereApiKey"
+
+# Required to avoid an infinite recursion 
+# (since our mock needs to forward some requests to the original httpx.Send)
+real_httpx_send_method = httpx.AsyncClient.send
+
+# this method only returns a mock response if the URL accessed is weaviate.
+# Otherwise, it passes the request through to real_httpx_send_method
+# Impotant since Weaviate might make some PyPI requests (which don't need to be mocked).
+async def mock_httpx_send_method(self, *args, **kwargs):
+    request = args[0]
+
+    if "weaviate.cloud" not in str(request.url):
+        return await real_httpx_send_method(self, *args, **kwargs)
+
+    assert WCD_URL in str(request.url)
+    assert ("x-cohere-api-key", COHERE_APIKEY) in request.headers.items()
+    assert WCD_APIKEY in request.headers['authorization']
+
+    result = httpx.Response(
+        status_code=200,
+        text=json.dumps({
+            "grpcMaxMessageSize": 10485760,
+            "hostname": "http://[::]:8080",
+            "modules": {
+                "backup-gcs": {
+                    "bucketName": "weaviate-wcs-example-example-backup",
+                    "rootName": "395b9713-2bb5-4a12-a9bc-a32eb6a2a3d8" # fake UUID
+                },
+                "generative-anthropic": {
+                    "documentationHref": "https://docs.anthropic.com/en/api/getting-started",
+                    "name": "Generative Search - Anthropic"
+                },
+                "text2vec-voyageai": {
+                    "documentationHref": "https://docs.voyageai.com/docs/embeddings",
+                    "name": "VoyageAI Module"
+                },
+                "text2vec-weaviate": {
+                    "documentationHref": "https://api.embedding.weaviate.io",
+                    "name": "Weaviate Embedding Module"
+                }
+            },
+            "version": "1.28.2"
+        })
+    )
+
+    return result
+
+def test_cloud_resource():
+    """Mocks the httpx.AsyncClient.send method. 
+        Makes sure the url and headers (incl' authorization) of the request made by Weaviate are the same as
+        specified in the Resource config.
+    """
+    with mock.patch.object(
+        httpx.AsyncClient, 
+        'send', 
+        autospec=True, 
+        side_effect = mock_httpx_send_method):
+
+        @asset
+        def query_cloud_weaviate_asset(weaviate_cloud: WeaviateResource):
+            with weaviate_cloud.get_client() as client:
+                # We only test the basic connection flow - which is over http (httpx library).
+                # The bulk of Weaviate communication (ie queries) is over grpc, which is quite complex to mock.
+                pass 
+
+        result = materialize(
+            [query_cloud_weaviate_asset],
+            resources={
+                "weaviate_cloud": WeaviateResource(
+                    connection_config=CloudConfig(cluster_url=WCD_URL),
+                    auth_credentials={
+                        "api_key": WCD_APIKEY
+                    },
+                    headers={
+                        "X-Cohere-Api-Key": COHERE_APIKEY,
+                    },
+                    # Important so that Weaviate doesn't make gRPC "heartbeat" checks 
+                    # on inititalization. (Those will fail here,, of course, since in the mock-tests we
+                    # don't use a real api-key).
+                    skip_init_checks=True 
+                ),
+            },
+        )
+
+        assert result.success
