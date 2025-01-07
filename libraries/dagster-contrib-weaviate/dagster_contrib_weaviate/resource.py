@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Generator
 
 import weaviate
 
@@ -8,7 +8,6 @@ from dagster._utils.backoff import backoff
 from pydantic import Field
 
 
-# A base class for WeaviateCloudResource, and WeaviateLocalResource
 class WeaviateBaseResource(ConfigurableResource):
     headers: Optional[Dict[str, str]] = Field(
         description=(
@@ -107,7 +106,7 @@ class WeaviateCloudResource(WeaviateBaseResource):
         return False
 
     @contextmanager
-    def get_client(self):
+    def get_client(self) -> Generator[weaviate.WeaviateClient, None, None]:
         conn = backoff(
             fn=weaviate.connect_to_weaviate_cloud,
             retry_on=(weaviate.exceptions.WeaviateConnectionError,),
@@ -169,7 +168,7 @@ class WeaviateLocalResource(WeaviateBaseResource):
         return False
 
     @contextmanager
-    def get_client(self):
+    def get_client(self) -> Generator[weaviate.WeaviateClient, None, None]:
         conn = backoff(
             fn=weaviate.connect_to_local,
             retry_on=(weaviate.exceptions.WeaviateConnectionError,),

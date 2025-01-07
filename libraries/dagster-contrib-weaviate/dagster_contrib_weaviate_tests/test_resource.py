@@ -14,18 +14,21 @@ WEAVIATE_GRPC_PORT = 50050
 
 DATA_DIR = Path(os.path.dirname(__file__))
 
+
 def read_data_vector_from_file() -> List[Any]:
     with open(Path(DATA_DIR, "data_vector.json")) as f:
         return json.load(f)
+
 
 def read_query_vector_from_file() -> List[float]:
     with open(Path(DATA_DIR, "query_vector.json")) as f:
         return json.load(f)
 
+
 def create_embedded_weaviate_and_add_data() -> weaviate.WeaviateClient:
     """Creates an embedded instance of weaviate, and adds data (including vectors), from
     the Weaviate tutorial. https://weaviate.io/developers/weaviate/starter-guides/custom-vectors
-    The returned WeaviateClient should be closed when the Weaviate instance is no longer needed    
+    The returned WeaviateClient should be closed when the Weaviate instance is no longer needed
     """
 
     data_vector = read_data_vector_from_file()
@@ -57,7 +60,7 @@ def create_embedded_weaviate_and_add_data() -> weaviate.WeaviateClient:
     return client
 
 
-def test_resource():
+def test_local_resource():
     """Starts up an embedded instance of Weaviate, adds some data, and then queries it.
     To avoid installing heavy models on github-actions (which could incur costs),
     we use the "bring-your-own-vectors" method,
@@ -79,7 +82,7 @@ def test_resource():
 
                 assert len(response.objects) == 2
 
-    materialize(
+    result = materialize(
         [query_weaviate_asset],
         resources={
             "weaviate_resource": WeaviateLocalResource(
@@ -87,3 +90,5 @@ def test_resource():
             )
         },
     )
+
+    assert result.success

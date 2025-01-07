@@ -3,12 +3,12 @@
 A dagster module that provides integration with [Weaviate](https://weaviate.io/)
 (both Cloud and Self-Hosted Weaviate instances).
 
-This module proveds the `WeaviateLocalResource` and the `WeaviateCloudResource` for integration 
-with a self-hosted or WeaviateCloud instances, respectively.
+This module provides the `WeaviateLocalResource` and the `WeaviateCloudResource` for integration 
+with a self-hosted or WeaviateCloud instance, respectively.
 
 ## Installation
 
-The `dagster_contrib_weaviate` module is availble as a PyPI package - install with your preferred python 
+The `dagster_contrib_weaviate` module is available as a PyPI package - install with your preferred python 
 environment manager (We recommend [uv](https://github.com/astral-sh/uv)).
 
 ```
@@ -18,7 +18,7 @@ uv pip install dagster_contrib_weaviate
 
 ## Example Usage (Local Weaviate Instance)
 
-(Based on the [Weaviate Quickstart (Local)](https://weaviate.io/developers/weaviate/quickstart/local))
+(Based on the [Weaviate Quickstart Guide (Local)](https://weaviate.io/developers/weaviate/quickstart/local))
 
 ```python
 from dagster import Definitions, asset
@@ -39,7 +39,7 @@ defs = Definitions(
 
 ## Example Usage (Weaviate Cloud Instance)
 
-Based on the [Weavite Cloud Quickstart](https://weaviate.io/developers/wcs/quickstart)
+Based on the [Weaviate Cloud Quickstart Guide](https://weaviate.io/developers/wcs/quickstart)
 
 ```python
 from dagster import Definitions, asset
@@ -71,7 +71,7 @@ defs = Definitions(
 
 ## Development
 
-The `Makefile` provides the tools required to test and lint your version locally
+The `Makefile` provides the tools required to test and lint your local installation
 
 ```sh
 make test
