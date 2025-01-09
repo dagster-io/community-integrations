@@ -19,39 +19,29 @@ env:
   RUSTUP_MAX_RETRIES: 10
 
 jobs:
-  lint:
-    name: "lint"
+  ci:
+    name: "CI"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: "Install Rustfmt"
-        run: rustup component add rustfmt
-
-      - name: "rustfmt"
-        run: cargo fmt --all --check
-
-  test:
-    name: "test"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: nextest
-
-      - name: "Install uv"
-        uses: astral-sh/setup-uv@v4
-
-      - name: "Tests"
-        run: cargo nextest run
-
-      - name: "Doctests"
-        run: cargo test --doc
-
-      - name: "Dagster integration tests"
-        run: uv run pytest
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: rustfmt
+        run: |
+          nix develop .#rust --command \
+            bash -c "cargo fmt --all --check"
+      - name: test
+        run: |
+          nix develop .#rust --command \
+            bash -c "cargo nextest run"
+      - name: doctest
+        run: |
+          nix develop .#rust --command \
+            bash -c "cargo test --doc"
+      - name: pipes-tests
+        run: |
+          nix develop .#rust --command \
+            uv run pytest
 
   integration:
     name: "integration"

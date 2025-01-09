@@ -1,6 +1,6 @@
 [project]
 name = "dagster-contrib-notdiamond"
-version = "0.0.1"
+version = "0.1.2"
 description = "Dagster integration with Not Diamond"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -23,7 +23,3 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["dagster_contrib_notdiamond"]
-
-[tool.dagster]
-module_name = "example_job.example_notdiamond"
-working_directory = "/Users/compa/git/community-integrations/libraries/dagster-contrib-notdiamond/"

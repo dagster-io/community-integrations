@@ -1,4 +1,3 @@
-use clap::ArgAction;
 use clap::Parser;
 use dagster_pipes_rust::{open_dagster_pipes, DagsterPipesError};
 use dagster_pipes_rust::{DAGSTER_PIPES_CONTEXT_ENV_VAR, DAGSTER_PIPES_MESSAGES_ENV_VAR};
@@ -8,55 +7,21 @@ use std::fs::File;
 #[derive(Parser)]
 struct Cli {
     #[arg(long)]
+    test_name: String,
+    #[arg(long)]
     context: Option<String>,
     #[arg(long)]
     messages: Option<String>,
-    #[arg(
-        long,
-        action = ArgAction::Set,
-        default_value_t = false,
-        default_missing_value = "false",
-        num_args=0..=1,
-        require_equals = false,
-    )]
-    env: bool,
-    #[arg(long = "job-name")]
+    #[arg(long)]
     job_name: Option<String>,
     #[arg(long)]
     extras: Option<String>,
-    #[arg(
-        long,
-        action = ArgAction::Set,
-        default_value_t = false,
-        default_missing_value = "false",
-        num_args=0..=1,
-        require_equals = false,
-    )]
-    full: bool,
     #[arg(long)]
-    custom_payload_path: Option<String>,
+    custom_payload: Option<String>,
     #[arg(long)]
     report_asset_check: Option<String>,
     #[arg(long)]
     report_asset_materialization: Option<String>,
-    #[arg(
-        long,
-        action = ArgAction::Set,
-        default_value_t = false,
-        default_missing_value = "false",
-        num_args=0..=1,
-        require_equals = false,
-    )]
-    throw_error: bool,
-    #[arg(
-        long,
-        action = ArgAction::Set,
-        default_value_t = false,
-        default_missing_value = "false",
-        num_args=0..=1,
-        require_equals = false,
-    )]
-    logging: bool,
     #[arg(long)]
     message_writer: Option<String>,
     #[arg(long)]
@@ -85,9 +50,9 @@ pub fn main() -> Result<(), DagsterPipesError> {
         assert_eq!(context.data.extras, Some(json));
     }
 
-    if let Some(custom_payload_path) = args.custom_payload_path {
+    if let Some(custom_payload) = args.custom_payload {
         let file =
-            File::open(custom_payload_path).expect("custom_payload_path could not be opened");
+            File::open(custom_payload).expect("custom_payload_path could not be opened");
         let payload = serde_json::from_reader::<File, serde_json::Value>(file)
             .expect("custom_payload_path could not be parsed")
             .as_object()

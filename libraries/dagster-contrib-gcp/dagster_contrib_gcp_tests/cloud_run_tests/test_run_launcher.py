@@ -11,6 +11,7 @@ from google.cloud.run_v2 import (
     GetExecutionRequest,
     RunJobRequest,
 )
+import datetime as dt
 
 
 def test_launch_run(
@@ -33,6 +34,7 @@ def test_launch_run(
     assert (
         args[0].name == "projects/test_project/locations/test_region/jobs/test_job_name"
     )
+    assert args[0].overrides.timeout == dt.timedelta(seconds=7200)
 
 
 def test_terminate(

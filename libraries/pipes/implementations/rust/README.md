@@ -68,8 +68,45 @@ defs = dg.Definitions(
 )
 ```
 
-
 ## Contributing
+
+### Prerequisites
+
+- [uv](https://docs.astral.sh/uv/)
+- [Rust](https://www.rust-lang.org/tools/install)
+
+For `nix` users, these dependencies can be installed with `nix develop .#rust`.
+
+### Installation
+
+1. Install the Python (Dagster) environment, mainly used for testing.
+
+```shell
+uv sync
+```
+
+This will automatically create a virtual environment in `.venv` and install all the Python dependencies.
+
+To use the environment, either activate it manually with `source ./.venv/bin/activate`, or use `uv run` to execute commands in the context of this environment.
+
+2. To build the Rust part of the project, use:
+```shell
+cargo build
+```
+
+### Testing
+
+The tests can be run with cargo:
+
+```shell
+cargo test
+```
+
+The integration tests are written in Python and can be run with `pytest`. The Rust project will be automatically built before running the tests.
+
+```shell
+uv run pytest
+```
 
 ### Pipes Schema
 
