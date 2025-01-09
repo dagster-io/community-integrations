@@ -1,5 +1,5 @@
 use clap::Parser;
-use dagster_pipes_rust::{open_dagster_pipes, DagsterPipesError};
+use dagster_pipes_rust::{open_dagster_pipes, DagsterPipesError, MessageWriter, PipesContext};
 use dagster_pipes_rust::{DAGSTER_PIPES_CONTEXT_ENV_VAR, DAGSTER_PIPES_MESSAGES_ENV_VAR};
 use std::collections::HashMap;
 use std::fs::File;
@@ -49,5 +49,22 @@ pub fn main() -> Result<(), DagsterPipesError> {
             serde_json::from_reader(file).expect("extras could not be parsed");
         assert_eq!(context.data.extras, Some(json));
     }
+
+    match args.test_name.as_str() {
+        "test_message_log" => test_message_log(context),
+        _ => Ok(()),
+    }?;
+    Ok(())
+}
+
+fn test_message_log<W>(mut context: PipesContext<W>) -> Result<(), DagsterPipesError>
+where
+    W: MessageWriter,
+{
+    context.logger.debug("Debug message")?;
+    context.logger.info("Info message")?;
+    context.logger.warning("Warning message")?;
+    context.logger.error("Error message")?;
+    context.logger.critical("Critical message")?;
     Ok(())
 }

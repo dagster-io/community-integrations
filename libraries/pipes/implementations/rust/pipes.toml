@@ -2,7 +2,7 @@
 error_reporting = false
 
 [messages]
-log = false
+log = true
 report_custom_message = false
 report_asset_materialization = false
 report_asset_check = false
