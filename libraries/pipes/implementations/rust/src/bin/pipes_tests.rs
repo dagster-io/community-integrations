@@ -51,8 +51,7 @@ pub fn main() -> Result<(), DagsterPipesError> {
     }
 
     if let Some(custom_payload) = args.custom_payload {
-        let file =
-            File::open(custom_payload).expect("custom_payload_path could not be opened");
+        let file = File::open(custom_payload).expect("custom_payload_path could not be opened");
         let payload = serde_json::from_reader::<File, serde_json::Value>(file)
             .expect("custom_payload_path could not be parsed")
             .as_object()
