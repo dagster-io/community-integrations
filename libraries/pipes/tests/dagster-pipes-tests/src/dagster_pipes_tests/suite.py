@@ -157,6 +157,7 @@ class PipesTestSuite:
             invocation = pipes_subprocess_client.run(
                 context=context,
                 command=args,
+                extras=metadata,
             )
 
             custom_messages = invocation.get_custom_messages()
