@@ -109,7 +109,7 @@ real_httpx_send_method = httpx.AsyncClient.send
 
 # this method only returns a mock response if the URL accessed is weaviate.
 # Otherwise, it passes the request through to real_httpx_send_method
-# Impotant since Weaviate might make some PyPI requests (which don't need to be mocked).
+# Important since Weaviate might make some PyPI requests (which don't need to be mocked).
 async def mock_httpx_send_method(self, *args, **kwargs):
     request = args[0]
 
@@ -120,6 +120,13 @@ async def mock_httpx_send_method(self, *args, **kwargs):
     assert ("x-cohere-api-key", COHERE_APIKEY) in request.headers.items()
     assert WCD_APIKEY in request.headers["authorization"]
 
+    # The mock response is based on:
+    # export WCD_API_KEY=...
+    # export WCD_URL=...
+    # curl $WCD_URL/v1/meta \
+    #   -H "x-weaviate-api-key: $WCD_API_KEY" \
+    #   -H "x-weaviate-cluster-url: $WCD_URL" \
+    #   -H "authorization: Bearer $WCD_API_KEY"
     result = httpx.Response(
         status_code=200,
         text=json.dumps(
