@@ -53,12 +53,12 @@ defs = Definitions(
 )
 ```
 
-Please refer to `example_job/example_notdiamond.py` for an example script which you can test by updating
+Please refer to `examples/example_notdiamond.py` for an example script which you can test by updating
 your pyproject.toml as follows (replacing `$PROJECT_HOME` with the path to this project):
 
 ```toml
 [tool.dagster]
-module_name = "example_job.example_notdiamond"
+module_name = "examples.example_notdiamond"
 working_directory = "$PROJECT_HOME/libraries/dagster-contrib-notdiamond/"
 ```
 
