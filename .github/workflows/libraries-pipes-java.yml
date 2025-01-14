@@ -10,7 +10,7 @@ on:
 
 defaults:
   run:
-    working-directory: ./libraries/pipes/implementations/java/dagster-pipes-java/
+    working-directory: ./libraries/pipes/implementations/java/
 
 jobs:
   integration-tests:

@@ -19,7 +19,7 @@ dev-dependencies = [
 ]
 
 [tool.uv.sources]
-dagster-pipes-tests = { path = "../../../tests/dagster-pipes-tests", editable = true }
+dagster-pipes-tests = { path = "../../tests/dagster-pipes-tests", editable = true }
 
 [tool.pytest.ini_options]
 addopts = "-s "
