@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from dagster_contrib_modal import ModalClient
+from dagster_modal import ModalClient
 
 
 class TestModalClient(unittest.TestCase):

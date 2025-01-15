@@ -20,7 +20,7 @@ class ModalClient(PipesSubprocessClient):
 
             import dagster as dg
 
-            from dagster_contrib_modal import ModalClient
+            from dagster_modal import ModalClient
 
             modal_resource = ModalClient(project_directory=Path(__file__).parent.parent)
 

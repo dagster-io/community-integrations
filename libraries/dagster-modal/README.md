@@ -1,4 +1,4 @@
-# dagster-contrib-modal
+# dagster-modal
 
 Leverage the scalable compute platform of Modal from your Dagster pipelines.
 

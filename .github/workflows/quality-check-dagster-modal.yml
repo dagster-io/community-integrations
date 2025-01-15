@@ -1,12 +1,12 @@
-name: quality-check-dagster-contrib-modal
+name: quality-check-dagster-modal
 on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
-      - 'libraries/dagster-contrib-modal/**'
+      - 'libraries/dagster-modal/**'
 
 jobs:
   check:
     uses: ./.github/workflows/template-quality-check.yml
     with:
-      working_directory: ./libraries/dagster-contrib-modal
+      working_directory: ./libraries/dagster-modal
