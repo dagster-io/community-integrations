@@ -1,12 +1,12 @@
-name: quality-check-dagster-contrib-weaviate
+name: quality-check-dagster-weaviate
 on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
-      - 'libraries/dagster-contrib-weaviate/**'
+      - 'libraries/dagster-weaviate/**'
 
 jobs:
   check:
     uses: ./.github/workflows/template-quality-check.yml
     with:
-      working_directory: ./libraries/dagster-contrib-weaviate
+      working_directory: ./libraries/dagster-weaviate
