@@ -20,14 +20,14 @@ from dagster import (
 from dagster._core.errors import DagsterInvariantViolationError
 from dagster._core.execution.context.init import build_init_resource_context
 from dagster._utils.test import wrap_op_in_graph_and_execute
-from dagster_contrib_gemini import GeminiResource
+from dagster_gemini import GeminiResource
 
 API_KEY = "xoxp-1234123412341234-12341234-1234"
 MODEL_NAME = "gemini-1.5-flash"
 
 
-@patch("dagster_contrib_gemini.resource.GenerativeModel")
-@patch("dagster_contrib_gemini.resource.genai.configure")
+@patch("dagster_gemini.resource.GenerativeModel")
+@patch("dagster_gemini.resource.genai.configure")
 def test_gemini_client(mock_configure, mock_model) -> None:
     gemini_resource = GeminiResource(api_key=API_KEY, generative_model_name=MODEL_NAME)
     gemini_resource.setup_for_execution(build_init_resource_context())
@@ -40,9 +40,9 @@ def test_gemini_client(mock_configure, mock_model) -> None:
         mock_model.assert_called_once_with(model_name=MODEL_NAME)
 
 
-@patch("dagster_contrib_gemini.resource.GenerativeModel")
+@patch("dagster_gemini.resource.GenerativeModel")
 @patch("dagster.OpExecutionContext", autospec=OpExecutionContext)
-@patch("dagster_contrib_gemini.resource.genai.configure")
+@patch("dagster_gemini.resource.genai.configure")
 def test_gemini_resource_with_op(mock_configure, mock_context, mock_model):
     @op
     def gemini_op(gemini_resource: GeminiResource):
@@ -61,9 +61,9 @@ def test_gemini_resource_with_op(mock_configure, mock_context, mock_model):
     assert result.success
 
 
-@patch("dagster_contrib_gemini.resource.GenerativeModel")
+@patch("dagster_gemini.resource.GenerativeModel")
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_gemini.resource.genai.configure")
+@patch("dagster_gemini.resource.genai.configure")
 def test_gemini_resource_with_asset(mock_configure, mock_context, mock_model):
     @asset
     def gemini_asset(gemini_resource: GeminiResource):
@@ -83,10 +83,10 @@ def test_gemini_resource_with_asset(mock_configure, mock_context, mock_model):
     assert result.success
 
 
-@patch("dagster_contrib_gemini.resource.GeminiResource._wrap_with_usage_metadata")
-@patch("dagster_contrib_gemini.resource.GenerativeModel")
+@patch("dagster_gemini.resource.GeminiResource._wrap_with_usage_metadata")
+@patch("dagster_gemini.resource.GenerativeModel")
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_gemini.resource.genai.configure")
+@patch("dagster_gemini.resource.genai.configure")
 def test_gemini_resource_with_graph_backed_asset(
     mock_configure, mock_context, mock_model, mock_wrapper
 ):
@@ -118,10 +118,10 @@ def test_gemini_resource_with_graph_backed_asset(
     assert result.success
 
 
-@patch("dagster_contrib_gemini.resource.GeminiResource._wrap_with_usage_metadata")
-@patch("dagster_contrib_gemini.resource.GenerativeModel")
+@patch("dagster_gemini.resource.GeminiResource._wrap_with_usage_metadata")
+@patch("dagster_gemini.resource.GenerativeModel")
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_gemini.resource.genai.configure")
+@patch("dagster_gemini.resource.genai.configure")
 def test_gemini_resource_with_multi_asset(
     mock_configure, mock_context, mock_model, mock_wrapper
 ):
@@ -166,10 +166,10 @@ def test_gemini_resource_with_multi_asset(
     assert result.success
 
 
-@patch("dagster_contrib_gemini.resource.GeminiResource._wrap_with_usage_metadata")
+@patch("dagster_gemini.resource.GeminiResource._wrap_with_usage_metadata")
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_gemini.resource.GenerativeModel")
-@patch("dagster_contrib_gemini.resource.genai.configure")
+@patch("dagster_gemini.resource.GenerativeModel")
+@patch("dagster_gemini.resource.genai.configure")
 def test_gemini_resource_with_partitioned_asset(
     mock_configure, mock_model, mock_context, mock_wrapper
 ):
@@ -235,8 +235,8 @@ def test_gemini_resource_with_partitioned_asset(
 
 
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_gemini.resource.GenerativeModel")
-@patch("dagster_contrib_gemini.resource.genai.configure")
+@patch("dagster_gemini.resource.GenerativeModel")
+@patch("dagster_gemini.resource.genai.configure")
 def test_gemini_wrapper_with_asset(mock_configure, mock_model, mock_context):
     @asset
     def gemini_asset(gemini_resource: GeminiResource):
@@ -284,8 +284,8 @@ def test_gemini_wrapper_with_asset(mock_configure, mock_model, mock_context):
 
 
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_gemini.resource.GenerativeModel")
-@patch("dagster_contrib_gemini.resource.genai.configure")
+@patch("dagster_gemini.resource.GenerativeModel")
+@patch("dagster_gemini.resource.genai.configure")
 def test_gemini_wrapper_with_graph_backed_asset(
     mock_configure, mock_model, mock_context
 ):
@@ -344,8 +344,8 @@ def test_gemini_wrapper_with_graph_backed_asset(
 
 # Test that usage metadata is not logged in an op context
 @patch("dagster.OpExecutionContext", autospec=OpExecutionContext)
-@patch("dagster_contrib_gemini.resource.GenerativeModel")
-@patch("dagster_contrib_gemini.resource.genai.configure")
+@patch("dagster_gemini.resource.GenerativeModel")
+@patch("dagster_gemini.resource.genai.configure")
 def test_gemini_wrapper_with_op(mock_configure, mock_model, mock_context):
     @op
     def gemini_op(gemini_resource: GeminiResource):
@@ -389,8 +389,8 @@ def test_gemini_wrapper_with_op(mock_configure, mock_model, mock_context):
 
 
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_gemini.resource.GenerativeModel")
-@patch("dagster_contrib_gemini.resource.genai.configure")
+@patch("dagster_gemini.resource.GenerativeModel")
+@patch("dagster_gemini.resource.genai.configure")
 def test_gemini_wrapper_with_multi_asset(mock_configure, mock_model, mock_context):
     @multi_asset(
         specs=[AssetSpec("status"), AssetSpec("result")],
@@ -442,8 +442,8 @@ def test_gemini_wrapper_with_multi_asset(mock_configure, mock_model, mock_contex
     assert result.success
 
 
-@patch("dagster_contrib_gemini.resource.GenerativeModel")
-@patch("dagster_contrib_gemini.resource.genai.configure")
+@patch("dagster_gemini.resource.GenerativeModel")
+@patch("dagster_gemini.resource.genai.configure")
 def test_gemini_wrapper_with_partitioned_asset(mock_configure, mock_model):
     NUM_PARTITION_KEYS = 4
     NUM_ASSET_DEFS = 5

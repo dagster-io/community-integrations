@@ -87,7 +87,7 @@ class GeminiResource(ConfigurableResource):
         .. code-block:: python
 
             from dagster import AssetExecutionContext, Definitions, EnvVar, asset, define_asset_job
-            from dagster_contrib_gemini import GeminiResource
+            from dagster_gemini import GeminiResource
 
 
             @asset(compute_kind="gemini")
@@ -180,7 +180,7 @@ class GeminiResource(ConfigurableResource):
                     define_asset_job,
                     op,
                 )
-                from dagster_contrib_gemini import GeminiResource
+                from dagster_gemini import GeminiResource
 
                 # This is an asset using the Gemini resource - usage stats will be logged to
                 #  the asset metadata.
@@ -256,7 +256,7 @@ class GeminiResource(ConfigurableResource):
                     define_asset_job,
                     multi_asset,
                 )
-                from dagster_contrib_gemini import GeminiResource
+                from dagster_gemini import GeminiResource
 
 
                 @asset(compute_kind="gemini")

@@ -1,15 +1,15 @@
-# dagster-contrib-gemini
+# dagster-gemini
 
 A dagster module that provides integration with [Gemini](https://deepmind.google/technologies/gemini/).
 
 ## Installation
 
-The `dagster_contrib_gemini` module is available as a PyPI package - install with your preferred python 
+The `dagster_gemini` module is available as a PyPI package - install with your preferred python 
 environment manager (We recommend [uv](https://github.com/astral-sh/uv)).
 
 ```
 source .venv/bin/activate
-uv pip install dagster_contrib_gemini
+uv pip install dagster_gemini
 ```
 
 ## Example Usage
@@ -25,7 +25,7 @@ not the streaming or batching API.
 
 ```python
 from dagster import AssetExecutionContext, Definitions, EnvVar, asset, define_asset_job
-from dagster_contrib_gemini import GeminiResource
+from dagster_gemini import GeminiResource
 
 
 @asset(compute_kind="gemini")

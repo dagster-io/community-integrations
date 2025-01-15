@@ -1,6 +1,6 @@
 [project]
-name = "dagster-contrib-gemini"
-version = "0.0.2"
+name = "dagster-gemini"
+version = "0.0.1"
 description = "Dagster integration with Gemini"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -21,4 +21,4 @@ requires = ["setuptools>=42"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["dagster_contrib_gemini"]
+packages = ["dagster_gemini"]

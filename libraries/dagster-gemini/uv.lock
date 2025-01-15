@@ -231,7 +231,7 @@ wheels = [
 ]
 
 [[package]]
-name = "dagster-contrib-gemini"
+name = "dagster-gemini"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [
