@@ -355,7 +355,16 @@ wheels = [
 ]
 
 [[package]]
-name = "dagster-contrib-weaviate"
+name = "dagster-pipes"
+version = "1.9.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/13/64/5f3e7a86fc5ee74b308e227c47ce06dedfea64813ca6e0ece39885e90c43/dagster-pipes-1.9.6.tar.gz", hash = "sha256:16deb358ccd9a5e2e0cc0311107be85edd19205b4473c2d0b19ec63ea0260100", size = 19785 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4e/5a/b99f936d083d36ec94cff5f4703aaab8ba7ab99081a6f4716c2fbe2e47e1/dagster_pipes-1.9.6-py3-none-any.whl", hash = "sha256:fc5b917e56a4fc8e2c248055cac1c5e32b1694607aacf43c0eee8dcdd657e359", size = 19667 },
+]
+
+[[package]]
+name = "dagster-weaviate"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [
@@ -381,15 +390,6 @@ dev = [
     { name = "pyright", specifier = ">=1.1.386" },
     { name = "pytest" },
     { name = "ruff" },
-]
-
-[[package]]
-name = "dagster-pipes"
-version = "1.9.6"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/13/64/5f3e7a86fc5ee74b308e227c47ce06dedfea64813ca6e0ece39885e90c43/dagster-pipes-1.9.6.tar.gz", hash = "sha256:16deb358ccd9a5e2e0cc0311107be85edd19205b4473c2d0b19ec63ea0260100", size = 19785 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/5a/b99f936d083d36ec94cff5f4703aaab8ba7ab99081a6f4716c2fbe2e47e1/dagster_pipes-1.9.6-py3-none-any.whl", hash = "sha256:fc5b917e56a4fc8e2c248055cac1c5e32b1694607aacf43c0eee8dcdd657e359", size = 19667 },
 ]
 
 [[package]]

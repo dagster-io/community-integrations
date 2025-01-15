@@ -16,7 +16,7 @@ class WeaviateResource(ConfigurableResource):
     Examples:
         .. code-block:: python
             from dagster import Definitions, asset
-            from dagster_contrib_weaviate import WeaviateResource, LocalConfig
+            from dagster_weaviate import WeaviateResource, LocalConfig
 
             @asset
             def my_table(weaviate: WeaviateResource):
@@ -38,7 +38,7 @@ class WeaviateResource(ConfigurableResource):
 
         .. code-block:: python
             from dagster import Definitions, asset
-            from dagster_contrib_weaviate import WeaviateResource, CloudConfig
+            from dagster_weaviate import WeaviateResource, CloudConfig
 
             @asset
             def my_table(weaviate: WeaviateResource):

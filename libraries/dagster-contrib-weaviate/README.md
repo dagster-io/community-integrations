@@ -1,16 +1,16 @@
-# dagster-contrib-weaviate
+# dagster-weaviate
 
 A dagster module that provides integration with [Weaviate](https://weaviate.io/)
 (both Cloud and Self-Hosted Weaviate instances).
 
 ## Installation
 
-The `dagster_contrib_weaviate` module is available as a PyPI package - install with your preferred python 
+The `dagster_weaviate` module is available as a PyPI package - install with your preferred python 
 environment manager (We recommend [uv](https://github.com/astral-sh/uv)).
 
 ```
 source .venv/bin/activate
-uv pip install dagster_contrib_weaviate
+uv pip install dagster_weaviate
 ```
 
 ## Example Usage (Local Weaviate Instance)
@@ -19,7 +19,7 @@ uv pip install dagster_contrib_weaviate
 
 ```python
 from dagster import Definitions, asset
-from dagster_contrib_weaviate import WeaviateResource, LocalConfig
+from dagster_weaviate import WeaviateResource, LocalConfig
 
 @asset
 def my_table(weaviate: WeaviateResource):
@@ -47,7 +47,7 @@ Based on the [Weaviate Cloud Quickstart Guide](https://weaviate.io/developers/wc
 
 ```python
 from dagster import Definitions, asset
-from dagster_contrib_weaviate import WeaviateResource, CloudConfig
+from dagster_weaviate import WeaviateResource, CloudConfig
 
 @asset
 def my_table(weaviate: WeaviateResource):

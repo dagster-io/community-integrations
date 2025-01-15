@@ -9,7 +9,7 @@ import time
 import weaviate
 
 from dagster import asset, materialize
-from dagster_contrib_weaviate import WeaviateResource, LocalConfig, CloudConfig
+from dagster_weaviate import WeaviateResource, LocalConfig, CloudConfig
 
 WEAVIATE_PORT = 8079
 WEAVIATE_GRPC_PORT = 50050

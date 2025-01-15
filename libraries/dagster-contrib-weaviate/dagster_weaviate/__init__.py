@@ -1,8 +1,8 @@
-from dagster_contrib_weaviate.resource import (
+from dagster_weaviate.resource import (
     WeaviateResource as WeaviateResource,
 )
 
-from dagster_contrib_weaviate.config import (
+from dagster_weaviate.config import (
     LocalConfig as LocalConfig,
     CloudConfig as CloudConfig,
 )
