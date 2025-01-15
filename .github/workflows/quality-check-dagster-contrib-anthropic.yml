@@ -1,12 +1,12 @@
-name: quality-check-dagster-contrib-anthropic
+name: quality-check-dagster-anthropic
 on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
-      - 'libraries/dagster-contrib-anthropic/**'
+      - 'libraries/dagster-anthropic/**'
 
 jobs:
   check:
     uses: ./.github/workflows/template-quality-check.yml
     with:
-      working_directory: ./libraries/dagster-contrib-anthropic
+      working_directory: ./libraries/dagster-anthropic

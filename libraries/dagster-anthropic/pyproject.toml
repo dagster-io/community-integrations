@@ -1,5 +1,5 @@
 [project]
-name = "dagster-contrib-anthropic"
+name = "dagster-anthropic"
 version = "0.0.1"
 description = "Dagster integration with Anthropic"
 readme = "README.md"
@@ -21,4 +21,4 @@ requires = ["setuptools>=42"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["dagster_contrib_anthropic"]
+packages = ["dagster_anthropic"]

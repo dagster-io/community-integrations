@@ -255,7 +255,7 @@ wheels = [
 ]
 
 [[package]]
-name = "dagster-contrib-anthropic"
+name = "dagster-anthropic"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [

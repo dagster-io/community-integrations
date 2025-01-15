@@ -85,7 +85,7 @@ class AnthropicResource(ConfigurableResource):
         .. code-block:: python
 
             from dagster import AssetExecutionContext, Definitions, EnvVar, asset, define_asset_job
-            from dagster_contrib_anthropic import AnthropicResource
+            from dagster_anthropic import AnthropicResource
 
 
             @asset(compute_kind="anthropic")
@@ -154,7 +154,7 @@ class AnthropicResource(ConfigurableResource):
                     define_asset_job,
                     op,
                 )
-                from dagster_contrib_anthropic import AnthropicResource
+                from dagster_anthropic import AnthropicResource
 
                 # This is an asset using the Anthropic resource - usage stats will be logged to
                 #  the asset metadata.
@@ -234,7 +234,7 @@ class AnthropicResource(ConfigurableResource):
                     define_asset_job,
                     multi_asset,
                 )
-                from dagster_contrib_anthropic import AnthropicResource
+                from dagster_anthropic import AnthropicResource
 
 
                 @asset(compute_kind="anthropic")

@@ -1,15 +1,15 @@
-# dagster-contrib-anthropic
+# dagster-anthropic
 
 A dagster module that provides integration with [Anthropic](https://www.anthropic.com//).
 
 ## Installation
 
-The `dagster_contrib_anthropic` module is available as a PyPI package - install with your preferred python 
+The `dagster_anthropic` module is available as a PyPI package - install with your preferred python 
 environment manager (We recommend [uv](https://github.com/astral-sh/uv)).
 
 ```
 source .venv/bin/activate
-uv pip install dagster_contrib_anthropic
+uv pip install dagster_anthropic
 ```
 
 ## Example Usage
@@ -25,7 +25,7 @@ not the streaming or batching API.
 
 ```python
 from dagster import AssetExecutionContext, Definitions, EnvVar, asset, define_asset_job
-from dagster_contrib_anthropic import AnthropicResource
+from dagster_anthropic import AnthropicResource
 
 
 @asset(compute_kind="anthropic")

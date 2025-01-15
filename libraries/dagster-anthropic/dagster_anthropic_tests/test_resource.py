@@ -20,13 +20,13 @@ from dagster import (
 from dagster._core.errors import DagsterInvariantViolationError
 from dagster._core.execution.context.init import build_init_resource_context
 from dagster._utils.test import wrap_op_in_graph_and_execute
-from dagster_contrib_anthropic import AnthropicResource
+from dagster_anthropic import AnthropicResource
 
 API_KEY = "xoxp-1234123412341234-12341234-1234"
 MODEL = "claude-3-5-sonnet-20241022"
 
 
-@patch("dagster_contrib_anthropic.resource.Anthropic")
+@patch("dagster_anthropic.resource.Anthropic")
 def test_anthropic_client(mock_client) -> None:
     anthropic_resource = AnthropicResource(api_key=API_KEY)
     anthropic_resource.setup_for_execution(build_init_resource_context())
@@ -39,7 +39,7 @@ def test_anthropic_client(mock_client) -> None:
         )
 
 
-@patch("dagster_contrib_anthropic.resource.Anthropic")
+@patch("dagster_anthropic.resource.Anthropic")
 def test_anthropic_client_with_config(mock_client) -> None:
     anthropic_resource = AnthropicResource(
         api_key=API_KEY,
@@ -55,9 +55,9 @@ def test_anthropic_client_with_config(mock_client) -> None:
         )
 
 
-@patch("dagster_contrib_anthropic.resource.AnthropicResource._wrap_with_usage_metadata")
+@patch("dagster_anthropic.resource.AnthropicResource._wrap_with_usage_metadata")
 @patch("dagster.OpExecutionContext", autospec=OpExecutionContext)
-@patch("dagster_contrib_anthropic.resource.Anthropic")
+@patch("dagster_anthropic.resource.Anthropic")
 def test_anthropic_resource_with_op(mock_client, mock_context, mock_wrapper):
     @op
     def anthropic_op(anthropic_resource: AnthropicResource):
@@ -78,9 +78,9 @@ def test_anthropic_resource_with_op(mock_client, mock_context, mock_wrapper):
     assert result.success
 
 
-@patch("dagster_contrib_anthropic.resource.AnthropicResource._wrap_with_usage_metadata")
+@patch("dagster_anthropic.resource.AnthropicResource._wrap_with_usage_metadata")
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_anthropic.resource.Anthropic")
+@patch("dagster_anthropic.resource.Anthropic")
 def test_anthropic_resource_with_asset(mock_client, mock_context, mock_wrapper):
     @asset
     def anthropic_asset(anthropic_resource: AnthropicResource):
@@ -104,9 +104,9 @@ def test_anthropic_resource_with_asset(mock_client, mock_context, mock_wrapper):
     assert result.success
 
 
-@patch("dagster_contrib_anthropic.resource.AnthropicResource._wrap_with_usage_metadata")
+@patch("dagster_anthropic.resource.AnthropicResource._wrap_with_usage_metadata")
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_anthropic.resource.Anthropic")
+@patch("dagster_anthropic.resource.Anthropic")
 def test_anthropic_resource_with_graph_backed_asset(
     mock_client, mock_context, mock_wrapper
 ):
@@ -140,9 +140,9 @@ def test_anthropic_resource_with_graph_backed_asset(
     assert result.success
 
 
-@patch("dagster_contrib_anthropic.resource.AnthropicResource._wrap_with_usage_metadata")
+@patch("dagster_anthropic.resource.AnthropicResource._wrap_with_usage_metadata")
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_anthropic.resource.Anthropic")
+@patch("dagster_anthropic.resource.Anthropic")
 def test_anthropic_resource_with_multi_asset(mock_client, mock_context, mock_wrapper):
     @multi_asset(
         specs=[AssetSpec("status"), AssetSpec("result")],
@@ -189,9 +189,9 @@ def test_anthropic_resource_with_multi_asset(mock_client, mock_context, mock_wra
     assert result.success
 
 
-@patch("dagster_contrib_anthropic.resource.AnthropicResource._wrap_with_usage_metadata")
+@patch("dagster_anthropic.resource.AnthropicResource._wrap_with_usage_metadata")
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_anthropic.resource.Anthropic")
+@patch("dagster_anthropic.resource.Anthropic")
 def test_anthropic_resource_with_partitioned_asset(
     mock_client, mock_context, mock_wrapper
 ):
@@ -257,7 +257,7 @@ def test_anthropic_resource_with_partitioned_asset(
 
 
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_anthropic.resource.Anthropic")
+@patch("dagster_anthropic.resource.Anthropic")
 def test_anthropic_wrapper_with_asset(mock_client, mock_context):
     @asset
     def anthropic_asset(anthropic_resource: AnthropicResource):
@@ -305,7 +305,7 @@ def test_anthropic_wrapper_with_asset(mock_client, mock_context):
 
 
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_anthropic.resource.Anthropic")
+@patch("dagster_anthropic.resource.Anthropic")
 def test_anthropic_wrapper_with_graph_backed_asset(mock_client, mock_context):
     @op
     def model_version_op():
@@ -366,7 +366,7 @@ def test_anthropic_wrapper_with_graph_backed_asset(mock_client, mock_context):
 
 # Test that usage metadata is not logged in an op context
 @patch("dagster.OpExecutionContext", autospec=OpExecutionContext)
-@patch("dagster_contrib_anthropic.resource.Anthropic")
+@patch("dagster_anthropic.resource.Anthropic")
 def test_anthropic_wrapper_with_op(mock_client, mock_context):
     @op
     def anthropic_op(anthropic_resource: AnthropicResource):
@@ -404,7 +404,7 @@ def test_anthropic_wrapper_with_op(mock_client, mock_context):
 
 
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_anthropic.resource.Anthropic")
+@patch("dagster_anthropic.resource.Anthropic")
 def test_anthropic_wrapper_with_multi_asset(mock_client, mock_context):
     @multi_asset(
         specs=[AssetSpec("status"), AssetSpec("result")],
@@ -456,7 +456,7 @@ def test_anthropic_wrapper_with_multi_asset(mock_client, mock_context):
     assert result.success
 
 
-@patch("dagster_contrib_anthropic.resource.Anthropic")
+@patch("dagster_anthropic.resource.Anthropic")
 def test_anthropic_wrapper_with_partitioned_asset(mock_client):
     NUM_PARTITION_KEYS = 4
     NUM_ASSET_DEFS = 5
