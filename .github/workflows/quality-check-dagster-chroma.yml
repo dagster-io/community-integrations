@@ -1,12 +1,12 @@
-name: quality-check-dagster-contrib-chroma
+name: quality-check-dagster-chroma
 on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
-      - 'libraries/dagster-contrib-chroma/**'
+      - 'libraries/dagster-chroma/**'
 
 jobs:
   check:
     uses: ./.github/workflows/template-quality-check.yml
     with:
-      working_directory: ./libraries/dagster-contrib-chroma
+      working_directory: ./libraries/dagster-chroma

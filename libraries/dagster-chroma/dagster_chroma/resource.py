@@ -20,7 +20,7 @@ class ChromaResource(ConfigurableResource):
 
         import os
         from dagster import Definitions, asset
-        from dagster_contrib_chroma import ChromaResource, LocalConfig, HttpConfig
+        from dagster_chroma import ChromaResource, LocalConfig, HttpConfig
 
         @asset
         def my_table(chroma: ChromaResource):

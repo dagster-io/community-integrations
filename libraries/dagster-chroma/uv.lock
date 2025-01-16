@@ -376,7 +376,7 @@ wheels = [
 ]
 
 [[package]]
-name = "dagster-contrib-chroma"
+name = "dagster-chroma"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [

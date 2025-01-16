@@ -1,0 +1,14 @@
+name: build-and-release-dagster-chroma
+
+on:
+  push:
+    tags:
+      - 'dagster_chroma-*.*.*'
+
+jobs:
+  build-and-release-dagster-chroma:
+    uses: ./.github/workflows/template-release.yml
+    with:
+      library_name: dagster-chroma
+      working_directory: ./libraries/dagster-chroma
+    secrets: inherit

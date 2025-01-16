@@ -1,16 +1,16 @@
-# dagster-contrib-chroma
+# dagster-chroma
 
 A dagster module that provides integration with [chroma](https://www.trychroma.com/). 
 Both HTTP connections, and local (filesystem-based) connections are supported.
 
 ## Installation
 
-The `dagster_contrib_chroma` module is available as a PyPI package - install with your preferred python 
+The `dagster_chroma` module is available as a PyPI package - install with your preferred python 
 environment manager (We recommend [uv](https://github.com/astral-sh/uv)).
 
 ```
 source .venv/bin/activate
-uv pip install dagster_contrib_chroma
+uv pip install dagster_chroma
 ```
 
 ## Example Usage (Local Chroma Instance)
@@ -20,7 +20,7 @@ uv pip install dagster_contrib_chroma
 ```python
 import os
 from dagster import Definitions, asset
-from dagster_contrib_chroma import ChromaResource, LocalConfig, HttpConfig
+from dagster_chroma import ChromaResource, LocalConfig, HttpConfig
 
 @asset
 def my_table(chroma: ChromaResource):

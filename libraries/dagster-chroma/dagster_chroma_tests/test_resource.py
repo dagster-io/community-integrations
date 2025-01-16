@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 
 from dagster import asset, materialize
-from dagster_contrib_chroma import ChromaResource, LocalConfig, HttpConfig
+from dagster_chroma import ChromaResource, LocalConfig, HttpConfig
 
 
 def test_local_resource(tmp_path: Path):
