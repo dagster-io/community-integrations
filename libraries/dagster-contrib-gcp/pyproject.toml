@@ -1,5 +1,5 @@
 [project]
-name = "dagster_contrib_gcp"
+name = "dagster-contrib-gcp"
 version = "0.0.3"
 description = "Community contributed Google Cloud Platform integration"
 readme = "README.md"

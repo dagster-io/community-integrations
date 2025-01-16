@@ -1,5 +1,5 @@
 [project]
-name = "example_integration"
+name = "example-integration"
 version = "0.0.1"
 description = "<insert description here>"
 readme = "README.md"
