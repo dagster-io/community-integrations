@@ -1,5 +1,5 @@
 [project]
-name = "dagster_chroma"
+name = "dagster-chroma"
 version = "0.0.1"
 description = "Dagster integration with chroma"
 readme = "README.md"
