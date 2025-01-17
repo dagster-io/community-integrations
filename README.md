@@ -18,9 +18,9 @@ See [RELEASES.md](RELEASES.md).
 
 We are very appreciative of the work from our community member's, and would like to recognize:
 
-* [GingerYouth](https://github.com/GingerYouth) for their work on Java Pipes
-* [marijncv](https://github.com/marijncv) for their work on Rust Pipes
-* [christeefy](https://github.com/christeefy) for their work on Rust Pipes
+* [GingerYouth](https://github.com/GingerYouth) for their work on the Java Pipes implementation
+* [marijncv](https://github.com/marijncv) for their work on the Rust Pipes implementation
+* [christeefy](https://github.com/christeefy) for their work on the Rust Pipes implementation
 
 Thank you all!
 
