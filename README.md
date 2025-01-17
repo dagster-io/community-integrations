@@ -16,7 +16,7 @@ See [RELEASES.md](RELEASES.md).
 
 ## Community
 
-We are very appreciative of the work from our community member's, and would like to recognize:
+We are very appreciative of the work from our community members, and would like to recognize:
 
 * [GingerYouth](https://github.com/GingerYouth) for their work on the Java Pipes implementation
 * [marijncv](https://github.com/marijncv) for their work on the Rust Pipes implementation
