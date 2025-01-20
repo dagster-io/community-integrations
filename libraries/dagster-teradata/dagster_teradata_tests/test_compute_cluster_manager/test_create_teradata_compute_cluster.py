@@ -1,11 +1,9 @@
 import os
 
-import pytest
 from dagster import job, op
 from dagster_teradata import teradata_resource
 
 
-@pytest.mark.integration
 def test_create_teradata_compute_cluster(tmp_path):
     @op(required_resource_keys={"teradata"})
     def example_create_teradata_compute_cluster(context):

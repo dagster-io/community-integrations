@@ -51,7 +51,6 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
     @public
     @contextmanager
     def get_connection(self):
-
         if not self.host:
             raise ValueError("Host is required but not provided.")
         if not self.user:
@@ -149,7 +148,7 @@ class TeradataDagsterConnection:
 
         with self.get_connection() as conn:
             with closing(conn.cursor()) as cursor:
-                self.log.info("Executing query: " + sql)
+                # self.log.info("Executing query: " + sql)
                 cursor.execute(sql)
                 if fetch_results:
                     if single_result_row:
@@ -188,7 +187,7 @@ class TeradataDagsterConnection:
         with self.get_connection() as conn:
             with closing(conn.cursor()) as cursor:
                 for sql in sql_queries:
-                    self.log.info("Executing query: " + sql)
+                    # self.log.info("Executing query: " + sql)
                     cursor.execute(sql)
                     if fetch_results:
                         results = results.append(cursor.fetchall())  # type: ignore

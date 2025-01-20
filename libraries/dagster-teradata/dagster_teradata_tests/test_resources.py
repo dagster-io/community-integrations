@@ -1,14 +1,12 @@
 import os
 import uuid
 
-import pytest
 import teradatasql
 from dagster import asset, materialize
 from dagster._time import get_current_timestamp
 from dagster_teradata import TeradataResource, fetch_last_updated_timestamps
 
 
-@pytest.mark.integration
 def test_resource(tmp_path):
     df = ["a"]
 
@@ -57,7 +55,6 @@ def test_resource(tmp_path):
     )
 
 
-@pytest.mark.integration
 def test_resources_teradata_connection():
     with TeradataResource(
         host=os.getenv("TERADATA_HOST"),
@@ -68,7 +65,7 @@ def test_resources_teradata_connection():
         # Teradata table names are expected to be capitalized.
         table_name = f"test_table_{str(uuid.uuid4()).replace('-', '_')}".lower()
         try:
-            start_time = get_current_timestamp()
+            start_time = round(get_current_timestamp())
             conn.cursor().execute(f"create table {table_name} (foo varchar(10))")
             # Insert one row
             conn.cursor().execute(f"insert into {table_name} values ('bar')")
@@ -81,9 +78,9 @@ def test_resources_teradata_connection():
                 ],  # Teradata table names are expected uppercase. Test that lowercase also works.
             )[table_name].timestamp()
 
-            # end_time = get_current_timestamp()
+            end_time = round(get_current_timestamp())
 
-            assert freshness_for_table > start_time
+            assert end_time > freshness_for_table > start_time
         finally:
             try:
                 conn.cursor().execute(f"drop table {table_name}")

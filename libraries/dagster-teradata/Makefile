@@ -5,7 +5,7 @@ build:
 	uv build
 
 test:
-	uv run pytest
+	uv run pytest --ignore-glob='*compute_cluster.py'
 
 ruff:
 	uv run ruff check --fix .

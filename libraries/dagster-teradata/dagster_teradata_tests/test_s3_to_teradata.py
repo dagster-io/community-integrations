@@ -1,6 +1,5 @@
 import os
 
-import pytest
 from dagster import job, op
 from dagster_aws.s3 import S3Resource
 from dagster_teradata import TeradataResource
@@ -19,8 +18,11 @@ td_resource = TeradataResource(
 )
 
 
-@pytest.mark.integration
 def test_s3_to_teradata(tmp_path):
+    @op(required_resource_keys={"teradata"})
+    def drop_existing_table(context):
+        context.resources.teradata.drop_table("people")
+
     @op(required_resource_keys={"teradata", "s3"})
     def example_test_s3_to_teradata(context):
         context.resources.teradata.s3_to_teradata(
@@ -29,6 +31,7 @@ def test_s3_to_teradata(tmp_path):
 
     @job(resource_defs={"teradata": td_resource, "s3": s3_resource})
     def example_job():
+        drop_existing_table()
         example_test_s3_to_teradata()
 
     example_job.execute_in_process(
