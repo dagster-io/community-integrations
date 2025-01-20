@@ -1,5 +1,3 @@
-from dagster._core.libraries import DagsterLibraryRegistry
-
 from dagster_teradata.resources import (
     TeradataDagsterConnection as TeradataDagsterConnection,
     TeradataResource as TeradataResource,

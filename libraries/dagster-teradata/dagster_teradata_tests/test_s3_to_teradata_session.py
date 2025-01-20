@@ -12,7 +12,7 @@ def test_s3_to_teradata(tmp_path):
     def example_test_s3_to_teradata(context):
         session = boto3.Session()
         context.resources.teradata.s3_to_teradata(
-            session, os.getenv('AWS_S3_LOCATION'), "people"
+            session, os.getenv("AWS_S3_LOCATION"), "people"
         )
 
     @job(resource_defs={"teradata": teradata_resource})

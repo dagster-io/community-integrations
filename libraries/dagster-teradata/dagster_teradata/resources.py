@@ -1,7 +1,7 @@
 from contextlib import closing, contextmanager
 from datetime import datetime
 from textwrap import dedent
-from typing import Any, Iterator, List, Mapping, Optional, Sequence, Union
+from typing import Any, List, Mapping, Optional, Sequence, Union
 
 import dagster._check as check
 import teradatasql
@@ -19,13 +19,15 @@ from dagster_azure.adls2 import ADLS2Resource
 from pydantic import Field
 
 from dagster_teradata import constants
-from dagster_teradata.teradata_compute_cluster_manager import TeradataComputeClusterManager
+from dagster_teradata.teradata_compute_cluster_manager import (
+    TeradataComputeClusterManager,
+)
 
 
 class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
-    host: str = Field(default=None, description="Teradata Database Hostname")
-    user: str = Field(description="User login name.")
-    password: str = Field(default=None, description="User password.")
+    host: Optional[str] = Field(description="Teradata Database Hostname")
+    user: Optional[str] = Field(description="User login name.")
+    password: Optional[str] = Field(description="User password.")
     database: Optional[str] = Field(
         default=None,
         description=("Name of the default database to use."),
@@ -49,6 +51,14 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
     @public
     @contextmanager
     def get_connection(self):
+
+        if not self.host:
+            raise ValueError("Host is required but not provided.")
+        if not self.user:
+            raise ValueError("User is required but not provided.")
+        if not self.password:
+            raise ValueError("Password is required but not provided.")
+
         connection_params = {
             "host": self.host,
             "user": self.user,
@@ -82,7 +92,10 @@ class TeradataDagsterConnection:
     """
 
     def __init__(
-        self, config: Mapping[str, str], log, teradata_connection_resource: TeradataResource
+        self,
+        config: Mapping[str, str],
+        log,
+        teradata_connection_resource: TeradataResource,
     ):
         self.teradata_connection_resource = teradata_connection_resource
         self.compute_cluster_manager = TeradataComputeClusterManager(self, log)
@@ -202,7 +215,9 @@ class TeradataDagsterConnection:
                         cursor.execute(f"DROP DATABASE {database}")
                     except Exception as ex:
                         if "3802" in str(ex):  # Handle "database does not exist" error
-                            self.log.warning(f"Database '{database}' does not exist. Skipping.")
+                            self.log.warning(
+                                f"Database '{database}' does not exist. Skipping."
+                            )
                         else:
                             raise
 
@@ -227,7 +242,9 @@ class TeradataDagsterConnection:
                         cursor.execute(f"DROP TABLE {table}")
                     except Exception as ex:
                         if "3807" in str(ex):  # Handle "table does not exist" error
-                            self.log.warning(f"Table '{table}' does not exist. Skipping.")
+                            self.log.warning(
+                                f"Table '{table}' does not exist. Skipping."
+                            )
                         else:
                             raise
 
@@ -305,7 +322,9 @@ class TeradataDagsterConnection:
                 access_key = s3.aws_access_key_id
                 access_secret = s3.aws_secret_access_key
                 token = s3.aws_session_token
-                credentials_part = f"ACCESS_ID= '{access_key}' ACCESS_KEY= '{access_secret}'"
+                credentials_part = (
+                    f"ACCESS_ID= '{access_key}' ACCESS_KEY= '{access_secret}'"
+                )
                 if token:
                     credentials_part = credentials_part + f" SESSION_TOKEN = '{token}'"
 
@@ -386,8 +405,8 @@ class TeradataDagsterConnection:
         compute_profile_name: str,
         compute_group_name: str,
         query_strategy: str = "STANDARD",
-        compute_map: str = None,
-        compute_attribute: str = None,
+        compute_map: Optional[str] = None,
+        compute_attribute: Optional[str] = None,
         timeout: int = constants.CC_OPR_TIME_OUT,
     ):
         return self.compute_cluster_manager.create_teradata_compute_cluster(
@@ -437,7 +456,6 @@ class TeradataDagsterConnection:
     config_schema=TeradataResource.to_config_schema(),
     description="This resource is for connecting to the Teradata Vantage",
 )
-
 def teradata_resource(context) -> TeradataDagsterConnection:
     """A resource for connecting to the Teradata Vantage. The returned resource object is an
     instance of :py:class:`TeradataConnection`.
@@ -501,7 +519,9 @@ def fetch_last_updated_timestamps(
     Returns:
         Mapping[str, datetime]: A dictionary of table names to their last updated time in UTC.
     """
-    check.invariant(len(tables) > 0, "Must provide at least one table name to query upon.")
+    check.invariant(
+        len(tables) > 0, "Must provide at least one table name to query upon."
+    )
     tables_str = ", ".join([f"'{table_name}'" for table_name in tables])
     fully_qualified_table_name = "DBC.TablesV"
 

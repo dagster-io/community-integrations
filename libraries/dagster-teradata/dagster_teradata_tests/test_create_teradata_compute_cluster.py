@@ -35,13 +35,13 @@ def test_create_teradata_compute_cluster(tmp_path):
 
     example_job.execute_in_process(
         run_config={
-            'resources': {
-                'teradata': {
-                    'config': {
-                        'host' : os.getenv("TERADATA_HOST"),
-                        'user' : os.getenv("TERADATA_USER"),
-                        'password' : os.getenv("TERADATA_PASSWORD"),
-                        'database' : os.getenv("TERADATA_DATABASE"),
+            "resources": {
+                "teradata": {
+                    "config": {
+                        "host": os.getenv("TERADATA_HOST"),
+                        "user": os.getenv("TERADATA_USER"),
+                        "password": os.getenv("TERADATA_PASSWORD"),
+                        "database": os.getenv("TERADATA_DATABASE"),
                     }
                 }
             }

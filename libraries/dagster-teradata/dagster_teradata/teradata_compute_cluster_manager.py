@@ -2,6 +2,7 @@ import asyncio
 import re
 import time
 from textwrap import dedent
+from typing import Optional
 
 import teradatasql
 from dagster import DagsterError
@@ -36,9 +37,13 @@ class TeradataComputeClusterManager:
                 if db_version is not None and int(db_version) < 20:
                     raise DagsterError(constants.CC_GRP_LAKE_SUPPORT_ONLY_MSG)
             else:
-                raise Exception("Error occurred while getting teradata database version")
+                raise Exception(
+                    "Error occurred while getting teradata database version"
+                )
         except teradatasql.DatabaseError as ex:
-            self.log.error("Error occurred while getting teradata database version: %s ", str(ex))
+            self.log.error(
+                "Error occurred while getting teradata database version: %s ", str(ex)
+            )
             raise Exception("Error occurred while getting teradata database version")
 
         lake_support_find_sql = (
@@ -52,7 +57,7 @@ class TeradataComputeClusterManager:
     def handle_cc_status(
         self, operation, sql, compute_profile_name, compute_group_name, timeout
     ) -> str:
-        sql_result = self.execute_query(sql, True, True)
+        self.execute_query(sql, True, True)
 
         cluster_sync = TeradataComputeClusterSync(
             self.connection,
@@ -64,13 +69,10 @@ class TeradataComputeClusterManager:
             timeout,
         )
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(cluster_sync.run())
+        status = cluster_sync.run()
+        self.log.info(status)
 
-        sql_result = "%s query ran successfully." % operation
-        self.log.info(sql_result)
-
-        return sql_result
+        return status
 
     def get_initially_suspended(self, create_cp_query):
         initially_suspended = "FALSE"
@@ -88,8 +90,8 @@ class TeradataComputeClusterManager:
         compute_profile_name: str,
         compute_group_name: str,
         query_strategy: str = "STANDARD",
-        compute_map: str = None,
-        compute_attribute: str = None,
+        compute_map: Optional[str] = None,
+        compute_attribute: Optional[str] = None,
         timeout: int = constants.CC_OPR_TIME_OUT,
     ):
         self.verify_compute_cluster(compute_profile_name)
@@ -111,7 +113,10 @@ class TeradataComputeClusterManager:
                 create_cg_query = "CREATE COMPUTE GROUP " + compute_group_name
                 if query_strategy is not None:
                     create_cg_query = (
-                        create_cg_query + " USING QUERY_STRATEGY ('" + query_strategy + "')"
+                        create_cg_query
+                        + " USING QUERY_STRATEGY ('"
+                        + query_strategy
+                        + "')"
                     )
                 self.execute_query(create_cg_query)
 
@@ -122,7 +127,9 @@ class TeradataComputeClusterManager:
             + "')"
         )
         if compute_group_name:
-            cp_status_query += " AND UPPER(ComputeGroupName) = UPPER('" + compute_group_name + "')"
+            cp_status_query += (
+                " AND UPPER(ComputeGroupName) = UPPER('" + compute_group_name + "')"
+            )
         cp_status_result = self.execute_query(cp_status_query, True, True)
         if cp_status_result is not None:
             cp_status_result = str(cp_status_result)
@@ -136,7 +143,9 @@ class TeradataComputeClusterManager:
             if compute_map is not None:
                 create_cp_query = create_cp_query + ", INSTANCE = " + compute_map
             if query_strategy is not None:
-                create_cp_query = create_cp_query + ", INSTANCE TYPE = " + query_strategy
+                create_cp_query = (
+                    create_cp_query + ", INSTANCE TYPE = " + query_strategy
+                )
             if compute_attribute is not None:
                 create_cp_query = create_cp_query + " USING " + compute_attribute
             operation = constants.CC_CREATE_OPR
@@ -144,7 +153,11 @@ class TeradataComputeClusterManager:
             if initially_suspended == "TRUE":
                 operation = constants.CC_CREATE_SUSPEND_OPR
             return self.handle_cc_status(
-                operation, create_cp_query, compute_profile_name, compute_group_name, timeout
+                operation,
+                create_cp_query,
+                compute_profile_name,
+                compute_group_name,
+                timeout,
             )
 
     def drop_teradata_compute_cluster(
@@ -167,7 +180,9 @@ class TeradataComputeClusterManager:
         if delete_compute_group:
             cg_drop_query = "DROP COMPUTE GROUP " + compute_group_name
             self.execute_query(cg_drop_query)
-            self.log.info("Compute Group %s is successfully dropped", compute_group_name)
+            self.log.info(
+                "Compute Group %s is successfully dropped", compute_group_name
+            )
         pass
 
     def resume_teradata_compute_cluster(
@@ -184,7 +199,9 @@ class TeradataComputeClusterManager:
             + "')"
         )
         if compute_group_name:
-            cc_status_query += " AND UPPER(ComputeGroupName) = UPPER('" + compute_group_name + "')"
+            cc_status_query += (
+                " AND UPPER(ComputeGroupName) = UPPER('" + compute_group_name + "')"
+            )
         cc_status_result = self.execute_query(cc_status_query, True, True)
         if cc_status_result is not None:
             cp_status_result = str(cc_status_result)
@@ -194,9 +211,13 @@ class TeradataComputeClusterManager:
             self.log.info(constants.CC_GRP_PRP_NON_EXISTS_MSG)
             raise DagsterError(constants.CC_GRP_PRP_NON_EXISTS_MSG)
         if cp_status_result != constants.CC_RESUME_DB_STATUS:
-            cp_resume_query = f"RESUME COMPUTE FOR COMPUTE PROFILE {compute_profile_name}"
+            cp_resume_query = (
+                f"RESUME COMPUTE FOR COMPUTE PROFILE {compute_profile_name}"
+            )
             if compute_group_name:
-                cp_resume_query = f"{cp_resume_query} IN COMPUTE GROUP {compute_group_name}"
+                cp_resume_query = (
+                    f"{cp_resume_query} IN COMPUTE GROUP {compute_group_name}"
+                )
             return self.handle_cc_status(
                 constants.CC_RESUME_OPR,
                 cp_resume_query,
@@ -206,7 +227,9 @@ class TeradataComputeClusterManager:
             )
         else:
             self.log.info(
-                "Compute Cluster %s already %s", compute_profile_name, constants.CC_RESUME_DB_STATUS
+                "Compute Cluster %s already %s",
+                compute_profile_name,
+                constants.CC_RESUME_DB_STATUS,
             )
 
     def suspend_teradata_compute_cluster(
@@ -237,7 +260,11 @@ class TeradataComputeClusterManager:
             if compute_group_name:
                 sql = f"{sql} IN COMPUTE GROUP {compute_group_name}"
             return self.handle_cc_status(
-                constants.CC_SUSPEND_OPR, sql, compute_profile_name, compute_group_name, timeout
+                constants.CC_SUSPEND_OPR,
+                sql,
+                compute_profile_name,
+                compute_group_name,
+                timeout,
             )
         else:
             self.log.info(
@@ -254,8 +281,8 @@ class TeradataComputeClusterSync:
         connection,
         log,
         operation: str,
-        compute_profile_name: str = None,
-        compute_group_name: str = None,
+        compute_profile_name: Optional[str] = None,
+        compute_group_name: Optional[str] = None,
         poll_interval: float | None = None,
         timeout: int = constants.CC_OPR_TIME_OUT,
     ):
@@ -267,7 +294,7 @@ class TeradataComputeClusterSync:
         self.timeout = timeout
         self.log = log
 
-    def run(self) -> dict:
+    def run(self):
         """Wait for Compute Cluster operation to complete."""
         start_time = time.time()  # Record the start time
         try:
@@ -329,12 +356,14 @@ class TeradataComputeClusterSync:
                         self.operation,
                     )
             else:
-                yield DagsterError("Invalid operation")
+                self.log.error("Invalid operation")
+                return "Invalid operation"
         except DagsterError as e:
-            yield DagsterError(str(e))
+            self.log.error(str(e))
+            return str(e)
         except asyncio.CancelledError:
             self.log.error(constants.CC_OPR_TIMEOUT_ERROR, self.operation)
-            yield DagsterError(constants.CC_OPR_TIMEOUT_ERROR, self.operation)
+            return constants.CC_OPR_TIMEOUT_ERROR % self.operation
 
     def get_status(self) -> str:
         """Return compute cluster SUSPEND/RESUME operation status."""
@@ -343,7 +372,11 @@ class TeradataComputeClusterSync:
             sql += f" AND UPPER(ComputeGroupName) = UPPER('{self.compute_group_name}')"
 
         if self.compute_group_name:
-            sql += " AND UPPER(ComputeGroupName) = UPPER('" + self.compute_group_name + "')"
+            sql += (
+                " AND UPPER(ComputeGroupName) = UPPER('"
+                + self.compute_group_name
+                + "')"
+            )
         result_set = self.connection.execute_query(sql, True, True)
         status = result_set
         if isinstance(result_set, list) and isinstance(result_set[0], str):

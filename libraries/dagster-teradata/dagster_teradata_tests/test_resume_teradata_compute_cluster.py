@@ -21,7 +21,9 @@ def test_resume_teradata_compute_cluster(tmp_path):
                 MIN_COMPUTE_COUNT(1) MAX_COMPUTE_COUNT(5) INITIALLY_resumeED('FALSE')
                    compute_attribute (str, optional): Additional attributes for compute profile. Defaults to None.
         """
-        context.resources.teradata.resume_teradata_compute_cluster("ShippingCG01", "Shipping")
+        context.resources.teradata.resume_teradata_compute_cluster(
+            "ShippingCG01", "Shipping"
+        )
 
     @job(resource_defs={"teradata": teradata_resource})
     def example_job():
@@ -29,13 +31,13 @@ def test_resume_teradata_compute_cluster(tmp_path):
 
     example_job.execute_in_process(
         run_config={
-            'resources': {
-                'teradata': {
-                    'config': {
-                        'host': os.getenv("TERADATA_HOST"),
-                        'user': os.getenv("TERADATA_USER"),
-                        'password': os.getenv("TERADATA_PASSWORD"),
-                        'database': os.getenv("TERADATA_DATABASE"),
+            "resources": {
+                "teradata": {
+                    "config": {
+                        "host": os.getenv("TERADATA_HOST"),
+                        "user": os.getenv("TERADATA_USER"),
+                        "password": os.getenv("TERADATA_PASSWORD"),
+                        "database": os.getenv("TERADATA_DATABASE"),
                     }
                 }
             }

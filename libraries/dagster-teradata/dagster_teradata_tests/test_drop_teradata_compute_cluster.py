@@ -16,7 +16,9 @@ def test_example_drop_teradata_compute_cluster(tmp_path):
             When set to True, it signals the system to remove the specified compute group.
             Conversely, when set to False, no action is taken on the compute group.
         """
-        context.resources.teradata.drop_teradata_compute_cluster("ShippingCG01", "Shipping", True)
+        context.resources.teradata.drop_teradata_compute_cluster(
+            "ShippingCG01", "Shipping", True
+        )
 
     @job(resource_defs={"teradata": teradata_resource})
     def example_job():
@@ -24,16 +26,15 @@ def test_example_drop_teradata_compute_cluster(tmp_path):
 
     example_job.execute_in_process(
         run_config={
-            'resources': {
-                'teradata': {
-                    'config': {
-                        'host' : os.getenv("TERADATA_HOST"),
-                        'user' : os.getenv("TERADATA_USER"),
-                        'password' : os.getenv("TERADATA_PASSWORD"),
-                        'database' : os.getenv("TERADATA_DATABASE"),
+            "resources": {
+                "teradata": {
+                    "config": {
+                        "host": os.getenv("TERADATA_HOST"),
+                        "user": os.getenv("TERADATA_USER"),
+                        "password": os.getenv("TERADATA_PASSWORD"),
+                        "database": os.getenv("TERADATA_DATABASE"),
                     }
                 }
             }
         }
     )
-
