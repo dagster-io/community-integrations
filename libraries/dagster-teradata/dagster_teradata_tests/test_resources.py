@@ -78,8 +78,6 @@ def test_resources_teradata_connection():
                 ],  # Teradata table names are expected uppercase. Test that lowercase also works.
             )[table_name].timestamp()
 
-            end_time = round(get_current_timestamp())
-
             assert freshness_for_table > start_time
         finally:
             try:
