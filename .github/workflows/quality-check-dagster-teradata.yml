@@ -22,7 +22,7 @@ jobs:
 
       - name: Sync dependencies
         working-directory: ./libraries/dagster-teradata
-        run: uv sync
+        run: uv sync --all-extras
 
       - name: Ruff
         working-directory: ./libraries/dagster-teradata
