@@ -8,6 +8,9 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: './libraries/dagster-teradata'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,5 +37,3 @@ jobs:
       - name: Pytest
         working-directory: ${{ inputs.working_directory }}
         run: uv run pytest --ignore=dagster_teradata_tests/functional/
-    with:
-      working_directory: ./libraries/dagster-teradata
