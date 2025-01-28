@@ -7,10 +7,31 @@ on:
 
 jobs:
   check:
-    uses: ./.github/workflows/template-quality-check.yml
-    with:
-      working_directory: ./libraries/dagster-teradata
+    runs-on: ubuntu-latest
     steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install python
+        working-directory: ./libraries/dagster-teradata
+        run: uv python install 3.12
+
+      - name: Sync dependencies
+        working-directory: ./libraries/dagster-teradata
+        run: uv sync
+
+      - name: Ruff
+        working-directory: ./libraries/dagster-teradata
+        run: uv run ruff check
+
+      - name: Pyright
+        working-directory: ./libraries/dagster-teradata
+        run: uv run pyright
+
       - name: Pytest
-        working-directory: ${{ inputs.working_directory }}
+        working-directory: ./libraries/dagster-teradata
         run: uv run pytest --ignore=dagster_teradata_tests/functional/
