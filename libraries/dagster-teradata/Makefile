@@ -1,5 +1,5 @@
 install:
-	uv sync
+	uv sync --all-extras
 
 build:
 	uv build
