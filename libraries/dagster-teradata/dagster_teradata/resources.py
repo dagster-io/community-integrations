@@ -295,7 +295,6 @@ class TeradataDagsterConnection:
             )
 
 
-            @pytest.mark.integration
             def test_s3_to_teradata(tmp_path):
                 @op(required_resource_keys={"teradata", "s3"})
                 def example_test_s3_to_teradata(context):

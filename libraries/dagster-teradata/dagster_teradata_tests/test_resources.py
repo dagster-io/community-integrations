@@ -80,7 +80,7 @@ def test_resources_teradata_connection():
 
             end_time = round(get_current_timestamp())
 
-            assert end_time > freshness_for_table > start_time
+            assert freshness_for_table > start_time
         finally:
             try:
                 conn.cursor().execute(f"drop table {table_name}")

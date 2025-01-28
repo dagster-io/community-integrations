@@ -21,17 +21,16 @@ it enables compute cluster management for Teradata Vantage Cloud Lake.
 ```python
 import os
 import pytest
-from dagster import job, op
+from dagster import job, op, EnvVar
 from dagster_teradata import TeradataResource
 
 td_resource = TeradataResource(
-    host=os.getenv("TERADATA_HOST"),
-    user=os.getenv("TERADATA_USER"),
-    password=os.getenv("TERADATA_PASSWORD"),
-    database=os.getenv("TERADATA_DATABASE"),
+    host=EnvVar("TERADATA_HOST"),
+    user=EnvVar("TERADATA_USER"),
+    password=EnvVar("TERADATA_PASSWORD"),
+    database=EnvVar("TERADATA_DATABASE"),
 )
 
-@pytest.mark.integration
 def test_execute_query(tmp_path):
     @op(required_resource_keys={"teradata"})
     def example_test_execute_query(context):
@@ -49,17 +48,16 @@ def test_execute_query(tmp_path):
 ```python
 import os
 import pytest
-from dagster import job, op
+from dagster import job, op, EnvVar
 from dagster_teradata import TeradataResource
 
 td_resource = TeradataResource(
-    host=os.getenv("TERADATA_HOST"),
-    user=os.getenv("TERADATA_USER"),
-    password=os.getenv("TERADATA_PASSWORD"),
-    database=os.getenv("TERADATA_DATABASE"),
+    host=EnvVar("TERADATA_HOST"),
+    user=EnvVar("TERADATA_USER"),
+    password=EnvVar("TERADATA_PASSWORD"),
+    database=EnvVar("TERADATA_DATABASE"),
 )
 
-@pytest.mark.integration
 def test_drop_table(tmp_path):
     @op(required_resource_keys={"teradata"})
     def example_test_drop_table(context):
@@ -79,11 +77,9 @@ Here is another example of compute cluster management in Teradata VantageCloud L
 import os
 
 import pytest
-from dagster import job, op
+from dagster import job, op, EnvVar
 from dagster_teradata import teradata_resource
 
-
-@pytest.mark.integration
 def test_create_teradata_compute_cluster(tmp_path):
     @op(required_resource_keys={"teradata"})
     def example_create_teradata_compute_cluster(context):
@@ -116,10 +112,10 @@ def test_create_teradata_compute_cluster(tmp_path):
             "resources": {
                 "teradata": {
                     "config": {
-                        "host": os.getenv("TERADATA_HOST"),
-                        "user": os.getenv("TERADATA_USER"),
-                        "password": os.getenv("TERADATA_PASSWORD"),
-                        "database": os.getenv("TERADATA_DATABASE"),
+                        "host": EnvVar("TERADATA_HOST"),
+                        "user": EnvVar("TERADATA_USER"),
+                        "password": EnvVar("TERADATA_PASSWORD"),
+                        "database": EnvVar("TERADATA_DATABASE"),
                     }
                 }
             }

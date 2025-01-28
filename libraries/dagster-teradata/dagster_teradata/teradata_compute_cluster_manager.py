@@ -1,6 +1,7 @@
 import asyncio
 import re
 import time
+from enum import Enum
 from textwrap import dedent
 from typing import Optional
 
@@ -8,6 +9,24 @@ import teradatasql
 from dagster import DagsterError
 
 from dagster_teradata import constants
+
+
+class CcOperation(Enum):
+    """Supported operations for CC."""
+
+    CREATE = "CREATE"
+    CREATE_SUSPEND = "CREATE_SUSPEND"
+    DROP = "DROP"
+    SUSPEND = "SUSPEND"
+    RESUME = "RESUME"
+
+
+class CcDbStatus(Enum):
+    """Database statuses for CC operations."""
+
+    INITIALIZING = "Initializing"
+    SUSPENDED = "Suspended"
+    RUNNING = "Running"
 
 
 class TeradataComputeClusterManager:
@@ -148,10 +167,10 @@ class TeradataComputeClusterManager:
                 )
             if compute_attribute is not None:
                 create_cp_query = create_cp_query + " USING " + compute_attribute
-            operation = constants.CC_CREATE_OPR
+            operation = CcOperation.CREATE
             initially_suspended = self.get_initially_suspended(create_cp_query)
             if initially_suspended == "TRUE":
-                operation = constants.CC_CREATE_SUSPEND_OPR
+                operation = CcOperation.CREATE_SUSPEND
             return self.handle_cc_status(
                 operation,
                 create_cp_query,
@@ -210,7 +229,7 @@ class TeradataComputeClusterManager:
         else:
             self.log.info(constants.CC_GRP_PRP_NON_EXISTS_MSG)
             raise DagsterError(constants.CC_GRP_PRP_NON_EXISTS_MSG)
-        if cp_status_result != constants.CC_RESUME_DB_STATUS:
+        if cp_status_result != CcDbStatus.RUNNING:
             cp_resume_query = (
                 f"RESUME COMPUTE FOR COMPUTE PROFILE {compute_profile_name}"
             )
@@ -219,7 +238,7 @@ class TeradataComputeClusterManager:
                     f"{cp_resume_query} IN COMPUTE GROUP {compute_group_name}"
                 )
             return self.handle_cc_status(
-                constants.CC_RESUME_OPR,
+                CcOperation.RESUME,
                 cp_resume_query,
                 compute_profile_name,
                 compute_group_name,
@@ -229,7 +248,7 @@ class TeradataComputeClusterManager:
             self.log.info(
                 "Compute Cluster %s already %s",
                 compute_profile_name,
-                constants.CC_RESUME_DB_STATUS,
+                CcDbStatus.RUNNING,
             )
 
     def suspend_teradata_compute_cluster(
@@ -255,12 +274,12 @@ class TeradataComputeClusterManager:
         else:
             self.log.info(constants.CC_GRP_PRP_NON_EXISTS_MSG)
             raise DagsterError(constants.CC_GRP_PRP_NON_EXISTS_MSG)
-        if result != constants.CC_SUSPEND_DB_STATUS:
+        if result != CcDbStatus.SUSPENDED:
             sql = f"SUSPEND COMPUTE FOR COMPUTE PROFILE {compute_profile_name}"
             if compute_group_name:
                 sql = f"{sql} IN COMPUTE GROUP {compute_group_name}"
             return self.handle_cc_status(
-                constants.CC_SUSPEND_OPR,
+                CcOperation.SUSPEND,
                 sql,
                 compute_profile_name,
                 compute_group_name,
@@ -270,7 +289,7 @@ class TeradataComputeClusterManager:
             self.log.info(
                 "Compute Cluster %s already %s",
                 compute_profile_name,
-                constants.CC_SUSPEND_DB_STATUS,
+                CcDbStatus.SUSPENDED,
             )
         pass
 
@@ -311,16 +330,16 @@ class TeradataComputeClusterSync:
                     self.log.info(constants.CC_GRP_PRP_NON_EXISTS_MSG)
                     raise DagsterError(constants.CC_GRP_PRP_NON_EXISTS_MSG)
                 if (
-                    self.operation == constants.CC_SUSPEND_OPR
-                    or self.operation == constants.CC_CREATE_SUSPEND_OPR
+                    self.operation == CcOperation.SUSPEND
+                    or self.operation == CcOperation.CREATE_SUSPEND
                 ):
-                    if status == constants.CC_SUSPEND_DB_STATUS:
+                    if status == CcDbStatus.SUSPENDED:
                         break
                 elif (
-                    self.operation == constants.CC_RESUME_OPR
-                    or self.operation == constants.CC_CREATE_OPR
+                    self.operation == CcOperation.RESUME
+                    or self.operation == CcOperation.CREATE
                 ):
-                    if status == constants.CC_RESUME_DB_STATUS:
+                    if status == CcDbStatus.RUNNING:
                         break
                 if self.poll_interval is not None:
                     self.poll_interval = float(self.poll_interval)
@@ -328,10 +347,10 @@ class TeradataComputeClusterSync:
                     self.poll_interval = float(constants.CC_POLL_INTERVAL)
                 time.sleep(self.poll_interval)
             if (
-                self.operation == constants.CC_SUSPEND_OPR
-                or self.operation == constants.CC_CREATE_SUSPEND_OPR
+                self.operation == CcOperation.SUSPEND
+                or self.operation == CcOperation.CREATE_SUSPEND
             ):
-                if status == constants.CC_SUSPEND_DB_STATUS:
+                if status == CcDbStatus.SUSPENDED:
                     return constants.CC_OPR_SUCCESS_STATUS_MSG % (
                         self.compute_profile_name,
                         self.operation,
@@ -342,10 +361,10 @@ class TeradataComputeClusterSync:
                         self.operation,
                     )
             elif (
-                self.operation == constants.CC_RESUME_OPR
-                or self.operation == constants.CC_CREATE_OPR
+                self.operation == CcOperation.RESUME
+                or self.operation == CcOperation.CREATE
             ):
-                if status == constants.CC_RESUME_DB_STATUS:
+                if status == CcDbStatus.RUNNING:
                     return constants.CC_OPR_SUCCESS_STATUS_MSG % (
                         self.compute_profile_name,
                         self.operation,

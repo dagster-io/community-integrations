@@ -1,13 +1,5 @@
 """Define constants for dagster-teradata."""
 
-CC_CREATE_OPR = "CREATE"
-CC_CREATE_SUSPEND_OPR = "CREATE_SUSPEND"
-CC_DROP_OPR = "DROP"
-CC_SUSPEND_OPR = "SUSPEND"
-CC_RESUME_OPR = "RESUME"
-CC_INITIALIZE_DB_STATUS = "Initializing"
-CC_SUSPEND_DB_STATUS = "Suspended"
-CC_RESUME_DB_STATUS = "Running"
 CC_OPR_SUCCESS_STATUS_MSG = "Compute Cluster %s  %s operation completed successfully."
 CC_OPR_FAILURE_STATUS_MSG = "Compute Cluster %s  %s operation has failed."
 CC_OPR_INITIALIZING_STATUS_MSG = (

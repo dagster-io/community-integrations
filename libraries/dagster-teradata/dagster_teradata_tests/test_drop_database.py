@@ -1,13 +1,11 @@
-import os
-
-from dagster import job, op
+from dagster import job, op, EnvVar
 from dagster_teradata import TeradataResource
 
 td_resource = TeradataResource(
-    host=os.getenv("TERADATA_HOST"),
-    user=os.getenv("TERADATA_USER"),
-    password=os.getenv("TERADATA_PASSWORD"),
-    database=os.getenv("TERADATA_DATABASE"),
+    host=EnvVar("TERADATA_HOST"),
+    user=EnvVar("TERADATA_USER"),
+    password=EnvVar("TERADATA_PASSWORD"),
+    database=EnvVar("TERADATA_DATABASE"),
 )
 
 
