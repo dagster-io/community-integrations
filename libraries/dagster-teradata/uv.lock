@@ -657,33 +657,41 @@ source = { editable = "." }
 dependencies = [
     { name = "dagster", version = "1.8.13", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "dagster", version = "1.9.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "teradatasql" },
+]
+
+[package.optional-dependencies]
+aws = [
+    { name = "boto3" },
+    { name = "dagster-aws", version = "0.24.13", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "dagster-aws", version = "0.25.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+]
+azure = [
+    { name = "dagster-azure", version = "0.24.13", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "dagster-azure", version = "0.25.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "boto3" },
-    { name = "dagster-aws", version = "0.24.13", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
-    { name = "dagster-aws", version = "0.25.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
-    { name = "dagster-azure", version = "0.24.13", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
-    { name = "dagster-azure", version = "0.25.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "ruff" },
-    { name = "teradatasql" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "dagster", specifier = ">=1.8.0" }]
+requires-dist = [
+    { name = "boto3", marker = "extra == 'aws'" },
+    { name = "dagster", specifier = ">=1.8.0" },
+    { name = "dagster-aws", marker = "extra == 'aws'" },
+    { name = "dagster-azure", marker = "extra == 'azure'" },
+    { name = "teradatasql" },
+]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "boto3" },
-    { name = "dagster-aws" },
-    { name = "dagster-azure" },
     { name = "pyright", specifier = ">=1.1.386" },
     { name = "pytest" },
     { name = "ruff" },
-    { name = "teradatasql" },
 ]
 
 [[package]]

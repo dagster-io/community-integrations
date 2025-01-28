@@ -1,7 +1,7 @@
 from contextlib import closing, contextmanager
 from datetime import datetime
 from textwrap import dedent
-from typing import Any, List, Mapping, Optional, Sequence, Union
+from typing import Any, List, Mapping, Optional, Sequence, Union, TYPE_CHECKING
 
 import dagster._check as check
 import teradatasql
@@ -14,8 +14,6 @@ from dagster import (
 from dagster._annotations import public
 from dagster._core.definitions.resource_definition import dagster_maintained_resource
 from dagster._utils.cached_method import cached_method
-from dagster_aws.s3 import S3Resource
-from dagster_azure.adls2 import ADLS2Resource
 from pydantic import Field
 
 from dagster_teradata import constants
@@ -247,10 +245,13 @@ class TeradataDagsterConnection:
                         else:
                             raise
 
+    if TYPE_CHECKING:
+        from dagster_aws.s3 import S3Resource
+
     @public
     def s3_to_teradata(
         self,
-        s3: S3Resource,
+        s3: "S3Resource",
         s3_source_key: str,
         teradata_table: str,
         public_bucket: bool = False,
@@ -338,10 +339,12 @@ class TeradataDagsterConnection:
 
         self.execute_query(sql)
 
+    if TYPE_CHECKING:
+        from dagster_azure.adls2 import ADLS2Resource
     @public
     def azure_blob_to_teradata(
         self,
-        azure: ADLS2Resource,
+        azure: "ADLS2Resource",
         blob_source_key: str,
         teradata_table: str,
         public_bucket: bool = False,
