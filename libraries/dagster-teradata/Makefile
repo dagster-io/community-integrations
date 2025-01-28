@@ -5,7 +5,7 @@ build:
 	uv build
 
 test:
-	uv run pytest --ignore-glob='*compute_cluster.py'
+	uv run pytest --ignore=dagster_teradata_tests/functional/
 
 ruff:
 	uv run ruff check --fix .

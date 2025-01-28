@@ -329,17 +329,18 @@ class TeradataComputeClusterSync:
                 if status is None or len(status) == 0:
                     self.log.info(constants.CC_GRP_PRP_NON_EXISTS_MSG)
                     raise DagsterError(constants.CC_GRP_PRP_NON_EXISTS_MSG)
+                    break
                 if (
                     self.operation == CcOperation.SUSPEND
                     or self.operation == CcOperation.CREATE_SUSPEND
                 ):
-                    if status == CcDbStatus.SUSPENDED:
+                    if status == CcDbStatus.SUSPENDED.value:
                         break
                 elif (
                     self.operation == CcOperation.RESUME
                     or self.operation == CcOperation.CREATE
                 ):
-                    if status == CcDbStatus.RUNNING:
+                    if status == CcDbStatus.RUNNING.value:
                         break
                 if self.poll_interval is not None:
                     self.poll_interval = float(self.poll_interval)
@@ -350,7 +351,7 @@ class TeradataComputeClusterSync:
                 self.operation == CcOperation.SUSPEND
                 or self.operation == CcOperation.CREATE_SUSPEND
             ):
-                if status == CcDbStatus.SUSPENDED:
+                if status == CcDbStatus.SUSPENDED.value:
                     return constants.CC_OPR_SUCCESS_STATUS_MSG % (
                         self.compute_profile_name,
                         self.operation,
@@ -364,7 +365,7 @@ class TeradataComputeClusterSync:
                 self.operation == CcOperation.RESUME
                 or self.operation == CcOperation.CREATE
             ):
-                if status == CcDbStatus.RUNNING:
+                if status == CcDbStatus.RUNNING.value:
                     return constants.CC_OPR_SUCCESS_STATUS_MSG % (
                         self.compute_profile_name,
                         self.operation,
