@@ -10,6 +10,20 @@ RunResponse = TypedDict(
         "traceId": str,
     },
 )
+
+ProjectResponse = TypedDict(
+    "ProjectResponse",
+    {
+        "projectId": str,
+        "title": str,
+        "description": str,
+        "creator": dict,
+        "lastEditedAt": str,
+        "lastPublishedAt": str,
+        "categories": List[dict],
+    },
+)
+
 NotificationResponse = TypedDict(
     "NotificationResponse",
     {

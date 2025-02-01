@@ -6,21 +6,17 @@ from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urljoin
 
 import requests
-import dagster as dg
-from pydantic import Field
-
-from dagster._annotations import deprecated
-from dagster._utils.cached_method import cached_method
-
+from dagster import Failure, Field, StringSource, get_dagster_logger, resource
 
 from dagster_hex.types import (
     HexOutput,
     NotificationDetails,
+    ProjectResponse,
     RunResponse,
     StatusResponse,
 )
 
-from dagster_hex.consts import (
+from .consts import (
     COMPLETE,
     DEFAULT_POLL_INTERVAL,
     DEFAULT_POLL_TIMEOUT,
@@ -30,35 +26,30 @@ from dagster_hex.consts import (
 )
 
 
-class HexResource(dg.ConfigurableResource):
-    api_key: str = Field(
-        ...,
-        description="Hex API Key. You can find this on the Hex settings page",
-    )
+class HexResource:
+    """
+    This class exposes methods on top of the Hex REST API.
 
-    base_url: str = Field(
-        default=HEX_API_BASE,
-        description="Hex Base URL for API requests.",
-    )
+    Args:
+        api_key (str): Hex API Token to use for authentication
+        base_url (str): Base URL for the API
+        request_max_retries (int): Number of times to retry a failed request
+        request_retry_delay (int): Time, in seconds, to wait between retries
+    """
 
-    request_max_retries: int = Field(
-        default=3,
-        description="The maximum times requests to the Hex API should be retried before failing.",
-    )
-
-    request_retry_delay: float = Field(
-        default=0.25,
-        description="Time (in seconds) to wait between each request retry.",
-    )
-    log: dg.ResourceDependency[Optional[logging.Logger]] = Field(
-        default=None,
-        description="Optional logger to be used from within the HexResource (default: `get_dagster_logger()`",
-    )
-
-    @property
-    @cached_method
-    def _log(self) -> logging.Logger:
-        return self.log if self.log else dg.get_dagster_logger()
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str = HEX_API_BASE,
+        log: logging.Logger = get_dagster_logger(),
+        request_max_retries: int = 3,
+        request_retry_delay: float = 0.25,
+    ):
+        self._log = log
+        self._api_key = api_key
+        self._request_max_retries = request_max_retries
+        self._request_retry_delay = request_retry_delay
+        self.api_base_url = base_url
 
     def make_request(
         self, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None
@@ -80,8 +71,8 @@ class HexResource(dg.ConfigurableResource):
             __version__ = "UnknownVersion"
 
         user_agent = "HexDagsterOp/" + __version__
-        headers = {"Authorization": f"Bearer {self.api_key}", "User-Agent": user_agent}
-        url = urljoin(self.base_url, endpoint)
+        headers = {"Authorization": f"Bearer {self._api_key}", "User-Agent": user_agent}
+        url = urljoin(self.api_base_url, endpoint)
 
         num_retries = 0
         while True:
@@ -107,6 +98,18 @@ class HexResource(dg.ConfigurableResource):
                         headers=headers,
                         data=data,
                     )
+                if response.status_code == 401:
+                    try:
+                        msg = response.json()
+                    except requests.exceptions.JSONDecodeError:
+                        msg = response.text
+                    raise Failure(f"Received 401 status from Hex: {msg}")
+                if response.status_code == 403:
+                    try:
+                        msg = response.json()
+                    except requests.exceptions.JSONDecodeError:
+                        msg = response.text
+                    raise Failure(f"Received 403 status from Hex: {msg}")
                 if response.status_code == 422:
                     # 422 statuses from Hex may have additional error information as a
                     # JSON payload
@@ -114,7 +117,7 @@ class HexResource(dg.ConfigurableResource):
                         msg = response.json()
                     except requests.exceptions.JSONDecodeError:
                         msg = response.text
-                    raise dg.Failure(f"Received 422 status from Hex: {msg}")
+                    raise Failure(f"Received 422 status from Hex: {msg}")
 
                 response.raise_for_status()
                 if response.headers.get("Content-Type", "").startswith(
@@ -125,24 +128,76 @@ class HexResource(dg.ConfigurableResource):
                     except requests.exceptions.JSONDecodeError:
                         self._log.error("Failed to decode response from API.")
                         self._log.error("API returned: %s", response.text)
-                        raise dg.Failure(
+                        raise Failure(
                             "Unexpected response from Hex API.Failed to decode to JSON."
                         )
                     return response_json
             except requests.RequestException as e:
                 self._log.error("Request to Hex API failed: %s", e)
-                if num_retries == self.request_max_retries:
+                if num_retries == self._request_max_retries:
                     break
                 num_retries += 1
-                time.sleep(self.request_retry_delay)
+                time.sleep(self._request_retry_delay)
 
-        raise dg.Failure("Exceeded max number of retries.")
+        raise Failure("Exceeded max number of retries.")
+
+    def get_all_projects(
+        self,
+    ) -> List[Dict[str, Any]]:
+        method = "GET"
+        endpoint = "api/v1/projects"
+        response = cast(
+            List[Dict[str, Any]],
+            self.make_request(method=method, endpoint=endpoint, data=None),
+        )
+        return response
+
+    def get_project(
+        self,
+        project_id: str,
+    ) -> ProjectResponse:
+        """
+        Fetches the details of a Hex Project
+
+        Args:
+            project_id (str): The Hex Project ID
+
+        Returns:
+            RunResponse
+        """
+        method = "GET"
+        endpoint = f"api/v1/projects/{project_id}"
+        response = cast(
+            ProjectResponse,
+            self.make_request(method=method, endpoint=endpoint, data=None),
+        )
+        return response
+
+    def get_project_details(
+        self,
+        project_id: str,
+    ) -> Dict[str, Any]:
+        try:
+            project_details = self.get_project(project_id)
+            return {
+                "project_id": project_id,
+                "title": project_details["title"],
+                "description": project_details["description"],
+                "creator": project_details["creator"]["email"],
+                "last_edited_at": project_details["lastEditedAt"],
+                "last_published_at": project_details["lastPublishedAt"],
+                "categories": project_details["categories"],
+            }
+        except Exception as e:
+            self._log.error(f"Error fetching project details for {project_id}: {e}")
+            raise e
 
     def run_project(
         self,
         project_id: str,
         inputs: Optional[Dict[str, Any]] = None,
         update_cache: bool = False,
+        use_cached_sql: bool = True,
         notifications: List[NotificationDetails] = [],
     ) -> RunResponse:
         """Trigger a sync and initiate a sync run
@@ -151,18 +206,25 @@ class HexResource(dg.ConfigurableResource):
             project_id (str): The Hex Project ID
             inputs (dict): additional input parameters, a json-serializable dictionary
                 of variable_name: value pairs.
-            update_cache (bool): When true, this run will update the cached state of the
+            update_cache (bool): [DEPRECATED] When true, this run will update the cached state of the
                 published app with the latest run results.
                 Additionally, any SQL cells that have caching enabled will be
                 re-executed as part of this run. Note that this cannot be set to true
                 if custom input parameters are provided.
+            use_cached_sql (bool): When false, the project will run without using
+                any cached SQL results, and will update those cached SQL results.
 
         Returns:
             RunResponse
         """
         method = "POST"
         endpoint = f"/api/v1/project/{project_id}/run"
-        data: Dict[str, Any] = {"updateCache": update_cache}
+
+        if update_cache:
+            self._log.warn(
+                "`update_cache` is deprecated. Please use `use_cached_sql` instead."
+            )
+        data: Dict[str, Any] = {"useCachedSqlResults": use_cached_sql}
         if inputs:
             data["inputParams"] = inputs
 
@@ -223,6 +285,7 @@ class HexResource(dg.ConfigurableResource):
         inputs: Optional[dict],
         notifications: List[NotificationDetails] = [],
         update_cache: bool = False,
+        use_cached_sql: bool = True,
         kill_on_timeout: bool = True,
         poll_interval: float = DEFAULT_POLL_INTERVAL,
         poll_timeout: Optional[float] = DEFAULT_POLL_TIMEOUT,
@@ -233,11 +296,13 @@ class HexResource(dg.ConfigurableResource):
             project_id (str): The Hex project id
             inputs (dict) additional input parameters, a json-serializable dictionary
                 of variable_name: value pairs.
-            update_cache (bool): When true, this run will update the cached state of the
+            update_cache (bool): [DEPRECATED] When true, this run will update the cached state of the
                 published app with the latest run results.
                 Additionally, any SQL cells that have caching enabled will be
                 re-executed as part of this run. Note that this cannot be set to true
                 if custom input parameters are provided.
+            use_cached_sql (bool): When false, the project will run without using
+                any cached SQL results, and will update those cached SQL results.
             kill_on_timeout (bool): attempt to stop the project if the timeout is
                 reached. If false, the project will continue running indefinitely in the
                 background until completion.
@@ -247,11 +312,15 @@ class HexResource(dg.ConfigurableResource):
         Returns:
             Dict[str, Any]: Parsed json output from the API
         """
+        if update_cache:
+            self._log.warn(
+                "`update_cache` is deprecated. Please use `use_cached_sql` instead."
+            )
         run_response = self.run_project(
             project_id,
             inputs=inputs,
             notifications=notifications,
-            update_cache=update_cache,
+            use_cached_sql=use_cached_sql,
         )
         run_id = run_response["runId"]
         poll_start = datetime.datetime.now()
@@ -265,7 +334,7 @@ class HexResource(dg.ConfigurableResource):
             )
 
             if project_status not in VALID_STATUSES:
-                raise dg.Failure(
+                raise Failure(
                     f"Received an unexpected status from the API: {project_status}"
                 )
 
@@ -273,7 +342,7 @@ class HexResource(dg.ConfigurableResource):
                 break
 
             if project_status in TERMINAL_STATUSES:
-                raise dg.Failure(
+                raise Failure(
                     f"Project Run failed with status {project_status}. "
                     f"See Run URL for more info {run_response['runUrl']}"
                 )
@@ -285,7 +354,7 @@ class HexResource(dg.ConfigurableResource):
             ):
                 if kill_on_timeout:
                     self.cancel_run(project_id, run_id)
-                raise dg.Failure(
+                raise Failure(
                     f"Project {project_id} for run: {run_id}' timed out after "
                     f"{datetime.datetime.now() - poll_start}. "
                     f"Last status was {project_status}. "
@@ -296,30 +365,25 @@ class HexResource(dg.ConfigurableResource):
         return HexOutput(run_response=run_response, status_response=run_status)
 
 
-@deprecated(
-    breaking_version="1.9",
-    subject="hex_resource function has been replaced with the configurable HexResource",
-    emit_runtime_warning=True,
-)
-@dg.resource(
+@resource(
     config_schema={
-        "api_key": dg.Field(
-            dg.StringSource,
+        "api_key": Field(
+            StringSource,
             is_required=True,
             description="Hex API Key. You can find this on the Hex settings page",
         ),
-        "base_url": dg.Field(
-            dg.StringSource,
+        "base_url": Field(
+            StringSource,
             default_value="https://app.hex.tech",
             description="Hex Base URL for API requests.",
         ),
-        "request_max_retries": dg.Field(
+        "request_max_retries": Field(
             int,
             default_value=3,
             description="The maximum times requests to the Hex API should be retried "
             "before failing.",
         ),
-        "request_retry_delay": dg.Field(
+        "request_retry_delay": Field(
             float,
             default_value=0.25,
             description="Time (in seconds) to wait between each request retry.",
@@ -334,6 +398,7 @@ def hex_resource(context) -> HexResource:
     return HexResource(
         api_key=context.resource_config["api_key"],
         base_url=context.resource_config["base_url"],
+        log=context.log,
         request_max_retries=context.resource_config["request_max_retries"],
         request_retry_delay=context.resource_config["request_retry_delay"],
     )
