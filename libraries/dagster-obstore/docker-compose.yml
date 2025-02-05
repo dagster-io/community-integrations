@@ -1,0 +1,11 @@
+services:
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    ports:
+      - 10000:10000
+  motoserver:
+    image: docker.io/motoserver/moto:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - MOTO_PORT=3000 # set moto listener port with env var

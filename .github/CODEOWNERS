@@ -3,3 +3,4 @@
 /libraries/pipes/   @danielgafni
 /libraries/pipes/implementations/java   @GingerYouth @danielgafni
 /libraries/pipes/implementations/rust  @cmpadden @christeefy @marijncv
+/libraries/dagster-obstore @ion-elgreco
