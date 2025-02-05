@@ -1,0 +1,31 @@
+[project]
+name = "dagster-sdf"
+version = "0.25.11"
+description = "A Dagster integration for sdf"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "dagster",
+    "sdf-cli>=0.3.23,<0.3.24",
+    "orjson",
+    "polars",
+    "typer>=0.9.0",
+]
+
+[project.scripts]
+dagster-sdf = "dagster_sdf.cli.app:app"
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest",
+    "pytest_mock",
+    "pyright>=1.1.386",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_sdf"]
