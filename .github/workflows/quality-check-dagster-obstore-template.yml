@@ -1,0 +1,42 @@
+name: quality-check-dagster-obstore
+
+on:
+  workflow_call:
+    inputs:
+      working_directory:
+        required: true
+        type: string
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Start moto,azurite servers
+        run: docker-compose up -d
+        working-directory: ${{ inputs.working_directory }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install python
+        working-directory: ${{ inputs.working_directory }}
+        run: uv python install 3.12
+
+      - name: Sync dependencies
+        working-directory: ${{ inputs.working_directory }}
+        run: uv sync
+
+      - name: Ruff
+        working-directory: ${{ inputs.working_directory }}
+        run: uv run ruff check
+
+      - name: Pyright
+        working-directory: ${{ inputs.working_directory }}
+        run: uv run pyright
+
+      - name: Pytest
+        working-directory: ${{ inputs.working_directory }}
+        run: uv run pytest

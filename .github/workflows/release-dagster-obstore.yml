@@ -1,0 +1,14 @@
+name: build-and-release-dagster-obstore
+
+on:
+  push:
+    tags:
+      - 'dagster_obstore-*.*.*'
+
+jobs:
+  build-and-release-dagster-obstore:
+    uses: ./.github/workflows/template-release.yml
+    with:
+      library_name: dagster-obstore
+      working_directory: ./libraries/dagster-obstore
+    secrets: inherit
