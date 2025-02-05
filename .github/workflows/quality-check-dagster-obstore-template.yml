@@ -20,7 +20,7 @@ jobs:
       - name: Run docker compose
         uses: hoverkraft-tech/compose-action@v2.2.0
         with:
-          compose-file: "${{ inputs.working_directory }}/docker-compose.yml"
+          cwd: ${{ inputs.working_directory }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
