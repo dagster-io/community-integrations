@@ -9,7 +9,7 @@ from dagster import (
     MaterializeResult,
     asset,
 )
-from dagster_contrib_notdiamond import NotDiamondResource
+from dagster_notdiamond import NotDiamondResource
 
 
 @asset

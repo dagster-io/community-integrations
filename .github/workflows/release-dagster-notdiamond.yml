@@ -1,0 +1,14 @@
+name: build-and-release-dagster-notdiamond
+
+on:
+  push:
+    tags:
+      - 'dagster_notdiamond-*.*.*'
+
+jobs:
+  build-and-release-dagster-notdiamond:
+    uses: ./.github/workflows/template-release.yml
+    with:
+      library_name: dagster-notdiamond
+      working_directory: ./libraries/dagster-notdiamond
+    secrets: inherit

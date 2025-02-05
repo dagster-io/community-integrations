@@ -1,5 +1,5 @@
 [project]
-name = "dagster-contrib-notdiamond"
+name = "dagster-notdiamond"
 version = "0.1.2"
 description = "Dagster integration with Not Diamond"
 readme = "README.md"
@@ -23,4 +23,4 @@ requires = ["setuptools>=42"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["dagster_contrib_notdiamond"]
+packages = ["dagster_notdiamond"]

@@ -1,7 +1,7 @@
 import time
 
 import dagster as dg
-import dagster_contrib_notdiamond as nd
+import dagster_notdiamond as nd
 import dagster_openai as oai
 
 

@@ -5,7 +5,7 @@ Not Diamond is an AI model router that automatically determines which LLM is bes
 ## Installation
 
 ```bash
-pip install dagster-contrib-notdiamond
+pip install dagster-notdiamond
 ```
 
 ## Configuration
@@ -26,7 +26,7 @@ from dagster import (
     MaterializeResult,
     asset,
 )
-from dagster_contrib_notdiamond import NotDiamondResource
+from dagster_notdiamond import NotDiamondResource
 
 
 @asset
@@ -59,7 +59,7 @@ your pyproject.toml as follows (replacing `$PROJECT_HOME` with the path to this 
 ```toml
 [tool.dagster]
 module_name = "examples.example_notdiamond"
-working_directory = "$PROJECT_HOME/libraries/dagster-contrib-notdiamond/"
+working_directory = "$PROJECT_HOME/libraries/dagster-notdiamond/"
 ```
 
 ## Support

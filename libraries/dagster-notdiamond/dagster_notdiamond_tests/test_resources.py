@@ -17,11 +17,11 @@ from dagster import (
 from dagster._core.errors import DagsterInvariantViolationError
 from dagster._core.execution.context.init import build_init_resource_context
 from dagster._utils.test import wrap_op_in_graph_and_execute
-from dagster_contrib_notdiamond import NotDiamondResource
+from dagster_notdiamond import NotDiamondResource
 from unittest.mock import ANY, MagicMock, patch
 
 
-@patch("dagster_contrib_notdiamond.resources.NotDiamond")
+@patch("dagster_notdiamond.resources.NotDiamond")
 def test_notdiamond_client(mock_client) -> None:
     notdiamond_resource = NotDiamondResource(
         api_key="xoxp-1234123412341234-12341234-1234"
@@ -35,7 +35,7 @@ def test_notdiamond_client(mock_client) -> None:
         )
 
 
-@patch("dagster_contrib_notdiamond.resources.NotDiamond")
+@patch("dagster_notdiamond.resources.NotDiamond")
 def test_notdiamond_client_with_config(mock_client) -> None:
     notdiamond_resource = NotDiamondResource(
         api_key="xoxp-1234123412341234-12341234-1234",
@@ -50,7 +50,7 @@ def test_notdiamond_client_with_config(mock_client) -> None:
 
 
 @patch("dagster.OpExecutionContext", autospec=OpExecutionContext)
-@patch("dagster_contrib_notdiamond.resources.NotDiamond")
+@patch("dagster_notdiamond.resources.NotDiamond")
 def test_notdiamond_resource_with_op(mock_client, mock_context):
     @op
     def notdiamond_op(notdiamond_resource: NotDiamondResource):
@@ -76,7 +76,7 @@ def test_notdiamond_resource_with_op(mock_client, mock_context):
 
 
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_notdiamond.resources.NotDiamond")
+@patch("dagster_notdiamond.resources.NotDiamond")
 def test_notdiamond_resource_with_asset(mock_client, mock_context):
     @asset
     def notdiamond_asset(notdiamond_resource: NotDiamondResource):
@@ -103,7 +103,7 @@ def test_notdiamond_resource_with_asset(mock_client, mock_context):
 
 
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_notdiamond.resources.NotDiamond")
+@patch("dagster_notdiamond.resources.NotDiamond")
 def test_notdiamond_resource_with_graph_backed_asset(mock_client, mock_context):
     @op
     def model_version_op():
@@ -139,7 +139,7 @@ def test_notdiamond_resource_with_graph_backed_asset(mock_client, mock_context):
 
 
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_notdiamond.resources.NotDiamond")
+@patch("dagster_notdiamond.resources.NotDiamond")
 def test_notdiamond_resource_with_multi_asset(mock_client, mock_context):
     @multi_asset(
         specs=[AssetSpec("status"), AssetSpec("result")],
@@ -186,7 +186,7 @@ def test_notdiamond_resource_with_multi_asset(mock_client, mock_context):
 
 
 @patch("dagster.AssetExecutionContext", autospec=AssetExecutionContext)
-@patch("dagster_contrib_notdiamond.resources.NotDiamond")
+@patch("dagster_notdiamond.resources.NotDiamond")
 def test_notdiamond_resource_with_partitioned_asset(mock_client, mock_context):
     notdiamond_partitions_def = StaticPartitionsDefinition([str(j) for j in range(5)])
 

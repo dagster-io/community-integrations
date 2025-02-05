@@ -47,7 +47,7 @@ class NotDiamondResource(ConfigurableResource):
             MaterializeResult,
             asset,
         )
-        from dagster_contrib_notdiamond import NotDiamondResource
+        from dagster_notdiamond import NotDiamondResource
 
 
         @asset
@@ -88,7 +88,7 @@ class NotDiamondResource(ConfigurableResource):
         # Set up a Not Diamond client based on the API key.
         self._client = NotDiamond(
             api_key=self.api_key,
-            user_agent=f"dagster-contrib-notdiamond/{metadata.version('dagster-contrib-notdiamond')}",
+            user_agent=f"dagster-notdiamond/{metadata.version('dagster-notdiamond')}",
         )
 
     @public
@@ -110,7 +110,7 @@ class NotDiamondResource(ConfigurableResource):
             .. code-block:: python
 
                 from dagster import AssetExecutionContext, asset
-                from dagster_contrib_notdiamond import NotDiamondResource
+                from dagster_notdiamond import NotDiamondResource
 
                 @asset(compute_kind="NotDiamond")
                 def notdiamond_asset(context: AssetExecutionContext, notdiamond: NotDiamondResource) -> Tuple[str, str]:
