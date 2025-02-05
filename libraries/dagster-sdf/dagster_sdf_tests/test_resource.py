@@ -7,7 +7,7 @@ import pydantic
 import pytest
 from dagster import In, Nothing, Out, job, op
 from dagster._core.errors import DagsterExecutionInterruptedError
-from dagster._core.execution.context.compute import OpExecutionContext
+from dagster._core.execution.context.compute import OpExecutionContext  # type: ignore
 from dagster_sdf.constants import (
     DAGSTER_SDF_CATALOG_NAME,
     DAGSTER_SDF_DIALECT,

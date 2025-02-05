@@ -124,7 +124,7 @@ def test_sdf_with_materialize(moms_flower_shop_target_dir: Path) -> None:
 
 def test_with_custom_translater_asset_key_fn(moms_flower_shop_target_dir: Path) -> None:
     class CustomDagsterSdfTranslator(DagsterSdfTranslator):
-        def get_asset_key(self, catalog: str, schema: str, table_name: str) -> AssetKey:
+        def get_asset_key(self, catalog: str, schema: str, table_name: str) -> AssetKey:  # type: ignore
             return AssetKey([f"pre-{catalog}-suff", f"pre-{schema}-suff", f"pre-{table_name}-suff"])
 
     @sdf_assets(

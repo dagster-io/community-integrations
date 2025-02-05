@@ -275,16 +275,16 @@ class SdfCliResource(ConfigurableResource):
             if match:
                 version = match.group(1)
                 if version < SDF_VERSION_LOWER_BOUND or version >= SDF_VERSION_UPPER_BOUND:
-                    logging.warn(
+                    logging.warning(
                         f"The sdf version '{version}' is not within the supported range of"
                         f" '{SDF_VERSION_LOWER_BOUND}' to '{SDF_VERSION_UPPER_BOUND}'. Check your"
                         " environment to ensure that the correct version of sdf is being used."
                     )
             else:
-                logging.warn(
+                logging.warning(
                     "Failed to extract the sdf version from the output. Check your environment to"
                     " ensure that the correct version of sdf is being used."
                 )
         except subprocess.CalledProcessError as e:
-            logging.warn(f"Failed to get the sdf version: {e}")
+            logging.warning(f"Failed to get the sdf version: {e}")
             exit(1)
