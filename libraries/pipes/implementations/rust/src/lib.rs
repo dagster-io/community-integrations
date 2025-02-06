@@ -115,6 +115,17 @@ where
         let msg = PipesMessage::new(Method::ReportAssetCheck, Some(params));
         self.message_channel.write_message(msg)
     }
+
+    pub fn report_custom_message(
+        &mut self,
+        payload: serde_json::Value,
+    ) -> Result<(), MessageWriteError> {
+        let params: HashMap<&str, Option<serde_json::Value>> =
+            HashMap::from([("payload", Some(payload))]);
+
+        let msg = PipesMessage::new(Method::ReportCustomMessage, Some(params));
+        self.message_channel.write_message(msg)
+    }
 }
 
 impl<W> Drop for PipesContext<W>
@@ -161,7 +172,7 @@ pub fn open_dagster_pipes() -> Result<PipesContext<PipesDefaultMessageWriter>, D
 
 #[cfg(test)]
 mod tests {
-    use rstest::rstest;
+    use rstest::{fixture, rstest};
     use std::collections::HashMap;
     use std::fs;
     use tempfile::NamedTempFile;
@@ -169,8 +180,26 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn test_write_pipes_metadata() {
+    #[fixture]
+    fn file_and_context() -> (NamedTempFile, PipesContext<DefaultWriter>) {
+        let file = NamedTempFile::new().unwrap();
+        let channel = DefaultChannel::File(FileChannel::new(file.path().into()));
+        let context: PipesContext<DefaultWriter> = PipesContext {
+            message_channel: channel.clone(),
+            data: PipesContextData {
+                asset_keys: Some(vec!["asset1".to_string()]),
+                run_id: "012345".to_string(),
+                ..Default::default()
+            },
+            logger: PipesLogger::new(channel),
+        };
+        (file, context)
+    }
+
+    #[rstest]
+    fn test_write_pipes_metadata(
+        #[from(file_and_context)] (file, mut context): (NamedTempFile, PipesContext<DefaultWriter>),
+    ) {
         let asset_metadata = HashMap::from([
             ("int", PipesMetadataValue::from(100)),
             ("float", PipesMetadataValue::from(100.0)),
@@ -213,17 +242,6 @@ mod tests {
             ("job", PipesMetadataValue::from_job("some_job".to_string())),
         ]);
 
-        let file = NamedTempFile::new().unwrap();
-        let channel = DefaultChannel::File(FileChannel::new(file.path().into()));
-        let mut context: PipesContext<DefaultWriter> = PipesContext {
-            message_channel: channel.clone(),
-            data: PipesContextData {
-                asset_keys: Some(vec!["asset1".to_string()]),
-                run_id: "012345".to_string(),
-                ..Default::default()
-            },
-            logger: PipesLogger::new(channel),
-        };
         context
             .report_asset_materialization("asset1", asset_metadata, Some("v1"))
             .expect("Failed to report asset materialization");
@@ -336,20 +354,10 @@ mod tests {
         })
     )]
     fn test_close_pipes_context(
+        #[from(file_and_context)] (file, mut context): (NamedTempFile, PipesContext<DefaultWriter>),
         #[case] exc: Option<PipesException>,
         #[case] expected_message: serde_json::Value,
     ) {
-        let file = NamedTempFile::new().unwrap();
-        let channel = DefaultChannel::File(FileChannel::new(file.path().into()));
-        let mut context: PipesContext<DefaultWriter> = PipesContext {
-            message_channel: channel.clone(),
-            data: PipesContextData {
-                asset_keys: Some(vec!["asset1".to_string()]),
-                run_id: "012345".to_string(),
-                ..Default::default()
-            },
-            logger: PipesLogger::new(channel),
-        };
         context.close(exc).expect("Failed to close context");
         assert_eq!(
             serde_json::from_str::<serde_json::Value>(&fs::read_to_string(file.path()).unwrap())
@@ -380,6 +388,27 @@ mod tests {
                 "__dagster_pipes_version": "0.1",
                 "method": "closed",
                 "params": null,
+            })
+        );
+    }
+
+    #[rstest]
+    fn test_report_custom_message(
+        #[from(file_and_context)] (file, mut context): (NamedTempFile, PipesContext<DefaultWriter>),
+    ) {
+        context
+            .report_custom_message(json!({"key": "value"}))
+            .expect("Failed to report custom message");
+
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&fs::read_to_string(file.path()).unwrap())
+                .unwrap(),
+            json!({
+                "__dagster_pipes_version": "0.1",
+                "method": "report_custom_message",
+                "params": {
+                    "payload": {"key": "value"}
+                },
             })
         );
     }

@@ -52,6 +52,9 @@ pub fn main() -> Result<(), DagsterPipesError> {
 
     match args.test_name.as_str() {
         "test_message_log" => test_message_log(context),
+        "test_message_report_custom_message" => {
+            test_message_report_custom_message(context, args.custom_payload)
+        }
         _ => Ok(()),
     }?;
     Ok(())
@@ -66,5 +69,25 @@ where
     context.logger.warning("Warning message")?;
     context.logger.error("Error message")?;
     context.logger.critical("Critical message")?;
+    Ok(())
+}
+
+fn test_message_report_custom_message<W>(
+    mut context: PipesContext<W>,
+    custom_payload: Option<String>,
+) -> Result<(), DagsterPipesError>
+where
+    W: MessageWriter,
+{
+    let custom_payload = custom_payload.expect("custom_payload is required");
+    let file = File::open(custom_payload).expect("custom_payload_path could not be opened");
+    let payload = serde_json::from_reader::<File, serde_json::Value>(file)
+        .expect("custom_payload_path could not be parsed")
+        .as_object()
+        .expect("custom payload must be an object")
+        .get("payload")
+        .expect("custom payload must have a 'payload' key")
+        .clone();
+    context.report_custom_message(payload)?;
     Ok(())
 }
