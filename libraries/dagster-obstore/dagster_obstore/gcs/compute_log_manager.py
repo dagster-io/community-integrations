@@ -123,7 +123,7 @@ class GCSComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass)
         if timeout:
             client_config["timeout"] = timeout
 
-        self._store = GCSStore.from_env(
+        self._store = GCSStore(
             bucket=bucket,
             config=gcs_config,
             client_options=client_config,

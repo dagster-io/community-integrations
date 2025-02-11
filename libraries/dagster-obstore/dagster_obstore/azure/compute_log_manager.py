@@ -175,7 +175,7 @@ class ADLSComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass
         if timeout:
             client_config["timeout"] = timeout
 
-        self._store = AzureStore.from_env(
+        self._store = AzureStore(
             container=container,
             config=azure_config,
             client_options=client_config,
