@@ -1,5 +1,4 @@
 [project]
-name = "dagster-obstore"
 version = "0.2.0"
 description = "Dagster integration with `obstore` a python binding to Rust object-store crate. Integration provides computeLogManagers for S3, ADLS & GCS and ObjectStore resourecs"
 readme = "README.md"
