@@ -19,7 +19,7 @@ from obstore.store import GCSStore
 from dagster_obstore._base.log_manager import BaseCloudStorageComputeLogManager
 
 if TYPE_CHECKING:
-    from obstore.store import ClientConfig, GCSConfig
+    from obstore.store import ClientConfig, GCSConfigInput
 POLLING_INTERVAL = 5
 
 
@@ -107,7 +107,7 @@ class GCSComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass)
         self._upload_interval = check.opt_int_param(upload_interval, "upload_interval")
         self._show_url_only = show_url_only
 
-        gcs_config: GCSConfig = {}
+        gcs_config: GCSConfigInput = {}
         client_config: ClientConfig = {}
         if service_account:
             gcs_config["service_account"] = service_account

@@ -23,7 +23,7 @@ POLLING_INTERVAL = 5
 
 
 if TYPE_CHECKING:
-    from obstore.store import AzureConfig, ClientConfig
+    from obstore.store import ClientConfig, AzureConfigInput
 
 
 class ADLSComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass):
@@ -115,7 +115,7 @@ class ADLSComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass
         timeout: Optional[str] = "60s",
         skip_empty_files: Optional[bool] = False,
         upload_interval: Optional[int] = None,
-        extra_azure_args: Optional["AzureConfig"] = None,
+        extra_azure_args: Optional["AzureConfigInput"] = None,
         show_url_only: Optional[bool] = False,
     ):
         self._storage_account = check.str_param(storage_account, "storage_account")
@@ -146,7 +146,7 @@ class ADLSComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass
         self._upload_interval = check.opt_int_param(upload_interval, "upload_interval")
         self._show_url_only = show_url_only
 
-        azure_config: AzureConfig = {}
+        azure_config: AzureConfigInput = {}
         client_config: ClientConfig = {}
 
         if storage_account:

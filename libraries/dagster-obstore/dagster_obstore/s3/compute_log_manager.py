@@ -21,7 +21,7 @@ from obstore.store import S3Store
 from dagster_obstore._base.log_manager import BaseCloudStorageComputeLogManager
 
 if TYPE_CHECKING:
-    from obstore.store import ClientConfig, S3Config
+    from obstore.store import ClientConfig, S3ConfigInput
 
 POLLING_INTERVAL = 5
 
@@ -89,7 +89,7 @@ class S3ComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass):
         endpoint: Optional[str] = None,
         skip_empty_files: Optional[bool] = False,
         upload_interval: Optional[int] = None,
-        extra_s3_args: Optional["S3Config"] = None,
+        extra_s3_args: Optional["S3ConfigInput"] = None,
         show_url_only: Optional[bool] = False,
         region: Optional[str] = None,
     ):
@@ -117,7 +117,7 @@ class S3ComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass):
         self._show_url_only = show_url_only
         self._region = region
 
-        s3_config: S3Config = {}
+        s3_config: S3ConfigInput = {}
         client_config: ClientConfig = {}
         if access_key_id:
             s3_config["access_key_id"] = access_key_id
