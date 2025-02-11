@@ -135,7 +135,7 @@ class S3ComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass):
         if timeout:
             client_config["timeout"] = timeout
 
-        self._store = S3Store.from_env(
+        self._store = S3Store(
             bucket=bucket,
             config=s3_config,
             client_options=client_config,

@@ -41,7 +41,7 @@ class S3ObjectStore(ConfigurableResource):
             "access_key_id": self.access_key_id,
             "secret_access_key": self.secret_access_key,
         }
-        return S3Store.from_env(
+        return S3Store(
             bucket=bucket,
             config=config,
             client_options={

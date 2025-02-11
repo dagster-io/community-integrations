@@ -63,7 +63,7 @@ class AzureObjectStore(ConfigurableResource):
         if self.use_azure_cli:
             config["use_azure_cli"] = self.use_azure_cli
 
-        return AzureStore.from_env(
+        return AzureStore(
             container=container,
             config=config,
             client_options={

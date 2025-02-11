@@ -42,7 +42,7 @@ class GCSObjectStore(ConfigurableResource):
         if self.service_account_path:
             config["service_account_path"] = self.service_account_path
 
-        return GCSStore.from_env(
+        return GCSStore(
             bucket=bucket,
             config=config,
             client_options={

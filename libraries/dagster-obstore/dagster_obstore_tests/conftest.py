@@ -67,7 +67,7 @@ def storage_account() -> str:
 
 @pytest.fixture
 def azure_store(container) -> AzureStore:
-    return AzureStore.from_env(container=container, client_options={"allow_http": True})
+    return AzureStore(container=container, client_options={"allow_http": True})
 
 
 @pytest.fixture
