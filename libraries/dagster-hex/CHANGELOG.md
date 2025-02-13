@@ -1,13 +1,18 @@
 # Changelog
 ---
 
-## 0.1.5 - UNRELEASED
+## 0.1.6 - UNRELEASED
+
+-
+
+## 0.1.5
+
 ### Added
 
 - Hex project asset definition with `build_hex_asset` function using the project_id
-- Update to hex resource to sync with new hex api updates to deprecate `update_cache` and add `use_cached_sql` instead.
+- Update to hex resource to sync with new hex API updates to deprecate `update_cache` and add `use_cached_sql` instead.
 
-## 0.1.4 - UNRELEASED
+## 0.1.4
 
 ### Added
 
