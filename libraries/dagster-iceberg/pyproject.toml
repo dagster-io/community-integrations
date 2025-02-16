@@ -1,6 +1,6 @@
 [project]
 name = "dagster-iceberg"
-version = "0.0.1"
+version = "0.2.1"
 description = "Package for PyIceberg-specific Dagster framework op and resource components."
 authors = [
   {name="Jasper Ginn", email="jasperginn@gmail.com"}
