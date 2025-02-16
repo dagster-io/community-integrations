@@ -22,7 +22,7 @@ jobs:
 
       - name: Sync dependencies
         working-directory: ./libraries/dagster-iceberg
-        run: uv sync --group dev
+        run: uv sync --group dev --group docs --all-extras
 
       - name: Black
         working-directory: ./libraries/dagster-iceberg
