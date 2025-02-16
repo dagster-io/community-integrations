@@ -1,0 +1,28 @@
+[project]
+name = "example_project"
+version = "0.1.0"
+description = "An example project to demonstrate the usage of dagster-pipes for typescript"
+readme = "README.md"
+requires-python = ">=3.9,<3.13"
+dependencies = [
+    "dagster",
+    "dagster-cloud",
+]
+
+[project.optional-dependencies]
+dev = [
+    "dagster-webserver", 
+    "pytest",
+    "ruff",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.dagster]
+module_name = "example_project.definitions"
+project_name = "example_project"
+
+[tool.setuptools.packages.find]
+exclude=["example_project_tests"]

@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "declaration": true,
+    "strict": true,
+    "target": "ES2022",
+    "outDir": "./dist",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+  },
+  "exclude": ["dist", "example-project"] 
+}

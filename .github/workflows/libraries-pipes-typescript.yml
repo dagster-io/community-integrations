@@ -1,0 +1,67 @@
+name: dagster-pipes-typescript
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - "libraries/pipes/tests/dagster-pipes-tests/**"
+      - "libraries/pipes/implementations/typescript/**"
+      - ".github/workflows/libraries-pipes-typescript.yml"
+
+defaults:
+  run:
+    working-directory: ./libraries/pipes/implementations/typescript/
+
+jobs:
+  ci:
+    name: "CI"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install
+      - name: Test
+        run: npm test
+      - name: Lint
+        run: npm run lint
+
+  integration:
+    name: "integration"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./libraries/pipes/implementations/typescript/example-project
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Install dependencies (pipes library)
+        run: npm install
+        working-directory: ./libraries/pipes/implementations/typescript
+
+      - name: compile typescript (pipes library)
+        run: npx tsc
+        working-directory: ./libraries/pipes/implementations/typescript
+
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v4
+
+      - name: "Install Python"
+        run: uv python install
+
+      - name: "Install the project"
+        run: uv sync --all-extras --dev
+
+      - name: "Lint"
+        run: uv run make ruff
+
+      - name: "Tests"
+        run: uv run pytest

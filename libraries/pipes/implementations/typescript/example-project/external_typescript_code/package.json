@@ -1,0 +1,19 @@
+{
+    "name": "example-dagster-pipes",
+    "version": "0.1.0",
+    "main": "index.js",
+    "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1",
+      "build": "tsc"
+    },
+    "author": "",
+    "license": "Apache-2.0",
+    "description": "",
+    "dependencies": {
+      "dagster_pipes_typescript": "file:../../"
+    },
+    "devDependencies": {
+      "@types/node": "^22.13.1"
+    }
+}
+  
