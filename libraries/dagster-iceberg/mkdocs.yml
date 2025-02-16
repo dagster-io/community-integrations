@@ -1,0 +1,70 @@
+site_name: dagster-iceberg
+
+# Repository
+repo_name: dagster-io/community-integrations
+repo_url: https://github.com/dagster-io/community-integrations/tree/main/libraries/dagster-iceberg
+edit_uri: ""
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quickstart: quickstart.md
+  - Features: features.md
+  - Reference: reference.md
+  - Developing: development.md
+  - "Code reference": code_reference.md
+
+theme:
+  name: "material"
+  logo: assets/dagster-iceberg-logo-small.png
+  features:
+    - content.code.select
+    - content.code.copy
+
+markdown_extensions:
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+
+plugins:
+- search
+- mkdocstrings:
+    default_handler: python
+    handlers:
+      python:
+        paths:
+        - src/dagster_iceberg
+        options:
+          docstring_options:
+            ignore_init_summary: true
+          docstring_section_style: list
+          filters: ["!^_"]
+          heading_level: 1
+          inherited_members: true
+          merge_init_into_class: true
+          parameter_headings: true
+          preload_modules: [mkdocstrings]
+          relative_crossrefs: true
+          scoped_crossrefs: true
+          separate_signature: true
+          show_bases: false
+          show_inheritance_diagram: true
+          show_root_heading: true
+          show_root_full_path: true
+          show_signature_annotations: true
+          show_source: true
+          show_symbol_type_heading: true
+          show_symbol_type_toc: true
+          signature_crossrefs: true
+          summary: true
+          unwrap_annotated: true
+- include-markdown
