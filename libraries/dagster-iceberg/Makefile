@@ -1,0 +1,20 @@
+install:
+	uv sync --all-extras --group dev --group docs
+
+build:
+	uv build
+
+test:
+	uv run pytest tests
+
+lint:
+	uv run black .
+	uv run ruff check --fix .
+	uv run ruff format .
+	uv run isort .
+
+check:
+	uv run pyright
+
+docs:
+	uv run mkdocs serve

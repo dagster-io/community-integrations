@@ -1,0 +1,110 @@
+[project]
+name = "dagster-iceberg"
+version = "0.0.1"
+description = "Package for PyIceberg-specific Dagster framework op and resource components."
+authors = [
+  {name="Jasper Ginn", email="jasperginn@gmail.com"}
+]
+requires-python = ">=3.10"
+readme = "README.md"
+dependencies = [
+    "pyiceberg[pyarrow]>=0.8",
+    "dagster>=1.8.2",
+    "pendulum>=3.0.0",
+    "tenacity>=8.5.0",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.optional-dependencies]
+daft = [
+    "getdaft>=0.3.0",
+]
+polars = [
+    "polars>=1.0.0",
+]
+pandas = [
+    "pandas>=2.0.0",
+]
+
+[tool.black]
+line-length = 88
+exclude = '''
+^/(
+  (
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.venv
+    | _build
+    | build
+    | dist
+    | .notebooks
+    | .nox
+  )
+)
+'''
+
+[tool.isort]
+profile = "black"
+extend_skip = [".notebooks", ".nox", ".venv"]
+
+[tool.mypy]
+exclude = [
+  '^docs/'
+]
+ignore_missing_imports = true
+explicit_package_bases = true
+
+[tool.ruff]
+lint.ignore = ["E501"]
+extend-exclude = [
+  "__pycache__",
+  "docs",
+  "site",
+  ".nox",
+  ".notebooks"
+]
+
+[tool.pytest.ini_options]
+cache_dir = "/home/vscode/workspace/.cache/pytest"
+
+[tool.pyright]
+exclude = [".venv", ".github", "docs", "tests"]
+include = ["src"]
+pythonVersion = "3.11"
+venvPath = "."
+venv = ".venv"
+
+[dependency-groups]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-include-markdown-plugin>=7.0.0",
+    "mkdocs-material>=9.5.42",
+    "mkdocstrings[python]>=0.26.2",
+]
+dev = [
+    "pytest>=8.3.2",
+    "pyright>=1.1.385",
+    "testcontainers[postgres]>=4.8.2",
+    "psycopg2-binary>=2.9.10",
+    "dagit>=1.8.8",
+    "black>=25.1.0",
+    "isort>=6.0.0",
+    "ruff>=0.9.6",
+    "pytest-cov>=6.0.0",
+]

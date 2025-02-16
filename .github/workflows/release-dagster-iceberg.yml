@@ -1,0 +1,14 @@
+name: build-and-release-dagster-iceberg
+
+on:
+  push:
+    tags:
+      - 'dagster_iceberg-*.*.*'
+
+jobs:
+  build-and-release-dagster-iceberg:
+    uses: ./.github/workflows/template-release.yml
+    with:
+      library_name: dagster-iceberg
+      working_directory: ./libraries/dagster-iceberg
+    secrets: inherit
