@@ -65,7 +65,9 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
         if self.logmech is not None and self.logmech.lower() == "browser":
             # When logmech is "browser", username and password should not be provided.
             if self.user is not None or self.password is not None:
-                raise ValueError("Username and password should not be specified when logmech is 'browser'")
+                raise ValueError(
+                    "Username and password should not be specified when logmech is 'browser'"
+                )
         else:
             if not self.user:
                 raise ValueError("User is required but not provided.")
@@ -80,9 +82,9 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
         if self.browser is not None:
             connection_params["browser"] = self.browser
         if self.browser_tab_timeout is not None:
-            connection_params["browser_tab_timeout"] = self.browser_tab_timeout
+            connection_params["browser_tab_timeout"] = str(self.browser_tab_timeout)
         if self.browser_timeout is not None:
-            connection_params["browser_timeout"] = self.browser_timeout
+            connection_params["browser_timeout"] = str(self.browser_timeout)
 
         teradata_conn = teradatasql.connect(**connection_params)
 
@@ -360,6 +362,7 @@ class TeradataDagsterConnection:
 
     if TYPE_CHECKING:
         from dagster_azure.adls2 import ADLS2Resource
+
     @public
     def azure_blob_to_teradata(
         self,
