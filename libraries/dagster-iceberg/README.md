@@ -1,6 +1,6 @@
 ![dagster-iceberg](docs/assets/dagster-iceberg-main.png)
 
-> ⚠️ This project is in beta
+> ⚠️ This project has [preview status](https://docs.dagster.io/api/api-lifecycle)
 
 [Dagster](https://dagster.io/) IO manager for managing [Iceberg](https://iceberg.apache.org/) tables with [PyIceberg](https://github.com/apache/iceberg-python).
 
@@ -25,4 +25,4 @@ Available features can be found [here](https://jasperhg90.github.io/dagster-iceb
 
 ## Status
 
-This library is currently in development and has beta status.
+This library is currently in development and has [preview status](https://docs.dagster.io/api/api-lifecycle).
