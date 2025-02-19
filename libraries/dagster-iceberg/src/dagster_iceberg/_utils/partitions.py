@@ -25,7 +25,7 @@ from pyiceberg.table import Table
 from pyiceberg.table.update.spec import UpdateSpec
 from pyiceberg.transforms import IdentityTransform
 
-from dagster_iceberg._utils.retries import PyIcebergOperationWithRetry
+from dagster_iceberg._utils.retries import IcebergOperationWithRetry
 from dagster_iceberg._utils.transforms import diff_to_transformation
 
 time_partition_dt_types = (T.TimestampType, T.DateType)
@@ -135,7 +135,7 @@ class DagsterPartitionToPredicateMapper(Generic[K]):
         return predicates
 
 
-class DagsterPartitionToPyIcebergExpressionMapper(
+class DagsterPartitionToIcebergExpressionMapper(
     DagsterPartitionToPredicateMapper[E.BooleanExpression]
 ):
     def _partition_filters_to_predicates(
@@ -220,7 +220,7 @@ def update_table_partition_spec(
     )
 
 
-class PyIcebergPartitionSpecUpdaterWithRetry(PyIcebergOperationWithRetry):
+class PyIcebergPartitionSpecUpdaterWithRetry(IcebergOperationWithRetry):
     def operation(self, table_slice: TableSlice, partition_spec_update_mode: str):
         self.logger.debug("Updating table partition spec")
         IcebergTableSpecUpdater(

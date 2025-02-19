@@ -5,14 +5,14 @@ from typing import List
 from pyiceberg import table
 from pyiceberg.exceptions import CommitFailedException
 
-from dagster_iceberg._utils.retries import PyIcebergOperationWithRetry
+from dagster_iceberg._utils.retries import IcebergOperationWithRetry
 
 
 def update_table_properties(
     table: table.Table, current_table_properties: dict, new_table_properties: dict
 ):
     """Update existing table properties with new table properties passed by user"""
-    PyIcebergPropertiesUpdaterWithRetry(table=table).execute(
+    IcebergPropertiesUpdaterWithRetry(table=table).execute(
         retries=3,
         exception_types=CommitFailedException,
         current_table_properties=current_table_properties,
@@ -20,7 +20,7 @@ def update_table_properties(
     )
 
 
-class PyIcebergPropertiesUpdaterWithRetry(PyIcebergOperationWithRetry):
+class IcebergPropertiesUpdaterWithRetry(IcebergOperationWithRetry):
     def operation(self, current_table_properties: dict, new_table_properties: dict):
         """Diffs current and new properties and updates where relevant"""
         IcebergTablePropertiesUpdater(
@@ -36,7 +36,7 @@ class TablePropertiesDiffer:
         """Helper class to diff current and new table properties
 
         Args:
-            current_table_properties (dict): Dictionary of current table properties retrieve from pyiceberg Table
+            current_table_properties (dict): Dictionary of current table properties retrieve from iceberg Table
             new_table_properties (dict): Dictionary of new table properties passed by user
         """
 

@@ -5,13 +5,13 @@ from typing import List
 import pyarrow as pa
 from pyiceberg import table
 
-from dagster_iceberg._utils.retries import PyIcebergOperationWithRetry
+from dagster_iceberg._utils.retries import IcebergOperationWithRetry
 
 
 def update_table_schema(
     table: table.Table, new_table_schema: pa.Schema, schema_update_mode: str
 ):
-    PyIcebergSchemaUpdaterWithRetry(table=table).execute(
+    IcebergSchemaUpdaterWithRetry(table=table).execute(
         retries=6,
         exception_types=ValueError,
         new_table_schema=new_table_schema,
@@ -19,7 +19,7 @@ def update_table_schema(
     )
 
 
-class PyIcebergSchemaUpdaterWithRetry(PyIcebergOperationWithRetry):
+class IcebergSchemaUpdaterWithRetry(IcebergOperationWithRetry):
     def operation(self, new_table_schema: pa.Schema, schema_update_mode: str):
         IcebergTableSchemaUpdater(
             schema_differ=SchemaDiffer(

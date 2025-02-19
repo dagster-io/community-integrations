@@ -6,5 +6,5 @@ from dagster_iceberg._utils.partitions import (
     DagsterPartitionToPolarsSqlPredicateMapper as DagsterPartitionToPolarsSqlPredicateMapper,
 )
 from dagster_iceberg._utils.partitions import (
-    DagsterPartitionToPyIcebergExpressionMapper as DagsterPartitionToPyIcebergExpressionMapper,
+    DagsterPartitionToIcebergExpressionMapper as DagsterPartitionToIcebergExpressionMapper,
 )

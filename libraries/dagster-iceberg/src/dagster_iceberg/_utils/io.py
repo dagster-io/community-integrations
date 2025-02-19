@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Sequence, Union
 
 import pyarrow as pa
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
-from pyiceberg import __version__ as iceberg_version
+from pyiceberg import __version__ as pyiceberg_version
 from pyiceberg import expressions as E
 from pyiceberg import table as iceberg_table
 from pyiceberg.catalog import Catalog
@@ -16,11 +16,11 @@ from pyiceberg.partitioning import PartitionSpec
 from pyiceberg.schema import Schema
 
 from dagster_iceberg._utils.partitions import (
-    DagsterPartitionToPyIcebergExpressionMapper,
+    DagsterPartitionToIcebergExpressionMapper,
     update_table_partition_spec,
 )
 from dagster_iceberg._utils.properties import update_table_properties
-from dagster_iceberg._utils.retries import PyIcebergOperationWithRetry
+from dagster_iceberg._utils.retries import IcebergOperationWithRetry
 from dagster_iceberg._utils.schema import update_table_schema
 from dagster_iceberg.version import __version__ as dagster_iceberg_version
 
@@ -43,7 +43,7 @@ def table_writer(
         table_slice (TableSlice): dagster database IO manager table slice. This
             contains information about dagster partitions.
         data (pa.Table): PyArrow table
-        catalog (Catalog): PyIceberg catalogs supported by this library
+        catalog (Catalog): PyIceberg catalogs supported by this library. See <https://py.iceberg.apache.org/configuration/#catalogs>.
         schema_update_mode (str): Whether to process schema updates on existing
             tables or error, value is either 'error' or 'update'
 
@@ -58,7 +58,7 @@ def table_writer(
     base_properties = {
         "created-by": "dagster",
         "dagster-run-id": dagster_run_id,
-        "pyiceberg-version": iceberg_version,
+        "pyiceberg-version": pyiceberg_version,
         "dagster-iceberg-version": dagster_iceberg_version,
     }
     logger.debug(
@@ -155,7 +155,7 @@ def get_expression_row_filter(
 ) -> E.BooleanExpression:
     """Construct an iceberg row filter based on dagster partition dimensions
     that can be used to overwrite those specific rows in the iceberg table."""
-    partition_filters = DagsterPartitionToPyIcebergExpressionMapper(
+    partition_filters = DagsterPartitionToIcebergExpressionMapper(
         partition_dimensions=dagster_partition_dimensions,
         table_schema=iceberg_table_schema,
         table_partition_spec=iceberg_partition_spec,
@@ -197,7 +197,7 @@ def create_table(
     """Creates an iceberg table and retries on failure
 
     Args:
-        catalog (Catalog): PyIceberg catalogs supported by this library
+        catalog (Catalog): PyIceberg catalogs supported by this library. See <https://py.iceberg.apache.org/configuration/#catalogs>.
         table_path (str): Table path
         schema (pa.Schema): PyArrow schema
         properties (Dict[str, str]): Table properties
@@ -205,7 +205,7 @@ def create_table(
     Raises:
         RetryError: Raised when the commit fails after the maximum number of retries
     """
-    PyIcebergCreateTableWithRetry(catalog=catalog).execute(
+    IcebergCreateTableWithRetry(catalog=catalog).execute(
         retries=3,
         exception_types=(CommitFailedException, TableAlreadyExistsError),
         table_path=table_path,
@@ -215,7 +215,7 @@ def create_table(
     return catalog.load_table(table_path)
 
 
-class PyIcebergCreateTableWithRetry(PyIcebergOperationWithRetry):
+class IcebergCreateTableWithRetry(IcebergOperationWithRetry):
     def __init__(self, catalog: Catalog):
         self.catalog = catalog
 
@@ -250,7 +250,7 @@ def overwrite_table(
     Raises:
         RetryError: Raised when the commit fails after the maximum number of retries
     """
-    PyIcebergTableOverwriterWithRetry(table=table).execute(
+    IcebergTableOverwriterWithRetry(table=table).execute(
         retries=3,
         exception_types=CommitFailedException,
         data=data,
@@ -259,7 +259,7 @@ def overwrite_table(
     )
 
 
-class PyIcebergTableOverwriterWithRetry(PyIcebergOperationWithRetry):
+class IcebergTableOverwriterWithRetry(IcebergOperationWithRetry):
     def operation(
         self,
         data: pa.Table,

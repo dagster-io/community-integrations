@@ -12,10 +12,10 @@ from tenacity import (
 )
 
 
-class PyIcebergOperationException(Exception): ...
+class IcebergOperationException(Exception): ...
 
 
-class PyIcebergOperationWithRetry(metaclass=ABCMeta):
+class IcebergOperationWithRetry(metaclass=ABCMeta):
     def __init__(self, table: Table):
         self.table = table
         self.logger = logging.getLogger(
@@ -53,6 +53,6 @@ class PyIcebergOperationWithRetry(metaclass=ABCMeta):
                             self.refresh()
                         raise e
         except RetryError as e:
-            raise PyIcebergOperationException(
+            raise IcebergOperationException(
                 f"Max retries exceeded for class {str(self.__class__)}"
             ) from e

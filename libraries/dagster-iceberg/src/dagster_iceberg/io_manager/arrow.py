@@ -8,7 +8,7 @@ from pyiceberg import table as ibt
 
 from dagster_iceberg import handler as _handler
 from dagster_iceberg import io_manager as _io_manager
-from dagster_iceberg._utils import DagsterPartitionToPyIcebergExpressionMapper
+from dagster_iceberg._utils import DagsterPartitionToIcebergExpressionMapper
 
 ArrowTypes = Union[pa.Table, pa.RecordBatchReader]
 
@@ -24,7 +24,7 @@ class _IcebergPyArrowTypeHandler(_handler.IcebergBaseTypeHandler[ArrowTypes]):
         )
         row_filter: E.BooleanExpression
         if table_slice.partition_dimensions:
-            expressions = DagsterPartitionToPyIcebergExpressionMapper(
+            expressions = DagsterPartitionToIcebergExpressionMapper(
                 partition_dimensions=table_slice.partition_dimensions,
                 table_schema=table.schema(),
                 table_partition_spec=table.spec(),

@@ -18,17 +18,17 @@ class IcebergTableResource(ConfigurableResource):
 
     ```python
     from dagster import Definitions, asset
-    from dagster_iceberg import PyIcebergTableResource, LocalConfig
+    from dagster_iceberg import IcebergTableResource, LocalConfig
 
     @asset
-    def my_table(pyiceberg_table: PyIcebergTableResource):
+    def my_table(iceberg_table: IcebergTableResource):
         df = pyiceberg_table.load().to_pandas()
 
     defs = Definitions(
         assets=[my_table],
         resources={
-            "pyiceberg_table,
-            PyIcebergTableResource(
+            "iceberg_table,
+            IcebergTableResource(
                 name="mycatalog",
                 namespace="mynamespace",
                 table="mytable",

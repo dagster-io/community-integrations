@@ -9,9 +9,9 @@ class IcebergCatalogConfig(Config):
     """Configuration for Iceberg Catalogs. See <https://py.iceberg.apache.org/configuration/#catalogs>
     for configuration options.
 
-    You can configure the PyIceberg IO manager:
+    You can configure the Iceberg IO manager:
 
-        1. Using a `.pyiceberg.yaml` configuration file.
+        1. Using a `.pyiceberg.yaml` configuration file. <see: https://py.iceberg.apache.org/configuration/#setting-configuration-values>.
         2. Through environment variables.
         3. Using the `IcebergCatalogConfig` configuration object.
 
@@ -29,7 +29,7 @@ class IcebergCatalogConfig(Config):
     io_manager = IcebergPyarrowIOManager(
         name=catalog_name,
         config=IcebergCatalogConfig(properties={
-            "uri": f"sqlite:///{warehouse_path}/pyiceberg_catalog.db",
+            "uri": f"sqlite:///{warehouse_path}/iceberg_catalog.db",
             "warehouse": f"file://{warehouse_path}",
         }),
         namespace=namespace,
