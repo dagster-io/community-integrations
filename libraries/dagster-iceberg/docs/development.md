@@ -1,17 +1,11 @@
 # Development
 
-To start developing, first clone the repository. In VSCode, open the repository in a devcontainer, and execute `just s` to install the dev dependencies and the project.
+To start developing, first clone the repository, then execute `make install` to install the dev dependencies and the project.
 
 ## Running tests
 
-To run pytest tests, execute `just t`.
+To run pytest tests, execute `make test`.
 
-## Pre-commit hooks
+## Linting
 
-Pre-commit hooks are installed when you execute `just s`.
-
-## Additional type checking
-
-We use `pyright` for additional type checking checks since that is what the main Dagster repository uses.
-
-To run type checks with pyright, execute `just c`.
+To run ruff and pyright, execute `make lint`

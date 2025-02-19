@@ -34,7 +34,7 @@ defs = Definitions(
 )
 ```
 
-## Step 2: Store a Dagster asset as a PyIceberg table
+## Step 2: Store a Dagster asset as an Iceberg table
 
 ```py linenums="1"
 import pandas as pd
@@ -56,7 +56,7 @@ def iris_dataset() -> pd.DataFrame:
     )
 ```
 
-## Step 3: Load PyIceberg tables in downstream assets
+## Step 3: Load Iceberg tables in downstream assets
 
 Dagster and the I/O manager allow you to load the data stored in Iceberg tables into downstream assets:
 

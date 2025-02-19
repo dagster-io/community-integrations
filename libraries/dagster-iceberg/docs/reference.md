@@ -4,11 +4,11 @@ This reference page provides information for working with dagster-iceberg.
 
 !!! warning "Iceberg catalog"
 
-    PyIceberg requires a catalog backend. A SQLite catalog is used here for illustrative purposes. Do not use this in a production setting. For more information and for catalog configuration settings, visit the [PyIceberg documentation](https://py.iceberg.apache.org/configuration/#catalogs).
+    Iceberg requires a catalog backend. A SQLite catalog is used here for illustrative purposes. Do not use this in a production setting. For more information and for catalog configuration settings, visit the [Iceberg documentation](https://py.iceberg.apache.org/configuration/#catalogs).
 
 ## Selecting specific columns in a downstream asset
 
-At times, you might prefer not to retrieve an entire table for a downstream asset. The PyIceberg I/O manager allows you to load specific columns by providing metadata related to the downstream asset.
+At times, you might prefer not to retrieve an entire table for a downstream asset. The Iceberg I/O manager allows you to load specific columns by providing metadata related to the downstream asset.
 
 ```python title="docs/snippets/select_columns.py" linenums="1"
 --8<-- "docs/snippets/select_columns.py"
@@ -16,13 +16,13 @@ At times, you might prefer not to retrieve an entire table for a downstream asse
 
 In this example, we focus exclusively on the columns containing sepal data from the `iris_dataset` table. To select specific columns, we can include metadata in the input asset. This is done using the `metadata` parameter of the `AssetIn` that loads the `iris_dataset` asset within the `ins` parameter. We provide the key `columns` along with a list of the desired column names.
 
-When Dagster materializes `sepal_data` and retrieves the `iris_dataset` asset via the PyIceberg I/O manager, it will only extract the `sepal_length_cm` and `sepal_width_cm` columns from the `iris/iris_dataset` table and deliver them to `sepal_data` as a Pandas DataFrame.
+When Dagster materializes `sepal_data` and retrieves the `iris_dataset` asset via the Iceberg I/O manager, it will only extract the `sepal_length_cm` and `sepal_width_cm` columns from the `iris/iris_dataset` table and deliver them to `sepal_data` as a Pandas DataFrame.
 
 ---
 
 ## Storing partitioned assets
 
-The PyIceberg I/O manager facilitates the storage and retrieval of partitioned data. To effectively manage data in the Iceberg table, it is essential for the PyIceberg I/O manager to identify the column that specifies the partition boundaries. This information allows the I/O manager to formulate the appropriate queries for selecting or replacing data.
+The Iceberg I/O manager facilitates the storage and retrieval of partitioned data. To effectively manage data in the Iceberg table, it is essential for the Iceberg I/O manager to identify the column that specifies the partition boundaries. This information allows the I/O manager to formulate the appropriate queries for selecting or replacing data.
 
 In the subsequent sections, we will outline how the I/O manager generates these queries for various partition types.
 
@@ -32,7 +32,7 @@ In the subsequent sections, we will outline how the I/O manager generates these 
 
 === "Storing static partitioned assets"
 
-    To save static partitioned assets in your Iceberg table, you need to set the `partition_expr` metadata on the asset. This informs the PyIceberg I/O manager which column holds the partition data:
+    To save static partitioned assets in your Iceberg table, you need to set the `partition_expr` metadata on the asset. This informs the Iceberg I/O manager which column holds the partition data:
 
     ```python title="docs/snippets/partitions_static.py" linenums="1"
     --8<-- "docs/snippets/partitions_static.py"
@@ -54,7 +54,7 @@ In the subsequent sections, we will outline how the I/O manager generates these 
 
 === "Storing time-partitioned assets"
 
-    Like static partitioned assets, you can specify `partition_expr` metadata on the asset to tell the PyIceberg I/O manager which column contains the partition data:
+    Like static partitioned assets, you can specify `partition_expr` metadata on the asset to tell the Iceberg I/O manager which column contains the partition data:
 
     ```python title="docs/snippets/partitions_time.py" linenums="1"
     --8<-- "docs/snippets/partitions_time.py"
@@ -76,7 +76,7 @@ In the subsequent sections, we will outline how the I/O manager generates these 
 
 === "Storing multi-partitioned assets"
 
-    The PyIceberg I/O manager can also store data partitioned on multiple dimensions. To do this, specify the column for each partition as a dictionary of `partition_expr` metadata:
+    The Iceberg I/O manager can also store data partitioned on multiple dimensions. To do this, specify the column for each partition as a dictionary of `partition_expr` metadata:
 
     ```python title="docs/snippets/partitions_multiple.py" linenums="1"
     --8<-- "docs/snippets/partitions_multiple.py"
@@ -96,7 +96,7 @@ In the subsequent sections, we will outline how the I/O manager generates these 
 
 ## Storing tables in multiple schemas
 
-You may want to have different assets stored in different PyIceberg schemas. The PyIceberg I/O manager allows you to specify the schema in several ways.
+You may want to have different assets stored in different Iceberg schemas. The Iceberg I/O manager allows you to specify the schema in several ways.
 
 If you want all of your assets to be stored in the same schema, you can specify the schema as configuration to the I/O manager.
 
@@ -118,9 +118,9 @@ In this example, the `iris_dataset` asset will be stored in the `IRIS` schema, a
 
 ---
 
-## Using the PyIceberg I/O manager with other I/O managers
+## Using the Iceberg I/O manager with other I/O managers
 
-You may have assets that you don't want to store in PyIceberg. You can provide an I/O manager to each asset using the `io_manager_key` parameter in the <PyObject object="asset" decorator /> decorator:
+You may have assets that you don't want to store in Iceberg. You can provide an I/O manager to each asset using the `io_manager_key` parameter in the <PyObject object="asset" decorator /> decorator:
 
 ```python title="docs/snippets/multiple_io_managers.py" linenums="1"
 --8<-- "docs/snippets/multiple_io_managers.py"
@@ -130,17 +130,17 @@ In this example:
 
 - The `iris_dataset` asset uses the I/O manager bound to the key `warehouse_io_manager` and `iris_plots` uses the I/O manager bound to the key `blob_io_manager`
 - In the <PyObject object="Definitions" /> object, we supply the I/O managers for those keys
-- When the assets are materialized, the `iris_dataset` will be stored in PyIceberg, and `iris_plots` will be saved in Amazon S3
+- When the assets are materialized, the `iris_dataset` will be stored in Iceberg, and `iris_plots` will be saved in Amazon S3
 
 ---
 
-## Storing and loading PyArrow, Pandas, or Polars DataFrames with PyIceberg
+## Storing and loading PyArrow, Pandas, or Polars DataFrames with Iceberg
 
-The PyIceberg I/O manager also supports storing and loading PyArrow and Polars DataFrames.
+The Iceberg I/O manager also supports storing and loading PyArrow and Polars DataFrames.
 
 === "PyArrow Tables"
 
-    The `pyiceberg` package relies heavily on Apache Arrow for efficient data transfer, so PyArrow is natively supported.
+    The `Iceberg` package relies heavily on Apache Arrow for efficient data transfer, so PyArrow is natively supported.
 
     You can use `IcebergPyarrowIOManager` to read and write iceberg tables:
 
@@ -174,17 +174,17 @@ The PyIceberg I/O manager also supports storing and loading PyArrow and Polars D
 
 ---
 
-## Executing custom SQL commands with the PyIceberg resource
+## Executing custom SQL commands with the Iceberg resource
 
-In addition to the PyIceberg I/O manager, Dagster also provides a PyIceberg resource for executing custom SQL queries.
+In addition to the Iceberg I/O manager, Dagster also provides a Iceberg resource for executing custom SQL queries.
 
-```python title="docs/snippets/pyiceberg_resource.py" linenums="1"
---8<-- "docs/snippets/pyiceberg_resource.py"
+```python title="docs/snippets/Iceberg_resource.py" linenums="1"
+--8<-- "docs/snippets/Iceberg_resource.py"
 ```
 
-In this example, we attach the PyIceberg resource to the small_petals asset. In the body of the asset function, we use the `load()` method to retrieve the PyIceberg `Table` object, which can then be used for further processing.
+In this example, we attach the Iceberg resource to the small_petals asset. In the body of the asset function, we use the `load()` method to retrieve the Iceberg `Table` object, which can then be used for further processing.
 
-For more information on the PyIceberg resource, see the PyIceberg resource API docs.
+For more information on the Iceberg resource, see the Iceberg resource API docs.
 
 ---
 
