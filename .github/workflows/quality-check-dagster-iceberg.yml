@@ -24,10 +24,6 @@ jobs:
         working-directory: ./libraries/dagster-iceberg
         run: uv sync --group dev --group docs --all-extras
 
-      - name: Black
-        working-directory: ./libraries/dagster-iceberg
-        run: uv run black .
-
       - name: Ruff check
         working-directory: ./libraries/dagster-iceberg
         run: uv run ruff check .
