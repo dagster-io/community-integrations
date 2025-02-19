@@ -8,7 +8,6 @@ test:
 	uv run pytest tests
 
 lint:
-	uv run black .
 	uv run ruff check --fix .
 	uv run ruff format .
 
