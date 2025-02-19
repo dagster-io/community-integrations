@@ -19,8 +19,8 @@ def dagster_partition_to_pyiceberg_expression_mapper(
     datetime_table_partition_dimension: TablePartitionDimension,
     category_table_partition_dimension_multiple: TablePartitionDimension,
     table_partitioned: iceberg_table.Table,
-) -> partitions.DagsterPartitionToPyIcebergExpressionMapper:
-    return partitions.DagsterPartitionToPyIcebergExpressionMapper(
+) -> partitions.DagsterPartitionToIcebergExpressionMapper:
+    return partitions.DagsterPartitionToIcebergExpressionMapper(
         partition_dimensions=[
             datetime_table_partition_dimension,
             category_table_partition_dimension_multiple,
@@ -31,7 +31,7 @@ def dagster_partition_to_pyiceberg_expression_mapper(
 
 
 def test_time_window_partition_filter(
-    dagster_partition_to_pyiceberg_expression_mapper: partitions.DagsterPartitionToPyIcebergExpressionMapper,
+    dagster_partition_to_pyiceberg_expression_mapper: partitions.DagsterPartitionToIcebergExpressionMapper,
     datetime_table_partition_dimension: TablePartitionDimension,
 ):
     expected_filter = E.And(
@@ -49,7 +49,7 @@ def test_time_window_partition_filter(
 
 
 def test_partition_filter(
-    dagster_partition_to_pyiceberg_expression_mapper: partitions.DagsterPartitionToPyIcebergExpressionMapper,
+    dagster_partition_to_pyiceberg_expression_mapper: partitions.DagsterPartitionToIcebergExpressionMapper,
     category_table_partition_dimension: TablePartitionDimension,
 ):
     expected_filter = E.EqualTo("category", "A")
@@ -60,7 +60,7 @@ def test_partition_filter(
 
 
 def test_partition_filter_with_multiple(
-    dagster_partition_to_pyiceberg_expression_mapper: partitions.DagsterPartitionToPyIcebergExpressionMapper,
+    dagster_partition_to_pyiceberg_expression_mapper: partitions.DagsterPartitionToIcebergExpressionMapper,
     category_table_partition_dimension_multiple: TablePartitionDimension,
 ):
     expected_filter = E.Or(*[E.EqualTo("category", "A"), E.EqualTo("category", "B")])
@@ -75,7 +75,7 @@ def test_partition_dimensions_to_filters(
     category_table_partition_dimension: TablePartitionDimension,
     table_partitioned: iceberg_table.Table,
 ):
-    mapper = partitions.DagsterPartitionToPyIcebergExpressionMapper(
+    mapper = partitions.DagsterPartitionToIcebergExpressionMapper(
         partition_dimensions=[
             datetime_table_partition_dimension,
             category_table_partition_dimension,
@@ -97,7 +97,7 @@ def test_partition_dimensions_to_filters(
 
 
 def test_partition_dimensions_to_filters_multiple_categories(
-    dagster_partition_to_pyiceberg_expression_mapper: partitions.DagsterPartitionToPyIcebergExpressionMapper,
+    dagster_partition_to_pyiceberg_expression_mapper: partitions.DagsterPartitionToIcebergExpressionMapper,
 ):
     filters = dagster_partition_to_pyiceberg_expression_mapper.partition_dimensions_to_filters()
     expected_filters = [
@@ -532,7 +532,7 @@ def test_dagster_partition_to_pyiceberg_expression_mapper_with_multiple_categori
     category_table_partition_dimension_multiple: TablePartitionDimension,
     table_partitioned: iceberg_table.Table,
 ):
-    mapper = partitions.DagsterPartitionToPyIcebergExpressionMapper(  # Same for all sql mappers
+    mapper = partitions.DagsterPartitionToIcebergExpressionMapper(  # Same for all sql mappers
         partition_dimensions=[
             datetime_table_partition_dimension,
             category_table_partition_dimension_multiple,
