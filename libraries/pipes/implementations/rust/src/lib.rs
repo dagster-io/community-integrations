@@ -238,14 +238,13 @@ mod tests {
 
     use super::*;
 
-    #[fixture]
-    fn file_and_context() -> (NamedTempFile, PipesContext<DefaultWriter>) {
+    fn file_and_context(assets: Vec<String>) -> (NamedTempFile, PipesContext<DefaultWriter>) {
         let file = NamedTempFile::new().unwrap();
         let channel = DefaultChannel::File(FileChannel::new(file.path().into()));
         let context: PipesContext<DefaultWriter> = PipesContext {
             message_channel: channel.clone(),
             data: PipesContextData {
-                asset_keys: Some(vec!["asset1".to_string()]),
+                asset_keys: Some(assets),
                 run_id: "012345".to_string(),
                 ..Default::default()
             },
@@ -254,9 +253,22 @@ mod tests {
         (file, context)
     }
 
+    #[fixture]
+    fn single_asset_file_and_context() -> (NamedTempFile, PipesContext<DefaultWriter>) {
+        file_and_context(vec!["asset1".to_string()])
+    }
+
+    #[fixture]
+    fn multi_asset_file_and_context() -> (NamedTempFile, PipesContext<DefaultWriter>) {
+        file_and_context(vec!["asset1".to_string(), "asset2".to_string()])
+    }
+
     #[rstest]
     fn test_write_pipes_metadata(
-        #[from(file_and_context)] (file, mut context): (NamedTempFile, PipesContext<DefaultWriter>),
+        #[from(single_asset_file_and_context)] (file, mut context): (
+            NamedTempFile,
+            PipesContext<DefaultWriter>,
+        ),
     ) {
         let asset_metadata = HashMap::from([
             ("int", PipesMetadataValue::from(100)),
@@ -412,7 +424,10 @@ mod tests {
         })
     )]
     fn test_close_pipes_context(
-        #[from(file_and_context)] (file, mut context): (NamedTempFile, PipesContext<DefaultWriter>),
+        #[from(single_asset_file_and_context)] (file, mut context): (
+            NamedTempFile,
+            PipesContext<DefaultWriter>,
+        ),
         #[case] exc: Option<PipesException>,
         #[case] expected_message: serde_json::Value,
     ) {
@@ -452,7 +467,10 @@ mod tests {
 
     #[rstest]
     fn test_report_custom_message(
-        #[from(file_and_context)] (file, mut context): (NamedTempFile, PipesContext<DefaultWriter>),
+        #[from(single_asset_file_and_context)] (file, mut context): (
+            NamedTempFile,
+            PipesContext<DefaultWriter>,
+        ),
     ) {
         context
             .report_custom_message(json!({"key": "value"}))
@@ -469,5 +487,62 @@ mod tests {
                 },
             })
         );
+    }
+
+    #[rstest]
+    fn test_resolve_optionally_passed_asset_key_with_single_asset(
+        #[from(single_asset_file_and_context)] (_file, context): (
+            NamedTempFile,
+            PipesContext<DefaultWriter>,
+        ),
+    ) {
+        assert_eq!(
+            context
+                .resolve_optionally_passed_asset_key(Some("asset1"))
+                .unwrap(),
+            "asset1"
+        );
+
+        assert_eq!(
+            context.resolve_optionally_passed_asset_key(None).unwrap(),
+            "asset1"
+        );
+
+        assert!(matches!(
+            context.resolve_optionally_passed_asset_key(Some("invalid")),
+            Err(ResolveAssetKeyError::Invalid { key: _ })
+        ));
+    }
+
+    #[rstest]
+    fn test_resolve_optionally_passed_asset_key_with_multi_asset(
+        #[from(multi_asset_file_and_context)] (_file, context): (
+            NamedTempFile,
+            PipesContext<DefaultWriter>,
+        ),
+    ) {
+        assert_eq!(
+            context
+                .resolve_optionally_passed_asset_key(Some("asset1"))
+                .unwrap(),
+            "asset1"
+        );
+
+        assert_eq!(
+            context
+                .resolve_optionally_passed_asset_key(Some("asset2"))
+                .unwrap(),
+            "asset2"
+        );
+
+        assert!(matches!(
+            context.resolve_optionally_passed_asset_key(None),
+            Err(ResolveAssetKeyError::Missing {})
+        ));
+
+        assert!(matches!(
+            context.resolve_optionally_passed_asset_key(Some("invalid")),
+            Err(ResolveAssetKeyError::Invalid { key: _ })
+        ));
     }
 }

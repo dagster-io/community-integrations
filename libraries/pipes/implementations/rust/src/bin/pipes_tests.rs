@@ -111,8 +111,12 @@ where
         .expect("report_asset_materialization could not be opened");
     let json: serde_json::Value =
         serde_json::from_reader(file).expect("report_asset_materialization could not be parsed");
-    let data_version = json.get("dataVersion").map(|v| v.as_str().expect("dataVersion must be a string"));
-    let asset_key = json.get("assetKey").map(|v| v.as_str().expect("assetKey must be a string"));
+    let data_version = json
+        .get("dataVersion")
+        .map(|v| v.as_str().expect("dataVersion must be a string"));
+    let asset_key = json
+        .get("assetKey")
+        .map(|v| v.as_str().expect("assetKey must be a string"));
 
     context.report_asset_materialization(asset_key, build_asset_metadata(), data_version)?;
     Ok(())
