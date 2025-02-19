@@ -28,13 +28,13 @@ jobs:
         working-directory: ./libraries/dagster-iceberg
         run: uv run black .
 
-      - name: Ruff
+      - name: Ruff check
         working-directory: ./libraries/dagster-iceberg
-        run: uv run ruff check
+        run: uv run ruff check .
 
-      - name: Ruff
+      - name: Ruff format
         working-directory: ./libraries/dagster-iceberg
-        run: uv run isort .
+        run: uv run ruff format .
 
       - name: Pyright
         working-directory: ./libraries/dagster-iceberg
