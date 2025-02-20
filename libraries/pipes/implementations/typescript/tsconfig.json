@@ -1,25 +1,11 @@
 {
   "compilerOptions": {
     "declaration": true,
-    "outDir": "./dist",
-    "module": "esnext",
-    "target": "es2022",
     "strict": true,
-    "allowJs": true,
-    "allowUnusedLabels": false,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "allowUnreachableCode": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    //"noUncheckedIndexedAccess": true,
-    "noImplicitReturns": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "incremental": true
+    "target": "ES2022",
+    "outDir": "./dist",
+    "module": "CommonJS",
+    "moduleResolution": "node"
   },
-  "exclude": ["dist", "example-project", "node_modules"] 
+  "exclude": ["dist", "example-project"] 
 }

@@ -11,9 +11,9 @@ Note that `external_typescript_code` depends on the local (dev) version of `@dag
 You can change the dependency to the latest `npm` release with `npm uninstall @dagster-io/dagster-pipes && npm install @dagster-io/dagster-pipes`
 
 ```bash
-# Compile the local (dev) version of dagster_pipes_typescript
+# Compile the local (dev) version of @dagster-io/dagster-pipes
 npm install .. && npm run build '-p ..'
+
 # Run dagster orchestration locally
 uv run dagster dev
 ```
-
