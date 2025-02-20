@@ -1,4 +1,4 @@
-import { PipesContext } from "./pipes_context";
+import {PipesContext} from './pipes_context';
 
 /* A basic logger class that wraps logging to the dagster orchestration process via a `PipesContext`.
 
@@ -6,29 +6,29 @@ import { PipesContext } from "./pipes_context";
    messages to the dagster orchestration process, at various levels.
 */
 export class PipesLogger {
-    context: PipesContext
+  context: PipesContext;
 
-    public constructor(context: PipesContext) {
-        this.context = context
-    }
+  public constructor(context: PipesContext) {
+    this.context = context;
+  }
 
-    public debug(message: string) {
-        this.context.log(message, "DEBUG")
-    }
+  public debug(message: string) {
+    this.context.log(message, 'DEBUG');
+  }
 
-    public info(message: string) {
-        this.context.log(message, "INFO")
-    }
+  public info(message: string) {
+    this.context.log(message, 'INFO');
+  }
 
-    public warning(message: string) {
-        this.context.log(message, "WARNING")
-    }
+  public warning(message: string) {
+    this.context.log(message, 'WARNING');
+  }
 
-    public error(message: string) {
-        this.context.log(message, "ERROR")   
-    }
+  public error(message: string) {
+    this.context.log(message, 'ERROR');
+  }
 
-    public critical(message: string) {
-        this.context.log(message, "CRITICAL")
-    }
+  public critical(message: string) {
+    this.context.log(message, 'CRITICAL');
+  }
 }

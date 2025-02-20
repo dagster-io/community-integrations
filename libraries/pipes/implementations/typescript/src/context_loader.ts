@@ -1,21 +1,21 @@
-import * as fs from "fs";
-import { PipesContextData } from "./types";
-import { DagsterPipesError } from "./errors";
+import * as fs from 'fs';
+import {PipesContextData} from './types';
+import {DagsterPipesError} from './errors';
 
 /**
  * A context loader loads context data injected by the orchestration process.
  */
 export abstract class PipesContextLoader {
-    public constructor() {}
-    
-    /**
-     * This method should read and yield the context data from the location specified by the passed in
-     * `PipesParams`.
-     *
-     * @param contextParams - The params provided by the context injector in the orchestration process.
-     * @returns The loaded context data.
-     */
-    public abstract loadContext(contextParams: Record<string, any>): PipesContextData;
+  public constructor() {}
+
+  /**
+   * This method should read and yield the context data from the location specified by the passed in
+   * `PipesParams`.
+   *
+   * @param contextParams - The params provided by the context injector in the orchestration process.
+   * @returns The loaded context data.
+   */
+  public abstract loadContext(contextParams: Record<string, any>): PipesContextData;
 }
 
 /**
@@ -27,18 +27,20 @@ export abstract class PipesContextLoader {
  * representing the context data.
  */
 export class PipesDefaultContextLoader extends PipesContextLoader {
-    public constructor() {
-        super();
-    }
+  public constructor() {
+    super();
+  }
 
-    public loadContext(contextParams: Record<string, any>): PipesContextData {
-        if ("path" in contextParams) {
-            const contextFilePath = contextParams["path"] as string;
-            return JSON.parse(fs.readFileSync(contextFilePath, "utf8"));
-        } else if ("data" in contextParams) {
-            return contextParams["data"];
-        } else {
-            throw new DagsterPipesError(`context params must contain either 'path' or 'data' key - but received ${JSON.stringify(contextParams)}`);
-        }
+  public loadContext(contextParams: Record<string, any>): PipesContextData {
+    if ('path' in contextParams) {
+      const contextFilePath = contextParams['path'] as string;
+      return JSON.parse(fs.readFileSync(contextFilePath, 'utf8'));
+    } else if ('data' in contextParams) {
+      return contextParams['data'];
+    } else {
+      throw new DagsterPipesError(
+        `context params must contain either 'path' or 'data' key - but received ${JSON.stringify(contextParams)}`,
+      );
     }
+  }
 }

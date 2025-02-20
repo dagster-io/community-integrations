@@ -4,8 +4,9 @@
   "main": "./dist/index.js",
   "scripts": {
     "test": "jest",
-    "lint": "eslint",
-    "build": "tsc"
+    "build": "tsc",
+    "lint": "eslint --fix",
+    "prettier-fix": "prettier \"./src/**/*.t{s,sx}\" -w"
   },
   "author": "dagster",
   "license": "Apache-2.0",

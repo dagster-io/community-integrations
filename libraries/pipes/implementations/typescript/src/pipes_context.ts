@@ -1,12 +1,19 @@
-import { PipesEnvParamsLoader, PipesParamsLoader } from "./params_loader";
-import { PipesContextLoader, PipesDefaultContextLoader } from "./context_loader";
-import { Method, PipesContextData, PipesMessage, ProvenanceByAssetKey, PartitionKeyRange, PartitionTimeWindow } from "./types";
-import { normalizeMetadata } from "./normalize_metadata";
-import { PipesDefaultMessageWriter, PipesMessageWriter } from "./message_writer";
-import { PipesLogger } from "./logger";
-import { DagsterPipesError, PipesException } from "./errors";
+import {PipesEnvParamsLoader, PipesParamsLoader} from './params_loader';
+import {PipesContextLoader, PipesDefaultContextLoader} from './context_loader';
+import {
+  Method,
+  PipesContextData,
+  PipesMessage,
+  ProvenanceByAssetKey,
+  PartitionKeyRange,
+  PartitionTimeWindow,
+} from './types';
+import {normalizeMetadata} from './normalize_metadata';
+import {PipesDefaultMessageWriter, PipesMessageWriter} from './message_writer';
+import {PipesLogger} from './logger';
+import {DagsterPipesError, PipesException} from './errors';
 
-export const PIPES_PROTOCOL_VERSION = "0.1"
+export const PIPES_PROTOCOL_VERSION = '0.1';
 
 /**
  * Initialize the Dagster Pipes context.
@@ -17,11 +24,11 @@ export const PIPES_PROTOCOL_VERSION = "0.1"
  *
  * If the process was not launched by Dagster, this function will emit a warning and return a
  * "no-op" object - in which all method calls are a no-op.
- * 
+ *
  * The returned PipesContext object is disposable - so it is recomended to use the `using` pattern,
  * to make sure the context is disposed at the end.
  * `using context = openDagsterPipes()`
- * 
+ *
  *
  * @param paramsLoader - The params loader to use. Defaults to `PipesEnvVarParamsLoader`.
  * @param contextLoader - The context loader to use. Defaults to `PipesDefaultContextLoader`.
@@ -29,24 +36,24 @@ export const PIPES_PROTOCOL_VERSION = "0.1"
  * @returns The initialized context.
  */
 export function openDagsterPipes(
-    paramsLoader: PipesParamsLoader | null = null, 
-    contextLoader: PipesContextLoader | null = null,
-    messageWriter: PipesMessageWriter | null = null): PipesContext {
-    return PipesContext.getInstance(paramsLoader, contextLoader, messageWriter);
+  paramsLoader: PipesParamsLoader | null = null,
+  contextLoader: PipesContextLoader | null = null,
+  messageWriter: PipesMessageWriter | null = null,
+): PipesContext {
+  return PipesContext.getInstance(paramsLoader, contextLoader, messageWriter);
 }
-
 
 /**
  * The context for a Dagster Pipes process.
  *
- * This class should not be instantiated by the user - who should rather use the `openDagsterPipes()` function. 
- * 
+ * This class should not be instantiated by the user - who should rather use the `openDagsterPipes()` function.
+ *
  * PipesContext is the abstract-base-class for `PipesContextImpl`. It also functions as a "no-op" class,
  * for the cases when the typescript process is not launched by the dagster orchestrator. In that case,
  * All the methods will act as no-ops, allowing the user's process to keep running as usual.
  * When the process is opened by the dagster orchestrator, a `PipesContextImpl` will be returned from
  * `openDagsterPipes` instead.
- * 
+ *
  * This class is analogous to `dagster.OpExecutionContext` on the Dagster side of the Pipes
  * connection. It provides access to information such as the asset key(s) and partition key(s) in
  * scope for the current step. It also provides methods for logging and emitting results that will
@@ -54,515 +61,528 @@ export function openDagsterPipes(
  */
 /* eslint-disable @typescript-eslint/no-unused-vars*/
 export class PipesContext {
-    private static instance: PipesContext | null = null;
+  private static instance: PipesContext | null = null;
 
-    private _logger: PipesLogger;
+  private _logger: PipesLogger;
 
-    public static getInstance(
-        paramsLoader: PipesParamsLoader | null, 
-        contextLoader: PipesContextLoader | null,
-        messageWriter: PipesMessageWriter | null    
-    ): PipesContext {
-        if (PipesContext.instance) {
-            return PipesContext.instance
-        }
-
-        if (!paramsLoader) {
-            paramsLoader = new PipesEnvParamsLoader();
-        }
-
-        if (!paramsLoader.isDagsterPipesProcess()) {
-            console.warn("This process was not launched by a Dagster orchestration process. All calls to the `dagster-pipes` context or attempts to initialize `dagster-pipes` abstractions are no-ops.")
-            PipesContext.instance = new PipesContext(); // the base class functions as a no-op / mock.
-            return PipesContext.instance; 
-        }
-        
-        if (!contextLoader) {
-            contextLoader = new PipesDefaultContextLoader();
-        }
-
-        if (!messageWriter) {
-            messageWriter = new PipesDefaultMessageWriter();
-        }
-
-        PipesContext.instance = new PipesContextImpl(paramsLoader, contextLoader, messageWriter);
-        return PipesContext.instance;
-    }
-    
-    protected constructor() {
-        this._logger = new PipesLogger(this);
+  public static getInstance(
+    paramsLoader: PipesParamsLoader | null,
+    contextLoader: PipesContextLoader | null,
+    messageWriter: PipesMessageWriter | null,
+  ): PipesContext {
+    if (PipesContext.instance) {
+      return PipesContext.instance;
     }
 
-    /**
-     * Report to Dagster that an asset has been materialized. Streams a payload containing
-     * materialization information back to Dagster. If no assets are in scope, raises an error.
-     *
-     * @param metadata - Metadata for the materialized asset. Defaults to None.
-     * @param dataVersion - The data version for the materialized asset. Defaults to None.
-     * @param assetKey - The asset key for the materialized asset. If only a single asset is in scope,
-     * this must be set explicitly or an error will be raised.
-     */
-    public reportAssetMaterialization(
-        metadata: Record<string, any> | null = null,
-        dataVersion: string | null = null,
-        assetKey: string | null = null
-    ): void {
-        // no-op
+    if (!paramsLoader) {
+      paramsLoader = new PipesEnvParamsLoader();
     }
 
-    /**
-     * Report to Dagster that an asset check has been performed. Streams a payload containing
-     * check result information back to Dagster. If no assets or associated checks are in scope, raises an error.
-     *
-     * @param checkName - The name of the check.
-     * @param passed - Whether the check passed.
-     * @param severity - The severity of the check. Defaults to "ERROR".
-     * @param metadata - Metadata for the check. Defaults to None.
-     * @param assetKey - The asset key for the check. If only a single asset is in scope, this must be
-     * set explicitly or an error will be raised.
-     */
-    public reportAssetCheck(
-        checkName: string,
-        passed: boolean,
-        severity: string = "ERROR",
-        metadata: Record<string, any> | null = null,
-        assetKey: string | null = null
-    ): void {
-        // no-op
-    }
-    
-    /**
-     * A logger that streams log messages back to Dagster.
-     */
-    public get logger(): PipesLogger {
-        return this._logger;
+    if (!paramsLoader.isDagsterPipesProcess()) {
+      console.warn(
+        'This process was not launched by a Dagster orchestration process. All calls to the `dagster-pipes` context or attempts to initialize `dagster-pipes` abstractions are no-ops.',
+      );
+      PipesContext.instance = new PipesContext(); // the base class functions as a no-op / mock.
+      return PipesContext.instance;
     }
 
-    /**
-     * Log a message with a specified level.
-     *
-     * @param message - The message to log.
-     * @param level - The level of the log message.
-     */
-    public log(message: string, level: string): void {
-        // no-op
+    if (!contextLoader) {
+      contextLoader = new PipesDefaultContextLoader();
     }
 
-    /**
-     * Send a JSON serializable payload back to the orchestration process. Can be retrieved there
-     * using `get_custom_messages`.
-     *
-     * @param payload - JSON serializable data.
-     */
-    public reportCustomMessage(payload: any): void {
-        // no-op
+    if (!messageWriter) {
+      messageWriter = new PipesDefaultMessageWriter();
     }
 
-    /**
-     * Close the pipes connection. This will flush all buffered messages to the orchestration
-     * process and cause any further attempt to write a message to raise an error. This method is
-     * idempotent-- subsequent calls after the first have no effect.
-     *
-     * @param exception - An optional exception to report when closing.
-     */
-    public close(exception: string | PipesException | null = null): void {
-        // no-op
-    }
+    PipesContext.instance = new PipesContextImpl(paramsLoader, contextLoader, messageWriter);
+    return PipesContext.instance;
+  }
 
-    public [Symbol.dispose]() {}
+  protected constructor() {
+    this._logger = new PipesLogger(this);
+  }
 
-    /**
-     * The AssetKey for the currently scoped asset. Raises an error if 0 or multiple assets
-     * are in scope.
-     */
-    public get assetKey(): string {
-        return "";
-    }
+  /**
+   * Report to Dagster that an asset has been materialized. Streams a payload containing
+   * materialization information back to Dagster. If no assets are in scope, raises an error.
+   *
+   * @param metadata - Metadata for the materialized asset. Defaults to None.
+   * @param dataVersion - The data version for the materialized asset. Defaults to None.
+   * @param assetKey - The asset key for the materialized asset. If only a single asset is in scope,
+   * this must be set explicitly or an error will be raised.
+   */
+  public reportAssetMaterialization(
+    metadata: Record<string, any> | null = null,
+    dataVersion: string | null = null,
+    assetKey: string | null = null,
+  ): void {
+    // no-op
+  }
 
-    /**
-     * The AssetKeys for the currently scoped assets. Raises an error if no
-     * assets are in scope.
-     */
-    public get assetKeys(): string[] {
-        return [];
-    }
+  /**
+   * Report to Dagster that an asset check has been performed. Streams a payload containing
+   * check result information back to Dagster. If no assets or associated checks are in scope, raises an error.
+   *
+   * @param checkName - The name of the check.
+   * @param passed - Whether the check passed.
+   * @param severity - The severity of the check. Defaults to "ERROR".
+   * @param metadata - Metadata for the check. Defaults to None.
+   * @param assetKey - The asset key for the check. If only a single asset is in scope, this must be
+   * set explicitly or an error will be raised.
+   */
+  public reportAssetCheck(
+    checkName: string,
+    passed: boolean,
+    severity: string = 'ERROR',
+    metadata: Record<string, any> | null = null,
+    assetKey: string | null = null,
+  ): void {
+    // no-op
+  }
 
-    /**
-     * The provenance for the currently scoped asset. Raises an error if 0 or multiple assets are in scope.
-     */
-    public get provenance(): ProvenanceByAssetKey | null {
-        return null;
-    }
+  /**
+   * A logger that streams log messages back to Dagster.
+   */
+  public get logger(): PipesLogger {
+    return this._logger;
+  }
 
-    /**
-     * Mapping of asset key to provenance for the currently scoped assets. Raises an error if no assets are in scope.
-     */
-    public get provenanceByAssetKey(): Record<string, ProvenanceByAssetKey | null> {
-        return {};
-    }
+  /**
+   * Log a message with a specified level.
+   *
+   * @param message - The message to log.
+   * @param level - The level of the log message.
+   */
+  public log(message: string, level: string): void {
+    // no-op
+  }
 
-    /**
-     * The code version for the currently scoped asset. Raises an error if 0 or multiple assets are in scope.
-     */
-    public get codeVersion(): string | null {
-        return null;
-    }
+  /**
+   * Send a JSON serializable payload back to the orchestration process. Can be retrieved there
+   * using `get_custom_messages`.
+   *
+   * @param payload - JSON serializable data.
+   */
+  public reportCustomMessage(payload: any): void {
+    // no-op
+  }
 
-    /**
-     * Mapping of asset key to code version for the currently scoped assets. Raises an error if no assets are in scope.
-     */
-    public get codeVersionByAssetKey(): Record<string, string | null> {
-        return {};
-    }
+  /**
+   * Close the pipes connection. This will flush all buffered messages to the orchestration
+   * process and cause any further attempt to write a message to raise an error. This method is
+   * idempotent-- subsequent calls after the first have no effect.
+   *
+   * @param exception - An optional exception to report when closing.
+   */
+  public close(exception: string | PipesException | null = null): void {
+    // no-op
+  }
 
-    /**
-     * Whether the current step is scoped to one or more partitions.
-     */
-    public get isPartitionStep(): boolean {
-        return false;
-    }
+  public [Symbol.dispose]() {}
 
-    /**
-     * The partition key for the currently scoped partition. Raises an error if 0 or multiple partitions are in scope.
-     */
-    public get partitionKey(): string {
-        return "";
-    }
+  /**
+   * The AssetKey for the currently scoped asset. Raises an error if 0 or multiple assets
+   * are in scope.
+   */
+  public get assetKey(): string {
+    return '';
+  }
 
-    /**
-     * The partition key range for the currently scoped partition or partitions. Raises an error if no partitions are in scope.
-     */
-    public get partitionKeyRange(): PartitionKeyRange {
-        return { start: "", end: "" };
-    }
+  /**
+   * The AssetKeys for the currently scoped assets. Raises an error if no
+   * assets are in scope.
+   */
+  public get assetKeys(): string[] {
+    return [];
+  }
 
-    /**
-     * The partition time window for the currently scoped partition or partitions. Returns null if partitions in scope are not temporal. Raises an error if no partitions are in scope.
-     */
-    public get partitionTimeWindow(): PartitionTimeWindow | null {
-        return null;
-    }
+  /**
+   * The provenance for the currently scoped asset. Raises an error if 0 or multiple assets are in scope.
+   */
+  public get provenance(): ProvenanceByAssetKey | null {
+    return null;
+  }
 
-    /**
-     * The run ID for the currently executing pipeline run.
-     */
-    public get runID(): string {
-        return "";
-    }
+  /**
+   * Mapping of asset key to provenance for the currently scoped assets. Raises an error if no assets are in scope.
+   */
+  public get provenanceByAssetKey(): Record<string, ProvenanceByAssetKey | null> {
+    return {};
+  }
 
-    /**
-     * The job name for the currently executing run. Returns null if the run is not derived from a job.
-     */
-    public get jobName(): string | null {
-        return null;
-    }
+  /**
+   * The code version for the currently scoped asset. Raises an error if 0 or multiple assets are in scope.
+   */
+  public get codeVersion(): string | null {
+    return null;
+  }
 
-    /**
-     * The retry number for the currently executing run.
-     */
-    public get retryNumber(): number {
-        return 0;
-    }
+  /**
+   * Mapping of asset key to code version for the currently scoped assets. Raises an error if no assets are in scope.
+   */
+  public get codeVersionByAssetKey(): Record<string, string | null> {
+    return {};
+  }
 
-    /**
-     * Get the value of an extra provided by the user. Raises an error if the extra is not defined.
-     *
-     * @param key - The key of the extra.
-     * @returns The value of the extra.
-     */
-    public getExtra(key: string): any {
-        return null;
-    }
+  /**
+   * Whether the current step is scoped to one or more partitions.
+   */
+  public get isPartitionStep(): boolean {
+    return false;
+  }
 
-    /**
-     * Key-value map for all extras provided by the user.
-     */
-    public get extras(): Record<string, any> {
-        return {};
-    }
+  /**
+   * The partition key for the currently scoped partition. Raises an error if 0 or multiple partitions are in scope.
+   */
+  public get partitionKey(): string {
+    return '';
+  }
 
-    /**
-     * Whether the context has been closed.
-     */
-    public get isClosed(): boolean {
-        return false;
-    }
+  /**
+   * The partition key range for the currently scoped partition or partitions. Raises an error if no partitions are in scope.
+   */
+  public get partitionKeyRange(): PartitionKeyRange {
+    return {start: '', end: ''};
+  }
+
+  /**
+   * The partition time window for the currently scoped partition or partitions. Returns null if partitions in scope are not temporal. Raises an error if no partitions are in scope.
+   */
+  public get partitionTimeWindow(): PartitionTimeWindow | null {
+    return null;
+  }
+
+  /**
+   * The run ID for the currently executing pipeline run.
+   */
+  public get runID(): string {
+    return '';
+  }
+
+  /**
+   * The job name for the currently executing run. Returns null if the run is not derived from a job.
+   */
+  public get jobName(): string | null {
+    return null;
+  }
+
+  /**
+   * The retry number for the currently executing run.
+   */
+  public get retryNumber(): number {
+    return 0;
+  }
+
+  /**
+   * Get the value of an extra provided by the user. Raises an error if the extra is not defined.
+   *
+   * @param key - The key of the extra.
+   * @returns The value of the extra.
+   */
+  public getExtra(key: string): any {
+    return null;
+  }
+
+  /**
+   * Key-value map for all extras provided by the user.
+   */
+  public get extras(): Record<string, any> {
+    return {};
+  }
+
+  /**
+   * Whether the context has been closed.
+   */
+  public get isClosed(): boolean {
+    return false;
+  }
 }
 /* eslint-enable @typescript-eslint/no-unused-vars*/
 
 /* The actual implementation of the PipesContext abstract base class.
- * 
+ *
  * Not directly created by the user (who uses openDagsterPipes method).
  * All methods documented at the PipesContext base class.s
  */
 class PipesContextImpl extends PipesContext {
-    private contextData: PipesContextData;
-    private messageWriter: PipesMessageWriter;
+  private contextData: PipesContextData;
+  private messageWriter: PipesMessageWriter;
 
-    private closed: boolean;
-    private materializedAssetsList: string[];
-    
-    public constructor(paramsLoader: PipesParamsLoader, contextLoader: PipesContextLoader, messageWriter: PipesMessageWriter) {
-        super();
-        
-        this.closed = false;
-        this.materializedAssetsList = []
+  private closed: boolean;
+  private materializedAssetsList: string[];
 
-        // CONTEXT DATA
-        const contextParams = paramsLoader.loadContextParams();
-        this.contextData = contextLoader.loadContext(contextParams);
+  public constructor(
+    paramsLoader: PipesParamsLoader,
+    contextLoader: PipesContextLoader,
+    messageWriter: PipesMessageWriter,
+  ) {
+    super();
 
-        // MESSAGE DATA
-        const decodedMessageParams = paramsLoader.loadMessagesParams();
-        this.messageWriter = messageWriter;
-        this.messageWriter.open(decodedMessageParams)
+    this.closed = false;
+    this.materializedAssetsList = [];
 
-        this.writeMessage(Method.Opened, {
-            "extras": this.messageWriter.openedExtras()
-        })
+    // CONTEXT DATA
+    const contextParams = paramsLoader.loadContextParams();
+    this.contextData = contextLoader.loadContext(contextParams);
+
+    // MESSAGE DATA
+    const decodedMessageParams = paramsLoader.loadMessagesParams();
+    this.messageWriter = messageWriter;
+    this.messageWriter.open(decodedMessageParams);
+
+    this.writeMessage(Method.Opened, {
+      extras: this.messageWriter.openedExtras(),
+    });
+  }
+
+  public close(exception: PipesException | string | null = null) {
+    if (this.closed) {
+      return;
     }
 
-    public close(exception: PipesException | string | null = null) {
-        if (this.closed) {
-            return;
+    if (typeof exception === 'string') {
+      exception = {
+        message: exception,
+        stack: [],
+        name: null,
+        cause: null,
+        context: null,
+      };
+    }
+
+    let payload;
+    if (exception === null) {
+      payload = {};
+    } else {
+      payload = {
+        exception: exception,
+      };
+    }
+
+    this.writeMessage(Method.Closed, payload);
+    this.closed = true;
+    this.messageWriter.close();
+  }
+
+  public [Symbol.dispose]() {
+    this.close();
+  }
+
+  // returns paramAssetKey if given. if not given - asserts that contextAssetKeys is of length 1,
+  // and returns the element inside.
+  // Also validates that paramAssetKey (if given), is included in contextAssetKeys (if given).
+  private resolveAssetKey(paramAssetKey: string | null) {
+    const definedAssetKeys = this.contextData.asset_keys;
+
+    if (definedAssetKeys) {
+      if (paramAssetKey) {
+        // Make sure assetKey is one of the asset-keys defined in the context
+        if (!definedAssetKeys.includes(paramAssetKey)) {
+          throw new DagsterPipesError(
+            `Invalid asset key. Expected one of ${definedAssetKeys}, got ${paramAssetKey}.`,
+          );
         }
-
-        if (typeof(exception) === "string") {
-            exception = {
-                message: exception,
-                stack: [],
-                name: null,
-                cause: null,
-                context: null
-            }
+        return paramAssetKey;
+      } else {
+        // Make sure only one asset-key is defined in the context, and use it.
+        if (definedAssetKeys.length != 1) {
+          throw new DagsterPipesError(
+            'Calling `reportAssetMaterialization` without passing an asset key is undefined. Current step targets multiple assets.',
+          );
         }
+        return definedAssetKeys[0];
+      }
+    } else {
+      // If there are no definedAssetKeys in the context, use the parameter assetKey.
+      if (!paramAssetKey) {
+        throw new DagsterPipesError(
+          'Calling `reportAssetMaterialization` witout passing an asset key is undefined. Current step does not target a specific asset.',
+        );
+      }
+    }
+    return paramAssetKey;
+  }
 
-        let payload;
-        if (exception === null) {
-            payload = {} 
-        } else {
-            payload = {
-                "exception": exception
-            }
-        }
-        
-        this.writeMessage(Method.Closed, payload)
-        this.closed = true;
-        this.messageWriter.close()
+  public reportAssetMaterialization(
+    metadata: Record<string, any> | null = null,
+    dataVersion: string | null = null,
+    assetKey: string | null = null,
+  ): void {
+    assetKey = this.resolveAssetKey(assetKey);
+
+    if (this.materializedAssetsList.includes(assetKey)) {
+      throw new DagsterPipesError(
+        `Asset ${assetKey} has already been materializaed - so no additional data can be reported for it.`,
+      );
     }
 
-    public [Symbol.dispose]() {
-        this.close()
+    if (metadata !== null) {
+      metadata = normalizeMetadata(metadata);
     }
 
-    // returns paramAssetKey if given. if not given - asserts that contextAssetKeys is of length 1,
-    // and returns the element inside.
-    // Also validates that paramAssetKey (if given), is included in contextAssetKeys (if given).
-    private resolveAssetKey(paramAssetKey: string | null) {
-        const definedAssetKeys = this.contextData.asset_keys;
+    this.writeMessage(Method.ReportAssetMaterialization, {
+      metadata: metadata,
+      data_version: dataVersion,
+      asset_key: assetKey,
+    });
 
-        if (definedAssetKeys) {
-            if (paramAssetKey) { // Make sure assetKey is one of the asset-keys defined in the context
-                if (!definedAssetKeys.includes(paramAssetKey)) {
-                    throw new DagsterPipesError(
-                        `Invalid asset key. Expected one of ${definedAssetKeys}, got ${paramAssetKey}.`
-                    )
-                }
-                return paramAssetKey
-            } else { // Make sure only one asset-key is defined in the context, and use it.
-                if (definedAssetKeys.length != 1) {
-                    throw new DagsterPipesError("Calling `reportAssetMaterialization` without passing an asset key is undefined. Current step targets multiple assets.")
-                }
-                return definedAssetKeys[0]
-            }
-        } else { // If there are no definedAssetKeys in the context, use the parameter assetKey.
-            if (!paramAssetKey) {
-                throw new DagsterPipesError("Calling `reportAssetMaterialization` witout passing an asset key is undefined. Current step does not target a specific asset.")
-            }
-        }
-        return paramAssetKey
+    this.materializedAssetsList.push(assetKey);
+  }
+
+  public reportAssetCheck(
+    checkName: string,
+    passed: boolean,
+    severity: string = 'ERROR',
+    metadata: Record<string, any> | null = null,
+    assetKey: string | null = null,
+  ): void {
+    assetKey = this.resolveAssetKey(assetKey);
+
+    if (metadata !== null) {
+      metadata = normalizeMetadata(metadata);
     }
 
-    public reportAssetMaterialization(
-        metadata: Record<string, any> | null = null,
-        dataVersion: string | null = null,
-        assetKey: string | null = null
-    ): void {
-        assetKey = this.resolveAssetKey(assetKey);
+    this.writeMessage(Method.ReportAssetCheck, {
+      asset_key: assetKey,
+      check_name: checkName,
+      passed: passed,
+      metadata: metadata,
+      severity: severity,
+    });
+  }
 
-        if (this.materializedAssetsList.includes(assetKey)) {
-            throw new DagsterPipesError(`Asset ${assetKey} has already been materializaed - so no additional data can be reported for it.`)
-        }
+  public log(message: string, level: string) {
+    this.writeMessage(Method.Log, {message: message, level: level});
+  }
 
-        if (metadata !== null) {
-            metadata = normalizeMetadata(metadata);    
-        }
+  public reportCustomMessage(payload: any): void {
+    this.writeMessage(Method.ReportCustomMessage, {payload: payload});
+  }
 
-        this.writeMessage(Method.ReportAssetMaterialization, {
-            metadata: metadata,
-            data_version: dataVersion,
-            asset_key: assetKey
-        });
-
-        this.materializedAssetsList.push(assetKey)
+  private writeMessage(method: Method, params: Record<string, any> = {}): void {
+    if (this.closed) {
+      throw new DagsterPipesError('cannot send message after PipesContext is closed');
     }
 
-    public reportAssetCheck(
-        checkName: string,
-        passed: boolean,
-        severity: string = "ERROR",
-        metadata: Record<string, any> | null = null,
-        assetKey: string | null = null
-    ): void {    
-        assetKey = this.resolveAssetKey(assetKey)
+    const message: PipesMessage = {
+      __dagster_pipes_version: PIPES_PROTOCOL_VERSION,
+      method: method,
+      params: params,
+    };
+    this.messageWriter.writeMessage(message);
+  }
 
-        if (metadata !== null) {
-            metadata = normalizeMetadata(metadata)
-        }
-
-        this.writeMessage(
-            Method.ReportAssetCheck,
-            {
-                "asset_key": assetKey,
-                "check_name": checkName,
-                "passed": passed,
-                "metadata": metadata,
-                "severity": severity
-            }
-        )
+  public get assetKey() {
+    if (!this.contextData.asset_keys) {
+      throw Error('asset_key is unedfined. Current step does not target an asset.');
     }
-    
-    public log(message: string, level: string) {
-        this.writeMessage(
-            Method.Log,
-            {"message": message, "level": level}
-        )
+    if (this.contextData.asset_keys.length != 1) {
+      throw Error('asset_key is undefined. Current step targets multiple assets.');
+    }
+    return this.contextData.asset_keys[0];
+  }
+
+  public get assetKeys() {
+    if (!this.contextData.asset_keys) {
+      throw Error('asset_keys is unedfined. Current step does not target an asset.');
     }
 
-    public reportCustomMessage(payload: any): void {
-        this.writeMessage(Method.ReportCustomMessage, {"payload": payload})
-    }
+    return this.contextData.asset_keys;
+  }
 
-    private writeMessage(method: Method, params: Record<string, any> = {}): void {
-        if (this.closed) {
-            throw new DagsterPipesError("cannot send message after PipesContext is closed")
-        }
-
-        const message: PipesMessage = {
-            __dagster_pipes_version: PIPES_PROTOCOL_VERSION,
-            method: method,
-            params: params,
-        };
-        this.messageWriter.writeMessage(message)
+  public get provenance(): ProvenanceByAssetKey | null {
+    if (!this.contextData.provenance_by_asset_key) {
+      throw Error('provenance is undefined. Current step does not target an asset.');
     }
-    
-    public get assetKey() {
-        if (!this.contextData.asset_keys) {
-            throw Error("asset_key is unedfined. Current step does not target an asset.");
-        }
-        if (this.contextData.asset_keys.length != 1) {
-            throw Error("asset_key is undefined. Current step targets multiple assets.")
-        }
-        return this.contextData.asset_keys[0]
+    if (!this.contextData.asset_keys || this.contextData.asset_keys.length != 1) {
+      throw Error('provenance is undefined. Current step targets multiple assets.');
     }
+    return this.contextData.provenance_by_asset_key[this.contextData.asset_keys[0]];
+  }
 
-    public get assetKeys() {
-        if (!this.contextData.asset_keys) {
-            throw Error("asset_keys is unedfined. Current step does not target an asset.");
-        }
-
-        return this.contextData.asset_keys;
+  public get provenanceByAssetKey(): Record<string, ProvenanceByAssetKey | null> {
+    if (!this.contextData.provenance_by_asset_key) {
+      throw Error('provenance_by_asset_key is undefined. Current step does not target an asset.');
     }
+    return this.contextData.provenance_by_asset_key;
+  }
 
-    public get provenance(): ProvenanceByAssetKey | null {
-        if (!this.contextData.provenance_by_asset_key) {
-            throw Error("provenance is undefined. Current step does not target an asset.");
-        }
-        if (!this.contextData.asset_keys || this.contextData.asset_keys.length != 1) {
-            throw Error("provenance is undefined. Current step targets multiple assets.");
-        }
-        return this.contextData.provenance_by_asset_key[this.contextData.asset_keys[0]];
+  public get codeVersion(): string | null {
+    if (!this.contextData.code_version_by_asset_key) {
+      throw Error('code_version is undefined. Current step does not target an asset.');
     }
+    if (!this.contextData.asset_keys || this.contextData.asset_keys.length != 1) {
+      throw Error('code_version is undefined. Current step targets multiple assets or no asset.');
+    }
+    return this.contextData.code_version_by_asset_key[this.contextData.asset_keys[0]];
+  }
 
-    public get provenanceByAssetKey(): Record<string, ProvenanceByAssetKey | null> {
-        if (!this.contextData.provenance_by_asset_key) {
-            throw Error("provenance_by_asset_key is undefined. Current step does not target an asset.");
-        }
-        return this.contextData.provenance_by_asset_key;
+  public get codeVersionByAssetKey(): Record<string, string | null> {
+    if (!this.contextData.code_version_by_asset_key) {
+      throw Error('code_version_by_asset_key is undefined. Current step does not target an asset.');
     }
+    return this.contextData.code_version_by_asset_key;
+  }
 
-    public get codeVersion(): string | null {
-        if (!this.contextData.code_version_by_asset_key) {
-            throw Error("code_version is undefined. Current step does not target an asset.");
-        }
-        if (!this.contextData.asset_keys || this.contextData.asset_keys.length != 1) {
-            throw Error("code_version is undefined. Current step targets multiple assets or no asset.");
-        }
-        return this.contextData.code_version_by_asset_key[this.contextData.asset_keys[0]];
-    }
+  public get isPartitionStep(): boolean {
+    return !!this.contextData.partition_key_range;
+  }
 
-    public get codeVersionByAssetKey(): Record<string, string | null> {
-        if (!this.contextData.code_version_by_asset_key) {
-            throw Error("code_version_by_asset_key is undefined. Current step does not target an asset.");
-        }
-        return this.contextData.code_version_by_asset_key;
+  public get partitionKey(): string {
+    if (!this.contextData.partition_key) {
+      throw Error('partition_key is undefined. Current step does not target a partition.');
     }
+    return this.contextData.partition_key;
+  }
 
-    public get isPartitionStep(): boolean {
-        return !!this.contextData.partition_key_range;
+  public get partitionKeyRange(): PartitionKeyRange {
+    if (!this.contextData.partition_key_range) {
+      throw new DagsterPipesError(
+        'partition_key_range is undefined. Current step does not target a partition.',
+      );
     }
+    return this.contextData.partition_key_range;
+  }
 
-    public get partitionKey(): string {
-        if (!this.contextData.partition_key) {
-            throw Error("partition_key is undefined. Current step does not target a partition.");
-        }
-        return this.contextData.partition_key;
+  public get partitionTimeWindow(): PartitionTimeWindow | null {
+    if (!this.contextData.partition_time_window) {
+      throw new DagsterPipesError(
+        'partition_time_window is undefined. Current step does not target a partition.',
+      );
     }
+    return this.contextData.partition_time_window;
+  }
 
-    public get partitionKeyRange(): PartitionKeyRange {
-        if (!this.contextData.partition_key_range) {
-            throw new DagsterPipesError("partition_key_range is undefined. Current step does not target a partition.");
-        }
-        return this.contextData.partition_key_range;
-    }
+  public get runID(): string {
+    return this.contextData.run_id;
+  }
 
-    public get partitionTimeWindow(): PartitionTimeWindow | null {
-        if (!this.contextData.partition_time_window) {
-            throw new DagsterPipesError("partition_time_window is undefined. Current step does not target a partition.");
-        }
-        return this.contextData.partition_time_window;
+  public get jobName(): string | null {
+    if (this.contextData.job_name) {
+      return this.contextData.job_name;
     }
+    return null;
+  }
 
-    public get runID(): string {
-        return this.contextData.run_id;
-    }
+  public get retryNumber(): number {
+    return this.contextData.retry_number;
+  }
 
-    public get jobName(): string | null {
-        if (this.contextData.job_name) {
-            return this.contextData.job_name;
-        }
-        return null;
+  public getExtra(key: string): any {
+    if (!this.contextData.extras) {
+      throw new DagsterPipesError('extras are not defined');
     }
+    if (!(key in this.contextData.extras)) {
+      throw new DagsterPipesError(`Extra with key ${key} is not defined.`);
+    }
+    return this.contextData.extras[key];
+  }
 
-    public get retryNumber(): number {
-        return this.contextData.retry_number;
-    }
+  public get extras(): Record<string, any> {
+    return this.contextData.extras || {};
+  }
 
-    public getExtra(key: string): any {
-        if (!this.contextData.extras) {
-            throw new DagsterPipesError('extras are not defined')
-        }
-        if (!(key in this.contextData.extras)) {
-            throw new DagsterPipesError(`Extra with key ${key} is not defined.`);
-        }
-        return this.contextData.extras[key];
-    }
-
-    public get extras(): Record<string, any> {
-        return this.contextData.extras || {};
-    }
-
-    public get isClosed(): boolean {
-        return this.closed;
-    }
+  public get isClosed(): boolean {
+    return this.closed;
+  }
 }
