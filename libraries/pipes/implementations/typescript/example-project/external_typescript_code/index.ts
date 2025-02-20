@@ -1,4 +1,4 @@
-import * as dagster_pipes from 'dagster_pipes_typescript';
+import * as dagster_pipes from '@dagster-io/dagster-pipes';
 
 using context = dagster_pipes.openDagsterPipes()
 

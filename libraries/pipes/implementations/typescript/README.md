@@ -13,20 +13,20 @@ Allows integration between any typescript process, and the dagster orchestrator.
 
 ### Installation
 
-`dagster_pipes_typescript` is available as an npm package:
+`@dagster-io/dagster-pipes` is available as an npm package:
 
 ```sh
-npm install dagster_pipes_typescript
+npm install @dagster-io/dagster-pipes
 ```
 
 ### Example
 
 > In addition to the examples below - you can find an example dagster deployment with a typescript pipes asset in the `example-project/` directory.
 
-After installing the dagster_pipes_typescript npm package, your typescript process can import it to integrate with dagster.
+After installing the `@dagster-io/dagster-pipes` npm package, your typescript process can import it to integrate with dagster.
 
 ```typescript
-import * as dagster_pipes from 'dagster_pipes_typescript';
+import * as dagster_pipes from '@dagster-io/dagster-pipes';
 
 using context = dagster_pipes.openDagsterPipes()
 

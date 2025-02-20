@@ -10,7 +10,7 @@
     "license": "Apache-2.0",
     "description": "",
     "dependencies": {
-      "dagster_pipes_typescript": "file:../../"
+      "@dagster-io/dagster-pipes": "file:../../"
     },
     "devDependencies": {
       "@types/node": "^22.13.1"

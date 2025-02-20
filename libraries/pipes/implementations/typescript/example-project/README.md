@@ -7,8 +7,8 @@ The dagster asset in the orchestrator process `example_typescript_asset`, utiliz
 
 ## Running
 
-Note that `external_typescript_code` depends on the local (dev) version of `dagster_pipes_typescript`.
-You can change the dependency to the latest `npm` release with `npm uninstall dagster_pipes_typescript && npm install dagster_pipes_typescript`
+Note that `external_typescript_code` depends on the local (dev) version of `@dagster-io/dagster-pipes`.
+You can change the dependency to the latest `npm` release with `npm uninstall @dagster-io/dagster-pipes && npm install @dagster-io/dagster-pipes`
 
 ```bash
 # Compile the local (dev) version of dagster_pipes_typescript
