@@ -8,8 +8,8 @@ test:
 	uv run pytest -vv
 
 ruff:
-	uv run ruff check --fix .
-	uv run ruff format .
+	uv run ruff check --fix
+	uv run ruff format
 
 check:
 	uv run pyright
