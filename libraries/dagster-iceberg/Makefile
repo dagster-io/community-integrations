@@ -7,9 +7,6 @@ build:
 test:
 	uv run pytest
 
-e2e-test:
-	uv run pytest kitchen-sink
-
 ruff:
 	uv run ruff check --fix
 	uv run ruff format

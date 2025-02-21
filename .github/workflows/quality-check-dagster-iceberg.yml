@@ -36,10 +36,6 @@ jobs:
         working-directory: ./libraries/dagster-iceberg
         run: uv run pyright
 
-      - name: Run unit tests
+      - name: Pytest
         working-directory: ./libraries/dagster-iceberg
         run: uv run pytest
-
-      - name: Run end-to-end tests
-        working-directory: ./libraries/dagster-iceberg
-        run: uv run pytest kitchen-sink
