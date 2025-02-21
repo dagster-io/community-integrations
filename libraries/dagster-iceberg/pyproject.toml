@@ -8,9 +8,9 @@ authors = [
 requires-python = ">=3.10"
 readme = "README.md"
 dependencies = [
-    "pyiceberg[pyarrow]>=0.8",
     "dagster>=1.8.2",
     "pendulum>=3.0.0",
+    "pyiceberg[pyarrow]>=0.8",
     "tenacity>=8.5.0",
 ]
 classifiers = [
@@ -98,11 +98,10 @@ docs = [
     "mkdocstrings[python]>=0.26.2",
 ]
 dev = [
-    "pytest>=8.3.2",
-    "pyright>=1.1.385",
-    "testcontainers[postgres]>=4.8.2",
-    "psycopg2-binary>=2.9.10",
     "dagit>=1.8.8",
-    "ruff>=0.9.6",
+    "psycopg2-binary>=2.9.10",
+    "pyright>=1.1.385",
+    "pytest>=8.3.2",
     "pytest-cov>=6.0.0",
+    "testcontainers[postgres]>=4.8.2",
 ]
