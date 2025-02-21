@@ -99,6 +99,8 @@ docs = [
 ]
 dev = [
     "dagit>=1.8.8",
+    "dagster-polars>=0.26.1",
+    "gcsfs>=2025.2.0",
     "psycopg2-binary>=2.9.10",
     "pyright>=1.1.385",
     "pytest>=8.3.2",
