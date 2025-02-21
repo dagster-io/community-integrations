@@ -341,6 +341,7 @@ class TeradataDagsterConnection:
 
     if TYPE_CHECKING:
         from dagster_azure.adls2 import ADLS2Resource
+
     @public
     def azure_blob_to_teradata(
         self,

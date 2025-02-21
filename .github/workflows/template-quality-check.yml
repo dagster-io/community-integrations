@@ -30,7 +30,7 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
         run: uv run ruff check
 
-      - name: Format
+      - name: Check formatting
         working-directory: ${{ inputs.working_directory }}
         run: uv run ruff format --check
 
