@@ -32,7 +32,10 @@ from dagster_sdf.constants import (
     SDF_EXECUTABLE,
     SDF_WORKSPACE_YML,
 )
-from dagster_sdf.dagster_sdf_translator import DagsterSdfTranslator, validate_opt_translator
+from dagster_sdf.dagster_sdf_translator import (
+    DagsterSdfTranslator,
+    validate_opt_translator,
+)
 from dagster_sdf.sdf_cli_invocation import SdfCliInvocation
 from dagster_sdf.sdf_version import SDF_VERSION_LOWER_BOUND, SDF_VERSION_UPPER_BOUND
 from dagster_sdf.sdf_workspace import SdfWorkspace
@@ -93,7 +96,9 @@ class SdfCliResource(ConfigurableResource):
             try:
                 resolved_path = absolute_path.resolve(strict=True)
             except FileNotFoundError:
-                raise ValueError(f"The absolute path of '{v}' ('{absolute_path}') does not exist")
+                raise ValueError(
+                    f"The absolute path of '{v}' ('{absolute_path}') does not exist"
+                )
             return os.fspath(resolved_path)
 
         return v
@@ -156,7 +161,9 @@ class SdfCliResource(ConfigurableResource):
             assets_def = context.assets_def if context else None
 
         context = (
-            context.op_execution_context if isinstance(context, AssetExecutionContext) else context
+            context.op_execution_context
+            if isinstance(context, AssetExecutionContext)
+            else context
         )
 
         dagster_sdf_translator = dagster_sdf_translator or DagsterSdfTranslator()
@@ -175,10 +182,16 @@ class SdfCliResource(ConfigurableResource):
                 # Check if this output is expected, if so, add the table_id and optionally the expected test name to the run_args
                 if selected_output_names and asset_output_name in selected_output_names:
                     table_id: Optional[str] = asset_metadata.get(DAGSTER_SDF_TABLE_ID)
-                    catalog: Optional[str] = asset_metadata.get(DAGSTER_SDF_CATALOG_NAME)
+                    catalog: Optional[str] = asset_metadata.get(
+                        DAGSTER_SDF_CATALOG_NAME
+                    )
                     schema: Optional[str] = asset_metadata.get(DAGSTER_SDF_SCHEMA_NAME)
-                    table_name: Optional[str] = asset_metadata.get(DAGSTER_SDF_TABLE_NAME)
-                    table_dialect: Optional[str] = asset_metadata.get(DAGSTER_SDF_DIALECT)
+                    table_name: Optional[str] = asset_metadata.get(
+                        DAGSTER_SDF_TABLE_NAME
+                    )
+                    table_dialect: Optional[str] = asset_metadata.get(
+                        DAGSTER_SDF_DIALECT
+                    )
                     # If any of the metadata is missing, raise an error
                     if (
                         table_id is None
@@ -197,7 +210,9 @@ class SdfCliResource(ConfigurableResource):
                     test_name_prefix = get_test_prefix(table_dialect)
                     # If the command is test, then we need to add the test name to the run_args (temporary: until sdf-cli applies --targets-only for test)
                     if args[0] == "test":
-                        run_args.append(f"{catalog}.{schema}.{test_name_prefix}{table_name}")
+                        run_args.append(
+                            f"{catalog}.{schema}.{test_name_prefix}{table_name}"
+                        )
 
         # Pass the current environment variables to the sdf CLI invocation.
         env = os.environ.copy()
@@ -237,12 +252,16 @@ class SdfCliResource(ConfigurableResource):
         try:
             resolved_path = absolute_path.resolve(strict=True)
         except FileNotFoundError:
-            raise ValueError(f"The absolute path of '{path}' ('{absolute_path}') does not exist")
+            raise ValueError(
+                f"The absolute path of '{path}' ('{absolute_path}') does not exist"
+            )
 
         return resolved_path
 
     @classmethod
-    def _validate_path_contains_file(cls, path: Path, file_name: str, error_message: str):
+    def _validate_path_contains_file(
+        cls, path: Path, file_name: str, error_message: str
+    ):
         if not path.joinpath(file_name).exists():
             raise ValueError(error_message)
 
@@ -274,7 +293,10 @@ class SdfCliResource(ConfigurableResource):
             match = re.search(r"sdf (\d+\.\d+\.\d+)", output)
             if match:
                 version = match.group(1)
-                if version < SDF_VERSION_LOWER_BOUND or version >= SDF_VERSION_UPPER_BOUND:
+                if (
+                    version < SDF_VERSION_LOWER_BOUND
+                    or version >= SDF_VERSION_UPPER_BOUND
+                ):
                     logging.warning(
                         f"The sdf version '{version}' is not within the supported range of"
                         f" '{SDF_VERSION_LOWER_BOUND}' to '{SDF_VERSION_UPPER_BOUND}'. Check your"

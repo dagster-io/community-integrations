@@ -221,7 +221,9 @@ class SdfCliInvocation:
                 # Retrieve the makefile-run.json artifact.
                 run_results = sdf_cli_invocation.get_artifact("makefile-run.json")
         """
-        artifact_path = self.target_dir.joinpath(SDF_TARGET_DIR, self.environment, artifact)
+        artifact_path = self.target_dir.joinpath(
+            SDF_TARGET_DIR, self.environment, artifact
+        )
 
         return orjson.loads(artifact_path.read_bytes())
 
@@ -242,12 +244,16 @@ class SdfCliInvocation:
 
                     yield log
         except DagsterExecutionInterruptedError:
-            logger.info(f"Forwarding interrupt signal to sdf command: `{self.sdf_command}`.")
+            logger.info(
+                f"Forwarding interrupt signal to sdf command: `{self.sdf_command}`."
+            )
 
             self.process.send_signal(signal.SIGINT)
             self.process.wait(timeout=self.termination_timeout_seconds)
 
-            logger.info(f"sdf process terminated with exit code `{self.process.returncode}`.")
+            logger.info(
+                f"sdf process terminated with exit code `{self.process.returncode}`."
+            )
 
             raise
 

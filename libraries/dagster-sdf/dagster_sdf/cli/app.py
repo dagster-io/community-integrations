@@ -96,7 +96,9 @@ def copy_scaffold(
     for path in dagster_project_dir.glob("**/*"):
         if path.suffix == ".jinja":
             relative_path = path.relative_to(Path.cwd())
-            destination_path = os.fspath(relative_path.parent.joinpath(relative_path.stem))
+            destination_path = os.fspath(
+                relative_path.parent.joinpath(relative_path.stem)
+            )
             template_path = path.relative_to(dagster_project_dir).as_posix()
 
             env.get_template(template_path).stream(
@@ -109,7 +111,9 @@ def copy_scaffold(
 
             path.unlink()
 
-    dagster_project_dir.joinpath("scaffold").rename(dagster_project_dir.joinpath(workspace_name))
+    dagster_project_dir.joinpath("scaffold").rename(
+        dagster_project_dir.joinpath(workspace_name)
+    )
 
 
 def _check_and_error_on_package_conflicts(workspace_name: str) -> None:

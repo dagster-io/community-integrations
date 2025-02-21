@@ -65,7 +65,9 @@ def test_sdf_cli_executable() -> None:
 
     # sdf executable must exist
     with pytest.raises(ValidationError, match="does not exist"):
-        SdfCliResource(workspace_dir=os.fspath(moms_flower_shop_path), sdf_executable="nonexistent")
+        SdfCliResource(
+            workspace_dir=os.fspath(moms_flower_shop_path), sdf_executable="nonexistent"
+        )
 
 
 def test_sdf_cli_workspace_dir_path() -> None:
@@ -79,7 +81,9 @@ def test_sdf_cli_workspace_dir_path() -> None:
         SdfCliResource(workspace_dir="nonexistent")
 
     # workspace directory must be a valid sdf workspace
-    with pytest.raises(ValidationError, match="specify a valid path to an sdf workspace."):
+    with pytest.raises(
+        ValidationError, match="specify a valid path to an sdf workspace."
+    ):
         SdfCliResource(workspace_dir=f"{os.fspath(moms_flower_shop_path)}/models")
 
 
@@ -136,7 +140,9 @@ def test_sdf_cli_target_dir(tmp_path: Path, sdf: SdfCliResource) -> None:
         .st_mtime
     )
 
-    sdf_cli_invocation_2 = sdf.cli(["compile"], target_dir=sdf_cli_invocation_1.target_dir).wait()
+    sdf_cli_invocation_2 = sdf.cli(
+        ["compile"], target_dir=sdf_cli_invocation_1.target_dir
+    ).wait()
     manifest_st_mtime_2 = (
         sdf_cli_invocation_2.target_dir.joinpath(
             SDF_TARGET_DIR, sdf_cli_invocation_2.environment, "makefile-compile.json"
@@ -176,7 +182,9 @@ def test_sdf_cli_op_execution(sdf: SdfCliResource) -> None:
         yield from sdf.cli(["run", "--save", "info-schema"], context=context).stream()
 
     @op(out=Out(Nothing))
-    def my_sdf_op_yield_events_with_downstream(context: OpExecutionContext, sdf: SdfCliResource):
+    def my_sdf_op_yield_events_with_downstream(
+        context: OpExecutionContext, sdf: SdfCliResource
+    ):
         yield from sdf.cli(["run", "--save", "info-schema"], context=context).stream()
 
     @op(ins={"depends_on": In(dagster_type=Nothing)})

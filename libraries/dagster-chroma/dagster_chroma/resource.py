@@ -37,7 +37,7 @@ class ChromaResource(ConfigurableResource):
             resources={
                 "chroma": ChromaResource(
                     connection_config=
-                        LocalConfig(persistence_path="./chroma") if os.getenv("DEV") else 
+                        LocalConfig(persistence_path="./chroma") if os.getenv("DEV") else
                             HttpConfig(host="192.168.0.10", port=8000)
                 ),
             }

@@ -108,7 +108,9 @@ class SdfCliEventMessage:
             DAGSTER_SDF_PURPOSE: purpose,
             DAGSTER_SDF_DIALECT: dialect,
             "Execution Duration": self.raw_event["st_dur_ms"] / 1000,
-            "Materialized From Cache": True if self.raw_event["st_done"] == "cached" else False,
+            "Materialized From Cache": True
+            if self.raw_event["st_done"] == "cached"
+            else False,
         }
         asset_key = dagster_sdf_translator.get_asset_key(catalog, schema, table)
         if purpose == "model":
@@ -133,7 +135,9 @@ class SdfCliEventMessage:
             yield event
         elif purpose == "test" and dagster_sdf_translator.settings.enable_asset_checks:
             passed = self.raw_event["st_verdict"] == "passed"
-            asset_check_key = dagster_sdf_translator.get_check_key_for_test(catalog, schema, table)
+            asset_check_key = dagster_sdf_translator.get_check_key_for_test(
+                catalog, schema, table
+            )
             # if the asset key is the same as the asset check key, then the test is not a table / column test
             if asset_key == asset_check_key.asset_key:
                 return

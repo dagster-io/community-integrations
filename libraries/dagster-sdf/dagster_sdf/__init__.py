@@ -7,7 +7,9 @@ from dagster_sdf.asset_utils import (
     default_asset_key_fn as default_asset_key_fn,
 )
 from dagster_sdf.resource import SdfCliResource as SdfCliResource
-from dagster_sdf.sdf_information_schema import SdfInformationSchema as SdfInformationSchema
+from dagster_sdf.sdf_information_schema import (
+    SdfInformationSchema as SdfInformationSchema,
+)
 from dagster_sdf.sdf_workspace import SdfWorkspace as SdfWorkspace
 from dagster_sdf.version import __version__ as __version__
 

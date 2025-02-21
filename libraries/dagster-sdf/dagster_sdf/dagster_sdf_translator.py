@@ -66,12 +66,17 @@ class DagsterSdfTranslator:
         return default_asset_key_fn(catalog, schema, table)
 
     @public
-    def get_check_key_for_test(self, catalog: str, schema: str, table: str) -> AssetCheckKey:
+    def get_check_key_for_test(
+        self, catalog: str, schema: str, table: str
+    ) -> AssetCheckKey:
         return default_asset_check_key_fn(catalog, schema, table)
 
     @public
     def get_description(
-        self, table_row: dict[str, Any], workspace_dir: Optional[Path], output_dir: Optional[Path]
+        self,
+        table_row: dict[str, Any],
+        workspace_dir: Optional[Path],
+        output_dir: Optional[Path],
     ) -> str:
         """A function that takes a dictionary representing columns of an sdf table row in sdf's
         information schema and returns the Dagster description for that table.
@@ -106,7 +111,9 @@ class DagsterSdfTranslator:
         )
 
 
-def validate_translator(dagster_sdf_translator: DagsterSdfTranslator) -> DagsterSdfTranslator:
+def validate_translator(
+    dagster_sdf_translator: DagsterSdfTranslator,
+) -> DagsterSdfTranslator:
     return check.inst_param(
         dagster_sdf_translator,
         "dagster_sdf_translator",

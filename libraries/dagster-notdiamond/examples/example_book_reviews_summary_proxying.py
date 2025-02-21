@@ -1,5 +1,3 @@
-import time
-
 import dagster as dg
 import dagster_openai as oai
 
@@ -59,16 +57,19 @@ def book_reviews_summary(
     prompt = f"""
     Given the book reviews for {book_review_data["title"]}, provide a detailed summary:
 
-    {'|'.join([r['content'] for r in book_review_data["reviews"]])}
+    {"|".join([r["content"] for r in book_review_data["reviews"]])}
     """
 
     with openai.get_client(context) as client:
         chat_completion = client.chat.completions.create(
             model="notdiamond",
             extra_body={
-              "models": ["gpt-4o", "claude-3-5-sonnet-20240620"], # pass in the LLM options you want to route between
-              "tradeoff": "cost",
-              "preference_id": "YOUR_PREFERENCE_ID"
+                "models": [
+                    "gpt-4o",
+                    "claude-3-5-sonnet-20240620",
+                ],  # pass in the LLM options you want to route between
+                "tradeoff": "cost",
+                "preference_id": "YOUR_PREFERENCE_ID",
             },
             messages=[{"role": "user", "content": prompt}],
         )

@@ -2,7 +2,10 @@ import os
 
 from dagster import AssetExecutionContext, AssetKey, materialize
 from dagster_sdf.asset_decorator import sdf_assets
-from dagster_sdf.dagster_sdf_translator import DagsterSdfTranslator, DagsterSdfTranslatorSettings
+from dagster_sdf.dagster_sdf_translator import (
+    DagsterSdfTranslator,
+    DagsterSdfTranslatorSettings,
+)
 from dagster_sdf.resource import SdfCliResource
 from dagster_sdf.sdf_workspace import SdfWorkspace
 
@@ -14,7 +17,9 @@ def test_asset_checks_passing() -> None:
         workspace_dir=os.fspath(lineage_asset_checks_path),
     )
     environment = "passing_tests"
-    sdf_cli_invocation = sdf.cli(["compile", "--save", "table-deps"], environment=environment)
+    sdf_cli_invocation = sdf.cli(
+        ["compile", "--save", "table-deps"], environment=environment
+    )
     assert sdf_cli_invocation.is_successful()
     target_dir = sdf_cli_invocation.target_dir
     dagster_sdf_translator = DagsterSdfTranslator(
@@ -23,7 +28,9 @@ def test_asset_checks_passing() -> None:
 
     @sdf_assets(
         workspace=SdfWorkspace(
-            workspace_dir=lineage_asset_checks_path, target_dir=target_dir, environment=environment
+            workspace_dir=lineage_asset_checks_path,
+            target_dir=target_dir,
+            environment=environment,
         ),
         dagster_sdf_translator=dagster_sdf_translator,
     )
@@ -72,13 +79,17 @@ def test_asset_checks_failing() -> None:
         settings=DagsterSdfTranslatorSettings(enable_asset_checks=True)
     )
     environment = "failing_tests"
-    sdf_cli_invocation = sdf.cli(["compile", "--save", "table-deps"], environment=environment)
+    sdf_cli_invocation = sdf.cli(
+        ["compile", "--save", "table-deps"], environment=environment
+    )
     assert sdf_cli_invocation.is_successful()
     target_dir = sdf_cli_invocation.target_dir
 
     @sdf_assets(
         workspace=SdfWorkspace(
-            workspace_dir=lineage_asset_checks_path, target_dir=target_dir, environment=environment
+            workspace_dir=lineage_asset_checks_path,
+            target_dir=target_dir,
+            environment=environment,
         ),
         dagster_sdf_translator=dagster_sdf_translator,
     )

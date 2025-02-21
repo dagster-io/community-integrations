@@ -50,11 +50,15 @@ def _assert_scaffold_defs(project_name: str, dagster_project_dir: Path) -> None:
     schedules_py_path = dagster_project_dir.joinpath(project_name, "schedules.py")
     schedules_py_path.write_text(schedules_py_path.read_text().replace("# ", ""))
 
-    scaffold_defs_module = importlib.import_module(f"{project_name}.{project_name}.definitions")
+    scaffold_defs_module = importlib.import_module(
+        f"{project_name}.{project_name}.definitions"
+    )
     defs: Definitions = getattr(scaffold_defs_module, "defs")
 
     materialize_sdf_models_job = defs.get_job_def("materialize_sdf_models")
-    materialize_sdf_models_schedule = defs.get_schedule_def("materialize_sdf_models_schedule")
+    materialize_sdf_models_schedule = defs.get_schedule_def(
+        "materialize_sdf_models_schedule"
+    )
 
     result = materialize_sdf_models_job.execute_in_process()
 
@@ -79,7 +83,14 @@ def test_project_scaffold_command(
     )
 
     subprocess.run(
-        ["sdf", "compile", "--save", "table-deps", "--target-dir", SDF_DAGSTER_OUTPUT_DIR],
+        [
+            "sdf",
+            "compile",
+            "--save",
+            "table-deps",
+            "--target-dir",
+            SDF_DAGSTER_OUTPUT_DIR,
+        ],
         cwd=sdf_workspace_dir,
         check=True,
     )
@@ -91,7 +102,9 @@ def test_project_scaffold_command(
     monkeypatch.chdir(tmp_path)
     sys.path.append(os.fspath(tmp_path))
 
-    _assert_scaffold_defs(project_name=project_name, dagster_project_dir=dagster_project_dir)
+    _assert_scaffold_defs(
+        project_name=project_name, dagster_project_dir=dagster_project_dir
+    )
 
 
 @pytest.mark.parametrize(
@@ -118,7 +131,9 @@ def test_project_scaffold_command_with_compile_env_var(
     monkeypatch.chdir(tmp_path)
     sys.path.append(os.fspath(tmp_path))
 
-    _assert_scaffold_defs(project_name=project_name, dagster_project_dir=dagster_project_dir)
+    _assert_scaffold_defs(
+        project_name=project_name, dagster_project_dir=dagster_project_dir
+    )
 
 
 def test_project_scaffold_command_on_invalid_dagster_project_name(
@@ -171,7 +186,10 @@ def test_project_scaffold_command_on_invalid_sdf_project_dir(
 
 @pytest.mark.parametrize("project_name", ["dagster", "dagster_sdf"])
 def test_project_scaffold_command_on_package_conflict(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, sdf_workspace_dir: Path, project_name: str
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    sdf_workspace_dir: Path,
+    project_name: str,
 ) -> None:
     monkeypatch.chdir(tmp_path)
 

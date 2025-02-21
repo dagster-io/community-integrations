@@ -3,7 +3,10 @@ from pathlib import Path
 from dagster import AssetExecutionContext, materialize
 from dagster._core.definitions.metadata import TableSchemaMetadataValue
 from dagster_sdf.asset_decorator import sdf_assets
-from dagster_sdf.dagster_sdf_translator import DagsterSdfTranslator, DagsterSdfTranslatorSettings
+from dagster_sdf.dagster_sdf_translator import (
+    DagsterSdfTranslator,
+    DagsterSdfTranslatorSettings,
+)
 from dagster_sdf.resource import SdfCliResource
 from dagster_sdf.sdf_workspace import SdfWorkspace
 

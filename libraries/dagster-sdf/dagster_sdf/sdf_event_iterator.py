@@ -8,7 +8,9 @@ from typing_extensions import TypeVar
 if TYPE_CHECKING:
     from dagster_sdf.sdf_cli_invocation import SdfCliInvocation
 
-SdfDagsterEventType = Union[Output, AssetMaterialization, AssetObservation, AssetCheckResult]
+SdfDagsterEventType = Union[
+    Output, AssetMaterialization, AssetObservation, AssetCheckResult
+]
 
 # We define SdfEventIterator as a generic type for the sake of type hinting.
 # This is so that users who inspect the type of the return value of `SdfCliInvocation.stream()`

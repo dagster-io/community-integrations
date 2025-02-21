@@ -7,7 +7,10 @@ from dagster._core.definitions.metadata.source_code import (
     with_source_code_references,
 )
 from dagster_sdf.asset_decorator import sdf_assets
-from dagster_sdf.dagster_sdf_translator import DagsterSdfTranslator, DagsterSdfTranslatorSettings
+from dagster_sdf.dagster_sdf_translator import (
+    DagsterSdfTranslator,
+    DagsterSdfTranslatorSettings,
+)
 from dagster_sdf.sdf_workspace import SdfWorkspace
 
 from dagster_sdf_tests.sdf_workspaces import moms_flower_shop_path
@@ -39,7 +42,9 @@ def test_basic_attach_code_references(moms_flower_shop_target_dir: Path) -> None
         assert os.path.exists(reference.file_path), reference.file_path
 
 
-def test_basic_attach_code_references_disabled(moms_flower_shop_target_dir: Path) -> None:
+def test_basic_attach_code_references_disabled(
+    moms_flower_shop_target_dir: Path,
+) -> None:
     @sdf_assets(
         workspace=SdfWorkspace(
             workspace_dir=moms_flower_shop_path,

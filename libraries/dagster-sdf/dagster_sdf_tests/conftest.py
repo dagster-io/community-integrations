@@ -21,12 +21,16 @@ def _create_sdf_invocation(
     sdf = SdfCliResource(workspace_dir=os.fspath(workspace_dir))
 
     sdf_invocation = sdf.cli(
-        ["compile", "--save", "table-deps"], environment=environment, raise_on_error=False
+        ["compile", "--save", "table-deps"],
+        environment=environment,
+        raise_on_error=False,
     ).wait()
 
     if run_workspace:
         sdf.cli(
-            ["run", "--save", "info-schema"], environment=environment, raise_on_error=True
+            ["run", "--save", "info-schema"],
+            environment=environment,
+            raise_on_error=True,
         ).wait()
 
     return sdf_invocation

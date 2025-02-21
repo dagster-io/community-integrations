@@ -97,7 +97,9 @@ def build_schedule_from_sdf_selection(
     )
 
 
-def get_asset_key_for_table_id(sdf_assets: Sequence[AssetsDefinition], table_id: str) -> AssetKey:
+def get_asset_key_for_table_id(
+    sdf_assets: Sequence[AssetsDefinition], table_id: str
+) -> AssetKey:
     """Returns the corresponding Dagster asset key for an sdf table.
 
     Args:
@@ -156,7 +158,9 @@ def get_materialized_sql_dir(target_dir: Path, environment: str) -> Path:
     return get_output_dir(target_dir, environment).joinpath("materialized")
 
 
-def get_table_path_from_parts(catalog_name: str, schema_name: str, table_name: str) -> Path:
+def get_table_path_from_parts(
+    catalog_name: str, schema_name: str, table_name: str
+) -> Path:
     return Path(catalog_name.lower(), schema_name.lower(), table_name.lower())
 
 
@@ -173,26 +177,35 @@ def default_description_fn(
     enable_materialized_sql_description: bool = True,
 ) -> str:
     description_sections = [
-        table_row["description"] or f"sdf {table_row['materialization']} {table_row['table_id']}",
+        table_row["description"]
+        or f"sdf {table_row['materialization']} {table_row['table_id']}",
     ]
     if enable_raw_sql_description:
         if workspace_dir is None:
-            raise ValueError("workspace_dir must be provided to enable raw SQL description.")
+            raise ValueError(
+                "workspace_dir must be provided to enable raw SQL description."
+            )
         path_to_file = None
         for source_location in table_row["source_locations"]:
             if source_location.endswith(".sql"):
                 path_to_file = workspace_dir.joinpath(source_location)
                 break
         if path_to_file is not None and path_to_file.exists():
-            description_sections.append(f"#### Raw SQL:\n```\n{_read_sql_file(path_to_file)}\n```")
+            description_sections.append(
+                f"#### Raw SQL:\n```\n{_read_sql_file(path_to_file)}\n```"
+            )
     if enable_materialized_sql_description:
         if output_dir is None:
-            raise ValueError("output_dir must be provided to enable materialized SQL description.")
+            raise ValueError(
+                "output_dir must be provided to enable materialized SQL description."
+            )
         path_to_file = (
             output_dir.joinpath("materialized")
             .joinpath(
                 get_table_path_from_parts(
-                    table_row["catalog_name"], table_row["schema_name"], table_row["table_name"]
+                    table_row["catalog_name"],
+                    table_row["schema_name"],
+                    table_row["table_name"],
                 )
             )
             .with_suffix(".sql")
@@ -227,7 +240,9 @@ def exists_in_selected(
         if purpose == "test":
             test_name_prefix = get_test_prefix(dialect)
             asset_output_name = (
-                dagster_name_fn(catalog_name, schema_name, table_name[len(test_name_prefix) :])
+                dagster_name_fn(
+                    catalog_name, schema_name, table_name[len(test_name_prefix) :]
+                )
                 if table_name.startswith(test_name_prefix)
                 else asset_output_name
             )

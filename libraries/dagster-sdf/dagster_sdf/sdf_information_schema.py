@@ -25,7 +25,11 @@ from dagster._core.definitions.metadata import (
 )
 from dagster._record import IHaveNew, record_custom
 
-from dagster_sdf.asset_utils import exists_in_selected, get_info_schema_dir, get_output_dir
+from dagster_sdf.asset_utils import (
+    exists_in_selected,
+    get_info_schema_dir,
+    get_output_dir,
+)
 from dagster_sdf.constants import (
     DAGSTER_SDF_CATALOG_NAME,
     DAGSTER_SDF_DIALECT,
@@ -99,7 +103,9 @@ class SdfInformationSchema(IHaveNew):
 
     def read_table(
         self,
-        table_name: Literal["tables", "columns", "table_lineage", "column_lineage", "table_deps"],
+        table_name: Literal[
+            "tables", "columns", "table_lineage", "column_lineage", "table_deps"
+        ],
     ) -> pl.DataFrame:
         check.invariant(
             table_name
@@ -110,7 +116,8 @@ class SdfInformationSchema(IHaveNew):
         )
 
         return self.information_schema.setdefault(
-            table_name, pl.read_parquet(self.information_schema_dir.joinpath(table_name))
+            table_name,
+            pl.read_parquet(self.information_schema_dir.joinpath(table_name)),
         )
 
     def build_sdf_multi_asset_args(
@@ -149,9 +156,9 @@ class SdfInformationSchema(IHaveNew):
                     elif meta_map["keys"] == "dagster-depends-on-asset-key":
                         dep_asset_key = meta_map["values"]
                         # Currently, we only support one upstream asset
-                        table_id_to_upstream.setdefault(table_row["table_id"], set()).add(
-                            AssetKey(dep_asset_key)
-                        )
+                        table_id_to_upstream.setdefault(
+                            table_row["table_id"], set()
+                        ).add(AssetKey(dep_asset_key))
                     elif table_row["origin"] == "remote":
                         origin_remote_tables.add(table_row["table_id"])
             elif table_row["origin"] == "remote":
@@ -160,7 +167,9 @@ class SdfInformationSchema(IHaveNew):
         # Step 3: Build Dagster Asset Outs and Internal Asset Deps
         for table_row in table_deps.rows(named=True):
             asset_key = dagster_sdf_translator.get_asset_key(
-                table_row["catalog_name"], table_row["schema_name"], table_row["table_name"]
+                table_row["catalog_name"],
+                table_row["schema_name"],
+                table_row["table_name"],
             )
             code_references = None
             if dagster_sdf_translator.settings.enable_code_references:
@@ -225,7 +234,14 @@ class SdfInformationSchema(IHaveNew):
 
     def get_columns(self) -> dict[str, list[TableColumn]]:
         columns = self.read_table("columns")[
-            ["table_id", "column_id", "classifiers", "column_name", "datatype", "description"]
+            [
+                "table_id",
+                "column_id",
+                "classifiers",
+                "column_name",
+                "datatype",
+                "description",
+            ]
         ]
         table_columns: dict[str, list[TableColumn]] = {}
         for row in columns.rows(named=True):
@@ -270,7 +286,9 @@ class SdfInformationSchema(IHaveNew):
         code_references = CodeReferencesMetadataSet(
             code_references=CodeReferencesMetadataValue(
                 code_references=[
-                    LocalFileCodeReference(file_path=os.fspath(self.workspace_dir.joinpath(loc)))
+                    LocalFileCodeReference(
+                        file_path=os.fspath(self.workspace_dir.joinpath(loc))
+                    )
                 ]
             )
         )
@@ -303,7 +321,9 @@ class SdfInformationSchema(IHaveNew):
                     continue
 
             asset_key = dagster_sdf_translator.get_asset_key(
-                table_row["catalog_name"], table_row["schema_name"], table_row["table_name"]
+                table_row["catalog_name"],
+                table_row["schema_name"],
+                table_row["table_name"],
             )
             code_references = None
             if dagster_sdf_translator.settings.enable_code_references:
@@ -326,7 +346,9 @@ class SdfInformationSchema(IHaveNew):
             yield AssetObservation(
                 asset_key=asset_key,
                 description=dagster_sdf_translator.get_description(
-                    table_row, self.workspace_dir, get_output_dir(self.target_dir, self.environment)
+                    table_row,
+                    self.workspace_dir,
+                    get_output_dir(self.target_dir, self.environment),
                 ),
                 metadata=metadata,
             )

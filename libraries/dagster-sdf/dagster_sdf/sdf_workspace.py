@@ -7,7 +7,11 @@ from typing import Optional, Union
 from dagster._model import DagsterModel
 from dagster._utils import run_with_concurrent_update_guard
 
-from dagster_sdf.constants import DEFAULT_SDF_WORKSPACE_ENVIRONMENT, SDF_EXECUTABLE, SDF_TARGET_DIR
+from dagster_sdf.constants import (
+    DEFAULT_SDF_WORKSPACE_ENVIRONMENT,
+    SDF_EXECUTABLE,
+    SDF_TARGET_DIR,
+)
 from dagster_sdf.errors import (
     DagsterSdfInformationSchemaNotFoundError,
     DagsterSdfWorkspaceNotFoundError,
@@ -72,7 +76,9 @@ class DagsterSdfWorkspacePreparer(SdfWorkspacePreparer):
                 )
 
     def prepare(self, workspace: "SdfWorkspace") -> None:
-        output_dir = workspace.target_dir.joinpath(SDF_TARGET_DIR, workspace.environment)
+        output_dir = workspace.target_dir.joinpath(
+            SDF_TARGET_DIR, workspace.environment
+        )
         run_with_concurrent_update_guard(
             output_dir,
             self._prepare_workspace,
@@ -131,7 +137,9 @@ class SdfWorkspace(DagsterModel):
     ):
         workspace_dir = Path(workspace_dir)
         if not workspace_dir.exists():
-            raise DagsterSdfWorkspaceNotFoundError(f"workspace_dir {workspace_dir} does not exist.")
+            raise DagsterSdfWorkspaceNotFoundError(
+                f"workspace_dir {workspace_dir} does not exist."
+            )
 
         target_dir = workspace_dir.joinpath(target_dir)
 

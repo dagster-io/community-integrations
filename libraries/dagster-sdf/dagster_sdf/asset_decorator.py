@@ -26,7 +26,9 @@ def sdf_assets(
     required_resource_keys: Optional[set[str]] = None,
     retry_policy: Optional[RetryPolicy] = None,
 ) -> Callable[[Callable[..., Any]], AssetsDefinition]:
-    dagster_sdf_translator = validate_translator(dagster_sdf_translator or DagsterSdfTranslator())
+    dagster_sdf_translator = validate_translator(
+        dagster_sdf_translator or DagsterSdfTranslator()
+    )
     information_schema = SdfInformationSchema(
         workspace_dir=workspace.workspace_dir,
         target_dir=workspace.target_dir,
