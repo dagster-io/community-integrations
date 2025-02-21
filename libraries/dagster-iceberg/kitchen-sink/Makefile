@@ -5,5 +5,8 @@ catalog:
 dev: catalog
 	dagster dev -f kitchen_sink.py
 
+test:
+	uv run pytest
+
 clean:
 	rm -rf /tmp/warehouse
