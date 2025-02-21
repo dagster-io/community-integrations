@@ -1,11 +1,11 @@
 # dagster-chroma
 
-A dagster module that provides integration with [chroma](https://www.trychroma.com/). 
+A dagster module that provides integration with [chroma](https://www.trychroma.com/).
 Both HTTP connections, and local (filesystem-based) connections are supported.
 
 ## Installation
 
-The `dagster_chroma` module is available as a PyPI package - install with your preferred python 
+The `dagster_chroma` module is available as a PyPI package - install with your preferred python
 environment manager (We recommend [uv](https://github.com/astral-sh/uv)).
 
 ```
@@ -29,7 +29,7 @@ def my_table(chroma: ChromaResource):
 
         collection.add(
             documents=[
-                "This is a document about oranges", 
+                "This is a document about oranges",
                 "This is a document about pineapples",
                 "This is a document about strawberries",
                 "This is a document about cucumbers"],
@@ -46,7 +46,7 @@ defs = Definitions(
     resources={
         "chroma": ChromaResource(
             connection_config=
-                LocalConfig(persistence_path="./chroma") if os.getenv("DEV") else 
+                LocalConfig(persistence_path="./chroma") if os.getenv("DEV") else
                     HttpConfig(host="192.168.0.10", port=8000)
         ),
     }

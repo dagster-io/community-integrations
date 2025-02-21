@@ -47,7 +47,7 @@ class ChromaResource(ConfigurableResource):
     connection_config: Union[LocalConfig, HttpConfig] = Field(
         discriminator="provider",
         description=(
-            """Specified whether to connect to Chroma via HTTP, or to use a Local database 
+            """Specified whether to connect to Chroma via HTTP, or to use a Local database
             (i.e. the library will directly access a persistence-directory on this machine)
             """
         ),

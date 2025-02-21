@@ -2,7 +2,7 @@
 
 This is an example project showcasing the usage of the typescript dagster-pipes library.
 
-The dagster asset in the orchestrator process `example_typescript_asset`, utilizes 
+The dagster asset in the orchestrator process `example_typescript_asset`, utilizes
 `PipesSubprocessClient` to run the code of `external_typescript_code` in a pipes context.
 
 ## Running

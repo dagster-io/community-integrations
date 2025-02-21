@@ -3,7 +3,7 @@
 A dagster module that provides integration with [Teradata Vantage](https://www.teradata.com/).
 
 ## Installation
-The `dagster_teradata` module is available as a PyPI package - install with your preferred python 
+The `dagster_teradata` module is available as a PyPI package - install with your preferred python
 environment manager.
 
 ```
@@ -13,9 +13,9 @@ pip install dagster-teradata
 
 ## Example Usage
 
-This offers seamless integration with Teradata Vantage, facilitating efficient workflows for data processing, management, 
-and transformation. This module supports a range of scenarios, such as executing queries, managing tables, 
-and integrating with cloud storage solutions like AWS S3 and Azure Data Lake Storage (ADLS). Additionally, 
+This offers seamless integration with Teradata Vantage, facilitating efficient workflows for data processing, management,
+and transformation. This module supports a range of scenarios, such as executing queries, managing tables,
+and integrating with cloud storage solutions like AWS S3 and Azure Data Lake Storage (ADLS). Additionally,
 it enables compute cluster management for Teradata Vantage Cloud Lake.
 
 ```python

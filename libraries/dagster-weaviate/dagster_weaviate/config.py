@@ -23,7 +23,7 @@ class LocalConfig(Config):
      Defaults to 8080 (the default port a weaviate instance runs on)"""
 
     grpc_port: int = DEFAULT_GRPC_PORT
-    """The port to use for the underlying gRPC API. 
+    """The port to use for the underlying gRPC API.
      Defaults to 50051 (the default grpc-port a weaviate instance runs on)"""
 
 
@@ -33,6 +33,6 @@ class CloudConfig(Config):
     provider: Literal["cloud"] = "cloud"
 
     cluster_url: str
-    """The WCD cluster URL or hostname to connect to. 
+    """The WCD cluster URL or hostname to connect to.
     Usually in the form: rAnD0mD1g1t5.something.weaviate.cloud
     """

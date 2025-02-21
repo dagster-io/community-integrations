@@ -29,12 +29,12 @@ table:
 
     - name: event_value
       description: >
-        Any numeric value associated with the event. 
+        Any numeric value associated with the event.
         For example, upon placing an order, the event value would be the total order amount in USD.
 
     - name: additional_details
       description: >
-        A JSON containing additional details about the order. 
+        A JSON containing additional details about the order.
         For exmaple, upon placing an order, the additional details will contain a delivery ID and other order information.
 
     - name: platform

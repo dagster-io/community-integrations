@@ -1,7 +1,7 @@
 table:
   name: raw_marketing_campaign_events
   description: >
-    An hourly table logging marketing campaigns. If a campaign is running that hour, it will be logged in the table. 
+    An hourly table logging marketing campaigns. If a campaign is running that hour, it will be logged in the table.
     If no campaigns are running for a certain houe, no campaigns will be logged.
 
   # Uncomment below to begin the "Enriching Your Warehouse" Tutorial >>>>>
@@ -28,7 +28,7 @@ table:
 
     - name: c_name
       description: >
-        A substring of the campaign name contain the campaign type. 
+        A substring of the campaign name contain the campaign type.
         Supported types - instagram_ads, friends_referrals, facebook_ads, google_search
 
     - name: priority

@@ -118,7 +118,7 @@ class TeradataComputeClusterManager:
         if compute_group_name:
             # Step 1: Check if the compute group exists
             check_compute_group_sql = dedent(f"""
-                        SELECT count(1) FROM DBC.ComputeGroups 
+                        SELECT count(1) FROM DBC.ComputeGroups
                         WHERE UPPER(ComputeGroupName) = UPPER('{compute_group_name}')
                     """)
             cg_status_result = self.execute_query(check_compute_group_sql, True, True)

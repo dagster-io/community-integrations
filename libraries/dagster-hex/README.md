@@ -16,7 +16,7 @@ Create a `HexResource` specifying the `api_key`, then, use that resource in our 
 import os
 import dagster as dg
 
-from dagster_hex.resources import HexResource 
+from dagster_hex.resources import HexResource
 
 
 @dg.asset
@@ -82,10 +82,10 @@ def hex_job():
 Ops will return an `AssetMaterialization`  with the following keys:
 
 ```
-run_url	
-run_status_url	
-trace_id	
-run_id	
+run_url
+run_status_url
+trace_id
+run_id
 elapsed_time
-notifications	
+notifications
 ```

@@ -7,5 +7,5 @@
     "module": "CommonJS",
     "moduleResolution": "node"
   },
-  "exclude": ["dist", "example-project"] 
+  "exclude": ["dist", "example-project"]
 }

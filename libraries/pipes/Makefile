@@ -15,5 +15,5 @@ jsonschema_typescript:
 	xargs quicktype -s schema -l typescript  \
 		--just-types -o \
 		implementations/typescript/src/types.ts
-	
+
 jsonschema: jsonschema_rust jsonschema_typescript

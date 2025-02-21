@@ -5,7 +5,7 @@ A dagster module that provides integration with [Weaviate](https://weaviate.io/)
 
 ## Installation
 
-The `dagster_weaviate` module is available as a PyPI package - install with your preferred python 
+The `dagster_weaviate` module is available as a PyPI package - install with your preferred python
 environment manager (We recommend [uv](https://github.com/astral-sh/uv)).
 
 ```
@@ -32,8 +32,8 @@ defs = Definitions(
     resources={
         "weaviate": WeaviateResource(
             connection_config=LocalConfig(
-                host="192.168.0.10", 
-                port=8080, 
+                host="192.168.0.10",
+                port=8080,
             )
         ),
     },

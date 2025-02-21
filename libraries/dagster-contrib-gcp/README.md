@@ -14,7 +14,7 @@ make build
 
 ## Overview
 
-This package provides integrations with Google Cloud Platform (GCP) services. It currently includes the following 
+This package provides integrations with Google Cloud Platform (GCP) services. It currently includes the following
 integrations:
 
 ### Cloud Run
@@ -23,7 +23,7 @@ integrations:
 
 Adds support for launching Dagster runs on Google Cloud Run. Usage is as follows:
 
-1. Create a Cloud Run Job from your Dagster code location image to act as the run worker. If you require multiple 
+1. Create a Cloud Run Job from your Dagster code location image to act as the run worker. If you require multiple
    environments/code locations, you can create multiple Cloud Run Jobs.
 2. Add `dagster-contrib-gcp` to your Dagster webserver/daemon environment.
 3. Add the following configuration to your Dagster instance YAML:

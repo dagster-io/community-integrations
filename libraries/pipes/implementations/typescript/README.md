@@ -59,11 +59,11 @@ import dagster as dg
     ]
 )
 def example_typescript_asset(
-    context: dg.AssetExecutionContext, 
+    context: dg.AssetExecutionContext,
     pipes_subprocess_client: dg.PipesSubprocessClient
 ) -> dg.MaterializeResult:
     external_script_path = dg.file_relative_path(__file__, "../external_typescript_code/")
-    
+
     subprocess.run(["npm install"],
                     cwd=external_script_path).check_returncode()
     subprocess.run(["tsc"],

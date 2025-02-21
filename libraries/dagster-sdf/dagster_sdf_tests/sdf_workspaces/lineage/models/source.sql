@@ -1,7 +1,7 @@
-select column1 as user_id, 
-       column2 as phone, 
-       column3 as txn_date, 
-       column4 as qty from 
+select column1 as user_id,
+       column2 as phone,
+       column3 as txn_date,
+       column4 as qty from
 (VALUES
   (1, '555-1212', '2022-01-01', 100),
   (1, '555-1212', '2022-02-01', 50),
