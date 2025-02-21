@@ -82,30 +82,36 @@ where
 
     pub fn report_asset_materialization(
         &mut self,
-        asset_key: &str,
+        asset_key: Option<&str>,
         metadata: HashMap<&str, PipesMetadataValue>,
         data_version: Option<&str>,
-    ) -> Result<(), MessageWriteError> {
+    ) -> Result<(), DagsterPipesError> {
         let params: HashMap<&str, Option<serde_json::Value>> = HashMap::from([
-            ("asset_key", Some(json!(asset_key))),
+            (
+                "asset_key",
+                Some(json!(self.resolve_optionally_passed_asset_key(asset_key)?)),
+            ),
             ("metadata", Some(json!(metadata))),
             ("data_version", data_version.map(|version| json!(version))),
         ]);
 
         let msg = PipesMessage::new(Method::ReportAssetMaterialization, Some(params));
-        self.message_channel.write_message(msg)
+        Ok(self.message_channel.write_message(msg)?)
     }
 
     pub fn report_asset_check(
         &mut self,
         check_name: &str,
         passed: bool,
-        asset_key: &str,
+        asset_key: Option<&str>,
         severity: &AssetCheckSeverity,
         metadata: HashMap<&str, PipesMetadataValue>,
-    ) -> Result<(), MessageWriteError> {
+    ) -> Result<(), DagsterPipesError> {
         let params: HashMap<&str, Option<serde_json::Value>> = HashMap::from([
-            ("asset_key", Some(json!(asset_key))),
+            (
+                "asset_key",
+                Some(json!(self.resolve_optionally_passed_asset_key(asset_key)?)),
+            ),
             ("check_name", Some(json!(check_name))),
             ("passed", Some(json!(passed))),
             ("severity", Some(json!(severity))),
@@ -113,7 +119,36 @@ where
         ]);
 
         let msg = PipesMessage::new(Method::ReportAssetCheck, Some(params));
-        self.message_channel.write_message(msg)
+        Ok(self.message_channel.write_message(msg)?)
+    }
+
+    fn resolve_optionally_passed_asset_key(
+        &self,
+        asset_key: Option<&str>,
+    ) -> Result<String, ResolveAssetKeyError> {
+        match &self.data.asset_keys {
+            Some(asset_keys) => match asset_key {
+                Some(key) => asset_keys
+                    .contains(&key.to_string())
+                    .then(|| Ok(key.to_string()))
+                    .unwrap_or_else(|| {
+                        Err(ResolveAssetKeyError::Invalid {
+                            key: key.to_string(),
+                        })
+                    }),
+                None => {
+                    if asset_keys.len() == 1 {
+                        Ok(asset_keys[0].to_string())
+                    } else {
+                        Err(ResolveAssetKeyError::Missing)
+                    }
+                }
+            },
+            None => match asset_key {
+                Some(key) => Ok(key.to_string()),
+                None => Err(ResolveAssetKeyError::Missing),
+            },
+        }
     }
 
     pub fn report_custom_message(
@@ -139,6 +174,25 @@ where
 
 #[derive(Debug, Error)]
 #[non_exhaustive]
+pub enum ResolveAssetKeyError {
+    #[error("io error at destination {}: {}", .dst, .source)]
+    #[non_exhaustive]
+    IO {
+        dst: String, // Write destination
+        source: std::io::Error,
+    },
+
+    #[error("invalid asset key: {}", .key)]
+    #[non_exhaustive]
+    Invalid { key: String },
+
+    #[error("missing asset key")]
+    #[non_exhaustive]
+    Missing,
+}
+
+#[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum DagsterPipesError {
     #[error("dagster pipes failed to load params: {0}")]
     #[non_exhaustive]
@@ -151,6 +205,10 @@ pub enum DagsterPipesError {
     #[error("dagster pipes failed to write message: {0}")]
     #[non_exhaustive]
     MessageWriter(#[from] MessageWriteError),
+
+    #[error("dagster pipes failed to validate asset key: {0}")]
+    #[non_exhaustive]
+    AssetKeyResolver(#[from] ResolveAssetKeyError),
 }
 
 // partial translation of
@@ -180,14 +238,13 @@ mod tests {
 
     use super::*;
 
-    #[fixture]
-    fn file_and_context() -> (NamedTempFile, PipesContext<DefaultWriter>) {
+    fn file_and_context(assets: Vec<String>) -> (NamedTempFile, PipesContext<DefaultWriter>) {
         let file = NamedTempFile::new().unwrap();
         let channel = DefaultChannel::File(FileChannel::new(file.path().into()));
         let context: PipesContext<DefaultWriter> = PipesContext {
             message_channel: channel.clone(),
             data: PipesContextData {
-                asset_keys: Some(vec!["asset1".to_string()]),
+                asset_keys: Some(assets),
                 run_id: "012345".to_string(),
                 ..Default::default()
             },
@@ -196,9 +253,22 @@ mod tests {
         (file, context)
     }
 
+    #[fixture]
+    fn single_asset_file_and_context() -> (NamedTempFile, PipesContext<DefaultWriter>) {
+        file_and_context(vec!["asset1".to_string()])
+    }
+
+    #[fixture]
+    fn multi_asset_file_and_context() -> (NamedTempFile, PipesContext<DefaultWriter>) {
+        file_and_context(vec!["asset1".to_string(), "asset2".to_string()])
+    }
+
     #[rstest]
     fn test_write_pipes_metadata(
-        #[from(file_and_context)] (file, mut context): (NamedTempFile, PipesContext<DefaultWriter>),
+        #[from(single_asset_file_and_context)] (file, mut context): (
+            NamedTempFile,
+            PipesContext<DefaultWriter>,
+        ),
     ) {
         let asset_metadata = HashMap::from([
             ("int", PipesMetadataValue::from(100)),
@@ -243,7 +313,7 @@ mod tests {
         ]);
 
         context
-            .report_asset_materialization("asset1", asset_metadata, Some("v1"))
+            .report_asset_materialization(Some("asset1"), asset_metadata, Some("v1"))
             .expect("Failed to report asset materialization");
 
         assert_eq!(
@@ -354,7 +424,10 @@ mod tests {
         })
     )]
     fn test_close_pipes_context(
-        #[from(file_and_context)] (file, mut context): (NamedTempFile, PipesContext<DefaultWriter>),
+        #[from(single_asset_file_and_context)] (file, mut context): (
+            NamedTempFile,
+            PipesContext<DefaultWriter>,
+        ),
         #[case] exc: Option<PipesException>,
         #[case] expected_message: serde_json::Value,
     ) {
@@ -394,7 +467,10 @@ mod tests {
 
     #[rstest]
     fn test_report_custom_message(
-        #[from(file_and_context)] (file, mut context): (NamedTempFile, PipesContext<DefaultWriter>),
+        #[from(single_asset_file_and_context)] (file, mut context): (
+            NamedTempFile,
+            PipesContext<DefaultWriter>,
+        ),
     ) {
         context
             .report_custom_message(json!({"key": "value"}))
@@ -411,5 +487,62 @@ mod tests {
                 },
             })
         );
+    }
+
+    #[rstest]
+    fn test_resolve_optionally_passed_asset_key_with_single_asset(
+        #[from(single_asset_file_and_context)] (_file, context): (
+            NamedTempFile,
+            PipesContext<DefaultWriter>,
+        ),
+    ) {
+        assert_eq!(
+            context
+                .resolve_optionally_passed_asset_key(Some("asset1"))
+                .unwrap(),
+            "asset1"
+        );
+
+        assert_eq!(
+            context.resolve_optionally_passed_asset_key(None).unwrap(),
+            "asset1"
+        );
+
+        assert!(matches!(
+            context.resolve_optionally_passed_asset_key(Some("invalid")),
+            Err(ResolveAssetKeyError::Invalid { key: _ })
+        ));
+    }
+
+    #[rstest]
+    fn test_resolve_optionally_passed_asset_key_with_multi_asset(
+        #[from(multi_asset_file_and_context)] (_file, context): (
+            NamedTempFile,
+            PipesContext<DefaultWriter>,
+        ),
+    ) {
+        assert_eq!(
+            context
+                .resolve_optionally_passed_asset_key(Some("asset1"))
+                .unwrap(),
+            "asset1"
+        );
+
+        assert_eq!(
+            context
+                .resolve_optionally_passed_asset_key(Some("asset2"))
+                .unwrap(),
+            "asset2"
+        );
+
+        assert!(matches!(
+            context.resolve_optionally_passed_asset_key(None),
+            Err(ResolveAssetKeyError::Missing {})
+        ));
+
+        assert!(matches!(
+            context.resolve_optionally_passed_asset_key(Some("invalid")),
+            Err(ResolveAssetKeyError::Invalid { key: _ })
+        ));
     }
 }

@@ -2,7 +2,7 @@
 
 ## [UNRELEASED]
 
--
+- (pull/117) Made the `asset_key` parameter of `report_asset_materialization` & `report_asset_check` optional. Added check to resolve the optionally passed asset key.
 
 ## 0.1.8
 
