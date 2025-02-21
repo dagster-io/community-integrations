@@ -24,7 +24,7 @@ jobs:
 
       - name: Sync dependencies
         working-directory: ${{ inputs.working_directory }}
-        run: uv sync
+        run: uv sync --all-extras
 
       - name: Lint
         working-directory: ${{ inputs.working_directory }}
