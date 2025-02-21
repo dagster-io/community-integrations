@@ -105,5 +105,6 @@ dev = [
     "pyright>=1.1.385",
     "pytest>=8.3.2",
     "pytest-cov>=6.0.0",
+    "ruff>=0.9.6",
     "testcontainers[postgres]>=4.8.2",
 ]
