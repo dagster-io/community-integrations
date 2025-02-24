@@ -68,6 +68,12 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
                 raise ValueError(
                     "Username and password should not be specified when logmech is 'browser'"
                 )
+            if self.browser is not None:
+                connection_params["browser"] = self.browser
+            if self.browser_tab_timeout is not None:
+                connection_params["browser_tab_timeout"] = str(self.browser_tab_timeout)
+            if self.browser_timeout is not None:
+                connection_params["browser_timeout"] = str(self.browser_timeout)
         else:
             if not self.user:
                 raise ValueError("User is required but not provided.")
@@ -79,12 +85,6 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
             connection_params["database"] = self.database
         if self.logmech is not None:
             connection_params["logmech"] = self.logmech
-        if self.browser is not None:
-            connection_params["browser"] = self.browser
-        if self.browser_tab_timeout is not None:
-            connection_params["browser_tab_timeout"] = str(self.browser_tab_timeout)
-        if self.browser_timeout is not None:
-            connection_params["browser_timeout"] = str(self.browser_timeout)
 
         teradata_conn = teradatasql.connect(**connection_params)
 
