@@ -30,6 +30,10 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
         default=None,
         description=("Name of the default database to use."),
     )
+    logmech: Optional[str] = None
+    browser: Optional[str] = None
+    browser_tab_timeout: Optional[int] = None
+    browser_timeout: Optional[int] = None
 
     @property
     @cached_method
@@ -41,6 +45,10 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
                 "user",
                 "password",
                 "database",
+                "logmech",
+                "browser",
+                "browser_tab_timeout",
+                "browser_timeout",
             )
             if self._resolved_config_dict.get(k) is not None
         }
@@ -49,21 +57,34 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
     @public
     @contextmanager
     def get_connection(self):
+        connection_params = {}
         if not self.host:
             raise ValueError("Host is required but not provided.")
-        if not self.user:
-            raise ValueError("User is required but not provided.")
-        if not self.password:
-            raise ValueError("Password is required but not provided.")
+        connection_params = {"host": self.host}
 
-        connection_params = {
-            "host": self.host,
-            "user": self.user,
-            "password": self.password,
-        }
+        if self.logmech is not None and self.logmech.lower() == "browser":
+            # When logmech is "browser", username and password should not be provided.
+            if self.user is not None or self.password is not None:
+                raise ValueError(
+                    "Username and password should not be specified when logmech is 'browser'"
+                )
+            if self.browser is not None:
+                connection_params["browser"] = self.browser
+            if self.browser_tab_timeout is not None:
+                connection_params["browser_tab_timeout"] = str(self.browser_tab_timeout)
+            if self.browser_timeout is not None:
+                connection_params["browser_timeout"] = str(self.browser_timeout)
+        else:
+            if not self.user:
+                raise ValueError("User is required but not provided.")
+            if not self.password:
+                raise ValueError("Password is required but not provided.")
+            connection_params.update({"user": self.user, "password": self.password})
 
         if self.database is not None:
             connection_params["database"] = self.database
+        if self.logmech is not None:
+            connection_params["logmech"] = self.logmech
 
         teradata_conn = teradatasql.connect(**connection_params)
 
@@ -341,6 +362,7 @@ class TeradataDagsterConnection:
 
     if TYPE_CHECKING:
         from dagster_azure.adls2 import ADLS2Resource
+
     @public
     def azure_blob_to_teradata(
         self,
