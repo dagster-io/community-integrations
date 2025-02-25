@@ -30,6 +30,8 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
         default=None,
         description=("Name of the default database to use."),
     )
+    port: Optional[str] = None
+    tmode: Optional[str] = "ANSI"
     logmech: Optional[str] = None
     browser: Optional[str] = None
     browser_tab_timeout: Optional[int] = None
@@ -61,6 +63,8 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
                 "user",
                 "password",
                 "database",
+                "port",
+                "tmode",
                 "logmech",
                 "browser",
                 "browser_tab_timeout",
@@ -112,9 +116,12 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
             if not self.password:
                 raise ValueError("Password is required but not provided.")
             connection_params.update({"user": self.user, "password": self.password})
-
         if self.database is not None:
             connection_params["database"] = self.database
+        if self.port is not None:
+            connection_params["port"] = self.port
+        if self.tmode is not None:
+            connection_params["tmode"] = self.tmode
         if self.logmech is not None:
             connection_params["logmech"] = self.logmech
         if self.http_proxy is not None:
