@@ -196,37 +196,63 @@ class HexResource:
         self,
         project_id: str,
         inputs: Optional[Dict[str, Any]] = None,
-        update_cache: bool = False,
+        update_cache: bool = False,  # Deprecated
         use_cached_sql: bool = True,
         notifications: List[NotificationDetails] = [],
+        dry_run: bool = False,
+        update_published_results: bool = False,
+        view_id: Optional[str] = None,
     ) -> RunResponse:
-        """Trigger a sync and initiate a sync run
+        """Trigger a run of the latest published version of a project.
 
         Args:
-            project_id (str): The Hex Project ID
-            inputs (dict): additional input parameters, a json-serializable dictionary
-                of variable_name: value pairs.
-            update_cache (bool): [DEPRECATED] When true, this run will update the cached state of the
-                published app with the latest run results.
-                Additionally, any SQL cells that have caching enabled will be
-                re-executed as part of this run. Note that this cannot be set to true
-                if custom input parameters are provided.
+            project_id (str): The Hex Project ID (UUID format)
+            inputs (Optional[Dict[str, Any]]): Input parameters for this project run.
+                Should be a dictionary of variable_name: value pairs. Only parameters
+                that are added to the published app can be set. Cannot be used with view_id.
+            update_cache (bool): [DEPRECATED] Use update_published_results instead.
             use_cached_sql (bool): When false, the project will run without using
                 any cached SQL results, and will update those cached SQL results.
+                Defaults to True.
+            notifications (List[NotificationDetails]): List of notification details
+                that will be delivered once a project run completes.
+            dry_run (bool): When true, performs a dry run without running the project.
+                Useful for validating API call structure. Defaults to False.
+            update_published_results (bool): When true, updates the cached state of
+                the published app with latest run results. Requires "Can Edit" permissions.
+                Cannot be true if custom inputs are provided. Defaults to False.
+            view_id (Optional[str]): SavedView viewId to use for the project run.
+                If specified, uses the saved view's inputs. Cannot be used with inputs.
 
         Returns:
             RunResponse
+
+        Raises:
+            ValueError: If both inputs and view_id are provided
         """
+        if inputs is not None and view_id is not None:
+            raise ValueError("Cannot specify both inputs and view_id")
+
         method = "POST"
         endpoint = f"/api/v1/project/{project_id}/run"
 
         if update_cache:
             self._log.warn(
-                "`update_cache` is deprecated. Please use `use_cached_sql` instead."
+                "`update_cache` is deprecated. Please use `update_published_results` to update "
+                "the published app cache and `use_cached_sql=False` to refresh SQL query caches."
             )
-        data: Dict[str, Any] = {"useCachedSqlResults": use_cached_sql}
+
+        data: Dict[str, Any] = {
+            "useCachedSqlResults": use_cached_sql,
+            "dryRun": dry_run,
+            "updatePublishedResults": update_published_results,
+        }
+
         if inputs:
             data["inputParams"] = inputs
+
+        if view_id:
+            data["viewId"] = view_id
 
         if notifications:
             data["notifications"] = notifications
