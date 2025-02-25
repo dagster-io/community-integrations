@@ -1,9 +1,14 @@
 # Changelog
+
 ---
 
 ## 0.1.6 - UNRELEASED
 
--
+### Added
+
+- Add support for new Hex API parameters in `run_project`: `dry_run`, `update_published_results`, and `view_id`
+- Improve deprecation notice for `update_cache` to clarify both alternatives
+- Add comprehensive test coverage for new parameters
 
 ## 0.1.5
 
