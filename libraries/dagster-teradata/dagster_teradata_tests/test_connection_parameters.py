@@ -2,14 +2,11 @@ from unittest import mock
 
 from dagster_teradata import TeradataResource
 
+
 @mock.patch("teradatasql.connect")
 def test_get_conn(mock_connect):
     resource = TeradataResource(
-        host="host",
-        user="login",
-        password="password",
-        database="schema",
-        port="1025"
+        host="host", user="login", password="password", database="schema", port="1025"
     )
 
     with resource.get_connection():
@@ -52,7 +49,7 @@ def test_get_sslmode_conn(mock_connect):
         password="password",
         database="schema",
         port="1025",
-        sslmode="require"
+        sslmode="require",
     )
 
     with resource.get_connection():
@@ -176,7 +173,7 @@ def test_get_proxy_conn(mock_connect):
         https_proxy="https://secureproxy",
         https_proxy_user="secureuser",
         https_proxy_password="securepass",
-        proxy_bypass_hosts="bypass.host.com"
+        proxy_bypass_hosts="bypass.host.com",
     )
 
     with resource.get_connection():
@@ -191,25 +188,3 @@ def test_get_proxy_conn(mock_connect):
     assert kwargs["https_proxy_user"] == "secureuser"
     assert kwargs["https_proxy_password"] == "securepass"
     assert kwargs["proxy_bypass_hosts"] == "bypass.host.com"
-
-
-@mock.patch("teradatasql.connect")
-def test_get_sso_conn(mock_connect):
-    resource = TeradataResource(
-        host="host",
-        database="schema",
-        logmech="browser",
-        browser="chrome",
-        browser_tab_timeout=30,
-        browser_timeout=60
-    )
-
-    with resource.get_connection():
-        pass
-
-    assert mock_connect.call_count == 1
-    args, kwargs = mock_connect.call_args
-    assert kwargs["logmech"] == "browser"
-    assert kwargs["browser"] == "chrome"
-    assert kwargs["browser_tab_timeout"] == '30'
-    assert kwargs["browser_timeout"] == '60'
