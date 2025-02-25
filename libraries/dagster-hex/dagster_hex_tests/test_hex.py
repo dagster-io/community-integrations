@@ -1,4 +1,5 @@
 from dagster_hex.resources import HexResource
+from dagster_hex.types import NotificationDetails
 
 
 def test_resource_request(requests_mock):
@@ -111,7 +112,7 @@ def test_run_project_with_notifications(requests_mock):
         json={"data": "mocked response"},
     )
 
-    notifications = [
+    notifications: list[NotificationDetails] = [
         {
             "type": "slack",
             "includeSuccessScreenshot": True,
