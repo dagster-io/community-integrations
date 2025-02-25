@@ -13,15 +13,15 @@ See:
 
 ## Installation
 
-See [Installing dagster-iceberg](https://jasperhg90.github.io/dagster-iceberg/installation/).
+See [Installing dagster-iceberg](https://jasperhg90.github.io/community-integrations/installation/).
 
 ## Documentation
 
-Documentation can be built locally by cloning this repository, navigating to the 'dagster-iceberg' folder, and running `make docs`
+Documentation can be built locally by cloning this repository, navigating to the 'dagster-iceberg' folder, and running `make docs`. It is also available on [here](https://jasperhg90.github.io/community-integrations/).
 
 ## Features
 
-Available features can be found [here](https://jasperhg90.github.io/dagster-iceberg/features/).
+Available features can be found [here](https://jasperhg90.github.io/community-integrations/features/).
 
 ## Status
 
