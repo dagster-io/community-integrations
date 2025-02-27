@@ -33,11 +33,14 @@ build-backend = "hatchling.build"
 daft = [
     "getdaft>=0.3.0",
 ]
+pandas = [
+    "pandas>=2.0.0",
+]
 polars = [
     "polars>=1.0.0",
 ]
-pandas = [
-    "pandas>=2.0.0",
+spark = [
+    "pyspark>=3.5.4",
 ]
 
 [tool.black]
