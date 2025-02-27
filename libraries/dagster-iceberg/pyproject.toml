@@ -40,7 +40,7 @@ polars = [
     "polars>=1.0.0",
 ]
 spark = [
-    "pyspark>=3.5.4",
+    "pyspark[connect]>=3.5.4",
 ]
 
 [tool.black]
