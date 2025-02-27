@@ -35,6 +35,7 @@ services:
     ports:
       - 8888:8888
       - 8080:8080
+      - 15002:15002
     links:
       - rest:rest
       - hive:hive
