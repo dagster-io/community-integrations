@@ -38,12 +38,12 @@ def invoke_materialize(
     return runner.invoke(asset_materialize_command, options)
 
 
-def test_single_asset():
+def test_polars():
     with instance_for_test() as instance:
-        result = invoke_materialize("clean_nyc_taxi_data")
+        result = invoke_materialize("reloaded_nyc_taxi_data")
         assert "RUN_SUCCESS" in result.output
-        assert (
-            instance.get_latest_materialization_event(AssetKey("clean_nyc_taxi_data"))
-            is not None
-        )
-        assert result.exit_code == 0
+        for asset_key in [
+            AssetKey("combined_nyc_taxi_data"),
+            AssetKey("reloaded_nyc_taxi_data"),
+        ]:
+            assert instance.get_latest_materialization_event(asset_key) is not None

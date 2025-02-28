@@ -32,8 +32,13 @@ raw_nyc_taxi_data = AssetSpec(
     },
     io_manager_key="iceberg_polars_io_manager",
 )
-def clean_nyc_taxi_data(raw_nyc_taxi_data: dict[str, pl.LazyFrame]) -> pl.LazyFrame:
+def combined_nyc_taxi_data(raw_nyc_taxi_data: dict[str, pl.LazyFrame]) -> pl.LazyFrame:
     return pl.concat(raw_nyc_taxi_data.values())
+
+
+@asset(io_manager_key="iceberg_polars_io_manager")
+def reloaded_nyc_taxi_data(combined_nyc_taxi_data: pl.LazyFrame) -> None:
+    print(combined_nyc_taxi_data.describe())
 
 
 catalog_config = IcebergCatalogConfig(
@@ -45,7 +50,7 @@ catalog_config = IcebergCatalogConfig(
 
 
 defs = Definitions(
-    assets=[raw_nyc_taxi_data, clean_nyc_taxi_data],
+    assets=[raw_nyc_taxi_data, combined_nyc_taxi_data, reloaded_nyc_taxi_data],
     resources={
         "polars_parquet_io_manager": PolarsParquetIOManager(
             base_dir="https://storage.googleapis.com/anaconda-public-data/nyc-taxi/"
