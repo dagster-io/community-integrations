@@ -36,4 +36,5 @@ def test_teradata_resource(teradata_connect):
         user="bar",
         password="baz",
         database="TESTDB",
+        tmode='ANSI'
     )
