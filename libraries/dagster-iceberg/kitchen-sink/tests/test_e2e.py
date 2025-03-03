@@ -16,7 +16,7 @@ MAKEFILE_DIR = file_relative_path(__file__, "../")
 def catalog():
     subprocess.run(["make", "catalog"], cwd=MAKEFILE_DIR, check=True)
     yield
-    subprocess.run(["make", "clean"], cwd=MAKEFILE_DIR, check=True)
+    subprocess.run(["make", "down"], cwd=MAKEFILE_DIR, check=True)
 
 
 def invoke_materialize(
