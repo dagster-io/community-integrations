@@ -14,9 +14,8 @@ from dagster_polars import PolarsParquetIOManager
 
 NUM_PARTS = 16  # 0
 
-CATALOG_NAME = "default"
-WAREHOUSE_PATH = "/tmp/warehouse"
-NAMESPACE = "default"
+CATALOG_NAME = "local"
+NAMESPACE = "demo.nyc"
 
 parts = StaticPartitionsDefinition([f"part.{i}" for i in range(NUM_PARTS)])
 raw_nyc_taxi_data = AssetSpec(
@@ -43,8 +42,11 @@ def reloaded_nyc_taxi_data(combined_nyc_taxi_data: pl.LazyFrame) -> None:
 
 catalog_config = IcebergCatalogConfig(
     properties={
-        "uri": f"sqlite:///{WAREHOUSE_PATH}/iceberg_catalog.db",
-        "warehouse": f"file://{WAREHOUSE_PATH}",
+        "type": "rest",
+        "uri": "http://localhost:8181",
+        "s3.endpoint": "http://localhost:9000",
+        "s3.access-key-id": "admin",
+        "s3.secret-access-key": "password",
     }
 )
 
