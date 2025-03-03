@@ -80,7 +80,8 @@ extend-exclude = [
   "docs",
   "site",
   ".nox",
-  ".notebooks"
+  ".notebooks",
+  "kitchen-sink/provision.py",  # Copied from https://github.com/apache/iceberg-python
 ]
 
 [tool.pytest.ini_options]
