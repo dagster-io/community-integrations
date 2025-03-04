@@ -14,8 +14,8 @@ from dagster_polars import PolarsParquetIOManager
 
 NUM_PARTS = 16  # 0
 
-CATALOG_NAME = "local"
-NAMESPACE = "demo.nyc"
+CATALOG_NAME = "demo"
+NAMESPACE = "nyc"
 
 parts = StaticPartitionsDefinition([f"part.{i}" for i in range(NUM_PARTS)])
 raw_nyc_taxi_data = AssetSpec(
