@@ -40,6 +40,7 @@ polars = [
     "polars>=1.0.0",
 ]
 spark = [
+    "dagster-pyspark>=0.26.1",
     "pyspark[connect]>=3.5.4",
 ]
 
