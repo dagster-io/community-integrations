@@ -206,12 +206,13 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
             else CustomDbIOManager
         )
         return IoManagerImplementation(
-            db_client=IcebergDbClient(),
-            database="iceberg",
-            schema=self.schema_,
             type_handlers=self.type_handlers(),
-            default_load_type=self.default_load_type(),
+            db_client=IcebergDbClient(),
+            # TODO(deepyaman): Qualify table name for Spark I/O manager with `database`.
+            database=context.resource_config["name"],
+            schema=self.schema_,
             io_manager_name="IcebergIOManager",
+            default_load_type=self.default_load_type(),
         )
 
 
