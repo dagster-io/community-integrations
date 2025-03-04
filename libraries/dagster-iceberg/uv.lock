@@ -472,6 +472,7 @@ polars = [
     { name = "polars" },
 ]
 spark = [
+    { name = "dagster-pyspark" },
     { name = "pyspark", extra = ["connect"] },
 ]
 
@@ -497,6 +498,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "dagster", specifier = ">=1.8.2" },
+    { name = "dagster-pyspark", marker = "extra == 'spark'", specifier = ">=0.26.1" },
     { name = "getdaft", marker = "extra == 'daft'", specifier = ">=0.3.0" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.0.0" },
     { name = "pendulum", specifier = ">=3.0.0" },
@@ -548,6 +550,32 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0b/08/87cd06155ba3c5971cee81f0ec3c0e8ed2b0f0ac711aa129946d5aec5753/dagster-polars-0.26.1.tar.gz", hash = "sha256:524af07ea1f2de4de1abd65ccf7ff76f827d904bbb4a8eda1696a33fb42fcded", size = 19298 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/48/53/805402f9e23a0fa32c34fc7afb03863976e9a5c12cdac320e158ea2aebe1/dagster_polars-0.26.1-py3-none-any.whl", hash = "sha256:0e2d60d3bc76104a3cc6bb9da9d8803f61c90a922ab1fcca7f7ec3967a6cd5e8", size = 23135 },
+]
+
+[[package]]
+name = "dagster-pyspark"
+version = "0.26.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dagster" },
+    { name = "dagster-spark" },
+    { name = "pyspark" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/47/fa/8600c58ac070adb839de6231fe00717101ccd08b8d728ec0c6e17e4ee436/dagster-pyspark-0.26.1.tar.gz", hash = "sha256:bf51e7424ddcb71bf5b967773c11577778aea6d97e1e756ae5730832b8e380a6", size = 11968 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3e/d0/33e529f4349448fd2031e5d342121cd7f2d16fc4e9e5410b58166213b23c/dagster_pyspark-0.26.1-py3-none-any.whl", hash = "sha256:440a815a81f0d8f14173c9ba77ddc148b66df4f91be65196dbc33942be628156", size = 12482 },
+]
+
+[[package]]
+name = "dagster-spark"
+version = "0.26.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dagster" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c5/b8/faaf9e88c0c91ea4b2041d089dbf2e020e1138d984d51c761186352f6993/dagster-spark-0.26.1.tar.gz", hash = "sha256:58478f88bb7952d27b4fe83ada86b81bace58a7d11dd56382380295188567f22", size = 28444 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/63/bb/8a3208862c513eee85426033ea9039e3f77224318890d70c39cd3b80ff2d/dagster_spark-0.26.1-py3-none-any.whl", hash = "sha256:c7a4c8141f8c2181eaf5c25bcc76893b21394bd409b2b5b33a091a472d9d4b3a", size = 30006 },
 ]
 
 [[package]]
