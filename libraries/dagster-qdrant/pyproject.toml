@@ -1,0 +1,26 @@
+[project]
+name = "dagster-qdrant"
+version = "0.0.1"
+description = "Dagster integration with Qdrant"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "dagster>=1.8.0",
+    "qdrant-client>=1.13.2",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest",
+    "pyright>=1.1.386",
+    "fastembed>=0.5.1",
+    "testcontainers>=4.4.0"
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_qdrant"]
