@@ -40,7 +40,7 @@ def invoke_materialize(
 
 def test_polars():
     with instance_for_test() as instance:
-        result = invoke_materialize("combined_nyc_taxi_data*")
+        result = invoke_materialize("*reloaded_nyc_taxi_data")
         assert "RUN_SUCCESS" in result.output
         for asset_key in [
             AssetKey("combined_nyc_taxi_data"),
