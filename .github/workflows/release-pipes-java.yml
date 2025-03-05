@@ -1,0 +1,37 @@
+name: Release dagster-pipes-java
+
+on:
+  push:
+    tags:
+      - 'dagster_pipes_java-*.*.*'
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    defaults:
+        run:
+          working-directory: ./libraries/pipes/implementations/java/
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Build
+        run: ./gradlew build
+
+      - name: Test
+        run: ./gradlew test
+
+      - name: Integration Test
+        run: nix develop .#java --command bash -c "uv run pytest"
+
+      - name: Publish and Release
+        run: ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache
+        env:
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.PGP_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.PGP_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.PGP_PRIVATE_KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}

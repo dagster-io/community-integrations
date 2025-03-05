@@ -1,13 +1,45 @@
 plugins {
     id 'java'
     id 'pmd'
+    id "com.vanniktech.maven.publish" version "0.30.0"
+    id 'signing'
 }
 
-group = 'org.example'
-version = '1.0-SNAPSHOT'
+import com.vanniktech.maven.publish.SonatypeHost
+
+mavenPublishing {
+    coordinates("io.dagster", "pipes", "1.0.0")
+    signAllPublications()
+
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+
+    pom {
+        name = 'pipes'
+        description = 'A java implementation of the dagster pipes protocol'
+        url = 'github.com/dagster-io/community-integrations'
+        licenses {
+            license {
+                name = 'The Apache License, Version 2.0'
+                url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+            }
+        }
+        developers {
+            developer {
+                id = 'dagster-io'
+                name = 'Dagster'
+            }
+        }
+        scm {
+            url = 'github.com/dagster-io/community-integrations'
+            connection = 'scm:git://github.com/dagster-io/community-integrations.git'
+            developerConnection = 'scm:git://github.com/dagster-io/community-integrations.git'
+        }
+    }
+}
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
 }
 
 dependencies {

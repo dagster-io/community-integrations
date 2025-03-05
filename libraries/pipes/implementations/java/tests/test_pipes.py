@@ -5,6 +5,6 @@ class TestJavaPipes(PipesTestSuite):
     BASE_ARGS = [
         "java",
         "-cp",
-        "build/libs/dagster-pipes-java-1.0-SNAPSHOT.jar",
-        "pipes.MainTest",
+        "build/libs/dagster-pipes-java.jar",
+        "io.dagster.pipes.MainTest",
     ]
