@@ -47,3 +47,14 @@ def test_polars():
             AssetKey("reloaded_nyc_taxi_data"),
         ]:
             assert instance.get_latest_materialization_event(asset_key) is not None
+
+
+def test_spark():
+    with instance_for_test() as instance:
+        result = invoke_materialize("*reloaded_nyc_taxi_data_spark")
+        assert "RUN_SUCCESS" in result.output
+        for asset_key in [
+            AssetKey("combined_nyc_taxi_data_spark"),
+            AssetKey("reloaded_nyc_taxi_data_spark"),
+        ]:
+            assert instance.get_latest_materialization_event(asset_key) is not None
