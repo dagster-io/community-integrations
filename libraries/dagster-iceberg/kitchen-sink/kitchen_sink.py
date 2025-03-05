@@ -15,7 +15,7 @@ from dagster_pyspark import PySparkResource
 from pyspark.sql.connect.dataframe import DataFrame
 
 
-NUM_PARTS = 16  # TODO(deepyaman): Make this configurable.
+NUM_PARTS = 2  # TODO(deepyaman): Make this configurable.
 
 CATALOG_NAME = "rest"
 NAMESPACE = "nyc"
