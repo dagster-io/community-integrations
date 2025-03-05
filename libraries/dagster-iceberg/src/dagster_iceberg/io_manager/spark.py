@@ -31,14 +31,14 @@ class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
     ):
         """Writes a PySpark dataframe to an Iceberg table."""
         obj.writeTo(
-            SparkIcebergDbClient.get_table_name(table_slice)
+            SparkIcebergDbClient.get_table_name(table_slice)  # pyright: ignore [reportArgumentType]
         ).create()  # TODO(deepyaman): Ensure table exists, and `overwritePartitions()`.
 
     def load_input(
         self, context: InputContext, table_slice: TableSlice, connection: SparkSession
     ) -> DataFrame:
         """Reads a PySpark dataframe from an Iceberg table."""
-        return connection.table(SparkIcebergDbClient.get_table_name(table_slice))
+        return connection.table(SparkIcebergDbClient.get_table_name(table_slice))  # pyright: ignore [reportArgumentType]
 
     @property
     def supported_types(self) -> Sequence[type[object]]:
