@@ -8,6 +8,7 @@ dev: export SPARK_REMOTE = sc://localhost
 dev: catalog
 	dagster dev -f kitchen_sink.py
 
+test: export SPARK_REMOTE = sc://localhost
 test:
 	uv run pytest
 
