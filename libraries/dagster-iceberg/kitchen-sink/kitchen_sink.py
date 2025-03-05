@@ -14,7 +14,7 @@ from dagster_polars import PolarsParquetIOManager
 
 NUM_PARTS = 16  # 0
 
-CATALOG_NAME = "demo"
+CATALOG_NAME = "rest"
 NAMESPACE = "nyc"
 
 parts = StaticPartitionsDefinition([f"part.{i}" for i in range(NUM_PARTS)])
