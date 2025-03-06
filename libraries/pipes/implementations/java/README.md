@@ -6,7 +6,7 @@ This project provides a Java implementation of the Dagster Pipes protocol. It ca
 
 We provide a simple example of how to interact with Dagster from Java. The example is a simple Java application that sends events to Dagster, which can be observer in the Dagster UI.
 
-- [Java code](src/main/java/pipes/utils/Example.java)
+- [Java code](src/main/java/io/dagster/pipes/utils/Example.java)
 - [Dagster code](examples/local/definitions.py)
 
 In order to run the example, follow these steps:

@@ -27,8 +27,8 @@ def count_adult_users(
         command=[
             "java",
             "-cp",
-            "build/libs/dagster-pipes-java-1.0-SNAPSHOT.jar",
-            "pipes.utils.Example",
+            "build/libs/dagster-pipes-java.jar",
+            "io.dagster.pipes.utils.Example",
         ],
     ).get_materialize_result()
 
