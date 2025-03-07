@@ -1,5 +1,5 @@
 import traceback
-from typing import TYPE_CHECKING, Any, Mapping, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Mapping, Optional, Sequence, Union
 
 import tenacity
 from dagster import (
@@ -37,7 +37,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         self,
         project: str,
         region: str,
-        job_name_by_code_location: "dict[str, str]",
+        job_name_by_code_location: "dict[str, Union[str, dict[str, str]]]",
         run_job_retry: "dict[str, int]",
         run_timeout: int,
         inst_data: Optional[ConfigurableClassData] = None,
@@ -88,14 +88,36 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
             context.dagster_run.run_id, {"cloud_run_job_execution_id": execution_id}
         )
 
+    def get_project_for_code_location_or_default(self, job_config: dict[str, Any]) -> str:
+        job_config = check.dict_param(job_config, "job_config")
+        return job_config.get('project_id', self.project)
+
+    def get_region_for_code_location_or_default(self, job_config: dict[str, Any]) -> str:
+        job_config = check.dict_param(job_config, "job_config")
+        return job_config.get('region', self.region)
+
+    def get_job_name_for_code_location(self, job_config: dict[str, Any]) -> str:
+        job_config = check.dict_param(job_config, "job_config")
+        return job_config["name"]
+
     def fully_qualified_job_name(self, code_location_name: str) -> str:
         try:
-            job_name = self.job_name_by_code_location[code_location_name]
+            job = self.job_name_by_code_location[code_location_name]
         except KeyError:
             raise Exception(
                 f"No run launcher defined for code location: {code_location_name}"
             )
-        return f"projects/{self.project}/locations/{self.region}/jobs/{job_name}"
+        # no additional job-specific configuration
+        if isinstance(job, str):
+            return (
+                f"projects/{self.project}/locations/{self.region}/jobs/{job}"
+            )
+        project_id_for_job = self.get_project_for_code_location_or_default(job)
+        region_for_job = self.get_region_for_code_location_or_default(job)
+        job_name = self.get_job_name_for_code_location(job)
+        return (
+            f"projects/{project_id_for_job}/locations/{region_for_job}/jobs/{job_name}"
+        )
 
     def create_execution(self, code_location_name: str, args: Sequence[str]):
         job_name = self.fully_qualified_job_name(code_location_name)
@@ -190,8 +212,10 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
                 Permissive({}),
                 is_required=True,
                 description=(
-                    "Job name for each code location. Each item in this map should be a key-value"
-                    " pair where the key is the code location name and the value is the job name."
+                    "Job name for each code location. Each item in this map may be a key-value"
+                    " pair where the key is the code location name and the value is the job name. "
+                    "Optionally, each code location key may specifiy the `job_name` and `project_id` "
+                    "override value in order to the code location to a different GCP project ID."
                 ),
             ),
             "run_job_retry": Field(
