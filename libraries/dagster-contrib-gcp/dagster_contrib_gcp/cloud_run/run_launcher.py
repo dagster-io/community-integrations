@@ -88,13 +88,17 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
             context.dagster_run.run_id, {"cloud_run_job_execution_id": execution_id}
         )
 
-    def get_project_for_code_location_or_default(self, job_config: dict[str, Any]) -> str:
+    def get_project_for_code_location_or_default(
+        self, job_config: dict[str, Any]
+    ) -> str:
         job_config = check.dict_param(job_config, "job_config")
-        return job_config.get('project_id', self.project)
+        return job_config.get("project_id", self.project)
 
-    def get_region_for_code_location_or_default(self, job_config: dict[str, Any]) -> str:
+    def get_region_for_code_location_or_default(
+        self, job_config: dict[str, Any]
+    ) -> str:
         job_config = check.dict_param(job_config, "job_config")
-        return job_config.get('region', self.region)
+        return job_config.get("region", self.region)
 
     def get_job_name_for_code_location(self, job_config: dict[str, Any]) -> str:
         job_config = check.dict_param(job_config, "job_config")
@@ -109,9 +113,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
             )
         # no additional job-specific configuration
         if isinstance(job, str):
-            return (
-                f"projects/{self.project}/locations/{self.region}/jobs/{job}"
-            )
+            return f"projects/{self.project}/locations/{self.region}/jobs/{job}"
         project_id_for_job = self.get_project_for_code_location_or_default(job)
         region_for_job = self.get_region_for_code_location_or_default(job)
         job_name = self.get_job_name_for_code_location(job)

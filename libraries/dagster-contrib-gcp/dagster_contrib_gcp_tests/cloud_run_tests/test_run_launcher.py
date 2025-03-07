@@ -44,8 +44,12 @@ def test_launch_run_with_job_config(
     mock_jobs_client,
     mock_executions_client,
 ):
-    instance_with_job_configs.launch_run(run_with_job_configs.run_id, workspace_with_job_configs)
-    run = check.not_none(instance_with_job_configs.get_run_by_id(run_with_job_configs.run_id))
+    instance_with_job_configs.launch_run(
+        run_with_job_configs.run_id, workspace_with_job_configs
+    )
+    run = check.not_none(
+        instance_with_job_configs.get_run_by_id(run_with_job_configs.run_id)
+    )
 
     # Assert the correct tag is set
     assert run.tags["cloud_run_job_execution_id"] == "test_execution_id"
