@@ -28,14 +28,14 @@ from dagster import (
 )
 
 from dagster_iceberg.config import IcebergCatalogConfig
-from dagster_iceberg.io_manager.arrow import IcebergPyarrowIOManager
+from dagster_iceberg.io_manager import IcebergIOManager
 
 
 @pytest.fixture
 def io_manager(
     catalog_name: str, namespace: str, catalog_config_properties: Dict[str, str]
-) -> IcebergPyarrowIOManager:
-    return IcebergPyarrowIOManager(
+) -> IcebergIOManager:
+    return IcebergIOManager(
         name=catalog_name,
         config=IcebergCatalogConfig(properties=catalog_config_properties),
         namespace=namespace,
@@ -207,7 +207,7 @@ def mapped_multi_partition(
 
 
 def test_unpartitioned_asset_to_unpartitioned_asset(
-    io_manager: IcebergPyarrowIOManager,
+    io_manager: IcebergIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
@@ -216,7 +216,7 @@ def test_unpartitioned_asset_to_unpartitioned_asset(
 
 
 def test_multi_partitioned_to_multi_partitioned_asset(
-    io_manager: IcebergPyarrowIOManager,
+    io_manager: IcebergIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
@@ -230,7 +230,7 @@ def test_multi_partitioned_to_multi_partitioned_asset(
 
 
 def test_multi_partitioned_to_single_partitioned_asset_colors(
-    io_manager: IcebergPyarrowIOManager,
+    io_manager: IcebergIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
@@ -251,7 +251,7 @@ def test_multi_partitioned_to_single_partitioned_asset_colors(
 
 
 def test_multi_partitioned_to_single_partitioned_asset_dates(
-    io_manager: IcebergPyarrowIOManager,
+    io_manager: IcebergIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
@@ -272,7 +272,7 @@ def test_multi_partitioned_to_single_partitioned_asset_dates(
 
 
 def test_multi_partitioned_to_non_partitioned_asset(
-    io_manager: IcebergPyarrowIOManager,
+    io_manager: IcebergIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
@@ -292,7 +292,7 @@ def test_multi_partitioned_to_non_partitioned_asset(
 
 
 def test_multi_partitioned_to_multi_partitioned_with_different_dimensions(
-    io_manager: IcebergPyarrowIOManager,
+    io_manager: IcebergIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
