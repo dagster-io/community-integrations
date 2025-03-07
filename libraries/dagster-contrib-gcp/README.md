@@ -39,7 +39,13 @@ run_launcher:
       env: GOOGLE_CLOUD_REGION
     job_name_by_code_location:
       my-code-location-1: my-cloud-run-job-1
-      my-code-location-2: my-cloud-run-job-2
+      # Optional Configuration
+      my-code-location-2: 
+        name: my-cloud-run-job-2
+        project_id: 
+          env: A_DIFFERENT_GOOGLE_CLOUD_PROJECT
+        region:
+          env: A DIFFERENT_GOOGLE_CLOUD_REGION
 ```
 
 Additional steps may be required for configuring IAM permissions, etc. In particular:
