@@ -37,6 +37,30 @@ def test_launch_run(
     assert args[0].overrides.timeout == dt.timedelta(seconds=7200)
 
 
+def test_launch_run_with_job_config(
+    instance_with_job_configs: DagsterInstance,
+    run_with_job_configs: DagsterRun,
+    workspace_with_job_configs: BaseWorkspaceRequestContext,
+    mock_jobs_client,
+    mock_executions_client,
+):
+    instance_with_job_configs.launch_run(run_with_job_configs.run_id, workspace_with_job_configs)
+    run = check.not_none(instance_with_job_configs.get_run_by_id(run_with_job_configs.run_id))
+
+    # Assert the correct tag is set
+    assert run.tags["cloud_run_job_execution_id"] == "test_execution_id"
+
+    # Check that mock was called with correct args
+    mock_jobs_client.run_job.assert_called_once()
+    args, _ = mock_jobs_client.run_job.call_args
+    assert isinstance(args[0], RunJobRequest)
+    assert (
+        args[0].name
+        == "projects/test_gcp-123/locations/other_test_region/jobs/test_job_with_config"
+    )
+    assert args[0].overrides.timeout == dt.timedelta(seconds=7200)
+
+
 def test_terminate(
     instance: DagsterInstance,
     run: DagsterRun,
