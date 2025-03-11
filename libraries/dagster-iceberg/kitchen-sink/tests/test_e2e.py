@@ -1,3 +1,4 @@
+import os
 import subprocess
 from typing import Optional
 
@@ -10,6 +11,8 @@ from dagster._utils import file_relative_path
 
 
 MAKEFILE_DIR = file_relative_path(__file__, "../")
+
+os.environ["SPARK_REMOTE"] = "sc://localhost"
 
 
 @pytest.fixture(autouse=True)
