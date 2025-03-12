@@ -18,6 +18,7 @@ os.environ["SPARK_REMOTE"] = "sc://localhost"
 @pytest.fixture(autouse=True)
 def catalog():
     subprocess.run(["make", "catalog"], cwd=MAKEFILE_DIR, check=True)
+    subprocess.run(["sleep", "10"])
     yield
     subprocess.run(["make", "down"], cwd=MAKEFILE_DIR, check=True)
 
