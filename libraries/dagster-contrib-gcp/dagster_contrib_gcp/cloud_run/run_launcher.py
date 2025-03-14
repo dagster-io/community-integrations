@@ -114,6 +114,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         # no additional job-specific configuration
         if isinstance(job, str):
             return f"projects/{self.project}/locations/{self.region}/jobs/{job}"
+
         project_id_for_job = self.get_project_for_code_location_or_default(job)
         region_for_job = self.get_region_for_code_location_or_default(job)
         job_name = self.get_job_name_for_code_location(job)
@@ -121,9 +122,24 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
             f"projects/{project_id_for_job}/locations/{region_for_job}/jobs/{job_name}"
         )
 
+    def env_override_for_code_location(self, code_location_name: str) -> dict[str, str]:
+        env = {}
+        try:
+            job = self.job_name_by_code_location[code_location_name]
+        except KeyError:
+            raise Exception(
+                f"No run launcher defined for code location: {code_location_name}"
+            )
+        if isinstance(job, str):
+            return env
+
+        _ = job.pop("name")
+        return job
+
     def create_execution(self, code_location_name: str, args: Sequence[str]):
         job_name = self.fully_qualified_job_name(code_location_name)
-        return self.execute_job(job_name, args=args)
+        job_env = self.env_override_for_code_location(code_location_name)
+        return self.execute_job(job_name, args=args, env=job_env)
 
     def execute_job(
         self,

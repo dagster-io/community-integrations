@@ -45,7 +45,7 @@ run_launcher:
         project_id: 
           env: A_DIFFERENT_GOOGLE_CLOUD_PROJECT
         region:
-          env: A DIFFERENT_GOOGLE_CLOUD_REGION
+          env: A_DIFFERENT_GOOGLE_CLOUD_REGION
 ```
 
 Additional steps may be required for configuring IAM permissions, etc. In particular:
