@@ -227,6 +227,7 @@ source = { editable = "." }
 dependencies = [
     { name = "dagster" },
     { name = "google-cloud-run" },
+    { name = "google-cloud-secret-manager" },
     { name = "tenacity" },
 ]
 
@@ -241,6 +242,7 @@ dev = [
 requires-dist = [
     { name = "dagster", specifier = ">=1.9.0" },
     { name = "google-cloud-run", specifier = ">=0.10.10" },
+    { name = "google-cloud-secret-manager", specifier = ">=2.23.1" },
     { name = "tenacity", specifier = ">=8.0.0" },
 ]
 
@@ -349,6 +351,22 @@ wheels = [
 ]
 
 [[package]]
+name = "google-cloud-secret-manager"
+version = "2.23.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-api-core", extra = ["grpc"] },
+    { name = "google-auth" },
+    { name = "grpc-google-iam-v1" },
+    { name = "proto-plus" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/de/93/a5d29da42b156557d53d7478d85f2fc152fca0b1a972e1149bf37e3eadbd/google_cloud_secret_manager-2.23.1.tar.gz", hash = "sha256:4d779ed5666b5c4a4e24e52f808b2e159b60fc68ed7b1f230ca491918632a114", size = 262696 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7a/57/b4b5c8101f9437ad78e911ed178645b5e52065314198035c8f9ddc875cea/google_cloud_secret_manager-2.23.1-py2.py3-none-any.whl", hash = "sha256:ed9a58750ec24be46dc17ea9b6cb1e7088490921b810a3c365b3e28be82984a1", size = 213554 },
+]
+
+[[package]]
 name = "googleapis-common-protos"
 version = "1.65.0"
 source = { registry = "https://pypi.org/simple" }
@@ -428,16 +446,16 @@ wheels = [
 
 [[package]]
 name = "grpc-google-iam-v1"
-version = "0.13.1"
+version = "0.14.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "googleapis-common-protos", extra = ["grpc"] },
     { name = "grpcio" },
     { name = "protobuf" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/63/41/f01bf46bac4034b4750575fe87c80c5a43a8912847307955e22f2125b60c/grpc-google-iam-v1-0.13.1.tar.gz", hash = "sha256:3ff4b2fd9d990965e410965253c0da6f66205d5a8291c4c31c6ebecca18a9001", size = 17664 }
+sdist = { url = "https://files.pythonhosted.org/packages/55/bc/310df38bfb67a5504d37dfcc370afd478cd8ccbf207057dd6f68e2e6350d/grpc_google_iam_v1-0.14.1.tar.gz", hash = "sha256:14149f37af0e5779fa8a22a8ae588663269e8a479d9c2e69a5056e589bf8a891", size = 16263 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a8/7d/da3875b7728bc700eeb28b513754ce237c04ac7cbf8559d76b0464ee01cb/grpc_google_iam_v1-0.13.1-py2.py3-none-any.whl", hash = "sha256:c3e86151a981811f30d5e7330f271cee53e73bb87755e88cc3b6f0c7b5fe374e", size = 24866 },
+    { url = "https://files.pythonhosted.org/packages/18/c1/00672fe34c8e7abe4e4956774daed7bfcf5805341dcb103457922f6ef83c/grpc_google_iam_v1-0.14.1-py2.py3-none-any.whl", hash = "sha256:b4eca35b2231dd76066ebf1728f3cd30d51034db946827ef63ef138da14eea16", size = 19253 },
 ]
 
 [[package]]

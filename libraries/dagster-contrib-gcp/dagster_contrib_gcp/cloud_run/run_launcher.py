@@ -1,5 +1,6 @@
 import traceback
 from typing import TYPE_CHECKING, Any, Mapping, Optional, Sequence, Union
+import os
 
 import tenacity
 from dagster import (
@@ -24,10 +25,18 @@ from google.api_core.operation import Operation
 from google.cloud import run_v2
 from google.cloud.run_v2 import RunJobRequest
 from google.cloud.run_v2.types import k8s_min
+from google.cloud.secretmanager_v1 import (
+    AccessSecretVersionRequest,
+    SecretManagerServiceClient,
+)
+
 from typing_extensions import Self
 
 if TYPE_CHECKING:
     from dagster._config.config_schema import UserConfigSchema
+
+ENV_KEY = "env"
+SECRETS_KEY = "secret_name"
 
 
 class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
@@ -122,19 +131,50 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
             f"projects/{project_id_for_job}/locations/{region_for_job}/jobs/{job_name}"
         )
 
-    def env_override_for_code_location(self, code_location_name: str) -> dict[str, str]:
-        env = {}
+    def resolve_secret(self, secret_name: str) -> Any:
+        client = SecretManagerServiceClient()
+        latest = AccessSecretVersionRequest(name=secret_name)
+        response = client.access_secret_version(latest)
+        return response.payload.data.decode("UTF-8")
+
+    def env_override_for_code_location(
+        self, code_location_name: str
+    ) -> Optional[dict[str, str]]:
+        """
+        Build EnvVar override context to pass to CloudRun job if configured
+        """
         try:
             job = self.job_name_by_code_location[code_location_name]
         except KeyError:
             raise Exception(
                 f"No run launcher defined for code location: {code_location_name}"
             )
+        # No custom configuration at all
         if isinstance(job, str):
-            return env
+            return None
 
-        _ = job.pop("name")
-        return job
+        job.pop("name")
+        env = {}
+        for setting_name in job:
+            node_config = job.get(setting_name)
+            # Explicit config
+            if not isinstance(node_config, dict):
+                env[setting_name] = node_config
+            
+            elif ENV_KEY in node_config:
+                # Configuration use environment variables
+                env_var = node_config.get(ENV_KEY)
+                env[setting_name] = os.environ[env_var]
+            
+            elif SECRETS_KEY in node_config:
+                # Configuration use secrets
+                secret_name = node_config.get(ENV_KEY)
+                env[setting_name] = self.resolve_secret(secret_name)
+            else:
+                raise KeyError(
+                    f"Unsupported Code Location configuration. Missing required keys for {code_location_name}"
+                )
+        return env
 
     def create_execution(self, code_location_name: str, args: Sequence[str]):
         job_name = self.fully_qualified_job_name(code_location_name)
