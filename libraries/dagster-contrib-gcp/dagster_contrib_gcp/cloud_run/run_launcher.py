@@ -1,5 +1,5 @@
 import traceback
-from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Mapping, Optional, Sequence, Union
 import os
 
 import tenacity
@@ -157,15 +157,18 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         env = {}
         for setting_name in job:
             node_config = job.get(setting_name)
-            # Explicit config
-            if not isinstance(node_config, dict):
+            try:
+                node_config = check.dict_param(node_config, "node_config")
+            except check.ParameterCheckError:
+                # Explicit config
                 env[setting_name] = node_config
-            
-            elif ENV_KEY in node_config:
+                continue
+
+            if ENV_KEY in node_config:
                 # Configuration use environment variables
                 env_var = node_config[ENV_KEY]
-                env[setting_name] = os.getenv(env_var)
-            
+                env[setting_name] = os.getenv(env_var) if env_var is not None else None
+
             elif SECRETS_KEY in node_config:
                 # Configuration use secrets
                 secret_name = node_config[SECRETS_KEY]

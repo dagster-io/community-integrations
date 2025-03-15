@@ -94,14 +94,14 @@ def test_env_override_for_code_location(patched_resolve_secret):
     env_with_secrets = run_launcher.CloudRunRunLauncher.env_override_for_code_location(
         mock, "other-code-location"
     )
-    assert "project_id" in env_with_secrets
-    assert "region" in env_with_secrets
+    assert env_with_secrets is not None and "project_id" in env_with_secrets
+    assert env_with_secrets is not None and "region" in env_with_secrets
 
     explicit_env = run_launcher.CloudRunRunLauncher.env_override_for_code_location(
         mock, "final-code-location"
     )
-    assert "project_id" in explicit_env
-    assert "region" in explicit_env
+    assert explicit_env is not None and "project_id" in explicit_env
+    assert explicit_env is not None and "region" in explicit_env
 
 
 def test_terminate(
