@@ -39,10 +39,39 @@ run_launcher:
       env: GOOGLE_CLOUD_REGION
     job_name_by_code_location:
       my-code-location-1: my-cloud-run-job-1
-      my-code-location-2: my-cloud-run-job-2
+      # Optional Configuration
+      my-code-location-2: 
+        name: my-cloud-run-job-2
+        project_id: 
+          secret_name: SOME_GCP_SECRET
+        region:
+          env: A_DIFFERENT_GOOGLE_CLOUD_REGION
+```
+#### Code Location Configuration
+The following configurations are supported per code-location:
+
+```yaml
+# No customizations
+my-code-location-1: my-cloud-run-job-1
+
+# Environment Variable or Secrets Manager references
+my-code-location-1: 
+  name: my-cloud-run-job-1
+  project_id:
+    secret_name: A_GCP_SECRET_NAME
+  region:
+    env: SOME_ENVIRONMENT_VARIABLE
+
+# Explicit in-line declaration
+my-code-location-1: 
+  name: my-cloud-run-job-1
+  project_id: gcp_123
+  region: us-central1
 ```
 
 Additional steps may be required for configuring IAM permissions, etc. In particular:
 - Ensure that the webserver/daemon environment has the necessary permissions to execute the Cloud Run jobs
+- Ensure the webserver/daemon can access Secret Manager (if using code location configuration with Secret Manager)
 - Ensure that the Cloud Run run worker jobs have the necessary permissions to execute your Dagster runs
 See the [Cloud Run documentation](https://cloud.google.com/run/docs) for more information.
+

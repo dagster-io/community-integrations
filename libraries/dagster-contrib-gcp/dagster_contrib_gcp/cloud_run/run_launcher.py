@@ -1,5 +1,6 @@
 import traceback
-from typing import TYPE_CHECKING, Any, Mapping, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Mapping, Optional, Sequence, Union
+import os
 
 import tenacity
 from dagster import (
@@ -24,10 +25,18 @@ from google.api_core.operation import Operation
 from google.cloud import run_v2
 from google.cloud.run_v2 import RunJobRequest
 from google.cloud.run_v2.types import k8s_min
+from google.cloud.secretmanager_v1 import (
+    AccessSecretVersionRequest,
+    SecretManagerServiceClient,
+)
+
 from typing_extensions import Self
 
 if TYPE_CHECKING:
     from dagster._config.config_schema import UserConfigSchema
+
+ENV_KEY = "env"
+SECRETS_KEY = "secret_name"
 
 
 class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
@@ -37,7 +46,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         self,
         project: str,
         region: str,
-        job_name_by_code_location: "dict[str, str]",
+        job_name_by_code_location: "dict[str, Union[str, dict[str, str]]]",
         run_job_retry: "dict[str, int]",
         run_timeout: int,
         inst_data: Optional[ConfigurableClassData] = None,
@@ -88,18 +97,92 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
             context.dagster_run.run_id, {"cloud_run_job_execution_id": execution_id}
         )
 
+    def get_project_for_code_location_or_default(
+        self, job_config: dict[str, Any]
+    ) -> str:
+        job_config = check.dict_param(job_config, "job_config")
+        return job_config.get("project_id", self.project)
+
+    def get_region_for_code_location_or_default(
+        self, job_config: dict[str, Any]
+    ) -> str:
+        job_config = check.dict_param(job_config, "job_config")
+        return job_config.get("region", self.region)
+
+    def get_job_name_for_code_location(self, job_config: dict[str, Any]) -> str:
+        job_config = check.dict_param(job_config, "job_config")
+        return job_config["name"]
+
     def fully_qualified_job_name(self, code_location_name: str) -> str:
         try:
-            job_name = self.job_name_by_code_location[code_location_name]
+            job = self.job_name_by_code_location[code_location_name]
         except KeyError:
             raise Exception(
                 f"No run launcher defined for code location: {code_location_name}"
             )
-        return f"projects/{self.project}/locations/{self.region}/jobs/{job_name}"
+        # no additional job-specific configuration
+        if isinstance(job, str):
+            return f"projects/{self.project}/locations/{self.region}/jobs/{job}"
+
+        project_id_for_job = self.get_project_for_code_location_or_default(job)
+        region_for_job = self.get_region_for_code_location_or_default(job)
+        job_name = self.get_job_name_for_code_location(job)
+        return (
+            f"projects/{project_id_for_job}/locations/{region_for_job}/jobs/{job_name}"
+        )
+
+    def resolve_secret(self, secret_name: str) -> Any:
+        client = SecretManagerServiceClient()
+        latest = AccessSecretVersionRequest(name=secret_name)
+        response = client.access_secret_version(latest)
+        return response.payload.data.decode("UTF-8")
+
+    def env_override_for_code_location(
+        self, code_location_name: str
+    ) -> Optional[dict[str, str]]:
+        """
+        Build EnvVar override context to pass to CloudRun job if configured
+        """
+        try:
+            job = self.job_name_by_code_location[code_location_name]
+        except KeyError:
+            raise Exception(
+                f"No run launcher defined for code location: {code_location_name}"
+            )
+        # No custom configuration at all
+        if isinstance(job, str):
+            return None
+
+        job.pop("name")
+        env = {}
+        for setting_name in job:
+            node_config = job.get(setting_name)
+            try:
+                node_config = check.dict_param(node_config, "node_config")
+            except check.ParameterCheckError:
+                # Explicit config
+                env[setting_name] = node_config
+                continue
+
+            if ENV_KEY in node_config:
+                # Configuration use environment variables
+                env_var = node_config[ENV_KEY]
+                env[setting_name] = os.getenv(env_var) if env_var is not None else None
+
+            elif SECRETS_KEY in node_config:
+                # Configuration use secrets
+                secret_name = node_config[SECRETS_KEY]
+                env[setting_name] = self.resolve_secret(secret_name)
+            else:
+                raise KeyError(
+                    f"Unsupported Code Location configuration. Missing required keys for {code_location_name}"
+                )
+        return env
 
     def create_execution(self, code_location_name: str, args: Sequence[str]):
         job_name = self.fully_qualified_job_name(code_location_name)
-        return self.execute_job(job_name, args=args)
+        job_env = self.env_override_for_code_location(code_location_name)
+        return self.execute_job(job_name, args=args, env=job_env)
 
     def execute_job(
         self,
@@ -190,8 +273,10 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
                 Permissive({}),
                 is_required=True,
                 description=(
-                    "Job name for each code location. Each item in this map should be a key-value"
-                    " pair where the key is the code location name and the value is the job name."
+                    "Job name for each code location. Each item in this map may be a key-value"
+                    " pair where the key is the code location name and the value is the job name. "
+                    "Optionally, each code location key may specifiy the `job_name` and `project_id` "
+                    "override value in order to the code location to a different GCP project ID."
                 ),
             ),
             "run_job_retry": Field(
