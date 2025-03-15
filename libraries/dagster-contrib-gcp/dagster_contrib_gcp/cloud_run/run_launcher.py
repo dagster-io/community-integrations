@@ -1,5 +1,5 @@
 import traceback
-from typing import TYPE_CHECKING, Any, Mapping, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, Sequence, Union
 import os
 
 import tenacity
@@ -163,12 +163,12 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
             
             elif ENV_KEY in node_config:
                 # Configuration use environment variables
-                env_var = node_config.get(ENV_KEY)
-                env[setting_name] = os.environ[env_var]
+                env_var = node_config[ENV_KEY]
+                env[setting_name] = os.getenv(env_var)
             
             elif SECRETS_KEY in node_config:
                 # Configuration use secrets
-                secret_name = node_config.get(ENV_KEY)
+                secret_name = node_config[SECRETS_KEY]
                 env[setting_name] = self.resolve_secret(secret_name)
             else:
                 raise KeyError(
