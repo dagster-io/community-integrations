@@ -6,12 +6,15 @@ from dagster import (
 )
 from dagster._core.launcher import WorkerStatus
 from dagster._core.workspace.context import BaseWorkspaceRequestContext
+from dagster_contrib_gcp.cloud_run import run_launcher
 from google.cloud.run_v2 import (
     CancelExecutionRequest,
     GetExecutionRequest,
     RunJobRequest,
 )
 import datetime as dt
+
+from unittest.mock import MagicMock, patch
 
 
 def test_launch_run(
@@ -63,6 +66,42 @@ def test_launch_run_with_job_config(
         == "projects/test_gcp-123/locations/other_test_region/jobs/test_job_with_config"
     )
     assert args[0].overrides.timeout == dt.timedelta(seconds=7200)
+
+
+@patch.object(run_launcher.CloudRunRunLauncher, "resolve_secret")
+def test_env_override_for_code_location(patched_resolve_secret):
+    mock = MagicMock()
+    mock.job_name_by_code_location = {
+        "my-code-location": "my-cloud-run-job-1",
+        "other-code-location": {
+            "name": "my-cloud-run-job-2",
+            "project_id": {"secret_name": "GCP_SECRET_NAME"},
+            "region": {"env": "GCP_REGION"},
+        },
+        "final-code-location": {
+            "name": "my-cloud-run-job-3",
+            "project_id": "gcp_123",
+            "region": "us-central1",
+        },
+    }
+    assert (
+        run_launcher.CloudRunRunLauncher.env_override_for_code_location(
+            mock, "my-code-location"
+        )
+        is None
+    )
+    patched_resolve_secret.return_value = "gcp_secret_value"
+    env_with_secrets = run_launcher.CloudRunRunLauncher.env_override_for_code_location(
+        mock, "other-code-location"
+    )
+    assert "project_id" in env_with_secrets
+    assert "region" in env_with_secrets
+
+    explicit_env = run_launcher.CloudRunRunLauncher.env_override_for_code_location(
+        mock, "final-code-location"
+    )
+    assert "project_id" in explicit_env
+    assert "region" in explicit_env
 
 
 def test_terminate(
