@@ -1,5 +1,4 @@
 import enum
-from abc import abstractmethod
 from contextlib import contextmanager  # noqa
 from typing import Dict, Iterator, Optional, Sequence, Type, TypedDict, cast  # noqa
 
@@ -10,7 +9,6 @@ from dagster._core.definitions.time_window_partitions import TimeWindow
 from dagster._core.storage.db_io_manager import (
     DbClient,
     DbIOManager,
-    DbTypeHandler,
     TablePartitionDimension,
     TableSlice,
 )
@@ -20,6 +18,10 @@ from pyiceberg.catalog import Catalog, load_catalog
 from dagster_iceberg._db_io_manager import CustomDbIOManager
 from dagster_iceberg.config import IcebergCatalogConfig  # noqa
 from dagster_iceberg._utils import preview
+from dagster_iceberg.type_handlers._arrow import _IcebergPyArrowTypeHandler
+from dagster_iceberg.type_handlers._daft import _IcebergDaftTypeHandler
+from dagster_iceberg.type_handlers._pandas import _IcebergPandasTypeHandler
+from dagster_iceberg.type_handlers._polars import _IcebergPolarsTypeHandler
 
 
 class PartitionSpecUpdateMode(enum.Enum):
@@ -190,14 +192,6 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
         " 'custom' uses the custom 'CustomDbIOManager' that allows you to use additional mappings. See <docs>.",
     )
 
-    @staticmethod
-    @abstractmethod
-    def type_handlers() -> Sequence[DbTypeHandler]: ...
-
-    @staticmethod
-    def default_load_type() -> Optional[Type]:
-        return None
-
     def create_io_manager(self, context) -> DbIOManager:
         if self.config is not None:
             self.config.model_dump()
@@ -207,12 +201,16 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
             else CustomDbIOManager
         )
         return IoManagerImplementation(
-            type_handlers=self.type_handlers(),
+            type_handlers=[
+                _IcebergPyArrowTypeHandler(),
+                _IcebergDaftTypeHandler(),
+                _IcebergPandasTypeHandler(),
+                _IcebergPolarsTypeHandler(),
+            ],
             db_client=IcebergDbClient(),
             database=self.name,
             schema=self.schema_,
             io_manager_name="IcebergIOManager",
-            default_load_type=self.default_load_type(),
         )
 
 
