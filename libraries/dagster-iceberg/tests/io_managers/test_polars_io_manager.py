@@ -1,5 +1,8 @@
 import datetime as dt
+import importlib
+import sys
 from typing import Dict
+from unittest.mock import patch
 
 import polars as pl
 import pytest
@@ -131,6 +134,41 @@ def multi_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
             "category_this": [category],
         }
     )
+
+
+def test_missing_dependencies(
+    asset_b_df_table_identifier: str,
+    asset_b_plus_one_table_identifier: str,
+    catalog: Catalog,
+    catalog_name: str,
+    catalog_config_properties: Dict[str, str],
+    namespace: str,
+):
+    with patch.dict(sys.modules, {"dagster_iceberg.type_handlers._daft": None}):
+        if "dagster_iceberg.io_manager" in sys.modules:
+            module = importlib.reload(sys.modules["dagster_iceberg.io_manager"])
+        else:
+            module = importlib.import_module("dagster_iceberg.io_manager")
+
+        io_manager = getattr(module, "IcebergIOManager")(
+            name=catalog_name,
+            config=IcebergCatalogConfig(properties=catalog_config_properties),
+            namespace=namespace,
+        )
+
+        resource_defs = {"io_manager": io_manager}
+
+        for _ in range(2):
+            res = materialize([b_df, b_plus_one], resources=resource_defs)
+            assert res.success
+
+            table = catalog.load_table(asset_b_df_table_identifier)
+            out_df = table.scan().to_arrow()
+            assert out_df["a"].to_pylist() == [1, 2, 3]
+
+            dt = catalog.load_table(asset_b_plus_one_table_identifier)
+            out_dt = dt.scan().to_arrow()
+            assert out_dt["a"].to_pylist() == [2, 3, 4]
 
 
 def test_iceberg_io_manager_with_assets(

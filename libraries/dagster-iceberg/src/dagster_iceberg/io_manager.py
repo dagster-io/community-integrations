@@ -1,6 +1,19 @@
 import enum
-from contextlib import contextmanager  # noqa
-from typing import Dict, Iterator, Optional, Sequence, Type, TypedDict, cast  # noqa
+import importlib
+import itertools
+from contextlib import contextmanager
+
+from functools import cached_property
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    Iterator,
+    Optional,
+    Sequence,
+    Type,
+    TypedDict,
+    cast,
+)
 
 from dagster import OutputContext
 from dagster._annotations import public
@@ -9,6 +22,7 @@ from dagster._core.definitions.time_window_partitions import TimeWindow
 from dagster._core.storage.db_io_manager import (
     DbClient,
     DbIOManager,
+    DbTypeHandler,
     TablePartitionDimension,
     TableSlice,
 )
@@ -16,12 +30,19 @@ from pydantic import Field
 from pyiceberg.catalog import Catalog, load_catalog
 
 from dagster_iceberg._db_io_manager import CustomDbIOManager
-from dagster_iceberg.config import IcebergCatalogConfig  # noqa
+from dagster_iceberg.config import IcebergCatalogConfig
 from dagster_iceberg._utils import preview
-from dagster_iceberg.type_handlers._arrow import _IcebergPyArrowTypeHandler
-from dagster_iceberg.type_handlers._daft import _IcebergDaftTypeHandler
-from dagster_iceberg.type_handlers._pandas import _IcebergPandasTypeHandler
-from dagster_iceberg.type_handlers._polars import _IcebergPolarsTypeHandler
+
+if TYPE_CHECKING:
+    from dagster._core.storage.db_io_manager import DbTypeHandler
+
+
+_ALL_TYPE_HANDLERS = (
+    "dagster_iceberg.type_handlers._arrow._IcebergPyArrowTypeHandler",
+    "dagster_iceberg.type_handlers._daft._IcebergDaftTypeHandler",
+    "dagster_iceberg.type_handlers._pandas._IcebergPandasTypeHandler",
+    "dagster_iceberg.type_handlers._polars._IcebergPolarsTypeHandler",
+)
 
 
 class PartitionSpecUpdateMode(enum.Enum):
@@ -192,6 +213,28 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
         " 'custom' uses the custom 'CustomDbIOManager' that allows you to use additional mappings. See <docs>.",
     )
 
+    @cached_property
+    def type_handlers(self) -> Sequence[DbTypeHandler]:
+        available_type_handlers = []
+        for type_handler_path in _ALL_TYPE_HANDLERS:
+            try:
+                type_handler_path, type_handler_class = type_handler_path.rsplit(".", 1)
+                module = importlib.import_module(type_handler_path)
+                type_handler = getattr(module, type_handler_class)
+                available_type_handlers.append(type_handler)
+            except (ImportError, AttributeError):
+                pass
+
+        return [type_handler() for type_handler in available_type_handlers]
+
+    @property
+    def supported_types(self) -> Sequence[Type[object]]:
+        return tuple(
+            itertools.chain.from_iterable(
+                type_handler.supported_types for type_handler in self.type_handlers
+            )
+        )
+
     def create_io_manager(self, context) -> DbIOManager:
         if self.config is not None:
             self.config.model_dump()
@@ -201,12 +244,7 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
             else CustomDbIOManager
         )
         return IoManagerImplementation(
-            type_handlers=[
-                _IcebergPyArrowTypeHandler(),
-                _IcebergDaftTypeHandler(),
-                _IcebergPandasTypeHandler(),
-                _IcebergPolarsTypeHandler(),
-            ],
+            type_handlers=self.type_handlers,
             db_client=IcebergDbClient(),
             database=self.name,
             schema=self.schema_,
