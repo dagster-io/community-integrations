@@ -136,7 +136,7 @@ def multi_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
     )
 
 
-def test_missing_dependencies(
+def test_works_without_other_type_handlers(
     asset_b_df_table_identifier: str,
     asset_b_plus_one_table_identifier: str,
     catalog: Catalog,
@@ -144,7 +144,14 @@ def test_missing_dependencies(
     catalog_config_properties: Dict[str, str],
     namespace: str,
 ):
-    with patch.dict(sys.modules, {"dagster_iceberg.type_handlers._daft": None}):
+    with patch.dict(
+        sys.modules,
+        {
+            "dagster_iceberg.type_handlers._arrow": None,
+            "dagster_iceberg.type_handlers._daft": None,
+            "dagster_iceberg.type_handlers._pandas": None,
+        },
+    ):
         if "dagster_iceberg.io_manager" in sys.modules:
             module = importlib.reload(sys.modules["dagster_iceberg.io_manager"])
         else:
