@@ -1,5 +1,4 @@
 import enum
-import importlib
 import itertools
 from contextlib import contextmanager
 
@@ -215,17 +214,17 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
 
     @cached_property
     def type_handlers(self) -> Sequence[DbTypeHandler]:
-        available_type_handlers = []
-        for type_handler_path in _ALL_TYPE_HANDLERS:
-            try:
-                type_handler_path, type_handler_class = type_handler_path.rsplit(".", 1)
-                module = importlib.import_module(type_handler_path)
-                type_handler = getattr(module, type_handler_class)
-                available_type_handlers.append(type_handler)
-            except (ImportError, AttributeError):
-                pass
+        from dagster_iceberg.type_handlers._arrow import _IcebergPyArrowTypeHandler
+        from dagster_iceberg.type_handlers._daft import _IcebergDaftTypeHandler
+        from dagster_iceberg.type_handlers._pandas import _IcebergPandasTypeHandler
+        from dagster_iceberg.type_handlers._polars import _IcebergPolarsTypeHandler
 
-        return [type_handler() for type_handler in available_type_handlers]
+        return [
+            _IcebergPyArrowTypeHandler(),
+            _IcebergDaftTypeHandler(),
+            _IcebergPandasTypeHandler(),
+            _IcebergPolarsTypeHandler(),
+        ]
 
     @property
     def supported_types(self) -> Sequence[Type[object]]:
