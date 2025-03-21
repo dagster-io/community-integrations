@@ -222,7 +222,7 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
                 module = importlib.import_module(type_handler_path)
                 type_handler = getattr(module, type_handler_class)
                 available_type_handlers.append(type_handler)
-            except (ImportError, AttributeError):
+            except ImportError:
                 pass
 
         return [type_handler() for type_handler in available_type_handlers]
