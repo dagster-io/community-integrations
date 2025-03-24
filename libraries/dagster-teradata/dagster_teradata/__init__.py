@@ -1,3 +1,5 @@
+from dagster._core.libraries import DagsterLibraryRegistry
+
 from dagster_teradata.resources import (
     TeradataDagsterConnection as TeradataDagsterConnection,
     TeradataResource as TeradataResource,
@@ -6,3 +8,5 @@ from dagster_teradata.resources import (
 )
 
 __version__ = "0.0.1"
+
+DagsterLibraryRegistry.register("dagster-teradata", __version__)
