@@ -1,6 +1,5 @@
 [project]
 name = "dagster-anthropic"
-version = "0.0.2"
 description = "Dagster integration with Anthropic"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -8,6 +7,7 @@ dependencies = [
     "dagster>=1.8.0",
     "anthropic>=0.42.0",
 ]
+dynamic = ["version"]
 
 [tool.uv]
 dev-dependencies = [
@@ -22,3 +22,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["dagster_anthropic"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_anthropic.__version__"}

@@ -1,6 +1,5 @@
 [project]
 name = "dagster-notdiamond"
-version = "0.1.3"
 description = "Dagster integration with Not Diamond"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -8,6 +7,7 @@ dependencies = [
     "dagster>=1.8.0",
     "notdiamond",
 ]
+dynamic = ["version"]
 
 [tool.uv]
 dev-dependencies = [
@@ -24,3 +24,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["dagster_notdiamond"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_notdiamond.__version__"}

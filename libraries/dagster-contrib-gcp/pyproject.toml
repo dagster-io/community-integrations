@@ -1,6 +1,5 @@
 [project]
 name = "dagster-contrib-gcp"
-version = "0.0.4"
 description = "Community contributed Google Cloud Platform integration"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -10,6 +9,7 @@ dependencies = [
     "google-cloud-secret-manager>=2.23.1",
     "tenacity>=8.0.0",
 ]
+dynamic = ["version"]
 
 [tool.uv]
 dev-dependencies = [
@@ -24,3 +24,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages]
 find = {exclude= ['dagster_contrib_gcp_tests*']}
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_contrib_gcp.__version__"}

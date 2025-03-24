@@ -1,5 +1,7 @@
-from dagster_sdf.version import __version__
+from importlib.metadata import version
+
+import dagster_sdf
 
 
 def test_version():
-    assert __version__
+    assert version("dagster-sdf") == dagster_sdf.__version__
