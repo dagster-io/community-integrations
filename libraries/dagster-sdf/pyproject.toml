@@ -31,4 +31,4 @@ build-backend = "setuptools.build_meta"
 packages = ["dagster_sdf"]
 
 [tool.setuptools.dynamic]
-version = {attr = "dagster_sdf.__version__"}
+version = {attr = "dagster_sdf.version.__version__"}
