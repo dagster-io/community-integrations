@@ -34,10 +34,10 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
         run: uv run ruff format --check
 
-      - name: Type check
-        working-directory: ${{ inputs.working_directory }}
-        run: uv run pyright
-
       - name: Test
         working-directory: ${{ inputs.working_directory }}
         run: uv run pytest
+
+      - name: Type check
+        working-directory: ${{ inputs.working_directory }}
+        run: uv run pyright
