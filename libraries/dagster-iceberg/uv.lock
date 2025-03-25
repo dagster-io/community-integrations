@@ -484,7 +484,6 @@ polars = [
     { name = "polars" },
 ]
 spark = [
-    { name = "dagster-pyspark" },
     { name = "pyspark", extra = ["connect"] },
 ]
 
@@ -492,6 +491,7 @@ spark = [
 dev = [
     { name = "dagit" },
     { name = "dagster-polars" },
+    { name = "dagster-pyspark" },
     { name = "fsspec", extra = ["http"] },
     { name = "psycopg2-binary" },
     { name = "pyright" },
@@ -510,13 +510,12 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "dagster", specifier = ">=1.8.2" },
-    { name = "dagster-pyspark", marker = "extra == 'spark'", specifier = ">=0.26.1" },
     { name = "getdaft", marker = "extra == 'daft'", specifier = ">=0.3.0" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.0.0" },
     { name = "pendulum", specifier = ">=3.0.0" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=1.0.0" },
     { name = "pyiceberg", extras = ["pyarrow"], specifier = ">=0.8" },
-    { name = "pyspark", extras = ["connect"], marker = "extra == 'spark'", specifier = ">=3.5.4" },
+    { name = "pyspark", extras = ["connect"], marker = "extra == 'spark'", specifier = ">=3.4.0" },
     { name = "tenacity", specifier = ">=8.5.0" },
 ]
 
@@ -524,6 +523,7 @@ requires-dist = [
 dev = [
     { name = "dagit", specifier = ">=1.8.8" },
     { name = "dagster-polars", specifier = ">=0.26.1" },
+    { name = "dagster-pyspark", specifier = ">=0.26.1" },
     { name = "fsspec", extras = ["http"], specifier = ">=2025.2.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "pyright", specifier = ">=1.1.385" },

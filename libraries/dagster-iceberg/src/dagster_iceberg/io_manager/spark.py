@@ -1,12 +1,13 @@
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
+from typing import TYPE_CHECKING, cast
 
 try:
     from pyspark.sql.connect.dataframe import DataFrame
     from pyspark.sql.connect.session import SparkSession
 except ImportError as e:
     raise ImportError("Please install dagster-iceberg with the 'spark' extra.") from e
-from dagster import ConfigurableIOManagerFactory
+from dagster import Config, ConfigurableIOManagerFactory
 from dagster._core.execution.context.input import InputContext
 from dagster._core.execution.context.output import OutputContext
 from dagster._core.storage.db_io_manager import (
@@ -15,7 +16,13 @@ from dagster._core.storage.db_io_manager import (
     DbTypeHandler,
     TableSlice,
 )
-from dagster_pyspark.resources import spark_session_from_config
+
+if TYPE_CHECKING:
+    from pyspark.sql._typing import OptionalPrimitiveType
+
+
+class SparkConfig(Config):
+    config_map: dict[str, "OptionalPrimitiveType"] | None = None
 
 
 class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
@@ -78,17 +85,20 @@ class SparkIcebergDbClient(DbClient[SparkSession]):
         context: OutputContext | InputContext,
         table_slice: TableSlice,
     ) -> Iterator[SparkSession]:
-        yield spark_session_from_config(
-            context.resource_config.get("spark_config")
-            if context.resource_config
-            else None,
-        )
+        builder = cast(SparkSession.Builder, SparkSession.builder)
+        if (
+            context.resource_config is not None
+            and (config_map := context.resource_config.get("config_map")) is not None
+        ):
+            builder.config(map=cast(dict[str, "OptionalPrimitiveType"], config_map))
+
+        yield builder.getOrCreate()
 
 
 class SparkIcebergIOManager(ConfigurableIOManagerFactory):
     catalog_name: str
     namespace: str
-    spark_config: Mapping[str, str] | None = None
+    spark_config: SparkConfig | None = None
 
     def create_io_manager(self, context) -> DbIOManager:
         return DbIOManager(
