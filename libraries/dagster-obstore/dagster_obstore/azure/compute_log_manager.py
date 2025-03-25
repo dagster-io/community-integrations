@@ -6,6 +6,8 @@ from dagster import (
     Field,
     Permissive,
     StringSource,
+)
+from dagster import (
     _check as check,
 )
 from dagster._config.config_type import Noneable
@@ -23,7 +25,7 @@ POLLING_INTERVAL = 5
 
 
 if TYPE_CHECKING:
-    from obstore.store import ClientConfig, AzureConfigInput
+    from obstore.store import AzureConfig, ClientConfig
 
 
 class ADLSComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass):
@@ -115,7 +117,7 @@ class ADLSComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass
         timeout: Optional[str] = "60s",
         skip_empty_files: Optional[bool] = False,
         upload_interval: Optional[int] = None,
-        extra_azure_args: Optional["AzureConfigInput"] = None,
+        extra_azure_args: Optional["AzureConfig"] = None,
         show_url_only: Optional[bool] = False,
     ):
         self._storage_account = check.str_param(storage_account, "storage_account")
@@ -146,11 +148,11 @@ class ADLSComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass
         self._upload_interval = check.opt_int_param(upload_interval, "upload_interval")
         self._show_url_only = show_url_only
 
-        azure_config: AzureConfigInput = {}
+        azure_config: AzureConfig = {}
         client_config: ClientConfig = {}
 
         if storage_account:
-            azure_config["azure_storage_account_name"] = storage_account
+            azure_config["account_name"] = storage_account
 
         if client_id:
             azure_config["client_id"] = client_id
@@ -160,10 +162,10 @@ class ADLSComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass
             azure_config["tenant_id"] = tenant_id
 
         if sas_token:
-            azure_config["sas_token"] = sas_token
+            azure_config["sas_key"] = sas_token
 
         if access_key:
-            azure_config["access_key"] = access_key
+            azure_config["account_key"] = access_key
 
         if use_azure_cli:
             azure_config["use_azure_cli"] = use_azure_cli
@@ -174,12 +176,11 @@ class ADLSComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass
             client_config["allow_invalid_certificates"] = allow_invalid_certificates
         if timeout:
             client_config["timeout"] = timeout
-
         self._store = AzureStore(
-            container=container,
+            container_name=container,
             config=azure_config,
             client_options=client_config,
-            **extra_azure_args if extra_azure_args is not None else {},
+            **extra_azure_args if extra_azure_args is not None else {},  # type: ignore
         )
 
     @classmethod

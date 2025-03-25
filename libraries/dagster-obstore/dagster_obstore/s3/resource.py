@@ -5,7 +5,7 @@ from obstore.store import S3Store
 from pydantic import Field
 
 if TYPE_CHECKING:
-    from obstore.store import RetryConfig, S3ConfigInput
+    from obstore.store import RetryConfig, S3Config
 
 
 class S3ObjectStore(ConfigurableResource):
@@ -37,7 +37,7 @@ class S3ObjectStore(ConfigurableResource):
         retry_config: Optional["RetryConfig"] = None,
     ) -> S3Store:
         """Creates an S3 object store."""
-        config: S3ConfigInput = {
+        config: S3Config = {
             "access_key_id": self.access_key_id,
             "secret_access_key": self.secret_access_key,
         }

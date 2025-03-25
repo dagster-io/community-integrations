@@ -96,8 +96,8 @@ class BaseCloudStorageComputeLogManager(
         elif prefix:
             # add the trailing '' to make sure that ['a'] does not match ['apple']
             blob_prefix = "/".join([self._prefix, "storage", *prefix, ""])
-            chunk_streams: ListStream[list[ObjectMeta]] = obs.list(
-                self._store, prefix=blob_prefix, return_arrow=False
+            chunk_streams: ListStream[list[ObjectMeta]] = self._store.list(
+                prefix=blob_prefix, return_arrow=False
             )
             blob_keys_to_remove = []
             for chunk in chunk_streams:
@@ -111,7 +111,7 @@ class BaseCloudStorageComputeLogManager(
             )
 
         if blob_keys_to_remove:
-            obs.delete(store=self._store, paths=blob_keys_to_remove)
+            self._store.delete(paths=blob_keys_to_remove)
 
     def download_url_for_type(  # type: ignore
         self, log_key: Sequence[str], io_type: ComputeIOType
@@ -130,7 +130,7 @@ class BaseCloudStorageComputeLogManager(
     ) -> bool:
         blob_key = self._blob_key(log_key, io_type, partial=partial)
         try:
-            obs.head(self._store, path=blob_key)
+            self._store.head(path=blob_key)
         except (FileNotFoundError, NotFoundError):
             return False
         return True
@@ -148,8 +148,7 @@ class BaseCloudStorageComputeLogManager(
 
         blob_key = self._blob_key(log_key, io_type, partial=partial)
         with open(path, "rb") as data:
-            obs.put(
-                self._store,
+            self._store.put(
                 blob_key,
                 file=data,
                 attributes={"ContentType": "text/plain"},
@@ -164,15 +163,15 @@ class BaseCloudStorageComputeLogManager(
         ensure_dir(os.path.dirname(path))
         blob_key = self._blob_key(log_key, io_type, partial=partial)
         with open(path, "wb") as fileobj:
-            file_bytes = obs.get(self._store, blob_key).bytes()
+            file_bytes = self._store.get(blob_key).bytes()
             fileobj.write(file_bytes)
 
     def get_log_keys_for_log_key_prefix(
         self, log_key_prefix: Sequence[str], io_type: ComputeIOType
     ) -> Sequence[Sequence[str]]:
         directory = self._resolve_path_for_namespace(log_key_prefix)
-        chunk_streams: ListStream[list[ObjectMeta]] = obs.list(
-            self._store, prefix="/".join(directory)
+        chunk_streams: ListStream[list[ObjectMeta]] = self._store.list(
+            prefix="/".join(directory)
         )
 
         results = []

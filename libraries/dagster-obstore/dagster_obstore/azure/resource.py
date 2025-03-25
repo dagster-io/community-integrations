@@ -5,7 +5,7 @@ from obstore.store import AzureStore
 from pydantic import Field
 
 if TYPE_CHECKING:
-    from obstore.store import AzureConfigInput, RetryConfig
+    from obstore.store import AzureConfig, RetryConfig
 
 
 class AzureServicePrincipal(ConfigurableResource):
@@ -48,9 +48,9 @@ class AzureObjectStore(ConfigurableResource):
         retry_config: Optional["RetryConfig"] = None,
     ) -> AzureStore:
         """Creates an Azure object store."""
-        config: AzureConfigInput = {}
+        config: AzureConfig = {}
         if self.access_key:
-            config["access_key"] = self.access_key
+            config["account_key"] = self.access_key
 
         if self.service_principal:
             config["client_id"] = self.service_principal.client_id
@@ -58,13 +58,13 @@ class AzureObjectStore(ConfigurableResource):
             config["tenant_id"] = self.service_principal.tenant_id
 
         if self.sas_token:
-            config["sas_token"] = self.sas_token
+            config["sas_key"] = self.sas_token
 
         if self.use_azure_cli:
             config["use_azure_cli"] = self.use_azure_cli
 
         return AzureStore(
-            container=container,
+            container_name=container,
             config=config,
             client_options={
                 "timeout": timeout,
