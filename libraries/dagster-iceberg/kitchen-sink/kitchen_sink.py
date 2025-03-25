@@ -8,8 +8,8 @@ from dagster import (
     asset,
 )
 from dagster_iceberg.config import IcebergCatalogConfig
-from dagster_iceberg.io_manager.polars import IcebergPolarsIOManager
-from dagster_iceberg.io_manager.spark import SparkIcebergIOManager
+from dagster_iceberg.io_manager import IcebergIOManager
+from dagster_iceberg.spark import SparkIcebergIOManager
 from dagster_polars import PolarsParquetIOManager
 from dagster_pyspark import PySparkResource
 from pyspark.sql.connect.dataframe import DataFrame
@@ -32,13 +32,13 @@ raw_nyc_taxi_data = AssetSpec(
             "nyc.parquet", partition_mapping=AllPartitionMapping()
         )
     },
-    io_manager_key="iceberg_polars_io_manager",
+    io_manager_key="iceberg_io_manager",
 )
 def combined_nyc_taxi_data(raw_nyc_taxi_data: dict[str, pl.LazyFrame]) -> pl.LazyFrame:
     return pl.concat(raw_nyc_taxi_data.values())
 
 
-@asset(io_manager_key="iceberg_polars_io_manager")
+@asset(io_manager_key="iceberg_io_manager")
 def reloaded_nyc_taxi_data(combined_nyc_taxi_data: pl.LazyFrame) -> None:
     print(combined_nyc_taxi_data.describe())
 
@@ -77,7 +77,7 @@ defs = Definitions(
         "polars_parquet_io_manager": PolarsParquetIOManager(
             base_dir="https://storage.googleapis.com/anaconda-public-data/nyc-taxi/"
         ),
-        "iceberg_polars_io_manager": IcebergPolarsIOManager(
+        "iceberg_io_manager": IcebergIOManager(
             name=CATALOG_NAME, config=catalog_config, namespace=NAMESPACE
         ),
         "pyspark": PySparkResource(spark_config={}),
