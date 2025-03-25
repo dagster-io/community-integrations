@@ -61,7 +61,7 @@ def book_reviews_summary(
     prompt = f"""
     Given the book reviews for {book_review_data["title"]}, provide a detailed summary:
 
-    {'|'.join([r['content'] for r in book_review_data["reviews"]])}
+    {"|".join([r["content"] for r in book_review_data["reviews"]])}
     """
 
     with notdiamond.get_client(context) as client:
