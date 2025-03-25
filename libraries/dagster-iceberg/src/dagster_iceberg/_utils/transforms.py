@@ -12,7 +12,8 @@ def date_diff(start: dt.datetime, end: dt.datetime) -> pendulum.Interval:
 
 
 def diff_to_transformation(
-    start: dt.datetime, end: dt.datetime
+    start: dt.datetime,
+    end: dt.datetime,
 ) -> transforms.Transform:
     """Based on the interval between two dates, return a transformation"""
     delta = date_diff(start, end)
@@ -26,7 +27,6 @@ def diff_to_transformation(
         case _:
             if delta.in_months() == 1:
                 return transforms.MonthTransform()
-            else:
-                raise NotImplementedError(
-                    f"Unsupported time window: {delta.in_words()}"
-                )
+            raise NotImplementedError(
+                f"Unsupported time window: {delta.in_words()}",
+            )

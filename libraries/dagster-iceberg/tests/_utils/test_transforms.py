@@ -7,7 +7,7 @@ from dagster_iceberg._utils import transforms
 
 
 @pytest.mark.parametrize(
-    "start, end, expected_transformation",
+    ("start", "end", "expected_transformation"),
     [
         (
             dt.datetime(2023, 1, 1, 0, 0, 0),

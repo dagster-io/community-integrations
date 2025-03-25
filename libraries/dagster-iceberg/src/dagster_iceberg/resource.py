@@ -1,13 +1,11 @@
-from typing import Optional
-
 from dagster import ConfigurableResource
 from dagster._annotations import public
 from pydantic import Field
 from pyiceberg.catalog import load_catalog
 from pyiceberg.table import Table
 
-from dagster_iceberg.config import IcebergCatalogConfig
 from dagster_iceberg._utils import preview
+from dagster_iceberg.config import IcebergCatalogConfig
 
 
 @public
@@ -50,12 +48,12 @@ class IcebergTableResource(ConfigurableResource):
     table: str = Field(
         description="Name of the iceberg table to interact with.",
     )
-    schema_: Optional[str] = Field(
+    schema_: str | None = Field(
         default=None,
         alias="namespace",
         description="Name of the iceberg catalog namespace to use.",
     )  # schema is a reserved word for pydantic
-    snapshot_id: Optional[int] = Field(
+    snapshot_id: int | None = Field(
         default=None,
         description="Snapshot ID that you would like to load. Default is latest.",
     )
@@ -63,4 +61,4 @@ class IcebergTableResource(ConfigurableResource):
     def load(self) -> Table:
         config_ = self.config.model_dump()
         catalog = load_catalog(name=self.name, **config_["properties"])
-        return catalog.load_table(identifier="%s.%s" % (self.schema_, self.table))
+        return catalog.load_table(identifier=f"{self.schema_}.{self.table}")

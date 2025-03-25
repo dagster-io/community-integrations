@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Mapping, Union, cast  # noqa
+from collections.abc import Mapping
+from typing import Any, cast
 
 from dagster import (
     InputContext,
@@ -32,8 +33,8 @@ class CustomDbIOManager(DbIOManager):
 
     def _get_schema(
         self,
-        context: Union[OutputContext, InputContext],
-        output_context_metadata: ArbitraryMetadataMapping | Dict[str, Any],
+        context: OutputContext | InputContext,
+        output_context_metadata: ArbitraryMetadataMapping | dict[str, Any],
     ) -> str:
         asset_key_path = context.asset_key.path
         # schema order of precedence: metadata, I/O manager 'schema' config, key_prefix
@@ -48,13 +49,15 @@ class CustomDbIOManager(DbIOManager):
         return schema
 
     def _get_table_slice(
-        self, context: Union[OutputContext, InputContext], output_context: OutputContext
+        self,
+        context: OutputContext | InputContext,
+        output_context: OutputContext,
     ) -> TableSlice:
         output_context_metadata = output_context.definition_metadata or {}
 
         schema: str
         table: str
-        partition_dimensions: List[TablePartitionDimension] = []
+        partition_dimensions: list[TablePartitionDimension] = []
         if context.has_asset_key:
             table = context.asset_key.path[-1]
             schema = self._get_schema(context, output_context_metadata)
@@ -66,18 +69,17 @@ class CustomDbIOManager(DbIOManager):
                         f"Asset '{context.asset_key}' has partitions, but no 'partition_expr'"
                         " metadata value, so we don't know what column it's partitioned on. To"
                         " specify a column, set this metadata value. E.g."
-                        ' @asset(metadata={"partition_expr": "your_partition_column"}).'
+                        ' @asset(metadata={"partition_expr": "your_partition_column"}).',
                     )
                 if isinstance(context.asset_partitions_def, MultiPartitionsDefinition):
-                    for partition_dimension in generate_multi_partitions_dimension(
+                    partition_dimensions = generate_multi_partitions_dimension(
                         asset_partition_keys=context.asset_partition_keys,
                         asset_partitions_def=context.asset_partitions_def,
                         partition_expr=cast(Mapping[str, str], partition_expr),
                         asset_key=context.asset_key,
-                    ):
-                        partition_dimensions.append(partition_dimension)
+                    )
                 else:
-                    partition_dimensions.append(
+                    partition_dimensions = [
                         generate_single_partition_dimension(
                             partition_expr=cast(str, partition_expr),
                             asset_partition_keys=context.asset_partition_keys,
@@ -89,8 +91,8 @@ class CustomDbIOManager(DbIOManager):
                                 )
                                 else None
                             ),
-                        )
-                    )
+                        ),
+                    ]
         else:
             table = output_context.name
             if output_context_metadata.get("schema"):

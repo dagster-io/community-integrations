@@ -1,5 +1,3 @@
-from typing import Dict
-
 import pyarrow as pa
 import pytest
 from dagster import asset, materialize
@@ -15,36 +13,40 @@ def table_name() -> str:
     return "resource_data"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def table_identifier(namespace: str, table_name: str) -> str:
     return f"{namespace}.{table_name}"
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def create_table_in_catalog(
-    catalog: Catalog, table_identifier: str, data_schema: pa.Schema
+    catalog: Catalog,
+    table_identifier: str,
+    data_schema: pa.Schema,
 ):
     catalog.create_table(table_identifier, data_schema)
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def iceberg_table(
-    create_table_in_catalog, catalog: Catalog, table_identifier: str
+    create_table_in_catalog,
+    catalog: Catalog,
+    table_identifier: str,
 ) -> Table:
     return catalog.load_table(table_identifier)
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def append_data_to_table(iceberg_table: Table, data: pa.Table):
     iceberg_table.append(df=data)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def pyiceberg_table_resource(
     catalog_name: str,
     namespace: str,
     table_name: str,
-    catalog_config_properties: Dict[str, str],
+    catalog_config_properties: dict[str, str],
 ) -> IcebergTableResource:
     return IcebergTableResource(
         name=catalog_name,

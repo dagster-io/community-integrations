@@ -1,4 +1,4 @@
-from typing import Sequence, Type
+from collections.abc import Sequence
 
 try:
     import daft as da
@@ -18,7 +18,10 @@ class _IcebergDaftTypeHandler(_handler.IcebergBaseTypeHandler[da.DataFrame]):
     """Type handler that converts data between Iceberg tables and polars DataFrames"""
 
     def to_data_frame(
-        self, table: ibt.Table, table_slice: TableSlice, target_type: Type[da.DataFrame]
+        self,
+        table: ibt.Table,
+        table_slice: TableSlice,
+        target_type: type[da.DataFrame],
     ) -> da.DataFrame:
         selected_fields: str = (
             ",".join(table_slice.columns) if table_slice.columns is not None else "*"
@@ -32,7 +35,7 @@ class _IcebergDaftTypeHandler(_handler.IcebergBaseTypeHandler[da.DataFrame]):
             ).partition_dimensions_to_filters()
             row_filter = " AND ".join(expressions)
 
-        ddf = table.to_daft()  # type: ignore # noqa
+        ddf = table.to_daft()  # noqa: F841, `daft.sql` detects `daft.DataFrame` objects
 
         stmt = f"SELECT {selected_fields} FROM ddf"
         if row_filter is not None:
@@ -44,7 +47,7 @@ class _IcebergDaftTypeHandler(_handler.IcebergBaseTypeHandler[da.DataFrame]):
         return obj.to_arrow()
 
     @property
-    def supported_types(self) -> Sequence[Type[object]]:
+    def supported_types(self) -> Sequence[type[object]]:
         return [da.DataFrame]
 
 

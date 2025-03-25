@@ -1,5 +1,4 @@
 import datetime as dt
-from typing import Dict
 
 import pandas as pd
 import pyarrow as pa
@@ -21,7 +20,9 @@ from dagster_iceberg.io_manager.pandas import IcebergPandasIOManager
 
 @pytest.fixture
 def io_manager(
-    catalog_name: str, namespace: str, catalog_config_properties: Dict[str, str]
+    catalog_name: str,
+    namespace: str,
+    catalog_config_properties: dict[str, str],
 ) -> IcebergPandasIOManager:
     return IcebergPandasIOManager(
         name=catalog_name,
@@ -36,27 +37,27 @@ def custom_db_io_manager(io_manager: IcebergPandasIOManager):
 
 
 # NB: iceberg table identifiers are namespace + asset names (see below)
-@pytest.fixture(scope="function")
+@pytest.fixture
 def asset_b_df_table_identifier(namespace: str) -> str:
     return f"{namespace}.b_df"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def asset_b_plus_one_table_identifier(namespace: str) -> str:
     return f"{namespace}.b_plus_one"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def asset_hourly_partitioned_table_identifier(namespace: str) -> str:
     return f"{namespace}.hourly_partitioned"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def asset_daily_partitioned_table_identifier(namespace: str) -> str:
     return f"{namespace}.daily_partitioned"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def asset_multi_partitioned_table_identifier(namespace: str) -> str:
     return f"{namespace}.multi_partitioned"
 
@@ -83,7 +84,7 @@ def hourly_partitioned(context: AssetExecutionContext) -> pd.DataFrame:
     value = context.op_execution_context.op_config["value"]
 
     return pa.Table.from_pydict(
-        {"partition": [partition], "value": [value], "b": [1]}
+        {"partition": [partition], "value": [value], "b": [1]},
     ).to_pandas()
 
 
@@ -98,7 +99,7 @@ def daily_partitioned(context: AssetExecutionContext) -> pd.DataFrame:
     value = context.op_execution_context.op_config["value"]
 
     return pa.Table.from_pydict(
-        {"partition": [partition], "value": [value], "b": [1]}
+        {"partition": [partition], "value": [value], "b": [1]},
     ).to_pandas()
 
 
@@ -107,17 +108,18 @@ def daily_partitioned(context: AssetExecutionContext) -> pd.DataFrame:
     partitions_def=MultiPartitionsDefinition(
         partitions_defs={
             "date": DailyPartitionsDefinition(
-                start_date="2022-01-01", end_date="2022-01-10"
+                start_date="2022-01-01",
+                end_date="2022-01-10",
             ),
             "category": StaticPartitionsDefinition(["a", "b", "c"]),
-        }
+        },
     ),
     config_schema={"value": str},
     metadata={
         "partition_expr": {
             "date": "date_this",
             "category": "category_this",
-        }
+        },
     },
 )
 def multi_partitioned(context: AssetExecutionContext) -> pd.DataFrame:
@@ -131,7 +133,7 @@ def multi_partitioned(context: AssetExecutionContext) -> pd.DataFrame:
             "value": [value],
             "b": [1],
             "category_this": [category],
-        }
+        },
     ).to_pandas()
 
 
@@ -169,7 +171,7 @@ def test_iceberg_io_manager_with_daily_partitioned_assets(
             partition_key=date,
             resources=resource_defs,
             run_config={
-                "ops": {"my_schema__daily_partitioned": {"config": {"value": "1"}}}
+                "ops": {"my_schema__daily_partitioned": {"config": {"value": "1"}}},
             },
         )
         assert res.success
@@ -199,7 +201,7 @@ def test_iceberg_io_manager_with_hourly_partitioned_assets(
             partition_key=date,
             resources=resource_defs,
             run_config={
-                "ops": {"my_schema__hourly_partitioned": {"config": {"value": "1"}}}
+                "ops": {"my_schema__hourly_partitioned": {"config": {"value": "1"}}},
             },
         )
         assert res.success
@@ -236,7 +238,7 @@ def test_iceberg_io_manager_with_multipartitioned_assets(
             partition_key=key,
             resources=resource_defs,
             run_config={
-                "ops": {"my_schema__multi_partitioned": {"config": {"value": "1"}}}
+                "ops": {"my_schema__multi_partitioned": {"config": {"value": "1"}}},
             },
         )
         assert res.success

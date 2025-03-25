@@ -11,24 +11,24 @@ from pyiceberg import types as T
 from pyiceberg.catalog import Catalog
 
 
-@pytest.fixture()
+@pytest.fixture
 def time_window() -> TimeWindow:
     return TimeWindow(dt.datetime(2023, 1, 1, 0), dt.datetime(2023, 1, 1, 1))
 
 
-@pytest.fixture()
+@pytest.fixture
 def datetime_table_partition_dimension(
     time_window: TimeWindow,
 ) -> TablePartitionDimension:
     return TablePartitionDimension("timestamp", time_window)
 
 
-@pytest.fixture()
+@pytest.fixture
 def category_table_partition_dimension() -> TablePartitionDimension:
     return TablePartitionDimension("category", ["A"])
 
 
-@pytest.fixture()
+@pytest.fixture
 def category_table_partition_dimension_multiple() -> TablePartitionDimension:
     return TablePartitionDimension("category", ["A", "B"])
 
@@ -48,7 +48,7 @@ def table_partitioned_update_name() -> str:
     return "handler_data_partitioned_update"
 
 
-@pytest.fixture()
+@pytest.fixture
 def partitioned_table_slice(
     datetime_table_partition_dimension: TablePartitionDimension,
     category_table_partition_dimension: TablePartitionDimension,
@@ -65,7 +65,7 @@ def partitioned_table_slice(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def table_slice(table_name: str, namespace: str) -> TableSlice:
     return TableSlice(
         table=table_name,
@@ -74,7 +74,7 @@ def table_slice(table_name: str, namespace: str) -> TableSlice:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def table_slice_with_selected_columns(table_name: str, namespace: str) -> TableSlice:
     return TableSlice(
         table=table_name,
@@ -84,7 +84,7 @@ def table_slice_with_selected_columns(table_name: str, namespace: str) -> TableS
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def iceberg_table_schema() -> iceberg_schema.Schema:
     return iceberg_schema.Schema(
         T.NestedField(
@@ -100,36 +100,42 @@ def iceberg_table_schema() -> iceberg_schema.Schema:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def table_identifier(namespace: str, table_name: str) -> str:
     return f"{namespace}.{table_name}"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def table_partitioned_identifier(namespace: str, table_partitioned_name: str) -> str:
     return f"{namespace}.{table_partitioned_name}"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def table_partitioned_update_identifier(
-    namespace: str, table_partitioned_update_name: str
+    namespace: str,
+    table_partitioned_update_name: str,
 ) -> str:
     return f"{namespace}.{table_partitioned_update_name}"
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def create_table_in_catalog(
-    catalog: Catalog, table_identifier: str, data_schema: pa.Schema
+    catalog: Catalog,
+    table_identifier: str,
+    data_schema: pa.Schema,
 ):
     catalog.create_table(table_identifier, schema=data_schema)
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def create_partitioned_table_in_catalog(
-    catalog: Catalog, table_partitioned_identifier: str, data_schema: pa.Schema
+    catalog: Catalog,
+    table_partitioned_identifier: str,
+    data_schema: pa.Schema,
 ):
     partitioned_table = catalog.create_table(
-        table_partitioned_identifier, schema=data_schema
+        table_partitioned_identifier,
+        schema=data_schema,
     )
     with partitioned_table.update_spec() as update:
         update.add_field(
@@ -144,14 +150,15 @@ def create_partitioned_table_in_catalog(
         )
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def create_partitioned_update_table_in_catalog(
     catalog: Catalog,
     table_partitioned_update_identifier: str,
     data_schema: pa.Schema,
 ):
     partitioned_update_table = catalog.create_table(
-        table_partitioned_update_identifier, schema=data_schema
+        table_partitioned_update_identifier,
+        schema=data_schema,
     )
     with partitioned_update_table.update_spec() as update:
         update.add_field(
@@ -166,14 +173,17 @@ def create_partitioned_update_table_in_catalog(
         )
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def append_data_to_table(
-    create_table_in_catalog, catalog: Catalog, table_identifier: str, data: pa.Table
+    create_table_in_catalog,
+    catalog: Catalog,
+    table_identifier: str,
+    data: pa.Table,
 ):
     catalog.load_table(table_identifier).append(data)
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def append_data_to_partitioned_table(
     create_partitioned_table_in_catalog,
     catalog: Catalog,
@@ -183,7 +193,7 @@ def append_data_to_partitioned_table(
     catalog.load_table(table_partitioned_identifier).append(data)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def append_data_to_partitioned_update_table(
     create_partitioned_update_table_in_catalog,
     catalog: Catalog,
@@ -193,20 +203,22 @@ def append_data_to_partitioned_update_table(
     catalog.load_table(table_partitioned_update_identifier).append(data)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def table(catalog: Catalog, table_identifier: str) -> iceberg_table.Table:
     return catalog.load_table(table_identifier)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def table_partitioned(
-    catalog: Catalog, table_partitioned_identifier: str
+    catalog: Catalog,
+    table_partitioned_identifier: str,
 ) -> iceberg_table.Table:
     return catalog.load_table(table_partitioned_identifier)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def table_partitioned_update(
-    catalog: Catalog, table_partitioned_update_identifier: str
+    catalog: Catalog,
+    table_partitioned_update_identifier: str,
 ) -> iceberg_table.Table:
     return catalog.load_table(table_partitioned_update_identifier)

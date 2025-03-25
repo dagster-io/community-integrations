@@ -1,5 +1,3 @@
-from typing import Dict
-
 import pytest
 from dagster import OutputContext, build_output_context
 from dagster._core.storage.db_io_manager import TableSlice
@@ -13,7 +11,9 @@ from dagster_iceberg.io_manager.base import IcebergDbClient
 
 @pytest.fixture
 def io_manager(
-    catalog_name: str, namespace: str, catalog_config_properties: Dict[str, str]
+    catalog_name: str,
+    namespace: str,
+    catalog_config_properties: dict[str, str],
 ) -> IcebergPyarrowIOManager:
     return IcebergPyarrowIOManager(
         name=catalog_name,
@@ -22,7 +22,7 @@ def io_manager(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def table_slice_unknown_schema() -> TableSlice:
     return TableSlice(
         table="some_table",
@@ -31,7 +31,7 @@ def table_slice_unknown_schema() -> TableSlice:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def table_slice_known_schema(namespace_name: str) -> TableSlice:
     return TableSlice(
         table="some_table",
@@ -57,7 +57,9 @@ def test_iceberg_db_client_with_known_schema(
     catalog: Catalog,
 ):
     iceberg_db_client.ensure_schema_exists(
-        context=output_context, table_slice=table_slice_known_schema, connection=catalog
+        context=output_context,
+        table_slice=table_slice_known_schema,
+        connection=catalog,
     )
 
 

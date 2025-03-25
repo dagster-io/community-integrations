@@ -8,7 +8,6 @@ TODO:
 """
 
 import datetime as dt
-from typing import Dict
 
 import pyarrow as pa
 import pytest
@@ -33,7 +32,9 @@ from dagster_iceberg.io_manager.arrow import IcebergPyarrowIOManager
 
 @pytest.fixture
 def io_manager(
-    catalog_name: str, namespace: str, catalog_config_properties: Dict[str, str]
+    catalog_name: str,
+    namespace: str,
+    catalog_config_properties: dict[str, str],
 ) -> IcebergPyarrowIOManager:
     return IcebergPyarrowIOManager(
         name=catalog_name,
@@ -44,7 +45,8 @@ def io_manager(
 
 
 daily_partitions_def = DailyPartitionsDefinition(
-    start_date="2022-01-01", end_date="2022-01-10"
+    start_date="2022-01-01",
+    end_date="2022-01-10",
 )
 
 letter_partitions_def = StaticPartitionsDefinition(["a", "b", "c"])
@@ -55,14 +57,14 @@ multi_partition_with_letter = MultiPartitionsDefinition(
     partitions_defs={
         "date": daily_partitions_def,
         "letter": letter_partitions_def,
-    }
+    },
 )
 
 multi_partition_with_color = MultiPartitionsDefinition(
     partitions_defs={
         "date": daily_partitions_def,
         "color": color_partitions_def,
-    }
+    },
 )
 
 
@@ -74,7 +76,7 @@ def asset_1() -> pa.Table:
         {
             "value": [1],
             "b": [1],
-        }
+        },
     )
 
 
@@ -93,7 +95,7 @@ def asset_2(asset_1: pa.Table) -> pa.Table:
         "partition_expr": {
             "date": "date_column",
             "color": "color_column",
-        }
+        },
     },
 )
 def multi_partitioned_asset_1(context: AssetExecutionContext) -> pa.Table:
@@ -106,7 +108,7 @@ def multi_partitioned_asset_1(context: AssetExecutionContext) -> pa.Table:
             "value": [1],
             "b": [1],
             "color_column": [color],
-        }
+        },
     )
 
 
@@ -118,7 +120,7 @@ def multi_partitioned_asset_1(context: AssetExecutionContext) -> pa.Table:
         "partition_expr": {
             "date": "date_column",
             "color": "color_column",
-        }
+        },
     },
 )
 def multi_partitioned_asset_2(multi_partitioned_asset_1: pa.Table) -> pa.Table:
@@ -140,9 +142,9 @@ def non_partitioned_asset(multi_partitioned_asset_1: pa.Table) -> pa.Table:
         "multi_partitioned_asset": AssetIn(
             ["my_schema", "multi_partitioned_asset_1"],
             partition_mapping=MultiToSingleDimensionPartitionMapping(
-                partition_dimension_name="date"
+                partition_dimension_name="date",
             ),
-        )
+        ),
     },
     metadata={
         "partition_expr": "date_column",
@@ -159,9 +161,9 @@ def single_partitioned_asset_date(multi_partitioned_asset: pa.Table) -> pa.Table
         "multi_partitioned_asset": AssetIn(
             ["my_schema", "multi_partitioned_asset_1"],
             partition_mapping=MultiToSingleDimensionPartitionMapping(
-                partition_dimension_name="color"
+                partition_dimension_name="color",
             ),
-        )
+        ),
     },
     metadata={
         "partition_expr": "color_column",
@@ -183,27 +185,27 @@ def single_partitioned_asset_color(multi_partitioned_asset: pa.Table) -> pa.Tabl
                     "color": DimensionPartitionMapping(
                         dimension_name="letter",
                         partition_mapping=StaticPartitionMapping(
-                            {"blue": "a", "red": "b", "yellow": "c"}
+                            {"blue": "a", "red": "b", "yellow": "c"},
                         ),
                     ),
                     "date": DimensionPartitionMapping(
                         dimension_name="date",
                         partition_mapping=SpecificPartitionsPartitionMapping(
-                            ["2022-01-01", "2024-01-01"]
+                            ["2022-01-01", "2024-01-01"],
                         ),
                     ),
-                }
+                },
             ),
-        )
+        ),
     },
 )
 def mapped_multi_partition(
-    context: AssetExecutionContext, multi_partitioned_asset: pa.Table
+    context: AssetExecutionContext,
+    multi_partitioned_asset: pa.Table,
 ) -> pa.Table:
     letter, _ = context.partition_key.split("|")
 
-    table_ = multi_partitioned_asset.append_column("letter", pa.array([letter]))
-    return table_
+    return multi_partitioned_asset.append_column("letter", pa.array([letter]))
 
 
 def test_unpartitioned_asset_to_unpartitioned_asset(

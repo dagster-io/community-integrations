@@ -96,12 +96,13 @@ def test_iceberg_table_property_updater_many_changes():
     )
     mock_iceberg_table = mock.MagicMock()
     table_property_updater.update_table_properties(
-        table=mock_iceberg_table, table_properties=properties_new
+        table=mock_iceberg_table,
+        table_properties=properties_new,
     )
     mock_iceberg_table.transaction.assert_called_once()
     mock_iceberg_table.transaction.return_value.__enter__.return_value.remove_properties.assert_called_once_with(
-        *["c"]
+        *["c"],
     )
     mock_iceberg_table.transaction.return_value.__enter__.return_value.set_properties.assert_called_once_with(
-        properties_new
+        properties_new,
     )

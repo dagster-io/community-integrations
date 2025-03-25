@@ -38,11 +38,12 @@ def test_time_window_partition_filter(
         *[
             E.GreaterThanOrEqual("timestamp", "2023-01-01T00:00:00"),
             E.LessThan("timestamp", "2023-01-01T01:00:00"),
-        ]
+        ],
     )
     filter_ = (
         dagster_partition_to_pyiceberg_expression_mapper._time_window_partition_filter(
-            datetime_table_partition_dimension, T.TimestampType
+            datetime_table_partition_dimension,
+            T.TimestampType,
         )
     )
     assert filter_ == expected_filter
@@ -54,7 +55,7 @@ def test_partition_filter(
 ):
     expected_filter = E.EqualTo("category", "A")
     filter_ = dagster_partition_to_pyiceberg_expression_mapper._partition_filter(
-        category_table_partition_dimension
+        category_table_partition_dimension,
     )
     assert filter_ == expected_filter
 
@@ -65,7 +66,7 @@ def test_partition_filter_with_multiple(
 ):
     expected_filter = E.Or(*[E.EqualTo("category", "A"), E.EqualTo("category", "B")])
     filter_ = dagster_partition_to_pyiceberg_expression_mapper._partition_filter(
-        category_table_partition_dimension_multiple
+        category_table_partition_dimension_multiple,
     )
     assert filter_ == expected_filter
 
@@ -89,7 +90,7 @@ def test_partition_dimensions_to_filters(
             *[
                 E.GreaterThanOrEqual("timestamp", "2023-01-01T00:00:00"),
                 E.LessThan("timestamp", "2023-01-01T01:00:00"),
-            ]
+            ],
         ),
         E.EqualTo("category", "A"),
     ]
@@ -105,7 +106,7 @@ def test_partition_dimensions_to_filters_multiple_categories(
             *[
                 E.GreaterThanOrEqual("timestamp", "2023-01-01T00:00:00"),
                 E.LessThan("timestamp", "2023-01-01T01:00:00"),
-            ]
+            ],
         ),
         E.Or(*[E.EqualTo("category", "A"), E.EqualTo("category", "B")]),
     ]
@@ -119,7 +120,10 @@ def test_iceberg_to_dagster_partition_mapper_new_fields(
     table_ = "handler_data_multi_partitioned_update_schema_change"
     spec = iceberg_partitioning.PartitionSpec(
         iceberg_partitioning.PartitionField(
-            1, 1, name="timestamp", transform=transforms.HourTransform()
+            1,
+            1,
+            name="timestamp",
+            transform=transforms.HourTransform(),
         ),
     )
     table_slice = TableSlice(
@@ -152,7 +156,10 @@ def test_iceberg_to_dagster_partition_mapper_changed_time_partition(
     table_ = "handler_data_multi_partitioned_update_schema_change"
     spec = iceberg_partitioning.PartitionSpec(
         iceberg_partitioning.PartitionField(
-            1, 1, name="timestamp", transform=transforms.HourTransform()
+            1,
+            1,
+            name="timestamp",
+            transform=transforms.HourTransform(),
         ),
     )
     table_slice = TableSlice(
@@ -182,10 +189,16 @@ def test_iceberg_to_dagster_partition_mapper_deleted(
     table_ = "handler_data_multi_partitioned_update_schema_change"
     spec = iceberg_partitioning.PartitionSpec(
         iceberg_partitioning.PartitionField(
-            1, 1, name="timestamp", transform=transforms.HourTransform()
+            1,
+            1,
+            name="timestamp",
+            transform=transforms.HourTransform(),
         ),
         iceberg_partitioning.PartitionField(
-            2, 2, name="category", transform=transforms.IdentityTransform()
+            2,
+            2,
+            name="category",
+            transform=transforms.IdentityTransform(),
         ),
     )
     table_slice = TableSlice(
@@ -210,10 +223,16 @@ def test_iceberg_table_spec_updater_delete_field(
     table_ = "handler_spec_updater_delete"
     spec = iceberg_partitioning.PartitionSpec(
         iceberg_partitioning.PartitionField(
-            1, 1, name="timestamp", transform=transforms.HourTransform()
+            1,
+            1,
+            name="timestamp",
+            transform=transforms.HourTransform(),
         ),
         iceberg_partitioning.PartitionField(
-            2, 2, name="category", transform=transforms.IdentityTransform()
+            2,
+            2,
+            name="category",
+            transform=transforms.IdentityTransform(),
         ),
     )
     table_slice = TableSlice(
@@ -238,7 +257,7 @@ def test_iceberg_table_spec_updater_delete_field(
     spec_updater.update_table_spec(table=mock_iceberg_table)
     mock_iceberg_table.update_spec.assert_called_once()
     mock_iceberg_table.update_spec.return_value.__enter__.return_value.remove_field.assert_called_once_with(
-        name="category"
+        name="category",
     )
 
 
@@ -249,7 +268,10 @@ def test_iceberg_table_spec_updater_update_field(
     table_ = "handler_spec_updater_update"
     spec = iceberg_partitioning.PartitionSpec(
         iceberg_partitioning.PartitionField(
-            1, 1, name="timestamp", transform=transforms.HourTransform()
+            1,
+            1,
+            name="timestamp",
+            transform=transforms.HourTransform(),
         ),
     )
     table_slice = TableSlice(
@@ -274,7 +296,7 @@ def test_iceberg_table_spec_updater_update_field(
     spec_updater.update_table_spec(table=mock_iceberg_table)
     mock_iceberg_table.update_spec.assert_called_once()
     mock_iceberg_table.update_spec.return_value.__enter__.return_value.remove_field.assert_called_once_with(
-        name="timestamp"
+        name="timestamp",
     )
     mock_iceberg_table.update_spec.return_value.__enter__.return_value.add_field.assert_called_once_with(
         source_column_name="timestamp",
@@ -421,7 +443,8 @@ def test_iceberg_table_spec_updater_fails_with_bad_static_partition_data_type(
 
 
 def test_update_table_partition_spec(
-    table: iceberg_table.Table, partitioned_table_slice: TableSlice
+    table: iceberg_table.Table,
+    partitioned_table_slice: TableSlice,
 ):
     partitions.update_table_partition_spec(
         table=table,
@@ -433,7 +456,8 @@ def test_update_table_partition_spec(
 
 
 def test_update_table_partition_spec_with_retries(
-    table: iceberg_table.Table, partitioned_table_slice: TableSlice
+    table: iceberg_table.Table,
+    partitioned_table_slice: TableSlice,
 ):
     mock_table = mock.MagicMock()
     mock_update_method = mock.MagicMock()
@@ -458,7 +482,6 @@ def test_update_table_partition_spec_with_retries(
         table_slice=partitioned_table_slice,
         partition_spec_update_mode="update",
     )
-    partitioned_table_slice.partition_dimensions
     assert mock_update_method.add_field.call_count == 7
 
 
@@ -546,7 +569,7 @@ def test_dagster_partition_to_pyiceberg_expression_mapper_with_multiple_categori
             *[
                 E.GreaterThanOrEqual("timestamp", "2023-01-01T00:00:00"),
                 E.LessThan("timestamp", "2023-01-01T01:00:00"),
-            ]
+            ],
         ),
         E.Or(*[E.EqualTo("category", "A"), E.EqualTo("category", "B")]),
     ]
