@@ -1,13 +1,13 @@
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 try:
     from pyspark.sql.connect.dataframe import DataFrame
     from pyspark.sql.connect.session import SparkSession
 except ImportError as e:
     raise ImportError("Please install dagster-iceberg with the 'spark' extra.") from e
-from dagster import Config, ConfigurableIOManagerFactory
+from dagster import ConfigurableIOManagerFactory
 from dagster._core.execution.context.input import InputContext
 from dagster._core.execution.context.output import OutputContext
 from dagster._core.storage.db_io_manager import (
@@ -16,13 +16,10 @@ from dagster._core.storage.db_io_manager import (
     DbTypeHandler,
     TableSlice,
 )
+from pydantic import Field
 
 if TYPE_CHECKING:
     from pyspark.sql._typing import OptionalPrimitiveType
-
-
-class SparkConfig(Config):
-    config_map: dict[str, "OptionalPrimitiveType"] | None = None
 
 
 class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
@@ -88,17 +85,18 @@ class SparkIcebergDbClient(DbClient[SparkSession]):
         builder = cast(SparkSession.Builder, SparkSession.builder)
         if (
             context.resource_config is not None
-            and (config_map := context.resource_config.get("config_map")) is not None
+            and (spark_config := context.resource_config["spark_config"]) is not None
         ):
-            builder.config(map=cast(dict[str, "OptionalPrimitiveType"], config_map))
+            builder.config(map=cast(dict[str, "OptionalPrimitiveType"], spark_config))
 
-        yield builder.getOrCreate()
+        # TODO(deepyaman): Don't hard code the Spark Connect remote URL.
+        yield builder.remote("sc://localhost").getOrCreate()
 
 
 class SparkIcebergIOManager(ConfigurableIOManagerFactory):
     catalog_name: str
     namespace: str
-    spark_config: SparkConfig | None = None
+    spark_config: dict[str, Any] | None = Field(default=None)
 
     def create_io_manager(self, context) -> DbIOManager:
         return DbIOManager(
