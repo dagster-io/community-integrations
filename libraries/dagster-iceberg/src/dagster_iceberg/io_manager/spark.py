@@ -83,11 +83,14 @@ class SparkIcebergDbClient(DbClient[SparkSession]):
         table_slice: TableSlice,
     ) -> Iterator[SparkSession]:
         builder = cast(SparkSession.Builder, SparkSession.builder)
-        if (
-            context.resource_config is not None
-            and (spark_config := context.resource_config["spark_config"]) is not None
-        ):
-            builder.config(map=cast(dict[str, "OptionalPrimitiveType"], spark_config))
+        if context.resource_config is not None:
+            if (spark_config := context.resource_config["spark_config"]) is not None:
+                builder.config(
+                    map=cast(dict[str, "OptionalPrimitiveType"], spark_config)
+                )
+
+            if (remote_url := context.resource_config["remote_url"]) is not None:
+                builder.remote(cast(str, remote_url))
 
         yield builder.getOrCreate()
 
@@ -96,6 +99,7 @@ class SparkIcebergIOManager(ConfigurableIOManagerFactory):
     catalog_name: str
     namespace: str
     spark_config: dict[str, Any] | None = Field(default=None)
+    remote_url: str | None = Field(default=None)
 
     def create_io_manager(self, context) -> DbIOManager:
         return DbIOManager(
