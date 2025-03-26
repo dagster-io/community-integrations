@@ -11,7 +11,7 @@ in
     # Create your shell
     packages = with pkgs; [
       zsh
-      jdk21
+      jdk17
       uv
       python
     ];
