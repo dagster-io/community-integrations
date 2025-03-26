@@ -48,7 +48,7 @@ def test_table_writer_partitioned(namespace: str, catalog: Catalog, data: pa.Tab
     identifier_ = f"{namespace}.{table_}"
     data = data.filter(
         (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
-        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1))
+        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1)),
     )
     io.table_writer(
         table_slice=TableSlice(
@@ -74,7 +74,9 @@ def test_table_writer_partitioned(namespace: str, catalog: Catalog, data: pa.Tab
 
 
 def test_table_writer_multi_partitioned(
-    namespace: str, catalog: Catalog, data: pa.Table
+    namespace: str,
+    catalog: Catalog,
+    data: pa.Table,
 ):
     # Works similar to # https://docs.dagster.io/integrations/deltalake/reference#storing-multi-partitioned-assets
     # Need to subset the data.
@@ -83,7 +85,7 @@ def test_table_writer_multi_partitioned(
     data = data.filter(
         (pc.field("category") == "A")
         & (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
-        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1))
+        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1)),
     )
     io.table_writer(
         table_slice=TableSlice(
@@ -113,7 +115,9 @@ def test_table_writer_multi_partitioned(
 
 
 def test_table_writer_multi_partitioned_update(
-    namespace: str, catalog: Catalog, data: pa.Table
+    namespace: str,
+    catalog: Catalog,
+    data: pa.Table,
 ):
     # Works similar to # https://docs.dagster.io/integrations/deltalake/reference#storing-multi-partitioned-assets
     # Need to subset the data.
@@ -122,7 +126,7 @@ def test_table_writer_multi_partitioned_update(
     data = data.filter(
         (pc.field("category") == "A")
         & (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
-        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1))
+        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1)),
     ).to_pydict()
     data["value"] = pa.array([10.0] * len(data["value"]))
     data = pa.Table.from_pydict(data)
@@ -156,16 +160,19 @@ def test_table_writer_multi_partitioned_update(
                     E.LessThan("timestamp", "2023-01-01T01:00:00"),
                 ),
                 E.EqualTo("category", "A"),
-            )
+            ),
         )
         .to_arrow()
         .to_pydict()
     )
-    assert all([v == 10 for v in data_out["value"]])
+    assert all(v == 10 for v in data_out["value"])
 
 
 def test_table_writer_multi_partitioned_update_partition_spec_change(
-    namespace: str, warehouse_path: str, catalog: Catalog, data: pa.Table
+    namespace: str,
+    warehouse_path: str,
+    catalog: Catalog,
+    data: pa.Table,
 ):
     table_ = "handler_data_table_writer_multi_partitioned_update_partition_spec_change"
     identifier_ = f"{namespace}.{table_}"
@@ -189,7 +196,7 @@ def test_table_writer_multi_partitioned_update_partition_spec_change(
     data_ = data.filter(
         (pc.field("category") == "A")
         & (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
-        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1))
+        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1)),
     )
     io.table_writer(
         table_slice=TableSlice(
@@ -228,7 +235,9 @@ def test_table_writer_multi_partitioned_update_partition_spec_change(
 
 
 def test_table_writer_multi_partitioned_update_partition_spec_error(
-    namespace: str, catalog: Catalog, data: pa.Table
+    namespace: str,
+    catalog: Catalog,
+    data: pa.Table,
 ):
     table_ = "handler_data_multi_partitioned_update_partition_spec_error"
     io.table_writer(
@@ -251,10 +260,11 @@ def test_table_writer_multi_partitioned_update_partition_spec_error(
     data_ = data.filter(
         (pc.field("category") == "A")
         & (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
-        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1))
+        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1)),
     )
     with pytest.raises(
-        ValueError, match="Partition spec update mode is set to 'error' but there"
+        ValueError,
+        match="Partition spec update mode is set to 'error' but there",
     ):
         io.table_writer(
             table_slice=TableSlice(
@@ -264,7 +274,8 @@ def test_table_writer_multi_partitioned_update_partition_spec_error(
                     TablePartitionDimension(
                         "timestamp",
                         TimeWindow(
-                            dt.datetime(2023, 1, 1, 0), dt.datetime(2023, 1, 1, 1)
+                            dt.datetime(2023, 1, 1, 0),
+                            dt.datetime(2023, 1, 1, 1),
                         ),
                     ),
                     TablePartitionDimension(
@@ -282,7 +293,9 @@ def test_table_writer_multi_partitioned_update_partition_spec_error(
 
 
 def test_iceberg_table_writer_with_table_properties(
-    namespace: str, catalog: Catalog, data: pa.Table
+    namespace: str,
+    catalog: Catalog,
+    data: pa.Table,
 ):
     table_ = "handler_data_iceberg_table_writer_with_table_properties"
     identifier_ = f"{namespace}.{table_}"
@@ -308,7 +321,9 @@ def test_iceberg_table_writer_with_table_properties(
 
 
 def test_iceberg_table_writer_drop_partition_spec_column(
-    namespace: str, catalog: Catalog, data: pa.Table
+    namespace: str,
+    catalog: Catalog,
+    data: pa.Table,
 ):
     table_ = "handler_data_iceberg_table_writer_drop_partition_spec"
     # First write
@@ -340,7 +355,8 @@ def test_iceberg_table_writer_drop_partition_spec_column(
                     TablePartitionDimension(
                         "timestamp",
                         TimeWindow(
-                            dt.datetime(2023, 1, 1, 0), dt.datetime(2023, 1, 1, 1)
+                            dt.datetime(2023, 1, 1, 0),
+                            dt.datetime(2023, 1, 1, 1),
                         ),
                     ),
                 ],
@@ -354,7 +370,9 @@ def test_iceberg_table_writer_drop_partition_spec_column(
 
 
 def test_write_from_any_to_zero_partition_spec_fields(
-    namespace: str, catalog: Catalog, data: pa.Table
+    namespace: str,
+    catalog: Catalog,
+    data: pa.Table,
 ):
     table_ = "handler_data_write_from_any_to_zero_partition_spec_fields"
     # First write

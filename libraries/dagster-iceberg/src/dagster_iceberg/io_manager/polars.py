@@ -1,4 +1,4 @@
-from typing import Sequence, Type, Union
+from collections.abc import Sequence
 
 try:
     import polars as pl
@@ -15,7 +15,7 @@ from dagster_iceberg._utils import DagsterPartitionToPolarsSqlPredicateMapper, p
 
 
 class _IcebergPolarsTypeHandler(
-    _handler.IcebergBaseTypeHandler[Union[pl.LazyFrame, pl.DataFrame]]
+    _handler.IcebergBaseTypeHandler[pl.LazyFrame | pl.DataFrame],
 ):
     """Type handler that converts data between Iceberg tables and polars DataFrames"""
 
@@ -23,8 +23,8 @@ class _IcebergPolarsTypeHandler(
         self,
         table: ibt.Table,
         table_slice: TableSlice,
-        target_type: Type[Union[pl.LazyFrame, pl.DataFrame]],
-    ) -> Union[pl.LazyFrame, pl.DataFrame]:
+        target_type: type[pl.LazyFrame | pl.DataFrame],
+    ) -> pl.LazyFrame | pl.DataFrame:
         selected_fields: str = (
             ",".join(table_slice.columns) if table_slice.columns is not None else "*"
         )
@@ -44,14 +44,13 @@ class _IcebergPolarsTypeHandler(
             stmt += f"\nWHERE {row_filter}"
         return pdf.sql(stmt) if target_type == pl.LazyFrame else pdf.sql(stmt).collect()
 
-    def to_arrow(self, obj: Union[pl.LazyFrame, pl.DataFrame]) -> pa.Table:
+    def to_arrow(self, obj: pl.LazyFrame | pl.DataFrame) -> pa.Table:
         if isinstance(obj, pl.LazyFrame):
             return obj.collect().to_arrow()
-        else:
-            return obj.to_arrow()
+        return obj.to_arrow()
 
     @property
-    def supported_types(self) -> Sequence[Type[object]]:
+    def supported_types(self) -> Sequence[type[object]]:
         return (pl.LazyFrame, pl.DataFrame)
 
 

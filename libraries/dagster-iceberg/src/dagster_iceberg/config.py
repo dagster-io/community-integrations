@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 from dagster import Config
 from dagster._annotations import public
@@ -37,4 +37,4 @@ class IcebergCatalogConfig(Config):
     ```
     """
 
-    properties: Dict[str, Any]
+    properties: dict[str, Any]

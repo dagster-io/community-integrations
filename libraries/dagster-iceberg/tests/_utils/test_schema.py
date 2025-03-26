@@ -12,12 +12,12 @@ def test_schema_differ_removed_fields():
         [
             pa.field("timestamp", pa.timestamp("ns")),
             pa.field("category", pa.string()),
-        ]
+        ],
     )
     schema_new = pa.schema(
         [
             pa.field("timestamp", pa.timestamp("ns")),
-        ]
+        ],
     )
     schema_differ = schema.SchemaDiffer(
         current_table_schema=schema_current,
@@ -32,14 +32,14 @@ def test_iceberg_schema_updater_add_column():
         [
             pa.field("timestamp", pa.timestamp("ns")),
             pa.field("category", pa.string()),
-        ]
+        ],
     )
     schema_new = pa.schema(
         [
             pa.field("timestamp", pa.timestamp("ns")),
             pa.field("category", pa.string()),
             pa.field("value", pa.float64()),
-        ]
+        ],
     )
     schema_updater = schema.IcebergTableSchemaUpdater(
         schema_differ=schema.SchemaDiffer(
@@ -52,7 +52,7 @@ def test_iceberg_schema_updater_add_column():
     schema_updater.update_table_schema(table=mock_iceberg_table)
     mock_iceberg_table.update_schema.assert_called_once()
     mock_iceberg_table.update_schema.return_value.__enter__.return_value.union_by_name.assert_called_once_with(
-        schema_new
+        schema_new,
     )
 
 
@@ -62,13 +62,13 @@ def test_iceberg_schema_updater_delete_column():
             pa.field("timestamp", pa.timestamp("ns")),
             pa.field("category", pa.string()),
             pa.field("value", pa.float64()),
-        ]
+        ],
     )
     schema_new = pa.schema(
         [
             pa.field("timestamp", pa.timestamp("ns")),
             pa.field("category", pa.string()),
-        ]
+        ],
     )
     schema_updater = schema.IcebergTableSchemaUpdater(
         schema_differ=schema.SchemaDiffer(
@@ -81,7 +81,7 @@ def test_iceberg_schema_updater_delete_column():
     schema_updater.update_table_schema(table=mock_iceberg_table)
     mock_iceberg_table.update_schema.assert_called_once()
     mock_iceberg_table.update_schema.return_value.__enter__.return_value.delete_column.assert_called_once_with(
-        "value"
+        "value",
     )
 
 
@@ -89,13 +89,13 @@ def test_iceberg_schema_updater_fails_with_error_update_mode():
     schema_current = pa.schema(
         [
             pa.field("timestamp", pa.timestamp("ns")),
-        ]
+        ],
     )
     schema_new = pa.schema(
         [
             pa.field("timestamp", pa.timestamp("ns")),
             pa.field("category", pa.string()),
-        ]
+        ],
     )
     schema_updater = schema.IcebergTableSchemaUpdater(
         schema_differ=schema.SchemaDiffer(
@@ -105,7 +105,10 @@ def test_iceberg_schema_updater_fails_with_error_update_mode():
         schema_update_mode="error",
     )
     mock_iceberg_table = mock.MagicMock()
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match="Schema spec update mode is set to 'error' but there are schema changes to the Iceberg table",
+    ):
         schema_updater.update_table_schema(table=mock_iceberg_table)
 
 
@@ -117,7 +120,7 @@ def test_update_table_schema(table: Table):
                 pa.field("timestamp", pa.timestamp("us")),
                 pa.field("category", pa.string()),
                 pa.field("new_value", pa.float64()),
-            ]
+            ],
         ),
         schema_update_mode="update",
     )
@@ -141,7 +144,7 @@ def test_update_table_schema_with_retries():
                 pa.field("timestamp", pa.timestamp("us")),
                 pa.field("category", pa.string()),
                 pa.field("new_value", pa.float64()),
-            ]
+            ],
         ),
         schema_update_mode="update",
     )
@@ -168,7 +171,7 @@ def test_update_table_schema_with_retries_fails():
                     pa.field("timestamp", pa.timestamp("us")),
                     pa.field("category", pa.string()),
                     pa.field("new_value", pa.float64()),
-                ]
+                ],
             ),
             schema_update_mode="update",
         )

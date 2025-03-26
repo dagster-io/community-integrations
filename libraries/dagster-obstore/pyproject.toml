@@ -1,6 +1,5 @@
 [project]
 name = "dagster-obstore"
-version = "0.2.1"
 description = "Dagster integration with `obstore` a python binding to Rust object-store crate. Integration provides computeLogManagers for S3, ADLS & GCS and ObjectStore resourecs"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -8,6 +7,7 @@ dependencies = [
     "dagster>=1.9.11",
     "obstore>=0.6.0",
 ]
+dynamic = ["version"]
 
 [tool.uv]
 dev-dependencies = [
@@ -25,11 +25,10 @@ dev-dependencies = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.setuptools]
-packages = ["dagster_obstore"]
+[tool.hatch.version]
+path = "dagster_obstore/__init__.py"
 
 [tool.pyright]
-
 typeCheckingMode = 'basic'
 reportUnknownMemberType   = false
 exclude = [

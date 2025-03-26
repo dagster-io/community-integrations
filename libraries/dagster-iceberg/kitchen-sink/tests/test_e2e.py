@@ -1,6 +1,5 @@
 import os
 import subprocess
-from typing import Optional
 
 import pytest
 from click.testing import CliRunner
@@ -8,7 +7,6 @@ from dagster import AssetKey
 from dagster._cli.asset import asset_materialize_command
 from dagster._core.test_utils import instance_for_test
 from dagster._utils import file_relative_path
-
 
 MAKEFILE_DIR = file_relative_path(__file__, "../")
 
@@ -25,8 +23,8 @@ def catalog():
 
 def invoke_materialize(
     select: str,
-    partition: Optional[str] = None,
-    partition_range: Optional[str] = None,
+    partition: str | None = None,
+    partition_range: str | None = None,
 ):
     runner = CliRunner()
     options = [

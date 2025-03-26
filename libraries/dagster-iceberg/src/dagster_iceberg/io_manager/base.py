@@ -1,7 +1,8 @@
 import enum
 from abc import abstractmethod
-from contextlib import contextmanager  # noqa
-from typing import Dict, Iterator, Optional, Sequence, Type, TypedDict, cast  # noqa
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
+from typing import TypedDict, cast
 
 from dagster import OutputContext
 from dagster._annotations import public
@@ -18,8 +19,8 @@ from pydantic import Field
 from pyiceberg.catalog import Catalog, load_catalog
 
 from dagster_iceberg._db_io_manager import CustomDbIOManager
-from dagster_iceberg.config import IcebergCatalogConfig  # noqa
 from dagster_iceberg._utils import preview
+from dagster_iceberg.config import IcebergCatalogConfig
 
 
 class PartitionSpecUpdateMode(enum.Enum):
@@ -38,13 +39,13 @@ class DbIoManagerImplementation(enum.Enum):
 
 
 class _IcebergCatalogProperties(TypedDict):
-    properties: Dict[str, str]
+    properties: dict[str, str]
 
 
 class _IcebergTableIOManagerResourceConfig(TypedDict):
     name: str
-    config: Optional[_IcebergCatalogProperties]
-    schema_: Optional[str]
+    config: _IcebergCatalogProperties | None
+    schema_: str | None
     db_io_manager: DbIoManagerImplementation
     partition_spec_update_mode: PartitionSpecUpdateMode
     schema_update_mode: SchemaUpdateMode
@@ -54,12 +55,16 @@ class _IcebergTableIOManagerResourceConfig(TypedDict):
 class IcebergDbClient(DbClient):
     @staticmethod
     def delete_table_slice(
-        context: OutputContext, table_slice: TableSlice, connection: Catalog
+        context: OutputContext,
+        table_slice: TableSlice,
+        connection: Catalog,
     ) -> None: ...
 
     @staticmethod
     def ensure_schema_exists(
-        context: OutputContext, table_slice: TableSlice, connection: Catalog
+        context: OutputContext,
+        table_slice: TableSlice,
+        connection: Catalog,
     ) -> None:
         connection.list_namespaces(table_slice.schema)
 
@@ -76,14 +81,14 @@ class IcebergDbClient(DbClient):
         ):
             query = f"SELECT {col_str} FROM {table_slice.schema}.{table_slice.table} WHERE\n"
             return query + _partition_where_clause(table_slice.partition_dimensions)
-        else:
-            return f"""SELECT {col_str} FROM {table_slice.schema}.{table_slice.table}"""
+        return f"""SELECT {col_str} FROM {table_slice.schema}.{table_slice.table}"""
 
     @staticmethod
     @contextmanager
     def connect(context, table_slice: TableSlice) -> Iterator[Catalog]:
         resource_config = cast(
-            _IcebergTableIOManagerResourceConfig, context.resource_config
+            _IcebergTableIOManagerResourceConfig,
+            context.resource_config,
         )
         # Config passed as env variables or using config file.
         #  See: https://py.iceberg.apache.org/configuration/
@@ -91,7 +96,8 @@ class IcebergDbClient(DbClient):
             yield load_catalog(name=resource_config["name"])
         else:
             yield load_catalog(
-                name=resource_config["name"], **resource_config["config"]["properties"]
+                name=resource_config["name"],
+                **resource_config["config"]["properties"],
             )
 
 
@@ -174,12 +180,12 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
     """
 
     name: str = Field(description="The name of the iceberg catalog.")
-    config: Optional[IcebergCatalogConfig] = Field(
+    config: IcebergCatalogConfig | None = Field(
         description="Additional configuration properties for the iceberg catalog. See <https://py.iceberg.apache.org/configuration/>"
         " for passing these as environment variables or using a configuration file.",
         default=None,
     )
-    schema_: Optional[str] = Field(
+    schema_: str | None = Field(
         default=None,
         alias="namespace",
         description="Name of the iceberg catalog namespace to use.",
@@ -195,7 +201,7 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
     def type_handlers() -> Sequence[DbTypeHandler]: ...
 
     @staticmethod
-    def default_load_type() -> Optional[Type]:
+    def default_load_type() -> type | None:
         return None
 
     def create_io_manager(self, context) -> DbIOManager:

@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional, Sequence, Union
+from collections.abc import Sequence
 
 import pyarrow as pa
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
@@ -34,8 +34,8 @@ def table_writer(
     schema_update_mode: str,
     partition_spec_update_mode: str,
     dagster_run_id: str,
-    dagster_partition_key: Optional[str] = None,
-    table_properties: Optional[Dict[str, str]] = None,
+    dagster_partition_key: str | None = None,
+    table_properties: dict[str, str] | None = None,
 ) -> None:
     """Writes data to an iceberg table
 
@@ -62,11 +62,13 @@ def table_writer(
         "dagster-iceberg-version": dagster_iceberg_version,
     }
     logger.debug(
-        f"Writing data to table {table_path} with properties {base_properties}"
+        "Writing data to table %s with properties %s",
+        table_path,
+        base_properties,
     )
     # In practice, partition_dimensions is an empty list for unpartitioned assets and not None
     #  even though it's the default value.
-    partition_exprs: List[str] | None = None
+    partition_exprs: list[str] | None = None
     partition_dimensions: Sequence[TablePartitionDimension] | None = None
     if (
         table_slice.partition_dimensions is not None
@@ -77,17 +79,18 @@ def table_writer(
             raise ValueError(
                 f"Could not map partition to partition expr, got '{partition_exprs}'."
                 "Did you name your partitions correctly and provided the correct"
-                " 'partition_expr' in the asset metadata?"
+                " 'partition_expr' in the asset metadata?",
             )
         partition_dimensions = table_slice.partition_dimensions
-    logger.debug(f"Partition dimensions: {partition_dimensions}")
+    logger.debug("Partition dimensions: %s", partition_dimensions)
     if table_exists(catalog, table_path):
         logger.debug("Updating existing table")
         table = catalog.load_table(table_path)
         # Check if the table has partition dimensions set
         num_partition_fields = len(table.spec().fields)
         logger.debug(
-            f"Current table version has {num_partition_fields} partition fields"
+            "Current table version has %s partition fields",
+            num_partition_fields,
         )
         # Check if schema matches. If not, update
         update_table_schema(
@@ -192,7 +195,7 @@ def create_table(
     catalog: Catalog,
     table_path: str,
     schema: pa.Schema,
-    properties: Dict[str, str],
+    properties: dict[str, str],
 ) -> iceberg_table.Table:
     """Creates an iceberg table and retries on failure
 
@@ -221,9 +224,8 @@ class IcebergCreateTableWithRetry(IcebergOperationWithRetry):
 
     def refresh(self):
         """Not using this method because we don't have a table to refresh"""
-        ...
 
-    def operation(self, table_path: str, schema: pa.Schema, properties: Dict[str, str]):
+    def operation(self, table_path: str, schema: pa.Schema, properties: dict[str, str]):
         self.catalog.create_table(
             table_path,
             schema=schema,
@@ -234,8 +236,8 @@ class IcebergCreateTableWithRetry(IcebergOperationWithRetry):
 def overwrite_table(
     table: iceberg_table.Table,
     data: pa.Table,
-    overwrite_filter: Union[E.BooleanExpression, str],
-    snapshot_properties: Optional[Dict[str, str]] = None,
+    overwrite_filter: E.BooleanExpression | str,
+    snapshot_properties: dict[str, str] | None = None,
 ):
     """Overwrites an iceberg table and retries on failure
 
@@ -263,10 +265,10 @@ class IcebergTableOverwriterWithRetry(IcebergOperationWithRetry):
     def operation(
         self,
         data: pa.Table,
-        overwrite_filter: Union[E.BooleanExpression, str],
-        snapshot_properties: Optional[Dict[str, str]] = None,
+        overwrite_filter: E.BooleanExpression | str,
+        snapshot_properties: dict[str, str] | None = None,
     ):
-        self.logger.debug(f"Overwriting table with filter: {overwrite_filter}")
+        self.logger.debug("Overwriting table with filter: %s", overwrite_filter)
         self.table.overwrite(
             df=data,
             overwrite_filter=overwrite_filter,

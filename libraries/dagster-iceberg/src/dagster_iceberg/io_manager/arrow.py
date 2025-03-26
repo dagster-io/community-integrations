@@ -1,4 +1,5 @@
-from typing import Sequence, Tuple, Type, Union
+from collections.abc import Sequence
+from typing import Union
 
 import pyarrow as pa
 from dagster._annotations import public
@@ -10,16 +11,19 @@ from dagster_iceberg import handler as _handler
 from dagster_iceberg import io_manager as _io_manager
 from dagster_iceberg._utils import DagsterPartitionToIcebergExpressionMapper, preview
 
-ArrowTypes = Union[pa.Table, pa.RecordBatchReader]
+ArrowTypes = Union[pa.Table, pa.RecordBatchReader]  # noqa: UP007, avoid Pyright failure
 
 
 class _IcebergPyArrowTypeHandler(_handler.IcebergBaseTypeHandler[ArrowTypes]):
     """Type handler that converts data between Iceberg tables and pyarrow Tables"""
 
     def to_data_frame(
-        self, table: ibt.Table, table_slice: TableSlice, target_type: Type[ArrowTypes]
+        self,
+        table: ibt.Table,
+        table_slice: TableSlice,
+        target_type: type[ArrowTypes],
     ) -> ArrowTypes:
-        selected_fields: Tuple[str, ...] = (
+        selected_fields: tuple[str, ...] = (
             tuple(table_slice.columns) if table_slice.columns is not None else ("*",)
         )
         row_filter: E.BooleanExpression
@@ -45,7 +49,7 @@ class _IcebergPyArrowTypeHandler(_handler.IcebergBaseTypeHandler[ArrowTypes]):
         return obj
 
     @property
-    def supported_types(self) -> Sequence[Type[object]]:
+    def supported_types(self) -> Sequence[type[object]]:
         return (pa.Table, pa.RecordBatchReader)
 
 

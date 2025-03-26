@@ -1,5 +1,4 @@
 import datetime as dt
-from typing import List
 
 import pytest
 from dagster import AssetKey, MultiPartitionKey, MultiPartitionsDefinition, TimeWindow
@@ -10,7 +9,7 @@ from dagster_iceberg._db_io_manager import utils
 
 # NB: dagster uses dt.datetime even for dates
 @pytest.fixture
-def daily_partitions_time_window_consecutive() -> List[TimeWindow]:
+def daily_partitions_time_window_consecutive() -> list[TimeWindow]:
     return [
         TimeWindow(
             start=dt.datetime(2022, 1, 1, 0),
@@ -28,7 +27,7 @@ def daily_partitions_time_window_consecutive() -> List[TimeWindow]:
 
 
 @pytest.fixture
-def daily_partitions_time_window_not_consecutive() -> List[TimeWindow]:
+def daily_partitions_time_window_not_consecutive() -> list[TimeWindow]:
     return [
         TimeWindow(
             start=dt.datetime(2022, 1, 1, 0),
@@ -46,10 +45,10 @@ def daily_partitions_time_window_not_consecutive() -> List[TimeWindow]:
 
 
 def test_multi_time_partitions_checker_consecutive(
-    daily_partitions_time_window_consecutive: List[TimeWindow],
+    daily_partitions_time_window_consecutive: list[TimeWindow],
 ):
     checker = utils.MultiTimePartitionsChecker(
-        partitions=daily_partitions_time_window_consecutive
+        partitions=daily_partitions_time_window_consecutive,
     )
     assert checker.start == dt.datetime(2022, 1, 1, 0)
     assert checker.end == dt.datetime(2022, 1, 4, 0)
@@ -58,10 +57,10 @@ def test_multi_time_partitions_checker_consecutive(
 
 
 def test_multi_time_partitions_checker_non_consecutive(
-    daily_partitions_time_window_not_consecutive: List[TimeWindow],
+    daily_partitions_time_window_not_consecutive: list[TimeWindow],
 ):
     checker = utils.MultiTimePartitionsChecker(
-        partitions=daily_partitions_time_window_not_consecutive
+        partitions=daily_partitions_time_window_not_consecutive,
     )
     assert checker.hourly_delta == 24
     assert checker.start == dt.datetime(2022, 1, 1, 0)
@@ -105,10 +104,10 @@ def test_generate_partition_dimensions_color_varying(
         asset_partition_keys=[
             MultiPartitionKey(keys_by_dimension={"color": "red", "date": "2022-01-01"}),
             MultiPartitionKey(
-                keys_by_dimension={"color": "blue", "date": "2022-01-01"}
+                keys_by_dimension={"color": "blue", "date": "2022-01-01"},
             ),
             MultiPartitionKey(
-                keys_by_dimension={"color": "yellow", "date": "2022-01-01"}
+                keys_by_dimension={"color": "yellow", "date": "2022-01-01"},
             ),
         ],
         asset_partitions_def=multi_partition_with_color,
@@ -121,10 +120,18 @@ def test_generate_partition_dimensions_color_varying(
     assert partition_dimensions[0].partition_expr == "color_column"
     assert partition_dimensions[1].partition_expr == "date_column"
     assert partition_dimensions[1].partitions.start == dt.datetime(
-        2022, 1, 1, 0, tzinfo=dt.timezone.utc
+        2022,
+        1,
+        1,
+        0,
+        tzinfo=dt.timezone.utc,
     )
     assert partition_dimensions[1].partitions.end == dt.datetime(
-        2022, 1, 2, 0, tzinfo=dt.timezone.utc
+        2022,
+        1,
+        2,
+        0,
+        tzinfo=dt.timezone.utc,
     )
     assert sorted(partition_dimensions[0].partitions) == ["blue", "red", "yellow"]
 
@@ -150,9 +157,17 @@ def test_generate_partition_dimensions_date_varying(
     assert partition_dimensions[0].partition_expr == "color_column"
     assert partition_dimensions[1].partition_expr == "date_column"
     assert partition_dimensions[1].partitions.start == dt.datetime(
-        2022, 1, 1, 0, tzinfo=dt.timezone.utc
+        2022,
+        1,
+        1,
+        0,
+        tzinfo=dt.timezone.utc,
     )
     assert partition_dimensions[1].partitions.end == dt.datetime(
-        2022, 1, 4, 0, tzinfo=dt.timezone.utc
+        2022,
+        1,
+        4,
+        0,
+        tzinfo=dt.timezone.utc,
     )
     assert partition_dimensions[0].partitions == ["red"]

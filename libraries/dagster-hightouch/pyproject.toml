@@ -1,6 +1,5 @@
 [project]
 name = "dagster-hightouch"
-version = "0.1.5"
 description = "Dagster library for Hightouch"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -8,10 +7,12 @@ dependencies = [
     "dagster>=0.14",
     "requests>=2.0",
 ]
+dynamic = ["version"]
 
 [tool.uv]
 dev-dependencies = [
     "pyright>=1.1.386",
+    "pytest",
     "ruff>=0.7.2",
 ]
 
@@ -21,3 +22,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["dagster_hightouch"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_hightouch.__version__"}

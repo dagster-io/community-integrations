@@ -1,6 +1,6 @@
 import datetime as dt
 import random
-from typing import Dict, Iterator
+from collections.abc import Iterator
 
 import psycopg2
 import pyarrow as pa
@@ -12,15 +12,10 @@ postgres = PostgresContainer("postgres:17-alpine")
 
 
 @pytest.fixture(scope="session", autouse=True)
-def setup(request: pytest.FixtureRequest) -> Iterator[PostgresContainer]:
+def setup() -> Iterator[PostgresContainer]:
     postgres.start()
-
-    def remove_container():
-        postgres.stop()
-
-    request.addfinalizer(remove_container)
-
     yield postgres
+    postgres.stop()
 
 
 @pytest.fixture(scope="session")
@@ -45,11 +40,11 @@ def postgres_uri(setup: PostgresContainer) -> str:
 
 # NB: we truncate all iceberg tables before each test
 #  that way, we don't have to worry about side effects
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def clean_iceberg_tables(postgres_connection: psycopg2.extensions.connection):
     with postgres_connection.cursor() as cur:
         cur.execute(
-            "SELECT tablename FROM pg_catalog.pg_tables WHERE tablename LIKE 'iceberg%';"
+            "SELECT tablename FROM pg_catalog.pg_tables WHERE tablename LIKE 'iceberg%';",
         )
         for tbl in cur.fetchall():
             cur.execute(f"TRUNCATE TABLE {tbl[0]};")
@@ -57,17 +52,17 @@ def clean_iceberg_tables(postgres_connection: psycopg2.extensions.connection):
 
 
 # NB: recreated for every test
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def warehouse_path(tmp_path_factory: pytest.TempPathFactory) -> str:
     dir_ = tmp_path_factory.mktemp("warehouse")
     return str(dir_.resolve())
 
 
-@pytest.fixture(scope="function")
-def catalog_config_properties(warehouse_path: str, postgres_uri: str) -> Dict[str, str]:
+@pytest.fixture
+def catalog_config_properties(warehouse_path: str, postgres_uri: str) -> dict[str, str]:
     return {
         "uri": postgres_uri,
-        "warehouse": f"file://{str(warehouse_path)}",
+        "warehouse": f"file://{warehouse_path!s}",
     }
 
 
@@ -76,8 +71,8 @@ def catalog_name() -> str:
     return "default"
 
 
-@pytest.fixture(scope="function")
-def catalog(catalog_name: str, catalog_config_properties: Dict[str, str]) -> Catalog:
+@pytest.fixture
+def catalog(catalog_name: str, catalog_config_properties: dict[str, str]) -> Catalog:
     return load_catalog(
         name=catalog_name,
         **catalog_config_properties,
@@ -89,7 +84,7 @@ def namespace_name() -> str:
     return "pytest"
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def namespace(catalog: Catalog, namespace_name: str) -> str:
     catalog.create_namespace(namespace_name)
     return namespace_name
@@ -104,7 +99,7 @@ def data() -> pa.Table:
             [
                 dt.datetime(2023, 1, 1, 0, 0, 0) + dt.timedelta(minutes=i)
                 for i in range(N)
-            ]
+            ],
         ),
         "category": pa.array([random.choice(["A", "B", "C"]) for _ in range(N)]),
         "value": pa.array(random.uniform(0, 1) for _ in range(N)),

@@ -1,6 +1,5 @@
 [project]
 name = "dagster-sdf"
-version = "0.25.11"
 description = "A Dagster integration for sdf"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -11,6 +10,7 @@ dependencies = [
     "polars",
     "typer>=0.9.0",
 ]
+dynamic = ["version"]
 
 [project.scripts]
 dagster-sdf = "dagster_sdf.cli.app:app"
@@ -29,3 +29,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["dagster_sdf"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_sdf.version.__version__"}

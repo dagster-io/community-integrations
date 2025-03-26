@@ -1,6 +1,5 @@
 import logging
 from abc import ABCMeta, abstractmethod
-from typing import Tuple
 
 from pyiceberg.table import Table
 from tenacity import (
@@ -19,7 +18,7 @@ class IcebergOperationWithRetry(metaclass=ABCMeta):
     def __init__(self, table: Table):
         self.table = table
         self.logger = logging.getLogger(
-            f"dagster_iceberg._utils.{self.__class__.__name__}"
+            f"dagster_iceberg._utils.{self.__class__.__name__}",
         )
 
     @abstractmethod
@@ -31,7 +30,7 @@ class IcebergOperationWithRetry(metaclass=ABCMeta):
     def execute(
         self,
         retries: int,
-        exception_types: type[BaseException] | Tuple[type[BaseException], ...],
+        exception_types: type[BaseException] | tuple[type[BaseException], ...],
         *args,
         **kwargs,
     ):
@@ -54,5 +53,5 @@ class IcebergOperationWithRetry(metaclass=ABCMeta):
                         raise e
         except RetryError as e:
             raise IcebergOperationException(
-                f"Max retries exceeded for class {str(self.__class__)}"
+                f"Max retries exceeded for class {self.__class__!s}",
             ) from e

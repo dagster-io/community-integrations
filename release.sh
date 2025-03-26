@@ -25,9 +25,12 @@ if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   exit 1
 fi
 
-sed -i '' 's/version = "[^"]*"/version = "'"$VERSION"'"/' "libraries/${PACKAGE}/pyproject.toml"
+# Find the file containing the `__version__ = "X.X.X"` definition.
+version_file=$(grep -lr '__version__ = "' libraries/${PACKAGE})
 
-git add "libraries/${PACKAGE}/pyproject.toml"
+sed -i '' 's/__version__ = "[^"]*"/__version__ = "'"$VERSION"'"/' "${version_file}"
+
+git add "${version_file}"
 git commit -m "Release $PACKAGE $VERSION"
 
 RELEASE_TAG="${PACKAGE//-/_}-${VERSION}"

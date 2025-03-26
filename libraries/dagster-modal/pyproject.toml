@@ -1,6 +1,5 @@
 [project]
 name = "dagster-modal"
-version = "0.0.2"
 description = "Dagster integration with Modal"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -9,6 +8,7 @@ dependencies = [
     "dagster>=1.7.0",
     "modal>=0.64.163",
 ]
+dynamic = ["version"]
 
 [tool.uv]
 dev-dependencies = [
@@ -23,3 +23,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["dagster_modal"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_modal.__version__"}

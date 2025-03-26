@@ -1,6 +1,5 @@
 [project]
 name = "dagster-iceberg"
-version = "0.2.2"
 description = "Package for PyIceberg-specific Dagster framework op and resource components."
 authors = [
   {name="Jasper Ginn", email="jasperginn@gmail.com"}
@@ -8,10 +7,10 @@ authors = [
 requires-python = ">=3.10"
 readme = "README.md"
 dependencies = [
-    "dagster>=1.8.2",
-    "pendulum>=3.0.0",
-    "pyiceberg[pyarrow]>=0.8",
-    "tenacity>=8.5.0",
+  "dagster>=1.8.2",
+  "pendulum>=3.0.0",
+  "pyiceberg[pyarrow]>=0.8",
+  "tenacity>=8.5.0",
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -19,63 +18,35 @@ classifiers = [
   "Operating System :: OS Independent",
   "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12"
 ]
+dynamic = ["version"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.version]
+path = "src/dagster_iceberg/version.py"
+
 [project.optional-dependencies]
 daft = [
-    "getdaft>=0.3.0",
+  "getdaft>=0.3.0",
 ]
 pandas = [
-    "pandas>=2.0.0",
+  "pandas>=2.0.0",
 ]
 polars = [
-    "polars>=1.0.0",
+  "polars>=1.0.0",
 ]
 spark = [
-    "dagster-pyspark>=0.26.1",
-    "pyspark[connect]>=3.5.4",
+  "dagster-pyspark>=0.26.1",
+  "pyspark[connect]>=3.5.4",
 ]
-
-[tool.black]
-line-length = 88
-exclude = '''
-^/(
-  (
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
-    | \.mypy_cache
-    | \.venv
-    | _build
-    | build
-    | dist
-    | .notebooks
-    | .nox
-  )
-)
-'''
-
-[tool.isort]
-profile = "black"
-extend_skip = [".notebooks", ".nox", ".venv"]
-
-[tool.mypy]
-exclude = [
-  '^docs/'
-]
-ignore_missing_imports = true
-explicit_package_bases = true
 
 [tool.ruff]
-lint.ignore = ["E501"]
 extend-exclude = [
   "__pycache__",
   "docs",
@@ -84,6 +55,58 @@ extend-exclude = [
   ".notebooks",
   "kitchen-sink/provision.py",  # Copied from https://github.com/apache/iceberg-python
 ]
+
+[tool.ruff.lint]
+select = [
+  "F",    # Pyflakes
+  "E",    # pycodestyle: Error
+  "W",    # pycodestyle: Warning
+  "I",    # isort
+  # "D",  # pydocstyle # TODO(deepyaman): Add missing docstrings.
+  "UP",   # pyupgrade
+  # "S",  # flake8-bandit # TODO(deepyaman): Remove assert and ignore tests.
+  "BLE",  # flake8-blind-except
+  "B",    # flake8-bugbear
+  # "A",  # flake8-builtins # TODO(deepyaman): Rename modules.
+  "COM",  # flake8-commas
+  "C4",   # flake8-comprehensions
+  "T10",  # flake8-debugger
+  "FA",   # flake8-future-annotations
+  "ISC",  # flake8-implicit-str-concat
+  "ICN",  # flake8-import-conventions
+  "G",    # flake8-logging-format
+  "INP",  # flake8-no-pep420
+  "PIE",  # flake8-pie
+  "T20",  # flake8-print
+  "PT",   # flake8-pytest-style
+  "Q",    # flake8-quotes
+  "RET",  # flake8-return
+  "SLF",  # flake8-self
+  "SIM",  # flake8-simplify
+  "TID",  # flake8-tidy-imports
+  "TCH",  # flake8-type-checking
+  "PTH",  # flake8-use-pathlib
+  "TD",   # flake8-todos
+  "ERA",  # eradicate
+  "PD",   # pandas-vet
+  "PGH",# pygrep-hooks # TODO(deepyaman): Use specific rule codes when ignoring type issues.
+  "FLY",  # flynt
+  "NPY",  # NumPy-specific rules
+  "PERF", # Perflint
+  "LOG",  # flake8-logging
+  "RUF",  # Ruff-specific rules
+]
+ignore = [
+  "E501",   # line-too-long
+  "UP038",  # non-pep604-isinstance, results in slower code
+  "B905",   # zip-without-explicit-strict, stylistic choice
+  "COM812", # missing-trailing-comma
+  "SLF001", # private-member-access
+  "TD003",  # missing-todo-link
+]
+
+[tool.ruff.lint.per-file-ignores]
+"kitchen-sink/*" = ["INP001"]
 
 [tool.pytest.ini_options]
 cache_dir = "/home/vscode/workspace/.cache/pytest"
@@ -97,19 +120,19 @@ venv = ".venv"
 
 [dependency-groups]
 docs = [
-    "mkdocs>=1.6.1",
-    "mkdocs-include-markdown-plugin>=7.0.0",
-    "mkdocs-material>=9.5.42",
-    "mkdocstrings[python]>=0.26.2",
+  "mkdocs>=1.6.1",
+  "mkdocs-include-markdown-plugin>=7.0.0",
+  "mkdocs-material>=9.5.42",
+  "mkdocstrings[python]>=0.26.2",
 ]
 dev = [
-    "dagit>=1.8.8",
-    "dagster-polars>=0.26.1",
-    "fsspec[http]>=2025.2.0",
-    "psycopg2-binary>=2.9.10",
-    "pyright>=1.1.385",
-    "pytest>=8.3.2",
-    "pytest-cov>=6.0.0",
-    "ruff>=0.9.6",
-    "testcontainers[postgres]>=4.8.2",
+  "dagit>=1.8.8",
+  "dagster-polars>=0.26.1",
+  "fsspec[http]>=2025.2.0",
+  "psycopg2-binary>=2.9.10",
+  "pyright>=1.1.385",
+  "pytest>=8.3.2",
+  "pytest-cov>=6.0.0",
+  "ruff>=0.9.6",
+  "testcontainers[postgres]>=4.8.2",
 ]

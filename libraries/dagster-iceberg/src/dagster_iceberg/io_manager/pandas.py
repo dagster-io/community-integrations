@@ -1,4 +1,4 @@
-from typing import Sequence, Type
+from collections.abc import Sequence
 
 try:
     import pandas as pd
@@ -11,8 +11,8 @@ from dagster._core.storage.db_io_manager import DbTypeHandler, TableSlice
 from pyiceberg.catalog import Catalog
 
 from dagster_iceberg import io_manager as _io_manager
-from dagster_iceberg.io_manager.arrow import _IcebergPyArrowTypeHandler
 from dagster_iceberg._utils import preview
+from dagster_iceberg.io_manager.arrow import _IcebergPyArrowTypeHandler
 
 
 class _IcebergPandasTypeHandler(_IcebergPyArrowTypeHandler):
@@ -36,7 +36,7 @@ class _IcebergPandasTypeHandler(_IcebergPyArrowTypeHandler):
         return tbl.read_pandas()
 
     @property
-    def supported_types(self) -> Sequence[Type[object]]:
+    def supported_types(self) -> Sequence[type[object]]:
         return [pd.DataFrame]
 
 

@@ -30,7 +30,7 @@ def multi_partition_with_letter(
         partitions_defs={
             "date": daily_partitions_definition,
             "letter": letter_partitions_definition,
-        }
+        },
     )
 
 
@@ -43,5 +43,5 @@ def multi_partition_with_color(
         partitions_defs={
             "date": daily_partitions_definition,
             "color": color_partitions_definition,
-        }
+        },
     )

@@ -1,12 +1,12 @@
 [project]
 name = "example-integration"
-version = "0.0.1"
 description = "<insert description here>"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
     "dagster>=1.8.0",
 ]
+dynamic = ["version"]
 
 [tool.uv]
 dev-dependencies = [
@@ -21,3 +21,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["example_integration"]
+
+[tool.setuptools.dynamic]
+version = {attr = "example_integration.__version__"}

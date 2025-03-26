@@ -1,6 +1,5 @@
 [project]
 name = "dagster-hex"
-version = "0.1.7"
 description = "Dagster integration with Hex"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -8,6 +7,7 @@ dependencies = [
     "dagster>=1.3",
     "requests>=2",
 ]
+dynamic = ["version"]
 
 [tool.uv]
 dev-dependencies = [
@@ -25,3 +25,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["dagster_hex"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_hex.__version__"}
