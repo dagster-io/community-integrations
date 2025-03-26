@@ -88,7 +88,7 @@ defs = Definitions(
         "spark_iceberg_io_manager": SparkIcebergIOManager(
             catalog_name=CATALOG_NAME,
             namespace=NAMESPACE,
-            spark_config={"spark.remote": "sc://localhost"},
+            remote_url="sc://localhost",
         ),
     },
 )
