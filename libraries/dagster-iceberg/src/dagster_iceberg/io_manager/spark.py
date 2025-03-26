@@ -89,8 +89,7 @@ class SparkIcebergDbClient(DbClient[SparkSession]):
         ):
             builder.config(map=cast(dict[str, "OptionalPrimitiveType"], spark_config))
 
-        # TODO(deepyaman): Don't hard code the Spark Connect remote URL.
-        yield builder.remote("sc://localhost").getOrCreate()
+        yield builder.getOrCreate()
 
 
 class SparkIcebergIOManager(ConfigurableIOManagerFactory):

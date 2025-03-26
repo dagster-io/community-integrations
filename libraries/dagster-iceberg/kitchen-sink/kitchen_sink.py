@@ -84,10 +84,11 @@ defs = Definitions(
             config=catalog_config,
             namespace=NAMESPACE,
         ),
-        "pyspark": PySparkResource(spark_config={}),
+        "pyspark": PySparkResource(spark_config={"spark.remote": "sc://localhost"}),
         "spark_iceberg_io_manager": SparkIcebergIOManager(
             catalog_name=CATALOG_NAME,
             namespace=NAMESPACE,
+            spark_config={"spark.remote": "sc://localhost"},
         ),
     },
 )
