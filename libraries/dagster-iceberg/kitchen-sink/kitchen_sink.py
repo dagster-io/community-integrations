@@ -42,7 +42,7 @@ def combined_nyc_taxi_data(raw_nyc_taxi_data: dict[str, pl.LazyFrame]) -> pl.Laz
 
 @asset(io_manager_key="iceberg_polars_io_manager")
 def reloaded_nyc_taxi_data(combined_nyc_taxi_data: pl.LazyFrame) -> None:
-    pass
+    print(combined_nyc_taxi_data.describe())  # noqa: T201
 
 
 @asset(deps=["combined_nyc_taxi_data"], io_manager_key="spark_iceberg_io_manager")
