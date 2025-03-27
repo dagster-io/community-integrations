@@ -48,6 +48,24 @@ def test_polars():
             assert instance.get_latest_materialization_event(asset_key) is not None
 
 
+def test_polars_partitioned():
+    with instance_for_test() as instance:
+        for partition in ["part.0", "part.1"]:
+            result = invoke_materialize(
+                "*reloaded_partitioned_nyc_taxi_data", partition=partition
+            )
+            assert "RUN_SUCCESS" in result.output
+
+        for asset_key in [
+            AssetKey("partitioned_nyc_taxi_data"),
+            AssetKey("reloaded_partitioned_nyc_taxi_data"),
+        ]:
+            assert instance.get_latest_materialization_event(asset_key) is not None
+            partitions = instance.get_materialized_partitions(asset_key)
+            for partition in ["part.0", "part.1"]:
+                assert partition in partitions
+
+
 def test_spark():
     with instance_for_test() as instance:
         result = invoke_materialize("*reloaded_nyc_taxi_data_spark")
