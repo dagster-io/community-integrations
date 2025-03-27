@@ -1,6 +1,7 @@
 import polars as pl
 from dagster import (
     AllPartitionMapping,
+    AssetExecutionContext,
     AssetIn,
     AssetSpec,
     Definitions,
@@ -45,6 +46,31 @@ def reloaded_nyc_taxi_data(combined_nyc_taxi_data: pl.LazyFrame) -> None:
     print(combined_nyc_taxi_data.describe())  # noqa: T201
 
 
+@asset(
+    ins={"raw_nyc_taxi_data": AssetIn("nyc.parquet")},
+    metadata={"partition_expr": "input_file_name"},
+    io_manager_key="iceberg_polars_io_manager",
+    partitions_def=parts,
+)
+def partitioned_nyc_taxi_data(
+    context: AssetExecutionContext, raw_nyc_taxi_data: pl.LazyFrame
+) -> pl.LazyFrame:
+    return raw_nyc_taxi_data.with_columns(
+        pl.lit(
+            f"https://storage.googleapis.com/anaconda-public-data/nyc-taxi/nyc.parquet/part.{context.partition_key}.parquet"
+        ).alias("input_file_name")
+    )
+
+
+@asset(
+    metadata={"partition_expr": "input_file_name"},
+    io_manager_key="iceberg_polars_io_manager",
+    partitions_def=parts,
+)
+def reloaded_partitioned_nyc_taxi_data(partitioned_nyc_taxi_data: pl.LazyFrame) -> None:
+    print(partitioned_nyc_taxi_data.describe())  # noqa: T201
+
+
 @asset(deps=["combined_nyc_taxi_data"], io_manager_key="spark_iceberg_io_manager")
 def combined_nyc_taxi_data_spark(pyspark: PySparkResource) -> DataFrame:
     spark = pyspark.spark_session
@@ -72,6 +98,8 @@ defs = Definitions(
         raw_nyc_taxi_data,
         combined_nyc_taxi_data,
         reloaded_nyc_taxi_data,
+        partitioned_nyc_taxi_data,
+        reloaded_partitioned_nyc_taxi_data,
         combined_nyc_taxi_data_spark,
         reloaded_nyc_taxi_data_spark,
     ],
