@@ -75,3 +75,21 @@ def test_spark():
             AssetKey("reloaded_nyc_taxi_data_spark"),
         ]:
             assert instance.get_latest_materialization_event(asset_key) is not None
+
+
+def test_spark_partitioned():
+    with instance_for_test() as instance:
+        for partition in ["part.0", "part.1"]:
+            result = invoke_materialize(
+                "*reloaded_partitioned_nyc_taxi_data_spark", partition=partition
+            )
+            assert "RUN_SUCCESS" in result.output
+
+        for asset_key in [
+            AssetKey("partitioned_nyc_taxi_data_spark"),
+            AssetKey("reloaded_partitioned_nyc_taxi_data_spark"),
+        ]:
+            assert instance.get_latest_materialization_event(asset_key) is not None
+            partitions = instance.get_materialized_partitions(asset_key)
+            for partition in ["part.0", "part.1"]:
+                assert partition in partitions
