@@ -81,6 +81,7 @@ class IcebergDbClient(DbClient):
         ):
             query = f"SELECT {col_str} FROM {table_slice.schema}.{table_slice.table} WHERE\n"
             return query + _partition_where_clause(table_slice.partition_dimensions)
+
         return f"""SELECT {col_str} FROM {table_slice.schema}.{table_slice.table}"""
 
     @staticmethod

@@ -82,6 +82,34 @@ def reloaded_nyc_taxi_data_spark(combined_nyc_taxi_data_spark: DataFrame) -> Non
     combined_nyc_taxi_data_spark.describe().show()
 
 
+@asset(
+    deps=["partitioned_nyc_taxi_data"],
+    metadata={"partition_expr": "input_file_name"},
+    io_manager_key="spark_iceberg_io_manager",
+    partitions_def=parts,
+)
+def partitioned_nyc_taxi_data_spark(
+    context: AssetExecutionContext, pyspark: PySparkResource
+) -> DataFrame:
+    spark = pyspark.spark_session
+    df = spark.table(f"{CATALOG_NAME}.{NAMESPACE}.partitioned_nyc_taxi_data")
+    return df.filter(
+        df.input_file_name
+        == f"https://storage.googleapis.com/anaconda-public-data/nyc-taxi/nyc.parquet/part.{context.partition_key}.parquet"
+    )
+
+
+@asset(
+    metadata={"partition_expr": "input_file_name"},
+    io_manager_key="spark_iceberg_io_manager",
+    partitions_def=parts,
+)
+def reloaded_partitioned_nyc_taxi_data_spark(
+    partitioned_nyc_taxi_data_spark: DataFrame,
+) -> None:
+    partitioned_nyc_taxi_data_spark.describe().show()
+
+
 catalog_config = IcebergCatalogConfig(
     properties={
         "type": "rest",
@@ -102,6 +130,8 @@ defs = Definitions(
         reloaded_partitioned_nyc_taxi_data,
         combined_nyc_taxi_data_spark,
         reloaded_nyc_taxi_data_spark,
+        partitioned_nyc_taxi_data_spark,
+        reloaded_partitioned_nyc_taxi_data_spark,
     ],
     resources={
         "polars_parquet_io_manager": PolarsParquetIOManager(
