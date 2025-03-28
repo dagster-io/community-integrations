@@ -88,7 +88,7 @@ select = [
   "TD",   # flake8-todos
   "ERA",  # eradicate
   "PD",   # pandas-vet
-  "PGH",# pygrep-hooks # TODO(deepyaman): Use specific rule codes when ignoring type issues.
+  "PGH",  # pygrep-hooks
   "FLY",  # flynt
   "NPY",  # NumPy-specific rules
   "PERF", # Perflint
@@ -127,6 +127,7 @@ docs = [
 ]
 dev = [
   "dagit>=1.8.8",
+  "dagster>=1.10.5",
   "dagster-polars>=0.26.1",
   "dagster-pyspark>=0.26.1",
   "fsspec[http]>=2025.2.0",
