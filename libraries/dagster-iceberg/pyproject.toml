@@ -102,6 +102,7 @@ ignore = [
   "COM812", # missing-trailing-comma
   "SLF001", # private-member-access
   "TD003",  # missing-todo-link
+  "PD901",  # pandas-df-variable-name, stylistic choice
 ]
 
 [tool.ruff.lint.per-file-ignores]
