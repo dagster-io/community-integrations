@@ -36,9 +36,9 @@ class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
     ):
         """Writes a PySpark dataframe to an Iceberg table."""
         table_name = SparkIcebergDbClient.get_table_name(table_slice)
-        table_exists = connection.catalog.tableExists(table_name)  # pyright: ignore [reportArgumentType]
+        table_exists = connection.catalog.tableExists(table_name)
         mode = "overwritePartitions" if table_exists else "create"
-        getattr(obj.writeTo(table_name), mode)()  # pyright: ignore [reportArgumentType]
+        getattr(obj.writeTo(table_name), mode)()
 
     def load_input(
         self,
@@ -47,7 +47,7 @@ class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
         connection: SparkSession,
     ) -> DataFrame:
         """Reads a PySpark dataframe from an Iceberg table."""
-        return connection.table(SparkIcebergDbClient.get_table_name(table_slice))  # pyright: ignore [reportArgumentType]
+        return connection.table(SparkIcebergDbClient.get_table_name(table_slice))
 
     @property
     def supported_types(self) -> Sequence[type[object]]:
