@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.dagster.pipes.DagsterPipesException;
 import io.dagster.pipes.data.PipesConstants;
+import io.dagster.pipes.utils.PipesUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -36,7 +37,7 @@ public class PipesMappingParamsLoader implements PipesParamsLoader {
             );
             return Optional.empty();
         }
-        return Optional.of(decodeParam(rawValue));
+        return Optional.of(PipesUtils.decodeParam(rawValue));
     }
 
     @Override
@@ -49,36 +50,7 @@ public class PipesMappingParamsLoader implements PipesParamsLoader {
             );
             return Optional.empty();
         }
-        return Optional.of(decodeParam(rawValue));
+        return Optional.of(PipesUtils.decodeParam(rawValue));
     }
-
-    private Map<String, Object> decodeParam(String rawValue) throws DagsterPipesException {
-        try {
-            byte[] base64Decoded = Base64.getDecoder().decode(rawValue);
-            byte[] zlibDecompressed = zlibDecompress(base64Decoded);
-            ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.readValue(
-                    zlibDecompressed,
-                    new TypeReference<Map<String, Object>>() {}
-            );
-        } catch (IOException ioe) {
-            throw new DagsterPipesException("Failed to decompress parameters", ioe);
-        }
-    }
-
-    private byte[] zlibDecompress(byte[] data) throws IOException {
-        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(data);
-             InflaterInputStream filterStream = new InflaterInputStream(inputStream);
-             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-
-            byte[] buffer = new byte[1024];
-            int readChunk;
-
-            while ((readChunk = filterStream.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, readChunk);
-            }
-
-            return outputStream.toByteArray();
-        }
-    }
+ 
 }

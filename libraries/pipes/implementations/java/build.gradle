@@ -7,8 +7,14 @@ plugins {
 
 import com.vanniktech.maven.publish.SonatypeHost
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
 mavenPublishing {
-    coordinates("io.dagster", "pipes", "1.0.0")
+    coordinates("io.dagster", "pipes", "1.1.0")
     signAllPublications()
 
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
@@ -50,7 +56,7 @@ dependencies {
     annotationProcessor 'info.picocli:picocli-codegen:4.7.6'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
     implementation 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
-    implementation group: 'org.mockito', name: 'mockito-core', version: '2.7.5'
+    implementation group: 'org.mockito', name: 'mockito-core', version: '4.11.0'
     implementation group: 'software.amazon.awssdk', name: 's3', version: '2.29.17'
 }
 
