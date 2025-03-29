@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Optional, cast
 
-import dagster._seven as seven
+import dagster_shared.seven as seven
 from dagster import (
     Field,
     Permissive,
@@ -61,7 +61,7 @@ class S3ComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass):
         access_key_id (Optional[str]): access key id to authenticate, if not passed it's parsed from the Environment.
         secret_access_key (Optional[str]): secret access key to authenticate, if not passed it's parsed from the Environment.
         local_dir (Optional[str]): Path to the local directory in which to stage logs. Default:
-            ``dagster._seven.get_system_temp_directory()``.
+            ``dagster_shared.seven.get_system_temp_directory()``.
         prefix (Optional[str]): Prefix for the log file keys.
         allow_http (Optional[bool]): Whether or not to allow http connections. Default False.
         allow_invalid_certificates (Optional[bool]): Whether or not to allow invalid certificates. Default False.

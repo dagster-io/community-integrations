@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Optional
 
-import dagster._seven as seven
+import dagster_shared.seven as seven
 from dagster import (
     Field,
     Permissive,
@@ -86,7 +86,7 @@ class ADLSComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass
         access_key (Optional[str]):
         use_azure_cli (Optional[bool]):
         local_dir (Optional[str]): Path to the local directory in which to stage logs. Default:
-            ``dagster._seven.get_system_temp_directory()``.
+            ``dagster_shared.seven.get_system_temp_directory()``.
         prefix (Optional[str]): Prefix for the log file keys.
         allow_http (Optional[bool]): Whether or not to allow http connections. Default False.
         allow_invalid_certificates (Optional[bool]): Whether or not to allow invalid certificates. Default False.

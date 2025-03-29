@@ -1,5 +1,4 @@
 version = 1
-revision = 1
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version < '3.10'",
@@ -332,7 +331,7 @@ wheels = [
 
 [[package]]
 name = "dagster"
-version = "1.9.11"
+version = "1.10.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "alembic" },
@@ -340,20 +339,18 @@ dependencies = [
     { name = "click" },
     { name = "coloredlogs" },
     { name = "dagster-pipes" },
+    { name = "dagster-shared" },
     { name = "docstring-parser" },
     { name = "filelock", version = "3.16.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "filelock", version = "3.17.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "grpcio" },
     { name = "grpcio-health-checking" },
     { name = "jinja2" },
-    { name = "packaging" },
     { name = "protobuf" },
     { name = "psutil", marker = "sys_platform == 'win32'" },
-    { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "pytz" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
-    { name = "pyyaml" },
     { name = "requests" },
     { name = "rich" },
     { name = "setuptools", version = "75.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -365,15 +362,14 @@ dependencies = [
     { name = "tomli" },
     { name = "toposort" },
     { name = "tqdm" },
-    { name = "typing-extensions" },
     { name = "tzdata", marker = "sys_platform == 'win32'" },
     { name = "universal-pathlib" },
     { name = "watchdog", version = "4.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "watchdog", version = "5.0.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5c/ee/dac62c226e6d1f40d2b71d4a1ac2ef8be85feff06e695b76f2bb154aa2cd/dagster-1.9.11.tar.gz", hash = "sha256:127790c9d511f1a653e7f85909167f49d811613dc143c3074b723ac199a081ee", size = 1424236 }
+sdist = { url = "https://files.pythonhosted.org/packages/26/72/a5965548050506b5381e8077bac7ed679276c8b8ba0832f2c84de30807c6/dagster-1.10.7.tar.gz", hash = "sha256:976aca6f9ef18b2cf63c4e583c58521d7981c1b1b70f0fe3661ab3453f1f5669", size = 1402907 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/a0/90bca71a73912c12dcb5c74771c199bdeaa95824324c5d14eadecf8fbe39/dagster-1.9.11-py3-none-any.whl", hash = "sha256:071cd89c688ce979c510c5ccb07324a60d936cb749446d3bd293370011524ee4", size = 1743152 },
+    { url = "https://files.pythonhosted.org/packages/af/10/635c6307018d4d95b5f9a301121a1644e24b7221e3f00fdeffac5a8c98e2/dagster-1.10.7-py3-none-any.whl", hash = "sha256:b9790999d226f690067cfc913bfd4111f532bbd72cfad01b78473fb7259892e1", size = 1719757 },
 ]
 
 [[package]]
@@ -399,7 +395,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dagster", specifier = ">=1.9.11" },
+    { name = "dagster", specifier = ">=1.10.7" },
     { name = "obstore", specifier = ">=0.6.0" },
 ]
 
@@ -417,11 +413,26 @@ dev = [
 
 [[package]]
 name = "dagster-pipes"
-version = "1.9.11"
+version = "1.10.7"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b1/7c/3b0e3ea79e5e240050190a75729f448de6dac90c5ef2d8f3e19cda4eb674/dagster-pipes-1.9.11.tar.gz", hash = "sha256:48b33e6bb9498bba40ab6901fbdc33e87c0436785d463f7b8af710b9667d5e58", size = 20049 }
+sdist = { url = "https://files.pythonhosted.org/packages/eb/da/15294d7e95adef3df8be6ce6613afe9cdd21b43a77d0eca151c674099ad2/dagster-pipes-1.10.7.tar.gz", hash = "sha256:b8ee19a66e993165a0c6aa04a019a934beb299341cb21668b2a24ed2a1b58e71", size = 20476 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8e/89/d44b90cf618c65a728c33501bedf8ba8c071bc49e83ce3c64ce637144b4d/dagster_pipes-1.9.11-py3-none-any.whl", hash = "sha256:005be0bdf933afbd4020ac86aee048a2964a3b61e396dd5e019e1bdb0aa6952b", size = 19956 },
+    { url = "https://files.pythonhosted.org/packages/5c/9b/e5f325c506790ca2f4e66acbe3965cf67053b5bb1e188cc130649da5f7db/dagster_pipes-1.10.7-py3-none-any.whl", hash = "sha256:caca2e18b9d993c71cb836a930c7c1a12be3d987637354a6ee2451d3ce7793b0", size = 20276 },
+]
+
+[[package]]
+name = "dagster-shared"
+version = "0.26.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "pydantic" },
+    { name = "pyyaml" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b8/47/b9b3d3958110b8e506b54e59a78ec25d2166d525a71d3f314ad55433ffec/dagster_shared-0.26.7.tar.gz", hash = "sha256:19c6542ee5d57d253de48435c2f280eabc7e1a2bee31169da0fbf0cf7ab9444a", size = 61501 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/86/12/844d5a5f34708570e58997903a5c9309ada3b368924e6f52f603da27a402/dagster_shared-0.26.7-py3-none-any.whl", hash = "sha256:f966d5af45efd48a0b38c049b44d604594bc6b23c18d317eefb3b42a10818e6b", size = 71218 },
 ]
 
 [[package]]
