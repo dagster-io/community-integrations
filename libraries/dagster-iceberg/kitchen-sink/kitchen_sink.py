@@ -36,12 +36,13 @@ raw_nyc_taxi_data = AssetSpec(
         ),
     },
     io_manager_key="iceberg_polars_io_manager",
+    group_name="polars",
 )
 def combined_nyc_taxi_data(raw_nyc_taxi_data: dict[str, pl.LazyFrame]) -> pl.LazyFrame:
     return pl.concat(raw_nyc_taxi_data.values())
 
 
-@asset(io_manager_key="iceberg_polars_io_manager")
+@asset(io_manager_key="iceberg_polars_io_manager", group_name="polars")
 def reloaded_nyc_taxi_data(combined_nyc_taxi_data: pl.LazyFrame) -> None:
     print(combined_nyc_taxi_data.describe())  # noqa: T201
 
@@ -51,6 +52,7 @@ def reloaded_nyc_taxi_data(combined_nyc_taxi_data: pl.LazyFrame) -> None:
     metadata={"partition_expr": "input_file_name"},
     io_manager_key="iceberg_polars_io_manager",
     partitions_def=parts,
+    group_name="polars",
 )
 def partitioned_nyc_taxi_data(
     context: AssetExecutionContext, raw_nyc_taxi_data: pl.LazyFrame
@@ -66,18 +68,23 @@ def partitioned_nyc_taxi_data(
     metadata={"partition_expr": "input_file_name"},
     io_manager_key="iceberg_polars_io_manager",
     partitions_def=parts,
+    group_name="polars",
 )
 def reloaded_partitioned_nyc_taxi_data(partitioned_nyc_taxi_data: pl.LazyFrame) -> None:
     print(partitioned_nyc_taxi_data.describe())  # noqa: T201
 
 
-@asset(deps=["combined_nyc_taxi_data"], io_manager_key="spark_iceberg_io_manager")
+@asset(
+    deps=["combined_nyc_taxi_data"],
+    io_manager_key="spark_iceberg_io_manager",
+    group_name="spark",
+)
 def combined_nyc_taxi_data_spark(pyspark: PySparkResource) -> DataFrame:
     spark = pyspark.spark_session
     return spark.table(f"{CATALOG_NAME}.{NAMESPACE}.combined_nyc_taxi_data")
 
 
-@asset(io_manager_key="spark_iceberg_io_manager")
+@asset(io_manager_key="spark_iceberg_io_manager", group_name="spark")
 def reloaded_nyc_taxi_data_spark(combined_nyc_taxi_data_spark: DataFrame) -> None:
     combined_nyc_taxi_data_spark.describe().show()
 
@@ -87,6 +94,7 @@ def reloaded_nyc_taxi_data_spark(combined_nyc_taxi_data_spark: DataFrame) -> Non
     metadata={"partition_expr": "input_file_name"},
     io_manager_key="spark_iceberg_io_manager",
     partitions_def=parts,
+    group_name="spark",
 )
 def partitioned_nyc_taxi_data_spark(
     context: AssetExecutionContext, pyspark: PySparkResource
@@ -103,6 +111,7 @@ def partitioned_nyc_taxi_data_spark(
     metadata={"partition_expr": "input_file_name"},
     io_manager_key="spark_iceberg_io_manager",
     partitions_def=parts,
+    group_name="spark",
 )
 def reloaded_partitioned_nyc_taxi_data_spark(
     partitioned_nyc_taxi_data_spark: DataFrame,
