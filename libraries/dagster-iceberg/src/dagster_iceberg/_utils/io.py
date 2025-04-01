@@ -70,10 +70,7 @@ def table_writer(
     #  even though it's the default value.
     partition_exprs: list[str] | None = None
     partition_dimensions: Sequence[TablePartitionDimension] | None = None
-    if (
-        table_slice.partition_dimensions is not None
-        and len(table_slice.partition_dimensions) != 0
-    ):
+    if table_slice.partition_dimensions:
         partition_exprs = [p.partition_expr for p in table_slice.partition_dimensions]
         if any(p is None for p in partition_exprs):
             raise ValueError(
