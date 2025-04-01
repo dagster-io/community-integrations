@@ -1,13 +1,5 @@
+import dagster as dg
 import polars as pl
-from dagster import (
-    AllPartitionMapping,
-    AssetExecutionContext,
-    AssetIn,
-    AssetSpec,
-    Definitions,
-    StaticPartitionsDefinition,
-    asset,
-)
 from dagster_polars import PolarsParquetIOManager
 from dagster_pyspark import PySparkResource
 from pyspark.sql.connect.dataframe import DataFrame
@@ -23,18 +15,18 @@ NAMESPACE = "nyc"
 
 PARTITION_EXPR = "partition_key"
 
-parts = StaticPartitionsDefinition([f"part.{i}" for i in range(NUM_PARTS)])
-raw_nyc_taxi_data = AssetSpec(
+parts = dg.StaticPartitionsDefinition([f"part.{i}" for i in range(NUM_PARTS)])
+raw_nyc_taxi_data = dg.AssetSpec(
     key="nyc.parquet",
     partitions_def=parts,
 ).with_io_manager_key("polars_parquet_io_manager")
 
 
-@asset(
+@dg.asset(
     ins={
-        "raw_nyc_taxi_data": AssetIn(
+        "raw_nyc_taxi_data": dg.AssetIn(
             "nyc.parquet",
-            partition_mapping=AllPartitionMapping(),
+            partition_mapping=dg.AllPartitionMapping(),
         ),
     },
     io_manager_key="iceberg_polars_io_manager",
@@ -44,27 +36,27 @@ def combined_nyc_taxi_data(raw_nyc_taxi_data: dict[str, pl.LazyFrame]) -> pl.Laz
     return pl.concat(raw_nyc_taxi_data.values())
 
 
-@asset(io_manager_key="iceberg_polars_io_manager", group_name="polars")
+@dg.asset(io_manager_key="iceberg_polars_io_manager", group_name="polars")
 def reloaded_nyc_taxi_data(combined_nyc_taxi_data: pl.LazyFrame) -> None:
     print(combined_nyc_taxi_data.describe())  # noqa: T201
 
 
-@asset(
-    ins={"raw_nyc_taxi_data": AssetIn("nyc.parquet")},
+@dg.asset(
+    ins={"raw_nyc_taxi_data": dg.AssetIn("nyc.parquet")},
     metadata={"partition_expr": PARTITION_EXPR},
     io_manager_key="iceberg_polars_io_manager",
     partitions_def=parts,
     group_name="polars",
 )
 def static_partitioned_nyc_taxi_data(
-    context: AssetExecutionContext, raw_nyc_taxi_data: pl.LazyFrame
+    context: dg.AssetExecutionContext, raw_nyc_taxi_data: pl.LazyFrame
 ) -> pl.LazyFrame:
     return raw_nyc_taxi_data.with_columns(
         pl.lit(context.partition_key).alias(PARTITION_EXPR)
     )
 
 
-@asset(
+@dg.asset(
     metadata={"partition_expr": PARTITION_EXPR},
     io_manager_key="iceberg_polars_io_manager",
     partitions_def=parts,
@@ -76,7 +68,7 @@ def reloaded_static_partitioned_nyc_taxi_data(
     print(static_partitioned_nyc_taxi_data.describe())  # noqa: T201
 
 
-@asset(
+@dg.asset(
     deps=["combined_nyc_taxi_data"],
     io_manager_key="spark_iceberg_io_manager",
     group_name="spark",
@@ -86,12 +78,12 @@ def combined_nyc_taxi_data_spark(pyspark: PySparkResource) -> DataFrame:
     return spark.table(f"{CATALOG_NAME}.{NAMESPACE}.combined_nyc_taxi_data")
 
 
-@asset(io_manager_key="spark_iceberg_io_manager", group_name="spark")
+@dg.asset(io_manager_key="spark_iceberg_io_manager", group_name="spark")
 def reloaded_nyc_taxi_data_spark(combined_nyc_taxi_data_spark: DataFrame) -> None:
     combined_nyc_taxi_data_spark.describe().show()
 
 
-@asset(
+@dg.asset(
     deps=["static_partitioned_nyc_taxi_data"],
     metadata={"partition_expr": PARTITION_EXPR},
     io_manager_key="spark_iceberg_io_manager",
@@ -99,14 +91,14 @@ def reloaded_nyc_taxi_data_spark(combined_nyc_taxi_data_spark: DataFrame) -> Non
     group_name="spark",
 )
 def static_partitioned_nyc_taxi_data_spark(
-    context: AssetExecutionContext, pyspark: PySparkResource
+    context: dg.AssetExecutionContext, pyspark: PySparkResource
 ) -> DataFrame:
     spark = pyspark.spark_session
     df = spark.table(f"{CATALOG_NAME}.{NAMESPACE}.static_partitioned_nyc_taxi_data")
     return df.filter(df[PARTITION_EXPR] == context.partition_key)
 
 
-@asset(
+@dg.asset(
     metadata={"partition_expr": PARTITION_EXPR},
     io_manager_key="spark_iceberg_io_manager",
     partitions_def=parts,
@@ -129,7 +121,7 @@ catalog_config = IcebergCatalogConfig(
 )
 
 
-defs = Definitions(
+defs = dg.Definitions(
     assets=[
         raw_nyc_taxi_data,
         combined_nyc_taxi_data,
