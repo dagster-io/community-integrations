@@ -265,16 +265,13 @@ class PartitionMapper:
         # In practice, partition_dimensions is an empty list and not None
         #  But the type hint is Optional[Sequence[TablePartitionDimension]]
         partition_dimensions: Sequence[TablePartitionDimension] | None = None
-        if not (
-            self.table_slice.partition_dimensions is None
-            or len(self.table_slice.partition_dimensions) == 0
-        ):
+        if self.table_slice.partition_dimensions:
             partition_dimensions = self.table_slice.partition_dimensions
-        if partition_dimensions is None and not allow_empty_dagster_partitions:
-            raise ValueError(
-                "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice.",
-            )
         if partition_dimensions is None:
+            if not allow_empty_dagster_partitions:
+                raise ValueError(
+                    "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice.",
+                )
             return []
         # Check if table columns have the correct data types
         for partition in partition_dimensions:
