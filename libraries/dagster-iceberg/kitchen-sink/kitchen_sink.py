@@ -13,7 +13,7 @@ NUM_PARTS = 2  # TODO(deepyaman): Make this configurable.
 CATALOG_NAME = "rest"
 NAMESPACE = "nyc"
 
-PARTITION_EXPR = "partition_key"
+STATIC_PARTITION_KEY = "partition_key"
 
 parts = dg.StaticPartitionsDefinition([f"part.{i}" for i in range(NUM_PARTS)])
 raw_nyc_taxi_data = dg.AssetSpec(
@@ -43,7 +43,7 @@ def reloaded_nyc_taxi_data(combined_nyc_taxi_data: pl.LazyFrame) -> None:
 
 @dg.asset(
     ins={"raw_nyc_taxi_data": dg.AssetIn("nyc.parquet")},
-    metadata={"partition_expr": PARTITION_EXPR},
+    metadata={"partition_expr": STATIC_PARTITION_KEY},
     io_manager_key="iceberg_polars_io_manager",
     partitions_def=parts,
     group_name="polars",
@@ -52,12 +52,12 @@ def static_partitioned_nyc_taxi_data(
     context: dg.AssetExecutionContext, raw_nyc_taxi_data: pl.LazyFrame
 ) -> pl.LazyFrame:
     return raw_nyc_taxi_data.with_columns(
-        pl.lit(context.partition_key).alias(PARTITION_EXPR)
+        pl.lit(context.partition_key).alias(STATIC_PARTITION_KEY)
     )
 
 
 @dg.asset(
-    metadata={"partition_expr": PARTITION_EXPR},
+    metadata={"partition_expr": STATIC_PARTITION_KEY},
     io_manager_key="iceberg_polars_io_manager",
     partitions_def=parts,
     group_name="polars",
@@ -85,7 +85,7 @@ def reloaded_nyc_taxi_data_spark(combined_nyc_taxi_data_spark: DataFrame) -> Non
 
 @dg.asset(
     deps=["static_partitioned_nyc_taxi_data"],
-    metadata={"partition_expr": PARTITION_EXPR},
+    metadata={"partition_expr": STATIC_PARTITION_KEY},
     io_manager_key="spark_iceberg_io_manager",
     partitions_def=parts,
     group_name="spark",
@@ -95,11 +95,11 @@ def static_partitioned_nyc_taxi_data_spark(
 ) -> DataFrame:
     spark = pyspark.spark_session
     df = spark.table(f"{CATALOG_NAME}.{NAMESPACE}.static_partitioned_nyc_taxi_data")
-    return df.filter(df[PARTITION_EXPR] == context.partition_key)
+    return df.filter(df[STATIC_PARTITION_KEY] == context.partition_key)
 
 
 @dg.asset(
-    metadata={"partition_expr": PARTITION_EXPR},
+    metadata={"partition_expr": STATIC_PARTITION_KEY},
     io_manager_key="spark_iceberg_io_manager",
     partitions_def=parts,
     group_name="spark",
