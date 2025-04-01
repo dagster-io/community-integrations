@@ -56,7 +56,7 @@ def reloaded_nyc_taxi_data(combined_nyc_taxi_data: pl.LazyFrame) -> None:
     partitions_def=parts,
     group_name="polars",
 )
-def partitioned_nyc_taxi_data(
+def static_partitioned_nyc_taxi_data(
     context: AssetExecutionContext, raw_nyc_taxi_data: pl.LazyFrame
 ) -> pl.LazyFrame:
     return raw_nyc_taxi_data.with_columns(
@@ -70,8 +70,10 @@ def partitioned_nyc_taxi_data(
     partitions_def=parts,
     group_name="polars",
 )
-def reloaded_partitioned_nyc_taxi_data(partitioned_nyc_taxi_data: pl.LazyFrame) -> None:
-    print(partitioned_nyc_taxi_data.describe())  # noqa: T201
+def reloaded_static_partitioned_nyc_taxi_data(
+    static_partitioned_nyc_taxi_data: pl.LazyFrame,
+) -> None:
+    print(static_partitioned_nyc_taxi_data.describe())  # noqa: T201
 
 
 @asset(
@@ -90,17 +92,17 @@ def reloaded_nyc_taxi_data_spark(combined_nyc_taxi_data_spark: DataFrame) -> Non
 
 
 @asset(
-    deps=["partitioned_nyc_taxi_data"],
+    deps=["static_partitioned_nyc_taxi_data"],
     metadata={"partition_expr": PARTITION_EXPR},
     io_manager_key="spark_iceberg_io_manager",
     partitions_def=parts,
     group_name="spark",
 )
-def partitioned_nyc_taxi_data_spark(
+def static_partitioned_nyc_taxi_data_spark(
     context: AssetExecutionContext, pyspark: PySparkResource
 ) -> DataFrame:
     spark = pyspark.spark_session
-    df = spark.table(f"{CATALOG_NAME}.{NAMESPACE}.partitioned_nyc_taxi_data")
+    df = spark.table(f"{CATALOG_NAME}.{NAMESPACE}.static_partitioned_nyc_taxi_data")
     return df.filter(df[PARTITION_EXPR] == context.partition_key)
 
 
@@ -110,10 +112,10 @@ def partitioned_nyc_taxi_data_spark(
     partitions_def=parts,
     group_name="spark",
 )
-def reloaded_partitioned_nyc_taxi_data_spark(
-    partitioned_nyc_taxi_data_spark: DataFrame,
+def reloaded_static_partitioned_nyc_taxi_data_spark(
+    static_partitioned_nyc_taxi_data_spark: DataFrame,
 ) -> None:
-    partitioned_nyc_taxi_data_spark.describe().show()
+    static_partitioned_nyc_taxi_data_spark.describe().show()
 
 
 catalog_config = IcebergCatalogConfig(
@@ -132,12 +134,12 @@ defs = Definitions(
         raw_nyc_taxi_data,
         combined_nyc_taxi_data,
         reloaded_nyc_taxi_data,
-        partitioned_nyc_taxi_data,
-        reloaded_partitioned_nyc_taxi_data,
+        static_partitioned_nyc_taxi_data,
+        reloaded_static_partitioned_nyc_taxi_data,
         combined_nyc_taxi_data_spark,
         reloaded_nyc_taxi_data_spark,
-        partitioned_nyc_taxi_data_spark,
-        reloaded_partitioned_nyc_taxi_data_spark,
+        static_partitioned_nyc_taxi_data_spark,
+        reloaded_static_partitioned_nyc_taxi_data_spark,
     ],
     resources={
         "polars_parquet_io_manager": PolarsParquetIOManager(
