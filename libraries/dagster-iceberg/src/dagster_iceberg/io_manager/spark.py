@@ -37,8 +37,21 @@ class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
         """Writes a PySpark dataframe to an Iceberg table."""
         table_name = SparkIcebergDbClient.get_table_name(table_slice)
         table_exists = connection.catalog.tableExists(table_name)
+        writer = obj.writeTo(table_name)
         mode = "overwritePartitions" if table_exists else "create"
-        getattr(obj.writeTo(table_name), mode)()
+        if (
+            table_slice.partition_dimensions
+            and len(table_slice.partition_dimensions) > 0
+            and mode == "create"
+        ):
+            writer = writer.partitionedBy(
+                *[
+                    partition_dimension.partition_expr
+                    for partition_dimension in table_slice.partition_dimensions
+                ]
+            )
+
+        getattr(writer, mode)()
 
     def load_input(
         self,
@@ -47,7 +60,7 @@ class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
         connection: SparkSession,
     ) -> DataFrame:
         """Reads a PySpark dataframe from an Iceberg table."""
-        return connection.table(SparkIcebergDbClient.get_table_name(table_slice))
+        return connection.sql(SparkIcebergDbClient.get_select_statement(table_slice))
 
     @property
     def supported_types(self) -> Sequence[type[object]]:

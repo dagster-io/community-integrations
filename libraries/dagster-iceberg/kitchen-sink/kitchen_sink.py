@@ -21,6 +21,8 @@ NUM_PARTS = 2  # TODO(deepyaman): Make this configurable.
 CATALOG_NAME = "rest"
 NAMESPACE = "nyc"
 
+PARTITION_EXPR = "partition_key"
+
 parts = StaticPartitionsDefinition([f"part.{i}" for i in range(NUM_PARTS)])
 raw_nyc_taxi_data = AssetSpec(
     key="nyc.parquet",
@@ -49,7 +51,7 @@ def reloaded_nyc_taxi_data(combined_nyc_taxi_data: pl.LazyFrame) -> None:
 
 @asset(
     ins={"raw_nyc_taxi_data": AssetIn("nyc.parquet")},
-    metadata={"partition_expr": "input_file_name"},
+    metadata={"partition_expr": PARTITION_EXPR},
     io_manager_key="iceberg_polars_io_manager",
     partitions_def=parts,
     group_name="polars",
@@ -58,14 +60,12 @@ def partitioned_nyc_taxi_data(
     context: AssetExecutionContext, raw_nyc_taxi_data: pl.LazyFrame
 ) -> pl.LazyFrame:
     return raw_nyc_taxi_data.with_columns(
-        pl.lit(
-            f"https://storage.googleapis.com/anaconda-public-data/nyc-taxi/nyc.parquet/part.{context.partition_key}.parquet"
-        ).alias("input_file_name")
+        pl.lit(context.partition_key).alias(PARTITION_EXPR)
     )
 
 
 @asset(
-    metadata={"partition_expr": "input_file_name"},
+    metadata={"partition_expr": PARTITION_EXPR},
     io_manager_key="iceberg_polars_io_manager",
     partitions_def=parts,
     group_name="polars",
@@ -91,7 +91,7 @@ def reloaded_nyc_taxi_data_spark(combined_nyc_taxi_data_spark: DataFrame) -> Non
 
 @asset(
     deps=["partitioned_nyc_taxi_data"],
-    metadata={"partition_expr": "input_file_name"},
+    metadata={"partition_expr": PARTITION_EXPR},
     io_manager_key="spark_iceberg_io_manager",
     partitions_def=parts,
     group_name="spark",
@@ -101,14 +101,11 @@ def partitioned_nyc_taxi_data_spark(
 ) -> DataFrame:
     spark = pyspark.spark_session
     df = spark.table(f"{CATALOG_NAME}.{NAMESPACE}.partitioned_nyc_taxi_data")
-    return df.filter(
-        df.input_file_name
-        == f"https://storage.googleapis.com/anaconda-public-data/nyc-taxi/nyc.parquet/part.{context.partition_key}.parquet"
-    )
+    return df.filter(df[PARTITION_EXPR] == context.partition_key)
 
 
 @asset(
-    metadata={"partition_expr": "input_file_name"},
+    metadata={"partition_expr": PARTITION_EXPR},
     io_manager_key="spark_iceberg_io_manager",
     partitions_def=parts,
     group_name="spark",
