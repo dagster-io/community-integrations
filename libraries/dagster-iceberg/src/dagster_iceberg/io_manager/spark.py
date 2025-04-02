@@ -1,13 +1,18 @@
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, cast
 
 try:
     from pyspark.sql.connect.dataframe import DataFrame
     from pyspark.sql.connect.session import SparkSession
+    from pyspark.sql.functions import days, hours, months
 except ImportError as e:
     raise ImportError("Please install dagster-iceberg with the 'spark' extra.") from e
 from dagster import ConfigurableIOManagerFactory
+from dagster._core.definitions.multi_dimensional_partitions import (
+    MultiPartitionsDefinition,
+)
+from dagster._core.definitions.partition import PartitionsDefinition, ScheduleType
 from dagster._core.definitions.time_window_partitions import TimeWindow
 from dagster._core.execution.context.input import InputContext
 from dagster._core.execution.context.output import OutputContext
@@ -40,10 +45,13 @@ class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
         writer = obj.writeTo(table_name)
         mode = "overwritePartitions" if table_exists else "create"
         if table_slice.partition_dimensions and mode == "create":
+            partition_transforms = _partition_transforms(context.asset_partitions_def)
             writer = writer.partitionedBy(
                 *[
-                    partition_dimension.partition_expr
-                    for partition_dimension in table_slice.partition_dimensions
+                    partition_transform(partition_dimension.partition_expr)
+                    for partition_transform, partition_dimension in zip(
+                        partition_transforms, table_slice.partition_dimensions
+                    )
                 ]
             )
 
@@ -128,6 +136,25 @@ class SparkIcebergIOManager(ConfigurableIOManagerFactory):
             schema=self.namespace,
             io_manager_name="SparkIcebergIOManager",
         )
+
+
+def _partition_transforms(partitions_def: PartitionsDefinition) -> Sequence[Callable]:
+    if isinstance(partitions_def, MultiPartitionsDefinition):
+        return [
+            _partition_transforms(x.partitions_def)[0]
+            for x in partitions_def.partitions_defs
+        ]
+
+    schedule_type = getattr(partitions_def, "schedule_type", None)
+    if schedule_type is ScheduleType.HOURLY:
+        return [hours]
+    if schedule_type is ScheduleType.DAILY:
+        return [days]
+    if schedule_type is ScheduleType.WEEKLY:
+        return [days]
+    if schedule_type is ScheduleType.MONTHLY:
+        return [months]
+    return [lambda x: x]
 
 
 def _partition_where_clause(
