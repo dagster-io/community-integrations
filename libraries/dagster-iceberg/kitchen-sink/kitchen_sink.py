@@ -176,6 +176,20 @@ def multi_partitioned_nyc_taxi_data_spark(
     )
 
 
+@dg.asset(
+    metadata={
+        "partition_expr": {"daily": DAILY_PARTITION_KEY, "static": STATIC_PARTITION_KEY}
+    },
+    io_manager_key="spark_iceberg_io_manager",
+    partitions_def=multi_partitions,
+    group_name="spark",
+)
+def reloaded_multi_partitioned_nyc_taxi_data_spark(
+    multi_partitioned_nyc_taxi_data_spark: DataFrame,
+) -> None:
+    multi_partitioned_nyc_taxi_data_spark.describe().show()
+
+
 catalog_config = IcebergCatalogConfig(
     properties={
         "type": "rest",
@@ -201,6 +215,7 @@ defs = dg.Definitions(
         static_partitioned_nyc_taxi_data_spark,
         reloaded_static_partitioned_nyc_taxi_data_spark,
         multi_partitioned_nyc_taxi_data_spark,
+        reloaded_multi_partitioned_nyc_taxi_data_spark,
     ],
     resources={
         "polars_parquet_io_manager": PolarsParquetIOManager(
