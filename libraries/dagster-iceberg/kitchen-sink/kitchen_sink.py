@@ -1,3 +1,5 @@
+from datetime import date
+
 import dagster as dg
 import polars as pl
 from dagster_polars import PolarsParquetIOManager
@@ -13,13 +15,21 @@ NUM_PARTS = 2  # TODO(deepyaman): Make this configurable.
 CATALOG_NAME = "rest"
 NAMESPACE = "nyc"
 
-STATIC_PARTITION_KEY = "partition_key"
+STATIC_PARTITION_KEY = "part"
+DAILY_PARTITION_KEY = "date"
 
-parts = dg.StaticPartitionsDefinition([f"part.{i}" for i in range(NUM_PARTS)])
+static_partitions = dg.StaticPartitionsDefinition(
+    [f"part.{i}" for i in range(NUM_PARTS)]
+)
 raw_nyc_taxi_data = dg.AssetSpec(
     key="nyc.parquet",
-    partitions_def=parts,
+    partitions_def=static_partitions,
 ).with_io_manager_key("polars_parquet_io_manager")
+
+daily_partitions = dg.DailyPartitionsDefinition(start_date="2015-01-01")
+multi_partitions = dg.MultiPartitionsDefinition(
+    {"daily": daily_partitions, "static": static_partitions}
+)
 
 
 @dg.asset(
@@ -45,7 +55,7 @@ def reloaded_nyc_taxi_data(combined_nyc_taxi_data: pl.LazyFrame) -> None:
     ins={"raw_nyc_taxi_data": dg.AssetIn("nyc.parquet")},
     metadata={"partition_expr": STATIC_PARTITION_KEY},
     io_manager_key="iceberg_polars_io_manager",
-    partitions_def=parts,
+    partitions_def=static_partitions,
     group_name="polars",
 )
 def static_partitioned_nyc_taxi_data(
@@ -59,13 +69,48 @@ def static_partitioned_nyc_taxi_data(
 @dg.asset(
     metadata={"partition_expr": STATIC_PARTITION_KEY},
     io_manager_key="iceberg_polars_io_manager",
-    partitions_def=parts,
+    partitions_def=static_partitions,
     group_name="polars",
 )
 def reloaded_static_partitioned_nyc_taxi_data(
     static_partitioned_nyc_taxi_data: pl.LazyFrame,
 ) -> None:
     print(static_partitioned_nyc_taxi_data.describe())  # noqa: T201
+
+
+@dg.asset(
+    ins={"raw_nyc_taxi_data": dg.AssetIn("nyc.parquet")},
+    metadata={
+        "partition_expr": {"daily": DAILY_PARTITION_KEY, "static": STATIC_PARTITION_KEY}
+    },
+    io_manager_key="iceberg_polars_io_manager",
+    partitions_def=multi_partitions,
+    group_name="polars",
+)
+def multi_partitioned_nyc_taxi_data(
+    context: dg.AssetExecutionContext, raw_nyc_taxi_data: pl.LazyFrame
+) -> pl.LazyFrame:
+    keys_by_dimension: dg.MultiPartitionKey = context.partition_key.keys_by_dimension
+    return raw_nyc_taxi_data.with_columns(
+        pl.col("tpep_pickup_datetime").dt.date().alias(DAILY_PARTITION_KEY),
+        pl.lit(keys_by_dimension["static"]).alias(STATIC_PARTITION_KEY),
+    ).filter(
+        pl.col(DAILY_PARTITION_KEY) == date.fromisoformat(keys_by_dimension["daily"])
+    )
+
+
+@dg.asset(
+    metadata={
+        "partition_expr": {"daily": DAILY_PARTITION_KEY, "static": STATIC_PARTITION_KEY}
+    },
+    io_manager_key="iceberg_polars_io_manager",
+    partitions_def=multi_partitions,
+    group_name="polars",
+)
+def reloaded_multi_partitioned_nyc_taxi_data(
+    multi_partitioned_nyc_taxi_data: pl.LazyFrame,
+) -> None:
+    print(multi_partitioned_nyc_taxi_data.describe())  # noqa: T201
 
 
 @dg.asset(
@@ -87,7 +132,7 @@ def reloaded_nyc_taxi_data_spark(combined_nyc_taxi_data_spark: DataFrame) -> Non
     deps=["static_partitioned_nyc_taxi_data"],
     metadata={"partition_expr": STATIC_PARTITION_KEY},
     io_manager_key="spark_iceberg_io_manager",
-    partitions_def=parts,
+    partitions_def=static_partitions,
     group_name="spark",
 )
 def static_partitioned_nyc_taxi_data_spark(
@@ -101,7 +146,7 @@ def static_partitioned_nyc_taxi_data_spark(
 @dg.asset(
     metadata={"partition_expr": STATIC_PARTITION_KEY},
     io_manager_key="spark_iceberg_io_manager",
-    partitions_def=parts,
+    partitions_def=static_partitions,
     group_name="spark",
 )
 def reloaded_static_partitioned_nyc_taxi_data_spark(
@@ -128,6 +173,8 @@ defs = dg.Definitions(
         reloaded_nyc_taxi_data,
         static_partitioned_nyc_taxi_data,
         reloaded_static_partitioned_nyc_taxi_data,
+        multi_partitioned_nyc_taxi_data,
+        reloaded_multi_partitioned_nyc_taxi_data,
         combined_nyc_taxi_data_spark,
         reloaded_nyc_taxi_data_spark,
         static_partitioned_nyc_taxi_data_spark,
