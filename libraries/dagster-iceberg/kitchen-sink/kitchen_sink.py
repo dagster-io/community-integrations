@@ -114,6 +114,40 @@ def reloaded_multi_partitioned_nyc_taxi_data(
 
 
 @dg.asset(
+    ins={
+        "multi_partitioned_nyc_taxi_data": dg.AssetIn(
+            partition_mapping=dg.MultiToSingleDimensionPartitionMapping(
+                partition_dimension_name="daily"
+            )
+        ),
+    },
+    metadata={"partition_expr": DAILY_PARTITION_KEY},
+    io_manager_key="iceberg_polars_io_manager",
+    partitions_def=daily_partitions,
+    group_name="polars",
+)
+def daily_partitioned_nyc_taxi_data(
+    context: dg.AssetExecutionContext, multi_partitioned_nyc_taxi_data: pl.LazyFrame
+) -> pl.LazyFrame:
+    assert multi_partitioned_nyc_taxi_data.select(
+        DAILY_PARTITION_KEY
+    ).unique().collect().item() == date.fromisoformat(context.partition_key)
+    return multi_partitioned_nyc_taxi_data
+
+
+@dg.asset(
+    metadata={"partition_expr": DAILY_PARTITION_KEY},
+    io_manager_key="iceberg_polars_io_manager",
+    partitions_def=daily_partitions,
+    group_name="polars",
+)
+def reloaded_daily_partitioned_nyc_taxi_data(
+    daily_partitioned_nyc_taxi_data: pl.LazyFrame,
+) -> None:
+    print(daily_partitioned_nyc_taxi_data.describe())  # noqa: T201
+
+
+@dg.asset(
     deps=["combined_nyc_taxi_data"],
     io_manager_key="spark_iceberg_io_manager",
     group_name="spark",
@@ -210,6 +244,8 @@ defs = dg.Definitions(
         reloaded_static_partitioned_nyc_taxi_data,
         multi_partitioned_nyc_taxi_data,
         reloaded_multi_partitioned_nyc_taxi_data,
+        daily_partitioned_nyc_taxi_data,
+        reloaded_daily_partitioned_nyc_taxi_data,
         combined_nyc_taxi_data_spark,
         reloaded_nyc_taxi_data_spark,
         static_partitioned_nyc_taxi_data_spark,
@@ -225,6 +261,7 @@ defs = dg.Definitions(
             name=CATALOG_NAME,
             config=catalog_config,
             namespace=NAMESPACE,
+            db_io_manager="custom",
         ),
         "pyspark": PySparkResource(spark_config={"spark.remote": "sc://localhost"}),
         "spark_iceberg_io_manager": SparkIcebergIOManager(
