@@ -224,6 +224,35 @@ def reloaded_multi_partitioned_nyc_taxi_data_spark(
     multi_partitioned_nyc_taxi_data_spark.describe().show()
 
 
+@dg.asset(
+    deps=["daily_partitioned_nyc_taxi_data"],
+    metadata={"partition_expr": DAILY_PARTITION_KEY},
+    io_manager_key="spark_iceberg_io_manager",
+    partitions_def=daily_partitions,
+    group_name="spark",
+)
+def daily_partitioned_nyc_taxi_data_spark(
+    context: dg.AssetExecutionContext, pyspark: PySparkResource
+) -> DataFrame:
+    spark = pyspark.spark_session
+    df = spark.table(f"{CATALOG_NAME}.{NAMESPACE}.daily_partitioned_nyc_taxi_data")
+    return df.filter(
+        df[DAILY_PARTITION_KEY] == date.fromisoformat(context.partition_key)
+    )
+
+
+@dg.asset(
+    metadata={"partition_expr": DAILY_PARTITION_KEY},
+    io_manager_key="spark_iceberg_io_manager",
+    partitions_def=daily_partitions,
+    group_name="spark",
+)
+def reloaded_daily_partitioned_nyc_taxi_data_spark(
+    daily_partitioned_nyc_taxi_data_spark: DataFrame,
+) -> None:
+    daily_partitioned_nyc_taxi_data_spark.describe().show()
+
+
 catalog_config = IcebergCatalogConfig(
     properties={
         "type": "rest",
@@ -252,6 +281,8 @@ defs = dg.Definitions(
         reloaded_static_partitioned_nyc_taxi_data_spark,
         multi_partitioned_nyc_taxi_data_spark,
         reloaded_multi_partitioned_nyc_taxi_data_spark,
+        daily_partitioned_nyc_taxi_data_spark,
+        reloaded_daily_partitioned_nyc_taxi_data_spark,
     ],
     resources={
         "polars_parquet_io_manager": PolarsParquetIOManager(
