@@ -33,4 +33,4 @@ root_module = "dagster_evidence"
 python_environment = "persistent_uv"
 
 [project.entry-points]
-"dagster_dg.library" = { foo = "dagster_evidence.lib"}
+"dagster_dg.library" = { dagster_evidence = "dagster_evidence.lib"}
