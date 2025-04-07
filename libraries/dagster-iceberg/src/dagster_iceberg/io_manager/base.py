@@ -33,7 +33,7 @@ class SchemaUpdateMode(enum.Enum):
     update = "update"
 
 
-class DbIoManagerImplementation(enum.Enum):
+class DbIOManagerImplementation(enum.Enum):
     default = "default"
     custom = "custom"
 
@@ -46,7 +46,7 @@ class _IcebergTableIOManagerResourceConfig(TypedDict):
     name: str
     config: _IcebergCatalogProperties | None
     schema_: str | None
-    db_io_manager: DbIoManagerImplementation
+    db_io_manager: DbIOManagerImplementation
     partition_spec_update_mode: PartitionSpecUpdateMode
     schema_update_mode: SchemaUpdateMode
 
@@ -191,8 +191,8 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
         alias="namespace",
         description="Name of the iceberg catalog namespace to use.",
     )  # schema is a reserved word for pydantic
-    db_io_manager: DbIoManagerImplementation = Field(
-        default=DbIoManagerImplementation.default,
+    db_io_manager: DbIOManagerImplementation = Field(
+        default=DbIOManagerImplementation.default,
         description="The implementation of the DbIOManager to use. 'default' uses the dagster default 'DbIOManager'."
         " 'custom' uses the custom 'CustomDbIOManager' that allows you to use additional mappings. See <docs>.",
     )
@@ -208,12 +208,12 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
     def create_io_manager(self, context) -> DbIOManager:
         if self.config is not None:
             self.config.model_dump()
-        IoManagerImplementation = (
+        IOManagerImplementation = (
             DbIOManager
-            if self.db_io_manager == DbIoManagerImplementation.default
+            if self.db_io_manager == DbIOManagerImplementation.default
             else CustomDbIOManager
         )
-        return IoManagerImplementation(
+        return IOManagerImplementation(
             type_handlers=self.type_handlers(),
             db_client=IcebergDbClient(),
             database=self.name,
