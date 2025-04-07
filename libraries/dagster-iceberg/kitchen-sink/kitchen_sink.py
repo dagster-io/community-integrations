@@ -15,8 +15,8 @@ NUM_PARTS = 2  # TODO(deepyaman): Make this configurable.
 CATALOG_NAME = "rest"
 NAMESPACE = "nyc"
 
-STATIC_PARTITION_KEY = "part"
-DAILY_PARTITION_KEY = "date"
+STATIC_PARTITION_COL = "part"
+DAILY_PARTITION_COL = "date"
 
 static_partitions = dg.StaticPartitionsDefinition(
     [f"part.{i}" for i in range(NUM_PARTS)]
@@ -53,7 +53,7 @@ def reloaded_nyc_taxi_data(combined_nyc_taxi_data: pl.LazyFrame) -> None:
 
 @dg.asset(
     ins={"raw_nyc_taxi_data": dg.AssetIn("nyc.parquet")},
-    metadata={"partition_expr": STATIC_PARTITION_KEY},
+    metadata={"partition_expr": STATIC_PARTITION_COL},
     io_manager_key="iceberg_polars_io_manager",
     partitions_def=static_partitions,
     group_name="polars",
@@ -62,12 +62,12 @@ def static_partitioned_nyc_taxi_data(
     context: dg.AssetExecutionContext, raw_nyc_taxi_data: pl.LazyFrame
 ) -> pl.LazyFrame:
     return raw_nyc_taxi_data.with_columns(
-        pl.lit(context.partition_key).alias(STATIC_PARTITION_KEY)
+        pl.lit(context.partition_key).alias(STATIC_PARTITION_COL)
     )
 
 
 @dg.asset(
-    metadata={"partition_expr": STATIC_PARTITION_KEY},
+    metadata={"partition_expr": STATIC_PARTITION_COL},
     io_manager_key="iceberg_polars_io_manager",
     partitions_def=static_partitions,
     group_name="polars",
@@ -81,7 +81,7 @@ def reloaded_static_partitioned_nyc_taxi_data(
 @dg.asset(
     ins={"raw_nyc_taxi_data": dg.AssetIn("nyc.parquet")},
     metadata={
-        "partition_expr": {"daily": DAILY_PARTITION_KEY, "static": STATIC_PARTITION_KEY}
+        "partition_expr": {"daily": DAILY_PARTITION_COL, "static": STATIC_PARTITION_COL}
     },
     io_manager_key="iceberg_polars_io_manager",
     partitions_def=multi_partitions,
@@ -92,16 +92,16 @@ def multi_partitioned_nyc_taxi_data(
 ) -> pl.LazyFrame:
     keys_by_dimension: dg.MultiPartitionKey = context.partition_key.keys_by_dimension
     return raw_nyc_taxi_data.with_columns(
-        pl.col("tpep_pickup_datetime").dt.date().alias(DAILY_PARTITION_KEY),
-        pl.lit(keys_by_dimension["static"]).alias(STATIC_PARTITION_KEY),
+        pl.col("tpep_pickup_datetime").dt.date().alias(DAILY_PARTITION_COL),
+        pl.lit(keys_by_dimension["static"]).alias(STATIC_PARTITION_COL),
     ).filter(
-        pl.col(DAILY_PARTITION_KEY) == date.fromisoformat(keys_by_dimension["daily"])
+        pl.col(DAILY_PARTITION_COL) == date.fromisoformat(keys_by_dimension["daily"])
     )
 
 
 @dg.asset(
     metadata={
-        "partition_expr": {"daily": DAILY_PARTITION_KEY, "static": STATIC_PARTITION_KEY}
+        "partition_expr": {"daily": DAILY_PARTITION_COL, "static": STATIC_PARTITION_COL}
     },
     io_manager_key="iceberg_polars_io_manager",
     partitions_def=multi_partitions,
@@ -121,7 +121,7 @@ def reloaded_multi_partitioned_nyc_taxi_data(
             )
         ),
     },
-    metadata={"partition_expr": DAILY_PARTITION_KEY},
+    metadata={"partition_expr": DAILY_PARTITION_COL},
     io_manager_key="iceberg_polars_io_manager",
     partitions_def=daily_partitions,
     group_name="polars",
@@ -130,13 +130,13 @@ def daily_partitioned_nyc_taxi_data(
     context: dg.AssetExecutionContext, multi_partitioned_nyc_taxi_data: pl.LazyFrame
 ) -> pl.LazyFrame:
     assert multi_partitioned_nyc_taxi_data.select(
-        DAILY_PARTITION_KEY
+        DAILY_PARTITION_COL
     ).unique().collect().item() == date.fromisoformat(context.partition_key)
     return multi_partitioned_nyc_taxi_data
 
 
 @dg.asset(
-    metadata={"partition_expr": DAILY_PARTITION_KEY},
+    metadata={"partition_expr": DAILY_PARTITION_COL},
     io_manager_key="iceberg_polars_io_manager",
     partitions_def=daily_partitions,
     group_name="polars",
@@ -164,7 +164,7 @@ def reloaded_nyc_taxi_data_spark(combined_nyc_taxi_data_spark: DataFrame) -> Non
 
 @dg.asset(
     deps=["static_partitioned_nyc_taxi_data"],
-    metadata={"partition_expr": STATIC_PARTITION_KEY},
+    metadata={"partition_expr": STATIC_PARTITION_COL},
     io_manager_key="spark_iceberg_io_manager",
     partitions_def=static_partitions,
     group_name="spark",
@@ -174,11 +174,11 @@ def static_partitioned_nyc_taxi_data_spark(
 ) -> DataFrame:
     spark = pyspark.spark_session
     df = spark.table(f"{CATALOG_NAME}.{NAMESPACE}.static_partitioned_nyc_taxi_data")
-    return df.filter(df[STATIC_PARTITION_KEY] == context.partition_key)
+    return df.filter(df[STATIC_PARTITION_COL] == context.partition_key)
 
 
 @dg.asset(
-    metadata={"partition_expr": STATIC_PARTITION_KEY},
+    metadata={"partition_expr": STATIC_PARTITION_COL},
     io_manager_key="spark_iceberg_io_manager",
     partitions_def=static_partitions,
     group_name="spark",
@@ -192,7 +192,7 @@ def reloaded_static_partitioned_nyc_taxi_data_spark(
 @dg.asset(
     deps=["multi_partitioned_nyc_taxi_data"],
     metadata={
-        "partition_expr": {"daily": DAILY_PARTITION_KEY, "static": STATIC_PARTITION_KEY}
+        "partition_expr": {"daily": DAILY_PARTITION_COL, "static": STATIC_PARTITION_COL}
     },
     io_manager_key="spark_iceberg_io_manager",
     partitions_def=multi_partitions,
@@ -205,14 +205,14 @@ def multi_partitioned_nyc_taxi_data_spark(
     keys_by_dimension: dg.MultiPartitionKey = context.partition_key.keys_by_dimension
     df = spark.table(f"{CATALOG_NAME}.{NAMESPACE}.multi_partitioned_nyc_taxi_data")
     return df.filter(
-        (df[DAILY_PARTITION_KEY] == date.fromisoformat(keys_by_dimension["daily"]))
-        & (df[STATIC_PARTITION_KEY] == keys_by_dimension["static"])
+        (df[DAILY_PARTITION_COL] == date.fromisoformat(keys_by_dimension["daily"]))
+        & (df[STATIC_PARTITION_COL] == keys_by_dimension["static"])
     )
 
 
 @dg.asset(
     metadata={
-        "partition_expr": {"daily": DAILY_PARTITION_KEY, "static": STATIC_PARTITION_KEY}
+        "partition_expr": {"daily": DAILY_PARTITION_COL, "static": STATIC_PARTITION_COL}
     },
     io_manager_key="spark_iceberg_io_manager",
     partitions_def=multi_partitions,
@@ -226,7 +226,7 @@ def reloaded_multi_partitioned_nyc_taxi_data_spark(
 
 @dg.asset(
     deps=["daily_partitioned_nyc_taxi_data"],
-    metadata={"partition_expr": DAILY_PARTITION_KEY},
+    metadata={"partition_expr": DAILY_PARTITION_COL},
     io_manager_key="spark_iceberg_io_manager",
     partitions_def=daily_partitions,
     group_name="spark",
@@ -237,12 +237,12 @@ def daily_partitioned_nyc_taxi_data_spark(
     spark = pyspark.spark_session
     df = spark.table(f"{CATALOG_NAME}.{NAMESPACE}.daily_partitioned_nyc_taxi_data")
     return df.filter(
-        df[DAILY_PARTITION_KEY] == date.fromisoformat(context.partition_key)
+        df[DAILY_PARTITION_COL] == date.fromisoformat(context.partition_key)
     )
 
 
 @dg.asset(
-    metadata={"partition_expr": DAILY_PARTITION_KEY},
+    metadata={"partition_expr": DAILY_PARTITION_COL},
     io_manager_key="spark_iceberg_io_manager",
     partitions_def=daily_partitions,
     group_name="spark",
