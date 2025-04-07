@@ -14,7 +14,7 @@ from dagster_iceberg import io_manager as _io_manager
 from dagster_iceberg._utils import DagsterPartitionToPolarsSqlPredicateMapper, preview
 
 
-class _IcebergPolarsTypeHandler(
+class _PolarsIcebergTypeHandler(
     _handler.IcebergBaseTypeHandler[pl.LazyFrame | pl.DataFrame],
 ):
     """Type handler that converts data between Iceberg tables and polars DataFrames"""
@@ -56,7 +56,7 @@ class _IcebergPolarsTypeHandler(
 
 @preview
 @public
-class IcebergPolarsIOManager(_io_manager.IcebergIOManager):
+class PolarsIcebergIOManager(_io_manager.IcebergIOManager):
     """An IO manager definition that reads inputs from and writes outputs to Iceberg tables using Polars.
 
     Examples:
@@ -67,7 +67,7 @@ class IcebergPolarsIOManager(_io_manager.IcebergIOManager):
     from dagster import Definitions, asset
 
     from dagster_iceberg.config import IcebergCatalogConfig
-    from dagster_iceberg.io_manager.polars import IcebergPolarsIOManager
+    from dagster_iceberg.io_manager.polars import PolarsIcebergIOManager
 
     CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/select_columns/catalog.db"
     CATALOG_WAREHOUSE = (
@@ -76,7 +76,7 @@ class IcebergPolarsIOManager(_io_manager.IcebergIOManager):
 
 
     resources = {
-        "io_manager": IcebergPolarsIOManager(
+        "io_manager": PolarsIcebergIOManager(
             name="test",
             config=IcebergCatalogConfig(
                 properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
@@ -134,4 +134,4 @@ class IcebergPolarsIOManager(_io_manager.IcebergIOManager):
 
     @staticmethod
     def type_handlers() -> Sequence[DbTypeHandler]:
-        return [_IcebergPolarsTypeHandler()]
+        return [_PolarsIcebergTypeHandler()]

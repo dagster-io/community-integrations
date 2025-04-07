@@ -5,7 +5,7 @@ from pyiceberg.catalog import Catalog
 from pyiceberg.exceptions import NoSuchNamespaceError
 
 from dagster_iceberg.config import IcebergCatalogConfig
-from dagster_iceberg.io_manager.arrow import IcebergPyarrowIOManager
+from dagster_iceberg.io_manager.arrow import PyArrowIcebergIOManager
 from dagster_iceberg.io_manager.base import IcebergDbClient
 
 
@@ -14,8 +14,8 @@ def io_manager(
     catalog_name: str,
     namespace: str,
     catalog_config_properties: dict[str, str],
-) -> IcebergPyarrowIOManager:
-    return IcebergPyarrowIOManager(
+) -> PyArrowIcebergIOManager:
+    return PyArrowIcebergIOManager(
         name=catalog_name,
         config=IcebergCatalogConfig(properties=catalog_config_properties),
         namespace=namespace,
@@ -46,7 +46,7 @@ def iceberg_db_client():
 
 
 @pytest.fixture
-def output_context(io_manager: IcebergPyarrowIOManager) -> OutputContext:
+def output_context(io_manager: PyArrowIcebergIOManager) -> OutputContext:
     return build_output_context(resources={"io_manager": io_manager})
 
 

@@ -142,7 +142,7 @@ The Iceberg I/O manager also supports storing and loading PyArrow and Polars Dat
 
     The `Iceberg` package relies heavily on Apache Arrow for efficient data transfer, so PyArrow is natively supported.
 
-    You can use `IcebergPyarrowIOManager` to read and write iceberg tables:
+    You can use `PyArrowIcebergIOManager` to read and write iceberg tables:
 
     ```python title="docs/snippets/io_manager_pyarrow.py" linenums="1"
     --8<-- "docs/snippets/io_manager_pyarrow.py"
@@ -150,7 +150,7 @@ The Iceberg I/O manager also supports storing and loading PyArrow and Polars Dat
 
 === "Pandas DataFrames"
 
-     You can use `IcebergPandasIOManager` to read and write iceberg tables using Pandas:
+     You can use `PandasIcebergIOManager` to read and write iceberg tables using Pandas:
 
     ```python title="docs/snippets/io_manager_pandas.py" linenums="1"
     --8<-- "docs/snippets/io_manager_pandas.py"
@@ -158,7 +158,7 @@ The Iceberg I/O manager also supports storing and loading PyArrow and Polars Dat
 
 === "Polars DataFrames"
 
-     You can use the `IcebergPolarsIOManager` to read and write iceberg tables using Polars using a full lazily optimized query engine:
+     You can use the `PolarsIcebergIOManager` to read and write iceberg tables using Polars using a full lazily optimized query engine:
 
     ```python title="docs/snippets/io_manager_polars.py" linenums="1"
     --8<-- "docs/snippets/io_manager_polars.py"
@@ -166,7 +166,7 @@ The Iceberg I/O manager also supports storing and loading PyArrow and Polars Dat
 
 === "Daft DataFrames"
 
-     You can use the `IcebergDaftIOManager` to read and write iceberg tables using Daft using a full lazily optimized query engine:
+     You can use the `DaftIcebergIOManager` to read and write iceberg tables using Daft using a full lazily optimized query engine:
 
     ```python title="docs/snippets/io_manager_daft.py" linenums="1"
     --8<-- "docs/snippets/io_manager_daft.py"
@@ -232,10 +232,10 @@ The `dagster-iceberg` library leans heavily on Dagster's `DbIOManager` implement
 
 ```python
 from dagster_iceberg.config import IcebergCatalogConfig
-from dagster_iceberg.io_manager.arrow import IcebergPyarrowIOManager
+from dagster_iceberg.io_manager.arrow import PyArrowIcebergIOManager
 
 
-IcebergPyarrowIOManager(
+PyArrowIcebergIOManager(
     name="my_catalog",
     config=IcebergCatalogConfig(properties={...}),
     namespace="my_schema",

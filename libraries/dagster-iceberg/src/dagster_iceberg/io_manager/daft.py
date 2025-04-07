@@ -14,7 +14,7 @@ from dagster_iceberg import io_manager as _io_manager
 from dagster_iceberg._utils import DagsterPartitionToDaftSqlPredicateMapper, preview
 
 
-class _IcebergDaftTypeHandler(_handler.IcebergBaseTypeHandler[da.DataFrame]):
+class _DaftIcebergTypeHandler(_handler.IcebergBaseTypeHandler[da.DataFrame]):
     """Type handler that converts data between Iceberg tables and polars DataFrames"""
 
     def to_data_frame(
@@ -53,7 +53,7 @@ class _IcebergDaftTypeHandler(_handler.IcebergBaseTypeHandler[da.DataFrame]):
 
 @preview
 @public
-class IcebergDaftIOManager(_io_manager.IcebergIOManager):
+class DaftIcebergIOManager(_io_manager.IcebergIOManager):
     """An IO manager definition that reads inputs from and writes outputs to Iceberg tables using Daft.
 
     Examples:
@@ -64,7 +64,7 @@ class IcebergDaftIOManager(_io_manager.IcebergIOManager):
     from dagster import Definitions, asset
 
     from dagster_iceberg.config import IcebergCatalogConfig
-    from dagster_iceberg.io_manager.daft import IcebergDaftIOManager
+    from dagster_iceberg.io_manager.daft import DaftIcebergIOManager
 
     CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/select_columns/catalog.db"
     CATALOG_WAREHOUSE = (
@@ -73,7 +73,7 @@ class IcebergDaftIOManager(_io_manager.IcebergIOManager):
 
 
     resources = {
-        "io_manager": IcebergDaftIOManager(
+        "io_manager": DaftIcebergIOManager(
             name="test",
             config=IcebergCatalogConfig(
                 properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
@@ -131,4 +131,4 @@ class IcebergDaftIOManager(_io_manager.IcebergIOManager):
 
     @staticmethod
     def type_handlers() -> Sequence[DbTypeHandler]:
-        return [_IcebergDaftTypeHandler()]
+        return [_DaftIcebergTypeHandler()]

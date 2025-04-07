@@ -8,13 +8,13 @@
 
 ## IO Managers
 
-::: dagster_iceberg.io_manager.arrow.IcebergPyarrowIOManager
+::: dagster_iceberg.io_manager.arrow.PyArrowIcebergIOManager
 
-::: dagster_iceberg.io_manager.polars.IcebergPolarsIOManager
+::: dagster_iceberg.io_manager.polars.PolarsIcebergIOManager
 
-::: dagster_iceberg.io_manager.daft.IcebergDaftIOManager
+::: dagster_iceberg.io_manager.daft.DaftIcebergIOManager
 
-::: dagster_iceberg.io_manager.pandas.IcebergPandasIOManager
+::: dagster_iceberg.io_manager.pandas.PandasIcebergIOManager
 
 ## Base classes
 

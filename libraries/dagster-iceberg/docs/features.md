@@ -12,9 +12,9 @@ You may also pass your catalog configuration through use of the `IcebergCatalogC
 
 ```python
 from dagster_iceberg.config import IcebergCatalogConfig
-from dagster_iceberg.io_manager.arrow import IcebergPyarrowIOManager
+from dagster_iceberg.io_manager.arrow import PyArrowIcebergIOManager
 
-io_manager = IcebergPyarrowIOManager(
+io_manager = PyArrowIcebergIOManager(
     name=catalog_name,
     config=IcebergCatalogConfig(properties={
         "uri": "postgresql+psycopg2://pyiceberg:pyiceberg@postgres/catalog",

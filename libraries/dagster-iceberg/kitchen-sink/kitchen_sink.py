@@ -7,7 +7,7 @@ from dagster_pyspark import PySparkResource
 from pyspark.sql.connect.dataframe import DataFrame
 
 from dagster_iceberg.config import IcebergCatalogConfig
-from dagster_iceberg.io_manager.polars import IcebergPolarsIOManager
+from dagster_iceberg.io_manager.polars import PolarsIcebergIOManager
 from dagster_iceberg.io_manager.spark import SparkIcebergIOManager
 
 NUM_PARTS = 2  # TODO(deepyaman): Make this configurable.
@@ -39,14 +39,14 @@ multi_partitions = dg.MultiPartitionsDefinition(
             partition_mapping=dg.AllPartitionMapping(),
         ),
     },
-    io_manager_key="iceberg_polars_io_manager",
+    io_manager_key="polars_iceberg_io_manager",
     group_name="polars",
 )
 def combined_nyc_taxi_data(raw_nyc_taxi_data: dict[str, pl.LazyFrame]) -> pl.LazyFrame:
     return pl.concat(raw_nyc_taxi_data.values())
 
 
-@dg.asset(io_manager_key="iceberg_polars_io_manager", group_name="polars")
+@dg.asset(io_manager_key="polars_iceberg_io_manager", group_name="polars")
 def reloaded_nyc_taxi_data(combined_nyc_taxi_data: pl.LazyFrame) -> None:
     print(combined_nyc_taxi_data.describe())  # noqa: T201
 
@@ -54,7 +54,7 @@ def reloaded_nyc_taxi_data(combined_nyc_taxi_data: pl.LazyFrame) -> None:
 @dg.asset(
     ins={"raw_nyc_taxi_data": dg.AssetIn("nyc.parquet")},
     metadata={"partition_expr": STATIC_PARTITION_COL},
-    io_manager_key="iceberg_polars_io_manager",
+    io_manager_key="polars_iceberg_io_manager",
     partitions_def=static_partitions,
     group_name="polars",
 )
@@ -68,7 +68,7 @@ def static_partitioned_nyc_taxi_data(
 
 @dg.asset(
     metadata={"partition_expr": STATIC_PARTITION_COL},
-    io_manager_key="iceberg_polars_io_manager",
+    io_manager_key="polars_iceberg_io_manager",
     partitions_def=static_partitions,
     group_name="polars",
 )
@@ -83,7 +83,7 @@ def reloaded_static_partitioned_nyc_taxi_data(
     metadata={
         "partition_expr": {"daily": DAILY_PARTITION_COL, "static": STATIC_PARTITION_COL}
     },
-    io_manager_key="iceberg_polars_io_manager",
+    io_manager_key="polars_iceberg_io_manager",
     partitions_def=multi_partitions,
     group_name="polars",
 )
@@ -103,7 +103,7 @@ def multi_partitioned_nyc_taxi_data(
     metadata={
         "partition_expr": {"daily": DAILY_PARTITION_COL, "static": STATIC_PARTITION_COL}
     },
-    io_manager_key="iceberg_polars_io_manager",
+    io_manager_key="polars_iceberg_io_manager",
     partitions_def=multi_partitions,
     group_name="polars",
 )
@@ -122,7 +122,7 @@ def reloaded_multi_partitioned_nyc_taxi_data(
         ),
     },
     metadata={"partition_expr": DAILY_PARTITION_COL},
-    io_manager_key="iceberg_polars_io_manager",
+    io_manager_key="polars_iceberg_io_manager",
     partitions_def=daily_partitions,
     group_name="polars",
 )
@@ -137,7 +137,7 @@ def daily_partitioned_nyc_taxi_data(
 
 @dg.asset(
     metadata={"partition_expr": DAILY_PARTITION_COL},
-    io_manager_key="iceberg_polars_io_manager",
+    io_manager_key="polars_iceberg_io_manager",
     partitions_def=daily_partitions,
     group_name="polars",
 )
@@ -288,7 +288,7 @@ defs = dg.Definitions(
         "polars_parquet_io_manager": PolarsParquetIOManager(
             base_dir="https://storage.googleapis.com/anaconda-public-data/nyc-taxi/",
         ),
-        "iceberg_polars_io_manager": IcebergPolarsIOManager(
+        "polars_iceberg_io_manager": PolarsIcebergIOManager(
             name=CATALOG_NAME,
             config=catalog_config,
             namespace=NAMESPACE,

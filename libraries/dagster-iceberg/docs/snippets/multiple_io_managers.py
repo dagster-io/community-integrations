@@ -2,7 +2,7 @@ import pandas as pd
 from dagster import Definitions, FilesystemIOManager, asset
 
 from dagster_iceberg.config import IcebergCatalogConfig
-from dagster_iceberg.io_manager.pandas import IcebergPandasIOManager
+from dagster_iceberg.io_manager.pandas import PandasIcebergIOManager
 
 CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/catalog.db"
 CATALOG_WAREHOUSE = "file:///home/vscode/workspace/.tmp/examples/warehouse"
@@ -10,7 +10,7 @@ FS_BASE_DIR = "/home/vscode/workspace/.tmp/examples/images"
 
 
 resources = {
-    "dwh_io_manager": IcebergPandasIOManager(
+    "dwh_io_manager": PandasIcebergIOManager(
         name="test",
         config=IcebergCatalogConfig(
             properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}

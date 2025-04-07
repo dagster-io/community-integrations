@@ -115,7 +115,7 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
     from dagster import Definitions, asset
 
     from dagster_iceberg.config import IcebergCatalogConfig
-    from dagster_iceberg.io_manager.arrow import IcebergPyarrowIOManager
+    from dagster_iceberg.io_manager.arrow import PyArrowIcebergIOManager
 
     CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/select_columns/catalog.db"
     CATALOG_WAREHOUSE = (
@@ -124,7 +124,7 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
 
 
     resources = {
-        "io_manager": IcebergPyarrowIOManager(
+        "io_manager": PyArrowIcebergIOManager(
             name="test",
             config=IcebergCatalogConfig(
                 properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}

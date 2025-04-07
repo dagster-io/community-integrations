@@ -15,7 +15,7 @@ from dagster import (
 from pyiceberg.catalog import Catalog
 
 from dagster_iceberg.config import IcebergCatalogConfig
-from dagster_iceberg.io_manager.pandas import IcebergPandasIOManager
+from dagster_iceberg.io_manager.pandas import PandasIcebergIOManager
 
 
 @pytest.fixture
@@ -23,8 +23,8 @@ def io_manager(
     catalog_name: str,
     namespace: str,
     catalog_config_properties: dict[str, str],
-) -> IcebergPandasIOManager:
-    return IcebergPandasIOManager(
+) -> PandasIcebergIOManager:
+    return PandasIcebergIOManager(
         name=catalog_name,
         config=IcebergCatalogConfig(properties=catalog_config_properties),
         namespace=namespace,
@@ -32,7 +32,7 @@ def io_manager(
 
 
 @pytest.fixture
-def custom_db_io_manager(io_manager: IcebergPandasIOManager):
+def custom_db_io_manager(io_manager: PandasIcebergIOManager):
     return io_manager.create_io_manager(None)
 
 
@@ -141,7 +141,7 @@ def test_iceberg_io_manager_with_assets(
     asset_b_df_table_identifier: str,
     asset_b_plus_one_table_identifier: str,
     catalog: Catalog,
-    io_manager: IcebergPandasIOManager,
+    io_manager: PandasIcebergIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
@@ -161,7 +161,7 @@ def test_iceberg_io_manager_with_assets(
 def test_iceberg_io_manager_with_daily_partitioned_assets(
     asset_daily_partitioned_table_identifier: str,
     catalog: Catalog,
-    io_manager: IcebergPandasIOManager,
+    io_manager: PandasIcebergIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
@@ -191,7 +191,7 @@ def test_iceberg_io_manager_with_daily_partitioned_assets(
 def test_iceberg_io_manager_with_hourly_partitioned_assets(
     asset_hourly_partitioned_table_identifier: str,
     catalog: Catalog,
-    io_manager: IcebergPandasIOManager,
+    io_manager: PandasIcebergIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
@@ -221,7 +221,7 @@ def test_iceberg_io_manager_with_hourly_partitioned_assets(
 def test_iceberg_io_manager_with_multipartitioned_assets(
     asset_multi_partitioned_table_identifier: str,
     catalog: Catalog,
-    io_manager: IcebergPandasIOManager,
+    io_manager: PandasIcebergIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 

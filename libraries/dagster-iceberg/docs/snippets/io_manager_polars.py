@@ -3,7 +3,7 @@ import polars as pl
 from dagster import Definitions, asset
 
 from dagster_iceberg.config import IcebergCatalogConfig
-from dagster_iceberg.io_manager.polars import IcebergPolarsIOManager
+from dagster_iceberg.io_manager.polars import PolarsIcebergIOManager
 
 CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/select_columns/catalog.db"
 CATALOG_WAREHOUSE = (
@@ -12,7 +12,7 @@ CATALOG_WAREHOUSE = (
 
 
 resources = {
-    "io_manager": IcebergPolarsIOManager(
+    "io_manager": PolarsIcebergIOManager(
         name="test",
         config=IcebergCatalogConfig(
             properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}

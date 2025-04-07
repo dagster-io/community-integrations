@@ -14,7 +14,7 @@ from dagster import (
 from pyiceberg.catalog import Catalog
 
 from dagster_iceberg.config import IcebergCatalogConfig
-from dagster_iceberg.io_manager.daft import IcebergDaftIOManager
+from dagster_iceberg.io_manager.daft import DaftIcebergIOManager
 
 
 @pytest.fixture
@@ -22,8 +22,8 @@ def io_manager(
     catalog_name: str,
     namespace: str,
     catalog_config_properties: dict[str, str],
-) -> IcebergDaftIOManager:
-    return IcebergDaftIOManager(
+) -> DaftIcebergIOManager:
+    return DaftIcebergIOManager(
         name=catalog_name,
         config=IcebergCatalogConfig(properties=catalog_config_properties),
         namespace=namespace,
@@ -31,7 +31,7 @@ def io_manager(
 
 
 @pytest.fixture
-def custom_db_io_manager(io_manager: IcebergDaftIOManager):
+def custom_db_io_manager(io_manager: DaftIcebergIOManager):
     return io_manager.create_io_manager(None)
 
 
@@ -135,7 +135,7 @@ def test_iceberg_io_manager_with_assets(
     asset_b_df_table_identifier: str,
     asset_b_plus_one_table_identifier: str,
     catalog: Catalog,
-    io_manager: IcebergDaftIOManager,
+    io_manager: DaftIcebergIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
@@ -155,7 +155,7 @@ def test_iceberg_io_manager_with_assets(
 def test_iceberg_io_manager_with_daily_partitioned_assets(
     asset_daily_partitioned_table_identifier: str,
     catalog: Catalog,
-    io_manager: IcebergDaftIOManager,
+    io_manager: DaftIcebergIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
@@ -185,7 +185,7 @@ def test_iceberg_io_manager_with_daily_partitioned_assets(
 def test_iceberg_io_manager_with_hourly_partitioned_assets(
     asset_hourly_partitioned_table_identifier: str,
     catalog: Catalog,
-    io_manager: IcebergDaftIOManager,
+    io_manager: DaftIcebergIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
@@ -215,7 +215,7 @@ def test_iceberg_io_manager_with_hourly_partitioned_assets(
 def test_iceberg_io_manager_with_multipartitioned_assets(
     asset_multi_partitioned_table_identifier: str,
     catalog: Catalog,
-    io_manager: IcebergDaftIOManager,
+    io_manager: DaftIcebergIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 

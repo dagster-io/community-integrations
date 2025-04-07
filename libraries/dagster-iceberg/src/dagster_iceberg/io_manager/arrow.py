@@ -14,7 +14,7 @@ from dagster_iceberg._utils import DagsterPartitionToIcebergExpressionMapper, pr
 ArrowTypes = Union[pa.Table, pa.RecordBatchReader]  # noqa: UP007, avoid Pyright failure
 
 
-class _IcebergPyArrowTypeHandler(_handler.IcebergBaseTypeHandler[ArrowTypes]):
+class _PyArrowIcebergTypeHandler(_handler.IcebergBaseTypeHandler[ArrowTypes]):
     """Type handler that converts data between Iceberg tables and pyarrow Tables"""
 
     def to_data_frame(
@@ -55,7 +55,7 @@ class _IcebergPyArrowTypeHandler(_handler.IcebergBaseTypeHandler[ArrowTypes]):
 
 @preview
 @public
-class IcebergPyarrowIOManager(_io_manager.IcebergIOManager):
+class PyArrowIcebergIOManager(_io_manager.IcebergIOManager):
     """An IO manager definition that reads inputs from and writes outputs to Iceberg tables using PyArrow.
 
     Examples:
@@ -66,7 +66,7 @@ class IcebergPyarrowIOManager(_io_manager.IcebergIOManager):
     from dagster import Definitions, asset
 
     from dagster_iceberg.config import IcebergCatalogConfig
-    from dagster_iceberg.io_manager.arrow import IcebergPyarrowIOManager
+    from dagster_iceberg.io_manager.arrow import PyArrowIcebergIOManager
 
     CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/select_columns/catalog.db"
     CATALOG_WAREHOUSE = (
@@ -75,7 +75,7 @@ class IcebergPyarrowIOManager(_io_manager.IcebergIOManager):
 
 
     resources = {
-        "io_manager": IcebergPyarrowIOManager(
+        "io_manager": PyArrowIcebergIOManager(
             name="test",
             config=IcebergCatalogConfig(
                 properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
@@ -133,4 +133,4 @@ class IcebergPyarrowIOManager(_io_manager.IcebergIOManager):
 
     @staticmethod
     def type_handlers() -> Sequence[DbTypeHandler]:
-        return [_IcebergPyArrowTypeHandler()]
+        return [_PyArrowIcebergTypeHandler()]
