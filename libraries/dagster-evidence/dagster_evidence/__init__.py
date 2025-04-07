@@ -1,5 +1,5 @@
 from dagster._core.libraries import DagsterLibraryRegistry
 
-__version__ = "0.0.1"
+__version__ = "0.26.9"
 
-DagsterLibraryRegistry.register("example-integration", __version__)
+DagsterLibraryRegistry.register("dagster-evidence", __version__)
