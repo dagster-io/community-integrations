@@ -52,4 +52,4 @@ packages = ["dagster_polars"]
 dagster_polars = ["py.typed"]
 
 [tool.setuptools.dynamic]
-version = {attr = "dagster_polars.__version__"}
+version = {attr = "dagster_polars.version.__version__"}
