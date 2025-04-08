@@ -180,7 +180,7 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
         elif fs is not None:
             with fs.open(str(path), mode="wb") as f:
                 df.write_parquet(
-                    f,
+                    f,  # type: ignore
                     compression=compression,  # type: ignore
                     compression_level=compression_level,
                     statistics=statistics,
