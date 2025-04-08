@@ -1,0 +1,14 @@
+name: build-and-release-dagster-polars
+
+on:
+  push:
+    tags:
+      - 'dagster_polars-*.*.*'
+
+jobs:
+  build-and-release-dagster-anthropic:
+    uses: ./.github/workflows/template-release.yml
+    with:
+      library_name: dagster-polars
+      working_directory: ./libraries/dagster-polars
+    secrets: inherit
