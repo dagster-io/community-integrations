@@ -1,7 +1,17 @@
 import sys
 from abc import abstractmethod
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, Union, cast, get_args, get_origin
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    TypeVar,
+    Union,
+    cast,
+    get_args,
+    get_origin,
+)
 
 if sys.version_info < (3, 10):
     from typing_extensions import TypeAlias
@@ -99,14 +109,18 @@ class OptionalTypeRouter(BaseTypeRouter, Generic[T]):
 
     def dump(self, obj: T, path: "UPath", dump_fn: F_D) -> None:
         if obj is None:
-            self.context.log.warning(f"Skipping saving optional output at {path} as it is None")
+            self.context.log.warning(
+                f"Skipping saving optional output at {path} as it is None"
+            )
             return
         else:
             self.parent_type_router.dump(obj, path, dump_fn)
 
     def load(self, path: "UPath", load_fn: F_L) -> T:
         if not path.exists():
-            self.context.log.warning(f"Skipping loading optional input at {path} as it is missing")
+            self.context.log.warning(
+                f"Skipping loading optional input at {path} as it is missing"
+            )
             return None  # type: ignore
         else:
             return self.parent_type_router.load(path, load_fn)

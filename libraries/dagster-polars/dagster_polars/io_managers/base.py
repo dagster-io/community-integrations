@@ -26,7 +26,11 @@ if TYPE_CHECKING:
 def _process_env_vars(config: Mapping[str, Any]) -> dict[str, Any]:
     out = {}
     for key, value in config.items():
-        if isinstance(value, dict) and len(value) == 1 and next(iter(value.keys())) == "env":
+        if (
+            isinstance(value, dict)
+            and len(value) == 1
+            and next(iter(value.keys())) == "env"
+        ):
             out[key] = EnvVar(next(iter(value.values()))).get_value()
         else:
             out[key] = value
@@ -55,7 +59,9 @@ class BasePolarsUPathIOManager(ConfigurableIOManager, UPathIOManager):
 
     # If a child IOManager supports loading multiple partitions at once, it should override .load_partitions to immidiately return a LazyFrame (by using scan_df_from_path)
 
-    base_dir: Optional[str] = Field(default=None, description="Base directory for storing files.")
+    base_dir: Optional[str] = Field(
+        default=None, description="Base directory for storing files."
+    )
     cloud_storage_options: Optional[Mapping[str, Any]] = Field(
         default=None,
         description="Storage authentication for cloud object store",

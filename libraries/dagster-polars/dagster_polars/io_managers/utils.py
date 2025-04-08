@@ -107,7 +107,9 @@ def get_table_metadata(
             records=[
                 TableRecord(
                     {
-                        col: cast_polars_single_value_to_dagster_table_types(df_sample_dict[i][col])
+                        col: cast_polars_single_value_to_dagster_table_types(
+                            df_sample_dict[i][col]
+                        )
                         for col in df.columns
                     }
                 )
@@ -172,6 +174,8 @@ def get_polars_metadata(
         metadata["table"] = table_metadata
         metadata["stats"] = stats_metadata
         metadata["dagster/row_count"] = MetadataValue.int(df.shape[0])
-        metadata["estimated_size_mb"] = MetadataValue.float(df.estimated_size(unit="mb"))
+        metadata["estimated_size_mb"] = MetadataValue.float(
+            df.estimated_size(unit="mb")
+        )
 
     return metadata
