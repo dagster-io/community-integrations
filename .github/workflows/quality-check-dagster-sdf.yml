@@ -22,7 +22,7 @@ jobs:
 
       - name: Install sdf
         working-directory: ./libraries/dagster-sdf
-        run: curl -LSfs https://cdn.sdf.com/releases/download/install.sh | sh -s
+        run: curl -LSfs https://cdn.sdf.com/releases/download/install.sh | sh -s -- --version 0.3.24
 
       - name: Sync dependencies
         working-directory: ./libraries/dagster-sdf
