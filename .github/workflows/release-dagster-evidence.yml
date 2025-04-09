@@ -1,0 +1,14 @@
+name: build-and-release-dagster-evidence
+
+on:
+  push:
+    tags:
+      - 'dagster_evidence-*.*.*'
+
+jobs:
+  build-and-release-dagster-evidence:
+    uses: ./.github/workflows/template-release.yml
+    with:
+      library_name: dagster-evidence
+      working_directory: ./libraries/dagster-evidence
+    secrets: inherit

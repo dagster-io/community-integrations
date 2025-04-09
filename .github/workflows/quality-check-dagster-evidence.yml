@@ -1,0 +1,12 @@
+name: quality-check-dagster-evidence
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'libraries/dagster-evidence/**'
+
+jobs:
+  check:
+    uses: ./.github/workflows/template-quality-check.yml
+    with:
+      working_directory: ./libraries/dagster-evidence
