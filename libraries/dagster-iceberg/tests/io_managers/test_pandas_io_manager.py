@@ -31,11 +31,6 @@ def io_manager(
     )
 
 
-@pytest.fixture
-def custom_db_io_manager(io_manager: PandasIcebergIOManager):
-    return io_manager.create_io_manager(None)
-
-
 # NB: iceberg table identifiers are namespace + asset names (see below)
 @pytest.fixture
 def asset_b_df_table_identifier(namespace: str) -> str:
