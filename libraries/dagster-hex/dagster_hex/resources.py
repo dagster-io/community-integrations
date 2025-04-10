@@ -1,13 +1,13 @@
 import datetime
 import logging
 import time
-from importlib.metadata import PackageNotFoundError, version
 from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urljoin
 
 import requests
 from dagster import Failure, Field, StringSource, get_dagster_logger, resource
 
+import dagster_hex
 from dagster_hex.types import (
     HexOutput,
     NotificationDetails,
@@ -65,12 +65,7 @@ class HexResource:
             Dict[str, Any]: Parsed json data from the response to this request
         """
 
-        try:
-            __version__ = version("dagster_hex")
-        except PackageNotFoundError:
-            __version__ = "UnknownVersion"
-
-        user_agent = "HexDagsterOp/" + __version__
+        user_agent = f"HexDagsterOp/{dagster_hex.__version__}"
         headers = {"Authorization": f"Bearer {self._api_key}", "User-Agent": user_agent}
         url = urljoin(self.api_base_url, endpoint)
 
