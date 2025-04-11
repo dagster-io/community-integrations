@@ -9,7 +9,7 @@ import com.vanniktech.maven.publish.SonatypeHost
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(8)
     }
 }
 
