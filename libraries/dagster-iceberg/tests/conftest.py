@@ -1,41 +1,52 @@
 import datetime as dt
 import random
+import time
 from collections.abc import Iterator
 
 import psycopg2
 import pyarrow as pa
 import pytest
+from dagster._utils import file_relative_path
 from pyiceberg.catalog import Catalog, load_catalog
-from testcontainers.postgres import PostgresContainer
+from testcontainers.compose import DockerCompose
 
-postgres = PostgresContainer("postgres:17-alpine")
+POSTGRES_USER = "test"
+POSTGRES_PASSWORD = "test"
+POSTGRES_DB = "test"
 
 
 @pytest.fixture(scope="session", autouse=True)
-def setup() -> Iterator[PostgresContainer]:
-    postgres.start()
-    yield postgres
-    postgres.stop()
+def compose() -> Iterator[DockerCompose]:
+    with DockerCompose(context=file_relative_path(__file__, "docker")) as compose:
+        time.sleep(10)  # TODO(deepyaman): Use DockerCompose.wait_for().
+        yield compose
+
+
+@pytest.fixture(scope="session")
+def postgres_host_and_port(compose: DockerCompose) -> tuple[str, str]:
+    return compose.get_service_host_and_port("postgres")
 
 
 @pytest.fixture(scope="session")
 def postgres_connection(
-    setup: PostgresContainer,
+    compose: DockerCompose,
 ) -> Iterator[psycopg2.extensions.connection]:
+    host, port = compose.get_service_host_and_port("postgres")
     conn = psycopg2.connect(
-        database=setup.dbname,
-        port=setup.get_exposed_port(5432),
-        host=setup.get_container_host_ip(),
-        user=setup.username,
-        password=setup.password,
+        database=POSTGRES_DB,
+        port=port,
+        host=host,
+        user=POSTGRES_USER,
+        password=POSTGRES_PASSWORD,
     )
     yield conn
     conn.close()
 
 
 @pytest.fixture(scope="session")
-def postgres_uri(setup: PostgresContainer) -> str:
-    return setup.get_connection_url()
+def postgres_uri(compose: DockerCompose) -> str:
+    host, port = compose.get_service_host_and_port("postgres")
+    return f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{host}:{port}/{POSTGRES_DB}"
 
 
 # NB: we truncate all iceberg tables before each test
