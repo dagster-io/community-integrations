@@ -131,10 +131,9 @@ dev = [
   "dagster-polars>=0.26.1",
   "dagster-pyspark>=0.26.1",
   "fsspec[http]>=2025.2.0",
-  "psycopg2-binary>=2.9.10",
+  "pyiceberg[sql-postgres]",
   "pyright>=1.1.385",
   "pytest>=8.3.2",
   "pytest-cov>=6.0.0",
   "ruff>=0.9.6",
-  "testcontainers[postgres]>=4.8.2",
 ]

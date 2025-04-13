@@ -1,6 +1,6 @@
 import datetime as dt
 import random
-import time
+import subprocess
 from collections.abc import Iterator
 
 import psycopg2
@@ -8,34 +8,36 @@ import pyarrow as pa
 import pytest
 from dagster._utils import file_relative_path
 from pyiceberg.catalog import Catalog, load_catalog
-from testcontainers.compose import DockerCompose
+
+COMPOSE_DIR = file_relative_path(__file__, "docker")
 
 POSTGRES_USER = "test"
 POSTGRES_PASSWORD = "test"
 POSTGRES_DB = "test"
+POSTGRES_HOST = "localhost"
+POSTGRES_PORT = 5432
 
 
 @pytest.fixture(scope="session", autouse=True)
-def compose() -> Iterator[DockerCompose]:
-    with DockerCompose(context=file_relative_path(__file__, "docker")) as compose:
-        time.sleep(10)  # TODO(deepyaman): Use DockerCompose.wait_for().
-        yield compose
+def compose():
+    subprocess.run(
+        ["docker", "compose", "up", "--build", "--wait"], cwd=COMPOSE_DIR, check=True
+    )
+    subprocess.run(["sleep", "10"])
+    yield
+    subprocess.run(
+        ["docker", "compose", "down", "--remove-orphans", "--volumes"],
+        cwd=COMPOSE_DIR,
+        check=True,
+    )
 
 
 @pytest.fixture(scope="session")
-def postgres_host_and_port(compose: DockerCompose) -> tuple[str, str]:
-    return compose.get_service_host_and_port("postgres")
-
-
-@pytest.fixture(scope="session")
-def postgres_connection(
-    compose: DockerCompose,
-) -> Iterator[psycopg2.extensions.connection]:
-    host, port = compose.get_service_host_and_port("postgres")
+def postgres_connection() -> Iterator[psycopg2.extensions.connection]:
     conn = psycopg2.connect(
         database=POSTGRES_DB,
-        port=port,
-        host=host,
+        port=POSTGRES_PORT,
+        host=POSTGRES_HOST,
         user=POSTGRES_USER,
         password=POSTGRES_PASSWORD,
     )
@@ -44,9 +46,8 @@ def postgres_connection(
 
 
 @pytest.fixture(scope="session")
-def postgres_uri(compose: DockerCompose) -> str:
-    host, port = compose.get_service_host_and_port("postgres")
-    return f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{host}:{port}/{POSTGRES_DB}"
+def postgres_uri() -> str:
+    return f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
 
 # NB: we truncate all iceberg tables before each test
