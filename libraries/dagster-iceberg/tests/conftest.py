@@ -79,6 +79,12 @@ def clean_iceberg_tables(postgres_connection: psycopg2.extensions.connection):
 # NB: recreated for every test
 @pytest.fixture(autouse=True)
 def warehouse_path(tmp_path_factory: pytest.TempPathFactory) -> str:
+    # Determine the warehouse path temporary directory pytest will make:
+    # https://github.com/pytest-dev/pytest/blob/b48e23d/src/_pytest/tmpdir.py#L67
+    # TODO(deepyaman): Figure out why teardown isn't called in cloud CI.
+    if (old_dir := tmp_path_factory.getbasetemp().joinpath(WAREHOUSE_DIR)).exists():
+        shutil.rmtree(old_dir)
+
     dir_ = tmp_path_factory.mktemp(WAREHOUSE_DIR, numbered=False)
     yield str(dir_.resolve())
     shutil.rmtree(dir_)
