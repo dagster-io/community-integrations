@@ -57,7 +57,6 @@ def test_spark_io_manager(namespace: str):
     assert len(spark.catalog.listCatalogs()) == 2
     assert spark.catalog.currentCatalog() == "postgres"
     tables = spark.catalog.listTables(namespace)
-    raise Exception(tables)
     df = spark.createDataFrame(
         pa.Table.from_pydict({"a": [1, 2, 3], "b": [4, 5, 6]}).to_pandas()
     )
