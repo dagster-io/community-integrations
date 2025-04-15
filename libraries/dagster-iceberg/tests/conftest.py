@@ -100,7 +100,7 @@ def catalog_config_properties(warehouse_path: str, postgres_uri: str) -> dict[st
 
 @pytest.fixture(scope="session")
 def catalog_name() -> str:
-    return "default"
+    return "postgres"
 
 
 @pytest.fixture
