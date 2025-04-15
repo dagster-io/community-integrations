@@ -7,22 +7,6 @@ from pyspark.sql.connect.dataframe import DataFrame
 
 from dagster_iceberg.io_manager.spark import SparkIcebergIOManager
 
-SPARK_CONFIG = {
-    "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
-    "spark.sql.catalog.postgres": "org.apache.iceberg.spark.SparkCatalog",
-    "spark.sql.catalog.postgres.type": "jdbc",
-    "spark.sql.catalog.postgres.uri": "jdbc:postgresql://postgres:5432/test",
-    "spark.sql.catalog.postgres.jdbc.user": "test",
-    "spark.sql.catalog.postgres.jdbc.password": "test",
-    "spark.sql.catalog.postgres.warehouse": "/home/iceberg/warehouse",
-    "spark.sql.defaultCatalog": "postgres",
-    "spark.eventLog.enabled": "true",
-    "spark.eventLog.dir": "/home/iceberg/spark-events",
-    "spark.history.fs.logDirectory": "/home/iceberg/spark-events",
-    "spark.sql.catalogImplementation": "in-memory",
-    "spark.sql.execution.arrow.pyspark.enabled": "true",
-}
-
 
 @pytest.fixture
 def io_manager(
@@ -32,7 +16,6 @@ def io_manager(
     return SparkIcebergIOManager(
         catalog_name=catalog_name,
         namespace=namespace,
-        spark_config=SPARK_CONFIG,
         remote_url="sc://localhost",
     )
 
@@ -53,11 +36,7 @@ def asset_b_plus_one_table_identifier(namespace: str) -> str:
     metadata={"partition_spec_update_mode": "update", "schema_update_mode": "update"},
 )
 def b_df() -> DataFrame:
-    spark = (
-        SparkSession.builder.remote("sc://localhost")
-        .config(map=SPARK_CONFIG)
-        .getOrCreate()
-    )
+    spark = SparkSession.builder.remote("sc://localhost").getOrCreate()
     spark.catalog.listCatalogs()  # Force Spark to initialize the catalog
     df = spark.createDataFrame(
         pa.Table.from_pydict({"a": [1, 2, 3], "b": [4, 5, 6]}).to_pandas()
@@ -73,29 +52,7 @@ def b_plus_one(b_df: DataFrame) -> DataFrame:
 
 
 def test_spark_io_manager():
-    spark = (
-        SparkSession.builder.remote("sc://localhost")
-        .config(
-            "spark.sql.extensions",
-            "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
-        )
-        .config("spark.sql.catalog.postgres", "org.apache.iceberg.spark.SparkCatalog")
-        .config("spark.sql.catalog.postgres.type", "jdbc")
-        .config(
-            "spark.sql.catalog.postgres.uri",
-            "jdbc:postgresql://postgres:5432/test",
-        )
-        .config("spark.sql.catalog.postgres.jdbc.user", "test")
-        .config("spark.sql.catalog.postgres.jdbc.password", "test")
-        .config("spark.sql.catalog.postgres.warehouse", "/home/iceberg/warehouse")
-        .config("spark.sql.defaultCatalog", "postgres")
-        .config("spark.eventLog.enabled", "true")
-        .config("spark.eventLog.dir", "/home/iceberg/spark-events")
-        .config("spark.history.fs.logDirectory", "/home/iceberg/spark-events")
-        .config("spark.sql.catalogImplementation", "in-memory")
-        .config("spark.sql.execution.arrow.pyspark.enabled", "true")
-        .getOrCreate()
-    )
+    spark = SparkSession.builder.remote("sc://localhost").getOrCreate()
     assert len(spark.catalog.listCatalogs()) == 1  # No idea why two calls are necessary
     assert len(spark.catalog.listCatalogs()) == 2
     assert spark.catalog.currentCatalog() == "postgres"
