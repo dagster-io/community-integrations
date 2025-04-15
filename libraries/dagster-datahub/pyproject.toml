@@ -1,5 +1,5 @@
 [project]
-name = "dagster-evidence"
+name = "dagster-datahub"
 description = "Dagster integration with evidence.dev"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -20,11 +20,11 @@ requires = ["setuptools>=42"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["dagster_evidence", "dagster_evidence.lib"]
+packages = ["dagster_datahub", "dagster_datahub.lib"]
 
 [tool.setuptools.dynamic]
-version = {attr = "dagster_evidence.__version__"}
+version = {attr = "dagster_datahub.__version__"}
 
 [project.entry-points]
-"dagster_dg.library" = { dagster_evidence = "dagster_evidence"}
-"dagster_dg.plugin" = { dagster_evidence = "dagster_evidence"}
+"dagster_dg.library" = { dagster_datahub = "dagster_datahub"}
+"dagster_dg.plugin" = { dagster_datahub = "dagster_datahub"}

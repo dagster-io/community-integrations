@@ -206,7 +206,7 @@ wheels = [
 ]
 
 [[package]]
-name = "dagster-evidence"
+name = "dagster-datahub"
 source = { editable = "." }
 dependencies = [
     { name = "dagster" },

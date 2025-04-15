@@ -1,7 +1,7 @@
 from importlib.metadata import version
 
-import dagster_evidence
+import dagster_datahub
 
 
 def test_version():
-    assert version("dagster-evidence") == dagster_evidence.__version__
+    assert version("dagster-datahub") == dagster_datahub.__version__
