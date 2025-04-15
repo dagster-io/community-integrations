@@ -1,6 +1,6 @@
 [project]
 name = "dagster-datahub"
-description = "Dagster integration with evidence.dev"
+description = "Dagster integration with datahub connectors"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
