@@ -93,6 +93,7 @@ def test_spark_io_manager():
         .config("spark.eventLog.dir", "/home/iceberg/spark-events")
         .config("spark.history.fs.logDirectory", "/home/iceberg/spark-events")
         .config("spark.sql.catalogImplementation", "in-memory")
+        .config("spark.sql.execution.arrow.pyspark.enabled", "true")
         .getOrCreate()
     )
     assert len(spark.catalog.listCatalogs()) == 1  # No idea why two calls are necessary
