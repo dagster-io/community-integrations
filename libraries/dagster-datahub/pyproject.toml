@@ -1,0 +1,30 @@
+[project]
+name = "dagster-evidence"
+description = "Dagster integration with evidence.dev"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "dagster>=1.10.9",
+]
+dynamic = ["version"]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest",
+    "pyright>=1.1.386",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_evidence", "dagster_evidence.lib"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_evidence.__version__"}
+
+[project.entry-points]
+"dagster_dg.library" = { dagster_evidence = "dagster_evidence"}
+"dagster_dg.plugin" = { dagster_evidence = "dagster_evidence"}
