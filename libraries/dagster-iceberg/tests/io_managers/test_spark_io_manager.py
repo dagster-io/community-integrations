@@ -4,6 +4,14 @@ from dagster import asset, materialize
 from pyiceberg.catalog import Catalog
 from pyspark.sql import SparkSession
 from pyspark.sql.connect.dataframe import DataFrame
+from pyspark.sql.types import (
+    DoubleType,
+    FloatType,
+    LongType,
+    StringType,
+    StructField,
+    StructType,
+)
 
 from dagster_iceberg.io_manager.spark import SparkIcebergIOManager
 
@@ -52,14 +60,23 @@ def b_plus_one(b_df: DataFrame) -> DataFrame:
 
 
 def test_spark_io_manager(namespace: str):
-    spark = SparkSession.builder.remote("sc://localhost").getOrCreate()
+    spark = (
+        SparkSession.builder.remote("sc://localhost").enableHiveSupport().getOrCreate()
+    )
     assert len(spark.catalog.listCatalogs()) == 1  # No idea why two calls are necessary
     assert len(spark.catalog.listCatalogs()) == 2
     assert spark.catalog.currentCatalog() == "postgres"
     spark.catalog.listTables(namespace)
-    df = spark.createDataFrame(
-        pa.Table.from_pydict({"a": [1, 2, 3], "b": [4, 5, 6]}).to_pandas()
+    schema = StructType(
+        [
+            StructField("vendor_id", LongType(), True),
+            StructField("trip_id", LongType(), True),
+            StructField("trip_distance", FloatType(), True),
+            StructField("fare_amount", DoubleType(), True),
+            StructField("store_and_fwd_flag", StringType(), True),
+        ]
     )
+    df = spark.createDataFrame([], schema)
     table_exists = spark.catalog.tableExists("postgres.pytest.b_df")
     writer = df.writeTo("postgres.pytest.b_df")
     mode = "overwritePartitions" if table_exists else "create"
