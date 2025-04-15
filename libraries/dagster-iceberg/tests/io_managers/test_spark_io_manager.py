@@ -98,6 +98,13 @@ def test_spark_io_manager():
     assert len(spark.catalog.listCatalogs()) == 1  # No idea why two calls are necessary
     assert len(spark.catalog.listCatalogs()) == 2
     assert spark.catalog.currentCatalog() == "postgres"
+    df = spark.createDataFrame(
+        pa.Table.from_pydict({"a": [1, 2, 3], "b": [4, 5, 6]}).to_pandas()
+    )
+    table_exists = spark.catalog.tableExists("postgres.pytest.b_df")
+    writer = df.writeTo("postgres.pytest.b_df")
+    mode = "overwritePartitions" if table_exists else "create"
+    getattr(writer, mode)()
 
 
 def test_iceberg_io_manager_with_assets(
