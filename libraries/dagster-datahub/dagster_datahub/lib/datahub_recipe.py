@@ -244,17 +244,14 @@ class DatahubDefsLoader(StateBackedDefinitionsLoader):
 
 @dataclass
 class DatahubRecipe(Component, Resolvable):
-    """Expose an Evidence.dev dashboard as a Dagster asset.
+    """Pull Datahub metadata into Dagster.
 
-
-    This component assumes that you have already created an Evidence.dev project. Read [the Evidence docs](https://docs.evidence.dev/) for more information.
+    This component will pull a Datahub recipe into Dagster.
 
     Args:
-        project_path: The path to the Evidence.dev project.
-        asset: The asset to expose.
+        recipe_path: the path to the Datahub recipe to use (usually a .dhub.yml file)
         asset_post_processors: A list of asset post processors to apply to the asset.
-        deploy_command: The command to run to deploy the static assets somewhere. The $EVIDENCE_BUILD_PATH environment variable will be set to the path of the build output.
-        npm_executable: The executable to use to run npm commands.
+        datahub_executable: The executable to use to run Datahub commands.
     """
 
     recipe_path: str

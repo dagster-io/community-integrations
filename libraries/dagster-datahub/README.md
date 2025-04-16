@@ -1,6 +1,6 @@
 # dagster-datahub
 
-`dagster-datahub` provides a Dagster Component that integrates with [evidence](https://evidence.dev/), an open-source tool for building data apps.
+`dagster-datahub` provides a Dagster Component that ingests metadata from Datahub.
 
 ## Test
 
