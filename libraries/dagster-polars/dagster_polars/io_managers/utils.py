@@ -132,7 +132,7 @@ def get_table_metadata(
 def get_polars_metadata(
     context: OutputContext, df: Union[pl.DataFrame, pl.LazyFrame]
 ) -> dict[str, MetadataValue]:
-    """Retrives some metadata on polars frames
+    """Retrieves some metadata on polars frames
     - DataFrame: stats, row_count, table or schema
     - LazyFrame: schema.
 

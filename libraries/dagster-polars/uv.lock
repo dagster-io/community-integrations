@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version < '3.11'",
@@ -145,7 +146,7 @@ name = "click"
 version = "8.1.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b9/2e/0090cbf739cee7d23781ad4b89a9894a41538e4fcf4c31dcdd705b78eb8b/click-8.1.8.tar.gz", hash = "sha256:ed53c9d8990d83c2a27deae68e4ee337473f6330c040a31d4225c9574d16096a", size = 226593 }
 wheels = [
@@ -190,10 +191,10 @@ dependencies = [
     { name = "grpcio-health-checking" },
     { name = "jinja2" },
     { name = "protobuf" },
-    { name = "psutil", marker = "platform_system == 'Windows'" },
+    { name = "psutil", marker = "sys_platform == 'win32'" },
     { name = "python-dotenv" },
     { name = "pytz" },
-    { name = "pywin32", marker = "platform_system == 'Windows'" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "requests" },
     { name = "rich" },
     { name = "setuptools" },
@@ -204,7 +205,7 @@ dependencies = [
     { name = "tomli" },
     { name = "toposort" },
     { name = "tqdm" },
-    { name = "tzdata", marker = "platform_system == 'Windows'" },
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
     { name = "universal-pathlib" },
     { name = "watchdog" },
 ]
@@ -255,7 +256,6 @@ wheels = [
 
 [[package]]
 name = "dagster-polars"
-version = "0.27.0"
 source = { editable = "." }
 dependencies = [
     { name = "dagster" },
@@ -271,6 +271,9 @@ deltalake = [
 ]
 gcp = [
     { name = "dagster-gcp" },
+]
+patito = [
+    { name = "patito" },
 ]
 
 [package.dev-dependencies]
@@ -290,11 +293,13 @@ requires-dist = [
     { name = "dagster" },
     { name = "dagster-gcp", marker = "extra == 'gcp'", specifier = ">=0.19.5" },
     { name = "deltalake", marker = "extra == 'deltalake'", specifier = ">=0.25.0" },
+    { name = "patito", marker = "extra == 'patito'", specifier = ">=0.8.3" },
     { name = "polars", specifier = ">=0.20.0" },
     { name = "pyarrow", specifier = ">=8.0.0" },
     { name = "typing-extensions", specifier = ">=4.7.0" },
     { name = "universal-pathlib", specifier = ">=0.1.4" },
 ]
+provides-extras = ["deltalake", "gcp", "patito"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1073,6 +1078,20 @@ wheels = [
 ]
 
 [[package]]
+name = "patito"
+version = "0.8.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "polars" },
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4f/77/376b341a49cf5fb2db16daae561f248fb504d65453f137eeda2a1cbbb443/patito-0.8.3.tar.gz", hash = "sha256:aba7ac6bb640a075e1c22862dd577519a615724db0694ac3ae81a6a3f3993fb1", size = 42640 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/72/f1/4a71d8a974d8f5625045b5351e91e4f93b9a3c14aacbd2777de63c53a851/patito-0.8.3-py3-none-any.whl", hash = "sha256:cc4dd90ec8a867806548a5161af4cf195f3d223fcae24d879285cc003ab89ed4", size = 43331 },
+]
+
+[[package]]
 name = "pluggy"
 version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1734,7 +1753,7 @@ name = "tqdm"
 version = "4.67.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737 }
 wheels = [
