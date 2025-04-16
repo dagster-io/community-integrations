@@ -1,9 +1,9 @@
 from dagster._core.libraries import DagsterLibraryRegistry
 
-from dagster_datahub.lib.evidence_project import EvidenceProject
+from dagster_datahub.lib.datahub_recipe import DatahubRecipe
 
 __version__ = "0.1.5"
 
-__all__ = [EvidenceProject]
+__all__ = [DatahubRecipe]
 
 DagsterLibraryRegistry.register("dagster-datahub", __version__)

@@ -1,1 +1,1 @@
-from dagster_datahub.lib.evidence_project import EvidenceProject
+from dagster_datahub.lib.datahub_recipe import DatahubRecipe

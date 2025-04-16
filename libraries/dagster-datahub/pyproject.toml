@@ -4,6 +4,7 @@ description = "Dagster integration with datahub connectors"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
+    "acryl-datahub>=1.0.0.2",
     "dagster>=1.10.9",
 ]
 dynamic = ["version"]
