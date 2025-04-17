@@ -25,7 +25,7 @@ services:
     depends_on:
       - postgres
     volumes:
-      - ${WAREHOUSE_PATH}:/home/iceberg/warehouse
+      - /tmp/iceberg/warehouse:/tmp/iceberg/warehouse
     ports:
       - 8888:8888
       - 8080:8080
