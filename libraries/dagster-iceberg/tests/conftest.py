@@ -3,7 +3,6 @@ import random
 import shutil
 import subprocess
 from collections.abc import Iterator
-from pathlib import Path
 
 import psycopg2
 import pyarrow as pa
@@ -19,12 +18,16 @@ POSTGRES_DB = "test"
 POSTGRES_HOST = "localhost"
 POSTGRES_PORT = 5432
 
+WAREHOUSE_DIR = "warehouse"
+
 
 @pytest.fixture(scope="session", autouse=True)
 def compose(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
     # Determine the warehouse path temporary directory pytest will make:
     # https://github.com/pytest-dev/pytest/blob/b48e23d/src/_pytest/tmpdir.py#L67
-    warehouse_path = str(Path("my-warehouse-dir").resolve())
+    warehouse_path = str(
+        tmp_path_factory.getbasetemp().joinpath(WAREHOUSE_DIR).resolve()
+    )
 
     subprocess.run(
         ["docker", "compose", "up", "--build", "--wait"],
@@ -79,11 +82,10 @@ def warehouse_path(tmp_path_factory: pytest.TempPathFactory) -> str:
     # Determine the warehouse path temporary directory pytest will make:
     # https://github.com/pytest-dev/pytest/blob/b48e23d/src/_pytest/tmpdir.py#L67
     # TODO(deepyaman): Figure out why teardown isn't called in cloud CI.
-    if (old_dir := Path("my-warehouse-dir")).exists():
+    if (old_dir := tmp_path_factory.getbasetemp().joinpath(WAREHOUSE_DIR)).exists():
         shutil.rmtree(old_dir)
 
-    dir_ = Path("my-warehouse-dir")
-    dir_.mkdir()
+    dir_ = tmp_path_factory.mktemp(WAREHOUSE_DIR, numbered=False)
     yield str(dir_.resolve())
     shutil.rmtree(dir_)
 
