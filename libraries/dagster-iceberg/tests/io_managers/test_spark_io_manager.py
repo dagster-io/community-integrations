@@ -1,7 +1,3 @@
-import os
-from pathlib import Path
-from time import sleep
-
 import pyarrow as pa
 import pytest
 from dagster import asset, materialize
@@ -98,10 +94,6 @@ def test_iceberg_io_manager_with_assets(
     for _ in range(2):
         res = materialize([b_df, b_plus_one], resources=resource_defs)
         assert res.success
-        sleep(10)
-        print("current dir")  # noqa: T201
-        print(Path.cwd())  # noqa: T201
-        print(os.listdir("/tmp/iceberg/warehouse/"))  # noqa: T201
 
         table = catalog.load_table(asset_b_df_table_identifier)
         out_df = table.scan().to_arrow()

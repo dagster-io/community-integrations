@@ -3,7 +3,6 @@ import random
 import shutil
 import subprocess
 from collections.abc import Iterator
-from pathlib import Path
 
 import psycopg2
 import pyarrow as pa
@@ -19,13 +18,22 @@ POSTGRES_DB = "test"
 POSTGRES_HOST = "localhost"
 POSTGRES_PORT = 5432
 
-WAREHOUSE_PATH = Path("/tmp/iceberg/warehouse")
+WAREHOUSE_DIR = "warehouse"
 
 
 @pytest.fixture(scope="session", autouse=True)
 def compose(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+    # Determine the warehouse path temporary directory pytest will make:
+    # https://github.com/pytest-dev/pytest/blob/b48e23d/src/_pytest/tmpdir.py#L67
+    warehouse_path = str(
+        tmp_path_factory.getbasetemp().joinpath(WAREHOUSE_DIR).resolve()
+    )
+
     subprocess.run(
-        ["docker", "compose", "up", "--build", "--wait"], cwd=COMPOSE_DIR, check=True
+        ["docker", "compose", "up", "--build", "--wait"],
+        cwd=COMPOSE_DIR,
+        check=True,
+        env={"WAREHOUSE_PATH": warehouse_path},
     )
     subprocess.run(["sleep", "10"])
     yield
@@ -33,6 +41,7 @@ def compose(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
         ["docker", "compose", "down", "--remove-orphans", "--volumes"],
         cwd=COMPOSE_DIR,
         check=True,
+        env={"WAREHOUSE_PATH": warehouse_path},
     )
 
 
@@ -69,14 +78,16 @@ def clean_iceberg_tables(postgres_connection: psycopg2.extensions.connection):
 
 # NB: recreated for every test
 @pytest.fixture(autouse=True)
-def warehouse_path() -> str:
+def warehouse_path(tmp_path_factory: pytest.TempPathFactory) -> str:
+    # Determine the warehouse path temporary directory pytest will make:
+    # https://github.com/pytest-dev/pytest/blob/b48e23d/src/_pytest/tmpdir.py#L67
     # TODO(deepyaman): Figure out why teardown isn't called in cloud CI.
-    if WAREHOUSE_PATH.exists():
-        shutil.rmtree(WAREHOUSE_PATH)
+    if (old_dir := tmp_path_factory.getbasetemp().joinpath(WAREHOUSE_DIR)).exists():
+        shutil.rmtree(old_dir)
 
-    WAREHOUSE_PATH.mkdir(parents=True)
-    yield str(WAREHOUSE_PATH)
-    shutil.rmtree(WAREHOUSE_PATH)
+    dir_ = tmp_path_factory.mktemp(WAREHOUSE_DIR, numbered=False)
+    yield str(dir_.resolve())
+    shutil.rmtree(dir_)
 
 
 @pytest.fixture
