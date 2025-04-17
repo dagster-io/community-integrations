@@ -28,6 +28,12 @@ bad_df = pl.DataFrame(
 )
 
 
+def test_patito_model_to_dagster_type():
+    dagster_type = patito_model_to_dagster_type(TestingRecord)
+    assert dagster_type._name == "TestingRecord"
+    assert dagster_type.typing_type == TestingRecord.DataFrame
+
+
 def test_get_patito_metadata():
     metadata = get_patito_metadata(TestingRecord)
     assert metadata["dagster/column_schema"] == dg.TableSchemaMetadataValue(

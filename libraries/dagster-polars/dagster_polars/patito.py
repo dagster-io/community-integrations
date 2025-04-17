@@ -91,13 +91,15 @@ def patito_model_to_dagster_type(
     """
     type_check_fn = _patito_model_to_type_check_fn(model)
 
+    model_title = model.__pydantic_core_schema__["config"]["title"]  # pyright: ignore[reportGeneralTypeIssues,reportTypedDictNotRequiredAccess]
+
     dagster_type = DagsterType(
         type_check_fn=type_check_fn,
-        name=model.__class__.__name__,
+        name=name or model_title,
         metadata=get_patito_metadata(model),
         typing_type=model.DataFrame,
         description=description
-        or f"Polars frame conforming to Patito model {model.__class__.__name__}",
+        or f"Polars frame conforming to Patito model {model_title}",
     )
 
     # this is a dirty hack --- this configures dagster-polars IOManager to skip data validation
