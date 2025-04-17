@@ -130,6 +130,7 @@ dev = [
   "dagster>=1.10.5",
   "dagster-polars>=0.26.1",
   "dagster-pyspark>=0.26.1",
+  "docker",
   "fsspec[http]>=2025.2.0",
   "pyiceberg[sql-postgres]",
   "pyright>=1.1.385",

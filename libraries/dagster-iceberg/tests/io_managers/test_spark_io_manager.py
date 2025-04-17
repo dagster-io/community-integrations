@@ -1,3 +1,4 @@
+import docker
 import pyarrow as pa
 import pytest
 from dagster import asset, materialize
@@ -95,10 +96,17 @@ def test_iceberg_io_manager_with_assets(
         res = materialize([b_df, b_plus_one], resources=resource_defs)
         assert res.success
 
-        table = catalog.load_table(asset_b_df_table_identifier)
-        out_df = table.scan().to_arrow()
-        assert out_df["a"].to_pylist() == [1, 2, 3]
+        client = docker.from_env()
+        container = client.containers.get("pyiceberg-spark")
 
-        dt = catalog.load_table(asset_b_plus_one_table_identifier)
-        out_dt = dt.scan().to_arrow()
-        assert out_dt["a"].to_pylist() == [2, 3, 4]
+        exit_code, output = container.exec_run(
+            """python -c 'from pyiceberg.catalog import load_catalog; catalog = load_catalog("postgres", **{"uri": "postgresql+psycopg2://test:test@postgres:5432/test", "warehouse": "file:///home/iceberg/warehouse"}); table = catalog.load_table("pytest.b_df"); out_df = table.scan().to_arrow(); assert out_df["a"].to_pylist() == [1, 2, 3]'"""
+        )
+        if exit_code:
+            raise Exception(output)
+
+        exit_code, output = container.exec_run(
+            """python -c 'from pyiceberg.catalog import load_catalog; catalog = load_catalog("postgres", **{"uri": "postgresql+psycopg2://test:test@postgres:5432/test", "warehouse": "file:///home/iceberg/warehouse"}); table = catalog.load_table("pytest.b_plus_one"); out_df = table.scan().to_arrow(); assert out_df["a"].to_pylist() == [2, 3, 4]'"""
+        )
+        if exit_code:
+            raise Exception(output)
