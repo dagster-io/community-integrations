@@ -1,5 +1,6 @@
 import datetime as dt
 import random
+import shutil
 import subprocess
 from collections.abc import Iterator
 
@@ -17,11 +18,22 @@ POSTGRES_DB = "test"
 POSTGRES_HOST = "localhost"
 POSTGRES_PORT = 5432
 
+WAREHOUSE_DIR = "warehouse"
+
 
 @pytest.fixture(scope="session", autouse=True)
-def compose():
+def compose(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+    # Determine the warehouse path temporary directory pytest will make:
+    # https://github.com/pytest-dev/pytest/blob/b48e23d/src/_pytest/tmpdir.py#L67
+    warehouse_path = str(
+        tmp_path_factory.getbasetemp().joinpath(WAREHOUSE_DIR).resolve()
+    )
+
     subprocess.run(
-        ["docker", "compose", "up", "--build", "--wait"], cwd=COMPOSE_DIR, check=True
+        ["docker", "compose", "up", "--build", "--wait"],
+        cwd=COMPOSE_DIR,
+        check=True,
+        env={"WAREHOUSE_PATH": warehouse_path},
     )
     subprocess.run(["sleep", "10"])
     yield
@@ -29,6 +41,7 @@ def compose():
         ["docker", "compose", "down", "--remove-orphans", "--volumes"],
         cwd=COMPOSE_DIR,
         check=True,
+        env={"WAREHOUSE_PATH": warehouse_path},
     )
 
 
@@ -66,8 +79,15 @@ def clean_iceberg_tables(postgres_connection: psycopg2.extensions.connection):
 # NB: recreated for every test
 @pytest.fixture(autouse=True)
 def warehouse_path(tmp_path_factory: pytest.TempPathFactory) -> str:
-    dir_ = tmp_path_factory.mktemp("warehouse")
-    return str(dir_.resolve())
+    # Determine the warehouse path temporary directory pytest will make:
+    # https://github.com/pytest-dev/pytest/blob/b48e23d/src/_pytest/tmpdir.py#L67
+    # TODO(deepyaman): Figure out why teardown isn't called in cloud CI.
+    if (old_dir := tmp_path_factory.getbasetemp().joinpath(WAREHOUSE_DIR)).exists():
+        shutil.rmtree(old_dir)
+
+    dir_ = tmp_path_factory.mktemp(WAREHOUSE_DIR, numbered=False)
+    yield str(dir_.resolve())
+    shutil.rmtree(dir_)
 
 
 @pytest.fixture
@@ -80,7 +100,7 @@ def catalog_config_properties(warehouse_path: str, postgres_uri: str) -> dict[st
 
 @pytest.fixture(scope="session")
 def catalog_name() -> str:
-    return "default"
+    return "postgres"
 
 
 @pytest.fixture

@@ -490,6 +490,7 @@ dev = [
     { name = "dagster" },
     { name = "dagster-polars" },
     { name = "dagster-pyspark" },
+    { name = "docker" },
     { name = "fsspec", extra = ["http"] },
     { name = "pyiceberg", extra = ["sql-postgres"] },
     { name = "pyright" },
@@ -522,6 +523,7 @@ dev = [
     { name = "dagster", specifier = ">=1.10.5" },
     { name = "dagster-polars", specifier = ">=0.26.1" },
     { name = "dagster-pyspark", specifier = ">=0.26.1" },
+    { name = "docker" },
     { name = "fsspec", extras = ["http"], specifier = ">=2025.2.0" },
     { name = "pyiceberg", extras = ["sql-postgres"] },
     { name = "pyright", specifier = ">=1.1.385" },
@@ -616,6 +618,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/73/a5/c224e5ceac1b5f3a88d405d799c7a00f790292cfa69a4a5c265689adbc43/dagster-webserver-1.10.7.tar.gz", hash = "sha256:4732c9a288098b95ff0e767f5a79944a8dbeeabfd099fe4f75ae183e52590fd5", size = 12112730 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/39/b0/0207d9657564e887f636dd7022b2d161ee04f8dd64bd9f6eaf14e54f8417/dagster_webserver-1.10.7-py3-none-any.whl", hash = "sha256:65f0f78b26763639a86897f4c99fd9ea17c2dc82ca2d919020f699ba345e2392", size = 12459915 },
+]
+
+[[package]]
+name = "docker"
+version = "7.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+    { name = "requests" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/91/9b/4a2ea29aeba62471211598dac5d96825bb49348fa07e906ea930394a83ce/docker-7.1.0.tar.gz", hash = "sha256:ad8c70e6e3f8926cb8a92619b832b4ea5299e2831c14284663184e200546fa6c", size = 117834 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e3/26/57c6fb270950d476074c087527a558ccb6f4436657314bfb6cdf484114c4/docker-7.1.0-py3-none-any.whl", hash = "sha256:c96b93b7f0a746f9e77d325bcfb87422a3d8bd4f03136ae8a85b37f1898d5fc0", size = 147774 },
 ]
 
 [[package]]
