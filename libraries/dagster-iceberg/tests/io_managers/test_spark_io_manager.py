@@ -24,6 +24,11 @@ SPARK_CONFIG = {
     "spark.sql.execution.arrow.pyspark.enabled": "true",
 }
 
+pytest.skip(
+    "Spark fails to create Parquet file when running on GitHub Actions",
+    allow_module_level=True,
+)
+
 
 @pytest.fixture
 def io_manager(
