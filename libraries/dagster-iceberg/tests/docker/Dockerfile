@@ -67,7 +67,7 @@ RUN chmod u+x /opt/spark/sbin/* && \
 
 RUN pip3 install -q ipython
 
-RUN pip3 install "pyiceberg[sql-postgres]==${PYICEBERG_VERSION}"
+RUN pip3 install "pyiceberg[sql-postgres,pyarrow]==${PYICEBERG_VERSION}"
 
 COPY entrypoint.sh .
 
