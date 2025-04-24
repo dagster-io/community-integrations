@@ -1,4 +1,4 @@
-import datetime as dt
+import datetime
 
 import polars as pl
 import pytest
@@ -72,12 +72,14 @@ def b_plus_one(b_df: pl.LazyFrame) -> pl.LazyFrame:
 
 @asset(
     key_prefix=["my_schema"],
-    partitions_def=HourlyPartitionsDefinition(start_date=dt.datetime(2022, 1, 1, 0)),
+    partitions_def=HourlyPartitionsDefinition(
+        start_date=datetime.datetime(2022, 1, 1, 0)
+    ),
     config_schema={"value": str},
     metadata={"partition_expr": "partition"},
 )
 def hourly_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
-    partition = dt.datetime.strptime(context.partition_key, "%Y-%m-%d-%H:%M")
+    partition = datetime.datetime.strptime(context.partition_key, "%Y-%m-%d-%H:%M")
     value = context.op_execution_context.op_config["value"]
 
     return pl.from_dict({"partition": [partition], "value": [value], "b": [1]})
@@ -90,7 +92,7 @@ def hourly_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
     metadata={"partition_expr": "partition"},
 )
 def daily_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
-    partition = dt.datetime.strptime(context.partition_key, "%Y-%m-%d").date()
+    partition = datetime.datetime.strptime(context.partition_key, "%Y-%m-%d").date()
     value = context.op_execution_context.op_config["value"]
 
     return pl.from_dict({"partition": [partition], "value": [value], "b": [1]})
@@ -117,7 +119,7 @@ def daily_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
 )
 def multi_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
     category, date = context.partition_key.split("|")
-    date_parsed = dt.datetime.strptime(date, "%Y-%m-%d").date()
+    date_parsed = datetime.datetime.strptime(date, "%Y-%m-%d").date()
     value = context.op_execution_context.op_config["value"]
 
     return pl.from_dict(
@@ -175,9 +177,9 @@ def test_iceberg_io_manager_with_daily_partitioned_assets(
 
     out_df = table.scan().to_arrow()
     assert out_df["partition"].to_pylist() == [
-        dt.date(2022, 1, 3),
-        dt.date(2022, 1, 2),
-        dt.date(2022, 1, 1),
+        datetime.date(2022, 1, 3),
+        datetime.date(2022, 1, 2),
+        datetime.date(2022, 1, 1),
     ]
 
 
@@ -205,9 +207,9 @@ def test_iceberg_io_manager_with_hourly_partitioned_assets(
 
     out_df = table.scan().to_arrow()
     assert out_df["partition"].to_pylist() == [
-        dt.datetime(2022, 1, 1, 3, 0),
-        dt.datetime(2022, 1, 1, 2, 0),
-        dt.datetime(2022, 1, 1, 1, 0),
+        datetime.datetime(2022, 1, 1, 3, 0),
+        datetime.datetime(2022, 1, 1, 2, 0),
+        datetime.datetime(2022, 1, 1, 1, 0),
     ]
 
 
@@ -242,11 +244,11 @@ def test_iceberg_io_manager_with_multipartitioned_assets(
 
     out_df = table.scan().to_arrow()
     assert out_df["date_this"].to_pylist() == [
-        dt.date(2022, 1, 2),
-        dt.date(2022, 1, 2),
-        dt.date(2022, 1, 2),
-        dt.date(2022, 1, 1),
-        dt.date(2022, 1, 1),
-        dt.date(2022, 1, 1),
+        datetime.date(2022, 1, 2),
+        datetime.date(2022, 1, 2),
+        datetime.date(2022, 1, 2),
+        datetime.date(2022, 1, 1),
+        datetime.date(2022, 1, 1),
+        datetime.date(2022, 1, 1),
     ]
     assert out_df["category_this"].to_pylist() == ["c", "b", "a", "c", "b", "a"]
