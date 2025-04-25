@@ -42,13 +42,13 @@ def asset_b_plus_one_table_identifier(namespace: str) -> str:
 
 
 @pytest.fixture
-def asset_hourly_partitioned_table_identifier(namespace: str) -> str:
-    return f"{namespace}.hourly_partitioned"
+def asset_daily_partitioned_table_identifier(namespace: str) -> str:
+    return f"{namespace}.daily_partitioned"
 
 
 @pytest.fixture
-def asset_daily_partitioned_table_identifier(namespace: str) -> str:
-    return f"{namespace}.daily_partitioned"
+def asset_hourly_partitioned_table_identifier(namespace: str) -> str:
+    return f"{namespace}.hourly_partitioned"
 
 
 @pytest.fixture
@@ -72,6 +72,19 @@ def b_plus_one(b_df: pl.LazyFrame) -> pl.LazyFrame:
 
 @asset(
     key_prefix=["my_schema"],
+    partitions_def=DailyPartitionsDefinition(start_date="2022-01-01"),
+    config_schema={"value": str},
+    metadata={"partition_expr": "partition"},
+)
+def daily_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
+    partition = datetime.datetime.strptime(context.partition_key, "%Y-%m-%d").date()
+    value = context.op_execution_context.op_config["value"]
+
+    return pl.from_dict({"partition": [partition], "value": [value], "b": [1]})
+
+
+@asset(
+    key_prefix=["my_schema"],
     partitions_def=HourlyPartitionsDefinition(
         start_date=datetime.datetime(2022, 1, 1, 0)
     ),
@@ -80,19 +93,6 @@ def b_plus_one(b_df: pl.LazyFrame) -> pl.LazyFrame:
 )
 def hourly_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
     partition = datetime.datetime.strptime(context.partition_key, "%Y-%m-%d-%H:%M")
-    value = context.op_execution_context.op_config["value"]
-
-    return pl.from_dict({"partition": [partition], "value": [value], "b": [1]})
-
-
-@asset(
-    key_prefix=["my_schema"],
-    partitions_def=DailyPartitionsDefinition(start_date="2022-01-01"),
-    config_schema={"value": str},
-    metadata={"partition_expr": "partition"},
-)
-def daily_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
-    partition = datetime.datetime.strptime(context.partition_key, "%Y-%m-%d").date()
     value = context.op_execution_context.op_config["value"]
 
     return pl.from_dict({"partition": [partition], "value": [value], "b": [1]})

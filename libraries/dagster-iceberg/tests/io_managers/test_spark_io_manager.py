@@ -5,6 +5,7 @@ import pyarrow as pa
 import pytest
 from dagster import (
     AssetExecutionContext,
+    DailyPartitionsDefinition,
     HourlyPartitionsDefinition,
     asset,
     materialize,
@@ -62,6 +63,11 @@ def asset_b_plus_one_table_identifier(namespace: str) -> str:
 
 
 @pytest.fixture
+def asset_daily_partitioned_table_identifier(namespace: str) -> str:
+    return f"{namespace}.daily_partitioned"
+
+
+@pytest.fixture
 def asset_hourly_partitioned_table_identifier(namespace: str) -> str:
     return f"{namespace}.hourly_partitioned"
 
@@ -84,6 +90,26 @@ def b_df() -> DataFrame:
 @asset(key_prefix=["my_schema"])
 def b_plus_one(b_df: DataFrame) -> DataFrame:
     return b_df.withColumn("a", b_df.a + 1)
+
+
+@asset(
+    key_prefix=["my_schema"],
+    partitions_def=DailyPartitionsDefinition(start_date="2022-01-01"),
+    config_schema={"value": str},
+    metadata={"partition_expr": "partition"},
+)
+def daily_partitioned(context: AssetExecutionContext) -> DataFrame:
+    partition = datetime.datetime.strptime(context.partition_key, "%Y-%m-%d")
+    value = context.op_execution_context.op_config["value"]
+
+    spark = (
+        SparkSession.builder.remote("sc://localhost")
+        .config(map=SPARK_CONFIG)
+        .getOrCreate()
+    )
+    return spark.createDataFrame(
+        [(partition, value, 1)], "partition: date, value: string, b: int"
+    )
 
 
 @asset(
@@ -156,6 +182,37 @@ def test_iceberg_io_manager_with_assets(
             "out_df = table.scan().to_arrow()",
             'assert out_df["a"].to_pylist() == [2, 3, 4]',
         )
+
+
+def test_iceberg_io_manager_with_daily_partitioned_assets(
+    asset_daily_partitioned_table_identifier: str,
+    catalog: Catalog,
+    io_manager: SparkIcebergIOManager,
+):
+    resource_defs = {"io_manager": io_manager}
+
+    for date in ["2022-01-01", "2022-01-02", "2022-01-03"]:
+        res = materialize(
+            [daily_partitioned],
+            partition_key=date,
+            resources=resource_defs,
+            run_config={
+                "ops": {"my_schema__daily_partitioned": {"config": {"value": "1"}}},
+            },
+        )
+        assert res.success
+
+    client = docker.from_env()
+    container = client.containers.get("pyiceberg-spark")
+
+    _exec_in_container(
+        container,
+        f'table = catalog.load_table("{asset_daily_partitioned_table_identifier}")',
+        "assert len(table.spec().fields) == 1",
+        'assert table.spec().fields[0].name == "partition_day"',
+        "out_df = table.scan().to_arrow()",
+        'assert out_df["partition"].to_pylist() == [datetime.date(2022, 1, 3), datetime.date(2022, 1, 2), datetime.date(2022, 1, 1)]',
+    )
 
 
 def test_iceberg_io_manager_with_hourly_partitioned_assets(
