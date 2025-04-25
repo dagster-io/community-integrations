@@ -1,7 +1,14 @@
+import datetime
+
 import docker
 import pyarrow as pa
 import pytest
-from dagster import asset, materialize
+from dagster import (
+    AssetExecutionContext,
+    HourlyPartitionsDefinition,
+    asset,
+    materialize,
+)
 from pyiceberg.catalog import Catalog
 from pyspark.sql import SparkSession
 from pyspark.sql.connect.dataframe import DataFrame
@@ -54,6 +61,11 @@ def asset_b_plus_one_table_identifier(namespace: str) -> str:
     return f"{namespace}.b_plus_one"
 
 
+@pytest.fixture
+def asset_hourly_partitioned_table_identifier(namespace: str) -> str:
+    return f"{namespace}.hourly_partitioned"
+
+
 @asset(
     key_prefix=["my_schema"],
     metadata={"partition_spec_update_mode": "update", "schema_update_mode": "update"},
@@ -74,6 +86,48 @@ def b_plus_one(b_df: DataFrame) -> DataFrame:
     return b_df.withColumn("a", b_df.a + 1)
 
 
+@asset(
+    key_prefix=["my_schema"],
+    partitions_def=HourlyPartitionsDefinition(
+        start_date=datetime.datetime(2022, 1, 1, 0)
+    ),
+    config_schema={"value": str},
+    metadata={"partition_expr": "partition"},
+)
+def hourly_partitioned(context: AssetExecutionContext) -> DataFrame:
+    partition = datetime.datetime.strptime(context.partition_key, "%Y-%m-%d-%H:%M")
+    value = context.op_execution_context.op_config["value"]
+
+    spark = (
+        SparkSession.builder.remote("sc://localhost")
+        .config(map=SPARK_CONFIG)
+        .getOrCreate()
+    )
+    return spark.createDataFrame(
+        [(partition, value, 1)], "partition: timestamp_ntz, value: string, b: int"
+    )
+
+
+def _exec_in_container(container: docker.models.containers.Container, *statements: str):
+    """Execute a series of statements in the specified Docker container.
+
+    This is a workaround for the fact that files created from within the
+    Docker Compose context are inaccessible from the host context.
+
+    Raises an exception if an error occurs while running the statements.
+    """
+    setup_statements = [
+        "import datetime",
+        "from pyiceberg.catalog import load_catalog",
+        'catalog = load_catalog("postgres", **{"uri": "postgresql+psycopg2://test:test@postgres:5432/test", "warehouse": "file:///home/iceberg/warehouse"})',
+    ]
+    exit_code, output = container.exec_run(
+        f"""python -c '{"; ".join([*setup_statements, *statements])}'"""
+    )
+    if exit_code:
+        raise Exception(output)
+
+
 def test_iceberg_io_manager_with_assets(
     asset_b_df_table_identifier: str,
     asset_b_plus_one_table_identifier: str,
@@ -82,21 +136,54 @@ def test_iceberg_io_manager_with_assets(
 ):
     resource_defs = {"io_manager": io_manager}
 
+    client = docker.from_env()
+    container = client.containers.get("pyiceberg-spark")
+
     for _ in range(2):
         res = materialize([b_df, b_plus_one], resources=resource_defs)
         assert res.success
 
-        client = docker.from_env()
-        container = client.containers.get("pyiceberg-spark")
-
-        exit_code, output = container.exec_run(
-            """python -c 'from pyiceberg.catalog import load_catalog; catalog = load_catalog("postgres", **{"uri": "postgresql+psycopg2://test:test@postgres:5432/test", "warehouse": "file:///home/iceberg/warehouse"}); table = catalog.load_table("pytest.b_df"); out_df = table.scan().to_arrow(); assert out_df["a"].to_pylist() == [1, 2, 3]'"""
+        _exec_in_container(
+            container,
+            f'table = catalog.load_table("{asset_b_df_table_identifier}")',
+            "out_df = table.scan().to_arrow()",
+            'assert out_df["a"].to_pylist() == [1, 2, 3]',
         )
-        if exit_code:
-            raise Exception(output)
 
-        exit_code, output = container.exec_run(
-            """python -c 'from pyiceberg.catalog import load_catalog; catalog = load_catalog("postgres", **{"uri": "postgresql+psycopg2://test:test@postgres:5432/test", "warehouse": "file:///home/iceberg/warehouse"}); table = catalog.load_table("pytest.b_plus_one"); out_df = table.scan().to_arrow(); assert out_df["a"].to_pylist() == [2, 3, 4]'"""
+        _exec_in_container(
+            container,
+            f'table = catalog.load_table("{asset_b_plus_one_table_identifier}")',
+            "out_df = table.scan().to_arrow()",
+            'assert out_df["a"].to_pylist() == [2, 3, 4]',
         )
-        if exit_code:
-            raise Exception(output)
+
+
+def test_iceberg_io_manager_with_hourly_partitioned_assets(
+    asset_hourly_partitioned_table_identifier: str,
+    catalog: Catalog,
+    io_manager: SparkIcebergIOManager,
+):
+    resource_defs = {"io_manager": io_manager}
+
+    for date in ["2022-01-01-01:00", "2022-01-01-02:00", "2022-01-01-03:00"]:
+        res = materialize(
+            [hourly_partitioned],
+            partition_key=date,
+            resources=resource_defs,
+            run_config={
+                "ops": {"my_schema__hourly_partitioned": {"config": {"value": "1"}}},
+            },
+        )
+        assert res.success
+
+    client = docker.from_env()
+    container = client.containers.get("pyiceberg-spark")
+
+    _exec_in_container(
+        container,
+        f'table = catalog.load_table("{asset_hourly_partitioned_table_identifier}")',
+        "assert len(table.spec().fields) == 1",
+        'assert table.spec().fields[0].name == "partition_hour"',
+        "out_df = table.scan().to_arrow()",
+        'assert out_df["partition"].to_pylist() == [datetime.datetime(2022, 1, 1, 3, 0), datetime.datetime(2022, 1, 1, 2, 0), datetime.datetime(2022, 1, 1, 1, 0)]',
+    )
