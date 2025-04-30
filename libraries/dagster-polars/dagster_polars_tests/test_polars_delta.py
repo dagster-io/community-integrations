@@ -79,6 +79,51 @@ def test_polars_delta_io_manager_append(polars_delta_io_manager: PolarsDeltaIOMa
     pl_testing.assert_frame_equal(pl.concat([df, df]), pl.read_delta(saved_path))
 
 
+def test_polars_delta_io_manager_append_lazy(
+    polars_delta_io_manager: PolarsDeltaIOManager,
+):
+    df = pl.DataFrame(
+        {
+            "a": [1, 2, 3],
+        }
+    )
+
+    @asset(io_manager_def=polars_delta_io_manager, metadata={"mode": "append"})
+    def append_asset() -> pl.LazyFrame:
+        return df.lazy()
+
+    result = materialize(
+        [append_asset],
+    )
+
+    handled_output_events = list(
+        filter(
+            lambda evt: evt.is_handled_output, result.events_for_node("append_asset")
+        )
+    )
+    saved_path = handled_output_events[0].event_specific_data.metadata["path"].value  # type: ignore
+    assert (
+        handled_output_events[0].event_specific_data.metadata["dagster/row_count"].value
+        == 3
+    )  # type: ignore
+    assert isinstance(saved_path, str)
+
+    result = materialize(
+        [append_asset],
+    )
+    handled_output_events = list(
+        filter(
+            lambda evt: evt.is_handled_output, result.events_for_node("append_asset")
+        )
+    )
+    assert (
+        handled_output_events[0].event_specific_data.metadata["dagster/row_count"].value
+        == 6
+    )  # type: ignore
+
+    pl_testing.assert_frame_equal(pl.concat([df, df]), pl.read_delta(saved_path))
+
+
 def test_polars_delta_io_manager_overwrite_schema(
     polars_delta_io_manager: PolarsDeltaIOManager, dagster_instance: DagsterInstance
 ):

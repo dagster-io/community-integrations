@@ -488,7 +488,8 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
                 # are appending to
                 pass
             else:
-                metadata["append_row_count"] = metadata["dagster/row_count"]
+                if "dagster/row_count" in metadata:
+                    metadata["append_row_count"] = metadata["dagster/row_count"]
 
                 path = self._get_path(context)
                 # we need to get row_count from the full table
