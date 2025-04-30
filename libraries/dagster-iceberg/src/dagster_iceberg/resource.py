@@ -13,45 +13,50 @@ from dagster_iceberg.config import IcebergCatalogConfig
 class IcebergTableResource(ConfigurableResource):
     """Resource for interacting with a PyIceberg table.
 
-    Examples:
+    Example:
+        .. code-block:: python
 
-    ```python
-    from dagster import Definitions, asset
-    from dagster_iceberg import IcebergTableResource, LocalConfig
+            from dagster import Definitions, asset
+            from dagster_iceberg import IcebergTableResource
 
-    @asset
-    def my_table(iceberg_table: IcebergTableResource):
-        df = pyiceberg_table.load().to_pandas()
 
-    defs = Definitions(
-        assets=[my_table],
-        resources={
-            "iceberg_table,
-            IcebergTableResource(
-                name="mycatalog",
-                namespace="mynamespace",
-                table="mytable",
-                config=IcebergCatalogConfig(properties={
-                    "uri": f"sqlite:///{warehouse_path}/pyiceberg_catalog.db",
-                    "warehouse": f"file://{warehouse_path}",
-                }),
+            @asset
+            def my_table(iceberg_table: IcebergTableResource):
+                df = iceberg_table.load().to_pandas()
+
+
+            warehouse_path = "/path/to/warehouse"
+
+            defs = Definitions(
+                assets=[my_table],
+                resources={
+                    "iceberg_table": IcebergTableResource(
+                        name="my_catalog",
+                        config=IcebergCatalogConfig(
+                            properties={
+                                "uri": f"sqlite:///{warehouse_path}/pyiceberg_catalog.db",
+                                "warehouse": f"file://{warehouse_path}",
+                            }
+                        ),
+                        table="my_table",
+                        namespace="my_namespace",
+                    )
+                },
             )
-        }
-    )
-    ```
+
     """
 
-    name: str = Field(description="The name of the iceberg catalog.")
+    name: str = Field(description="The name of the Iceberg catalog.")
     config: IcebergCatalogConfig = Field(
-        description="Additional configuration properties for the iceberg catalog.",
+        description="Additional configuration properties for the Iceberg catalog.",
     )
     table: str = Field(
-        description="Name of the iceberg table to interact with.",
+        description="Name of the Iceberg table to interact with.",
     )
     schema_: str | None = Field(
         default=None,
         alias="namespace",
-        description="Name of the iceberg catalog namespace to use.",
+        description="Name of the Iceberg catalog namespace to use.",
     )  # schema is a reserved word for pydantic
     snapshot_id: int | None = Field(
         default=None,
