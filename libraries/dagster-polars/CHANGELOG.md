@@ -1,10 +1,10 @@
-## [Unreleased]
+## 0.27.2
 
-## Fixed
+### Fixed
 
 - Fixed sinking `polars.LazyFrame` in append mode with `PolarsDeltaIOManager`
 
-## 0.27,1
+## 0.27.1
 
 ### Added
 
