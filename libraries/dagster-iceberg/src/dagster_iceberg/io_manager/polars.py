@@ -63,7 +63,6 @@ class PolarsIcebergIOManager(_io_manager.IcebergIOManager):
     Examples:
         .. code-block:: python
 
-            import pandas as pd
             import polars as pl
             from dagster import Definitions, asset
             from dagster_iceberg.config import IcebergCatalogConfig
@@ -87,17 +86,16 @@ class PolarsIcebergIOManager(_io_manager.IcebergIOManager):
 
             @asset
             def iris_dataset() -> pl.DataFrame:
-                return pl.from_pandas(
-                    pd.read_csv(
-                        "https://docs.dagster.io/assets/iris.csv",
-                        names=[
-                            "sepal_length_cm",
-                            "sepal_width_cm",
-                            "petal_length_cm",
-                            "petal_width_cm",
-                            "species",
-                        ],
-                    )
+                return pl.read_csv(
+                    "https://docs.dagster.io/assets/iris.csv",
+                    has_header=False,
+                    new_columns=[
+                        "sepal_length_cm",
+                        "sepal_width_cm",
+                        "petal_length_cm",
+                        "petal_width_cm",
+                        "species",
+                    ],
                 )
 
 
