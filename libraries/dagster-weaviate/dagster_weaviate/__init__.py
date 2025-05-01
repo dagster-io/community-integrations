@@ -11,4 +11,6 @@ from dagster_weaviate.config import (
 
 __version__ = "0.0.2"
 
-DagsterLibraryRegistry.register("dagster-weaviate", __version__)
+DagsterLibraryRegistry.register(
+    "dagster-weaviate", __version__, is_dagster_package=False
+)

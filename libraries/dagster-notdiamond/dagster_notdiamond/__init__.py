@@ -6,4 +6,6 @@ from dagster_notdiamond.resources import (
 
 __version__ = "0.0.3"
 
-DagsterLibraryRegistry.register("dagster-notdiamond", __version__)
+DagsterLibraryRegistry.register(
+    "dagster-notdiamond", __version__, is_dagster_package=False
+)

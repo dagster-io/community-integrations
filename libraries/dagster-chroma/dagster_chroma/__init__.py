@@ -11,4 +11,4 @@ from dagster_chroma.config import (
 
 __version__ = "0.0.2"
 
-DagsterLibraryRegistry.register("dagster-chroma", __version__)
+DagsterLibraryRegistry.register("dagster-chroma", __version__, is_dagster_package=False)

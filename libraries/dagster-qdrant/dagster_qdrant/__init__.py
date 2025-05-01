@@ -6,4 +6,4 @@ from dagster_qdrant.resource import QdrantResource
 __all__ = ["QdrantConfig", "QdrantResource"]
 __version__ = "0.0.2"
 
-DagsterLibraryRegistry.register("dagster-qdrant", __version__)
+DagsterLibraryRegistry.register("dagster-qdrant", __version__, is_dagster_package=False)

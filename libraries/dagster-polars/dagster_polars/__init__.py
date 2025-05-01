@@ -34,4 +34,4 @@ try:
 except ImportError:
     pass
 
-DagsterLibraryRegistry.register("dagster-polars", __version__)
+DagsterLibraryRegistry.register("dagster-polars", __version__, is_dagster_package=False)

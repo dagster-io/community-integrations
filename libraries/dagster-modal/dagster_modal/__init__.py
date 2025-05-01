@@ -4,4 +4,4 @@ from dagster_modal.resources import ModalClient as ModalClient
 
 __version__ = "0.0.3"
 
-DagsterLibraryRegistry.register("dagster-modal", __version__)
+DagsterLibraryRegistry.register("dagster-modal", __version__, is_dagster_package=False)

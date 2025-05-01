@@ -6,4 +6,6 @@ __version__ = "0.1.5"
 
 __all__ = [EvidenceProject]
 
-DagsterLibraryRegistry.register("dagster-evidence", __version__)
+DagsterLibraryRegistry.register(
+    "dagster-evidence", __version__, is_dagster_package=False
+)
