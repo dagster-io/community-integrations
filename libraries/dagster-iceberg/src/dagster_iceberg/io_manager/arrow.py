@@ -53,8 +53,8 @@ class _PyArrowIcebergTypeHandler(_handler.IcebergBaseTypeHandler[ArrowTypes]):
         return (pa.Table, pa.RecordBatchReader)
 
 
-@preview
 @public
+@preview
 class PyArrowIcebergIOManager(_io_manager.IcebergIOManager):
     """An I/O manager definition that reads inputs from and writes outputs to Iceberg tables using PyArrow.
 

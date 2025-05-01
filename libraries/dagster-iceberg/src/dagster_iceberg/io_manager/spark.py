@@ -9,6 +9,7 @@ try:
 except ImportError as e:
     raise ImportError("Please install dagster-iceberg with the 'spark' extra.") from e
 from dagster import ConfigurableIOManagerFactory
+from dagster._annotations import public
 from dagster._core.definitions.multi_dimensional_partitions import (
     MultiPartitionsDefinition,
 )
@@ -25,10 +26,13 @@ from dagster._core.storage.db_io_manager import (
 )
 from pydantic import Field
 
+from dagster_iceberg._utils import preview
+
 if TYPE_CHECKING:
     from pyspark.sql._typing import OptionalPrimitiveType
 
 
+@preview
 class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
     """Type handler that reads and writes PySpark dataframes from and to Iceberg tables."""
 
@@ -71,6 +75,7 @@ class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
         return (DataFrame,)
 
 
+@preview
 class SparkIcebergDbClient(DbClient[SparkSession]):
     @staticmethod
     def delete_table_slice(
@@ -122,6 +127,8 @@ class SparkIcebergDbClient(DbClient[SparkSession]):
         yield builder.getOrCreate()
 
 
+@public
+@preview
 class SparkIcebergIOManager(ConfigurableIOManagerFactory):
     catalog_name: str
     namespace: str

@@ -55,8 +55,8 @@ class _PolarsIcebergTypeHandler(_handler.IcebergBaseTypeHandler[PolarsTypes]):
         return (pl.LazyFrame, pl.DataFrame)
 
 
-@preview
 @public
+@preview
 class PolarsIcebergIOManager(_io_manager.IcebergIOManager):
     """An I/O manager definition that reads inputs from and writes outputs to Iceberg tables using Polars.
 

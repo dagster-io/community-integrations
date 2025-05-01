@@ -51,8 +51,8 @@ class _DaftIcebergTypeHandler(_handler.IcebergBaseTypeHandler[da.DataFrame]):
         return [da.DataFrame]
 
 
-@preview
 @public
+@preview
 class DaftIcebergIOManager(_io_manager.IcebergIOManager):
     """An I/O manager definition that reads inputs from and writes outputs to Iceberg tables using Daft.
 

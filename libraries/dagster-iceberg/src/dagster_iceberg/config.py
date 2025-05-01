@@ -3,8 +3,11 @@ from typing import Any
 from dagster import Config
 from dagster._annotations import public
 
+from dagster_iceberg._utils import preview
+
 
 @public
+@preview
 class IcebergCatalogConfig(Config):
     """Configuration for Iceberg Catalogs.
 

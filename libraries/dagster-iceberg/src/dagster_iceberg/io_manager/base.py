@@ -102,8 +102,8 @@ class IcebergDbClient(DbClient):
             )
 
 
-@preview
 @public
+@preview
 class IcebergIOManager(ConfigurableIOManagerFactory):
     """Base class for an I/O manager definition that reads inputs from and writes outputs to Iceberg tables.
 

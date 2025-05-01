@@ -40,8 +40,8 @@ class _PandasIcebergTypeHandler(_PyArrowIcebergTypeHandler):
         return [pd.DataFrame]
 
 
-@preview
 @public
+@preview
 class PandasIcebergIOManager(_io_manager.IcebergIOManager):
     """An I/O manager definition that reads inputs from and writes outputs to Iceberg tables using pandas.
 
