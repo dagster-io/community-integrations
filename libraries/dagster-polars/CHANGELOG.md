@@ -1,3 +1,9 @@
+## [Unreleased]
+
+## Fixes
+
+- Fixed `ImportError` when `patito` is not installed
+
 ## 0.27.2
 
 ### Fixed

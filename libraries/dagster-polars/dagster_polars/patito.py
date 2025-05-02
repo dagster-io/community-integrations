@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Optional, Mapping
+from typing import TYPE_CHECKING, Any, Mapping, Optional
 
 import polars as pl
 from dagster import (

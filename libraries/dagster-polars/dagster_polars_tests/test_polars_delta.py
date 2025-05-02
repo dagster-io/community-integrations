@@ -21,10 +21,10 @@ from dagster import (
     asset,
     materialize,
 )
+from deltalake import DeltaTable  # noqa: TID253
+
 from dagster_polars import PolarsDeltaIOManager
 from dagster_polars.io_managers.delta import DeltaWriteMode
-from deltalake import DeltaTable
-
 from dagster_polars_tests.utils import get_saved_path
 
 

@@ -1,3 +1,5 @@
+import importlib
+import importlib.util
 import sys
 from abc import abstractmethod
 from collections.abc import Mapping
@@ -12,6 +14,7 @@ from typing import (
     get_args,
     get_origin,
 )
+
 from dagster._core.types.dagster_type import TypeHintInferredDagsterType
 
 if sys.version_info < (3, 10):
@@ -229,13 +232,18 @@ class PatitoTypeRouter(BaseTypeRouter, Generic[T]):
         return self.typing_type.model
 
 
+# Order matters!
 TYPE_ROUTERS = [
     TypeRouter,
     OptionalTypeRouter,
     DictTypeRouter,
-    PatitoTypeRouter,
-    PolarsTypeRouter,
 ]
+
+if importlib.util.find_spec("patito") is not None:
+    TYPE_ROUTERS.append(PatitoTypeRouter)
+
+
+TYPE_ROUTERS.append(PolarsTypeRouter)
 
 
 def resolve_type_router(

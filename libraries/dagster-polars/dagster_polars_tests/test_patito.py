@@ -4,6 +4,7 @@ import dagster as dg
 import patito as pt  # noqa: TID253
 import polars as pl
 import pytest
+
 from dagster_polars import BasePolarsUPathIOManager
 from dagster_polars.patito import get_patito_metadata, patito_model_to_dagster_type
 

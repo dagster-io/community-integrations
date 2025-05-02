@@ -8,6 +8,7 @@ import pytest
 import pytest_cases
 from _pytest.tmpdir import TempPathFactory
 from dagster import BetaWarning, DagsterInstance, PreviewWarning
+
 from dagster_polars import (
     BasePolarsUPathIOManager,
     PolarsDeltaIOManager,

@@ -19,6 +19,7 @@ from dagster import (
     asset,
     materialize,
 )
+
 from dagster_polars import (
     BasePolarsUPathIOManager,
     DataFramePartitions,
@@ -26,7 +27,6 @@ from dagster_polars import (
     PolarsDeltaIOManager,
     PolarsParquetIOManager,
 )
-
 from dagster_polars_tests.utils import get_saved_path
 
 

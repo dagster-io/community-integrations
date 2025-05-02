@@ -19,13 +19,13 @@ from dagster import (
     asset,
     materialize,
 )
+
 from dagster_polars import (
     BasePolarsUPathIOManager,
     LazyFramePartitions,
     PolarsDeltaIOManager,
     PolarsParquetIOManager,
 )
-
 from dagster_polars_tests.utils import get_saved_path
 
 
