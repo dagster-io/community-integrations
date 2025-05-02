@@ -130,6 +130,46 @@ class SparkIcebergDbClient(DbClient[SparkSession]):
 @public
 @preview
 class SparkIcebergIOManager(ConfigurableIOManagerFactory):
+    """An I/O manager definition that reads inputs from and writes outputs to Iceberg tables using PySpark.
+
+    This I/O manager is only designed to work with Spark Connect.
+
+    Example:
+        .. code-block:: python
+
+            from dagster import Definitions, asset
+            from dagster_iceberg.io_manager.spark import SparkIcebergIOManager
+            from pyspark.sql import SparkSession
+            from pyspark.sql.connect.dataframe import DataFrame
+
+            resources = {
+                "io_manager": SparkIcebergIOManager(
+                    catalog_name="test",
+                    namespace="dagster",
+                    remote_url="spark://localhost",
+                )
+            }
+
+
+            @asset
+            def iris_dataset() -> DataFrame:
+                spark = SparkSession.builder.remote("sc://localhost").getOrCreate()
+                return spark.read.csv(
+                    "https://docs.dagster.io/assets/iris.csv",
+                    schema=(
+                        "sepal_length_cm FLOAT, "
+                        "sepal_width_cm FLOAT, "
+                        "petal_length_cm FLOAT, "
+                        "petal_width_cm FLOAT, "
+                        "species STRING"
+                    ),
+                )
+
+
+            defs = Definitions(assets=[iris_dataset], resources=resources)
+
+    """
+
     catalog_name: str
     namespace: str
     spark_config: dict[str, Any] | None = Field(default=None)
