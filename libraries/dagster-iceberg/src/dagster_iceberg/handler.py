@@ -25,6 +25,8 @@ ArrowTypes = pa.Table | pa.RecordBatchReader
 @public
 @preview
 class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
+    """Base class for a type handler that reads inputs from and writes outputs to Iceberg tables."""
+
     @abstractmethod
     def to_data_frame(
         self,
