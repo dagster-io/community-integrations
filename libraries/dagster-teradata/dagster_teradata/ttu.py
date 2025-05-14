@@ -6,6 +6,7 @@ import os
 
 class Bteq:
     def __init__(self, connection, teradata_connection_resource, log):
+        self.timeout = None
         self.connection = connection
         self.log = log
         self.teradata_connection_resource = teradata_connection_resource
@@ -20,6 +21,11 @@ class Bteq:
         :param timeout: Timeout in seconds for the BTEQ execution.
         :return: The last line of the BTEQ log if xcom_push_flag is True, otherwise None.
         """
+        if timeout is not None:
+            self.timeout = timeout
+        else:
+            # Run without timeout or use a default
+            self.timeout = 5
         conn = {
             "host": self.teradata_connection_resource.host,
             "login": self.teradata_connection_resource.user,
@@ -70,7 +76,7 @@ class Bteq:
 
                 # Wait for the BTEQ process to complete with optional timeout
                 try:
-                    conn["sp"].wait(timeout=timeout)
+                    conn["sp"].wait(timeout=self.timeout)
                     self.log.info(
                         "BTEQ command exited with return code %s", conn["sp"].returncode
                     )
@@ -102,7 +108,7 @@ class Bteq:
             try:
                 self.log.info("Terminating subprocess...")
                 conn["sp"].terminate()
-                conn["sp"].wait(timeout=5)
+                conn["sp"].wait(timeout=self.timeout)
                 self.log.info("Subprocess terminated successfully.")
             except subprocess.TimeoutExpired:
                 self.log.warning(

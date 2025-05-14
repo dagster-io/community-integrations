@@ -226,7 +226,7 @@ class TeradataDagsterConnection:
                         results = results.append(cursor.fetchall())  # type: ignore
                         return results
 
-    def bteq_operator(self, bteq_script: str) -> None:
+    def bteq_operator(self, bteq_script: str, timeout: int = None) -> None:
         """Executes BTEQ sentences using BTEQ binary.
 
         Args:
@@ -240,7 +240,7 @@ class TeradataDagsterConnection:
                     bteq = "SELECT * FROM dbc.dbcinfo"
                     teradata.execute_bteq(bteq)
         """
-        self.bteq.bteq_operator(bteq_script)
+        self.bteq.bteq_operator(bteq_script, timeout)
 
     def drop_database(self, databases: Union[str, Sequence[str]]) -> None:
         """

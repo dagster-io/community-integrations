@@ -44,7 +44,7 @@ def test_execute_bteq_sql_error(tmp_path):
 def test_execute_bteq_timeout(tmp_path):
     @op(required_resource_keys={"teradata"})
     def timeout_op(context):
-        context.resources.teradata.bteq_operator("SELECT * FROM dbc.dbcinfo;", timeout=1)
+        context.resources.teradata.bteq_operator("SELECT * FROM dbc.dbcinfo;", 1)
 
     @job(resource_defs={"teradata": td_resource})
     def timeout_job():
