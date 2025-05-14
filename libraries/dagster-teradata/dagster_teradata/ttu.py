@@ -1,14 +1,18 @@
-from tempfile import gettempdir, NamedTemporaryFile, TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from dagster import DagsterError
 import subprocess
 import os
+
+
 class Bteq:
     def __init__(self, connection, teradata_connection_resource, log):
         self.connection = connection
         self.log = log
         self.teradata_connection_resource = teradata_connection_resource
 
-    def execute_bteq(self, bteq_script: str, xcom_push_flag=False, timeout: int | None = None) -> str:
+    def bteq_operator(
+        self, bteq_script: str, xcom_push_flag=False, timeout: int | None = None
+    ) -> str:
         """
         Executes BTEQ sentences using BTEQ binary.
         :param bteq: string of BTEQ sentences
@@ -16,38 +20,44 @@ class Bteq:
         :param timeout: Timeout in seconds for the BTEQ execution.
         :return: The last line of the BTEQ log if xcom_push_flag is True, otherwise None.
         """
-        conn = {'host': self.teradata_connection_resource.host, 'login': self.teradata_connection_resource.user,
-                'password': self.teradata_connection_resource.password,
-                'bteq_output_width': self.teradata_connection_resource.bteq_output_width,
-                'bteq_session_encoding': self.teradata_connection_resource.bteq_session_encoding,
-                'bteq_quit_zero': self.teradata_connection_resource.bteq_quit_zero,
-                'console_output_encoding': self.teradata_connection_resource.console_output_encoding,}
+        conn = {
+            "host": self.teradata_connection_resource.host,
+            "login": self.teradata_connection_resource.user,
+            "password": self.teradata_connection_resource.password,
+            "bteq_output_width": self.teradata_connection_resource.bteq_output_width,
+            "bteq_session_encoding": self.teradata_connection_resource.bteq_session_encoding,
+            "bteq_quit_zero": self.teradata_connection_resource.bteq_quit_zero,
+            "console_output_encoding": self.teradata_connection_resource.console_output_encoding,
+        }
         self.log.info("Executing BTEQ script...")
 
-        with TemporaryDirectory(prefix='dagster_ttu_bteq_') as tmpdir:
-            with NamedTemporaryFile(dir=tmpdir, mode='wb') as tmpfile:
-                bteq_file_content  = self._prepare_bteq_script(bteq_script,
-                                                       conn['host'],
-                                                       conn['login'],
-                                                       conn['password'],
-                                                       conn['bteq_output_width'],
-                                                       conn['bteq_session_encoding'],
-                                                       conn['bteq_quit_zero']
-                                                       )
+        with TemporaryDirectory(prefix="dagster_ttu_bteq_") as tmpdir:
+            with NamedTemporaryFile(dir=tmpdir, mode="wb") as tmpfile:
+                bteq_file_content = self._prepare_bteq_script(
+                    bteq_script,
+                    conn["host"],
+                    conn["login"],
+                    conn["password"],
+                    conn["bteq_output_width"],
+                    conn["bteq_session_encoding"],
+                    conn["bteq_quit_zero"],
+                )
                 self.log.debug("Generated BTEQ script:\n%s", bteq_file_content)
 
-                tmpfile.write(bytes(bteq_file_content,'UTF8'))
+                tmpfile.write(bytes(bteq_file_content, "UTF8"))
                 tmpfile.flush()
                 tmpfile.seek(0)
 
-                conn['sp'] = subprocess.Popen(['bteq'],
-                    stdin = tmpfile,
-                    stdout = subprocess.PIPE,
-                    stderr = subprocess.STDOUT,
-                    cwd = tmpdir,
-                    preexec_fn = os.setsid)
+                conn["sp"] = subprocess.Popen(
+                    ["bteq"],
+                    stdin=tmpfile,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    cwd=tmpdir,
+                    preexec_fn=os.setsid,
+                )
 
-                line = ''
+                line = ""
                 failure_message = "An error occurred during the BTEQ operation. Please review the full BTEQ output for details."
                 self.log.info("BTEQ Output:")
                 for line in iter(conn["sp"].stdout.readline, b""):
@@ -61,10 +71,14 @@ class Bteq:
                 # Wait for the BTEQ process to complete with optional timeout
                 try:
                     conn["sp"].wait(timeout=timeout)
-                    self.log.info("BTEQ command exited with return code %s", conn["sp"].returncode)
+                    self.log.info(
+                        "BTEQ command exited with return code %s", conn["sp"].returncode
+                    )
                 except subprocess.TimeoutExpired:
                     self.on_kill()
-                    raise DagsterError(f"BTEQ command timed out after {timeout} seconds")
+                    raise DagsterError(
+                        f"BTEQ command timed out after {timeout} seconds"
+                    )
 
                 # Raise an exception if the BTEQ command failed
                 if conn["sp"].returncode:
@@ -91,7 +105,9 @@ class Bteq:
                 conn["sp"].wait(timeout=5)
                 self.log.info("Subprocess terminated successfully.")
             except subprocess.TimeoutExpired:
-                self.log.warning("Subprocess did not terminate in time. Forcing kill...")
+                self.log.warning(
+                    "Subprocess did not terminate in time. Forcing kill..."
+                )
                 conn["sp"].kill()
                 self.log.info("Subprocess killed forcefully.")
             except (ProcessLookupError, OSError) as e:
@@ -99,13 +115,13 @@ class Bteq:
 
     @staticmethod
     def _prepare_bteq_script(
-            bteq_string: str,
-            host: str,
-            login: str,
-            password: str,
-            bteq_output_width: int,
-            bteq_session_encoding: str,
-            bteq_quit_zero: bool,
+        bteq_string: str,
+        host: str,
+        login: str,
+        password: str,
+        bteq_output_width: int,
+        bteq_session_encoding: str,
+        bteq_quit_zero: bool,
     ) -> str:
         """
         Prepare a BTEQ file with connection parameters for executing SQL sentences with BTEQ syntax.

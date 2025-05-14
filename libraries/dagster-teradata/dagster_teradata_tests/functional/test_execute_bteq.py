@@ -14,8 +14,9 @@ td_resource = TeradataResource(
 def test_execute_bteq(tmp_path):
     @op(required_resource_keys={"teradata"})
     def example_test_execute_bteq(context):
-        result = context.resources.teradata.execute_bteq_script(
-            "select * from dbc.dbcinfo")
+        result = context.resources.teradata.bteq_operator(
+            "select * from dbc.dbcinfo;"
+        )
         context.log.info(result)
 
     @job(resource_defs={"teradata": td_resource})

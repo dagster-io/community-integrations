@@ -35,11 +35,18 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
     browser: Optional[str] = None
     browser_tab_timeout: Optional[int] = None
     browser_timeout: Optional[int] = None
-    console_output_encoding: Optional[str] = Field(default="utf-8", description="Console output encoding.")
-    bteq_session_encoding: Optional[str] = Field(default="ASCII", description="BTEQ session encoding.")
-    bteq_output_width: Optional[int] = Field(default=65531, description="BTEQ output width.")
-    bteq_quit_zero: Optional[bool] = Field(default=False, description="BTEQ quit zero flag.")
-
+    console_output_encoding: Optional[str] = Field(
+        default="utf-8", description="Console output encoding."
+    )
+    bteq_session_encoding: Optional[str] = Field(
+        default="ASCII", description="BTEQ session encoding."
+    )
+    bteq_output_width: Optional[int] = Field(
+        default=65531, description="BTEQ output width."
+    )
+    bteq_quit_zero: Optional[bool] = Field(
+        default=False, description="BTEQ quit zero flag."
+    )
 
     @property
     @cached_method
@@ -219,7 +226,7 @@ class TeradataDagsterConnection:
                         results = results.append(cursor.fetchall())  # type: ignore
                         return results
 
-    def execute_bteq_script(self, bteq_script: str) -> None:
+    def bteq_operator(self, bteq_script: str) -> None:
         """Executes BTEQ sentences using BTEQ binary.
 
         Args:
@@ -233,7 +240,7 @@ class TeradataDagsterConnection:
                     bteq = "SELECT * FROM dbc.dbcinfo"
                     teradata.execute_bteq(bteq)
         """
-        self.bteq.execute_bteq(bteq_script)
+        self.bteq.bteq_operator(bteq_script)
 
     def drop_database(self, databases: Union[str, Sequence[str]]) -> None:
         """
