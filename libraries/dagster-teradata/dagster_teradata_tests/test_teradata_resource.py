@@ -32,9 +32,5 @@ def test_teradata_resource(teradata_connect):
     result = teradata_job.execute_in_process()
     assert result.success
     teradata_connect.assert_called_once_with(
-        host="foo",
-        user="bar",
-        password="baz",
-        database="TESTDB",
-        tmode='ANSI'
+        host="foo", user="bar", password="baz", database="TESTDB", tmode="ANSI"
     )
