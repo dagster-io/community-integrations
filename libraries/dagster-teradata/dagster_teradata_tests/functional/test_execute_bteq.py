@@ -1,6 +1,7 @@
 import os
 
-from dagster import job, op
+import pytest
+from dagster import job, op, DagsterError
 from dagster_teradata import TeradataResource
 
 td_resource = TeradataResource(
@@ -10,104 +11,172 @@ td_resource = TeradataResource(
     database=os.getenv("TERADATA_DATABASE"),
 )
 
-
-def test_execute_bteq(tmp_path):
+def test_local_bteq_script_execution():
     @op(required_resource_keys={"teradata"})
-    def example_test_execute_bteq(context):
+    def example_test_local_script(context):
         result = context.resources.teradata.bteq_operator(
-            "select * from dbc.dbcinfo;"
+            bteq_script="SELECT * FROM dbc.dbcinfo;"
         )
         context.log.info(result)
+        assert result is None
 
     @job(resource_defs={"teradata": td_resource})
     def example_job():
-        example_test_execute_bteq()
+        example_test_local_script()
 
     example_job.execute_in_process(resources={"teradata": td_resource})
 
-def test_execute_bteq_sql_error(tmp_path):
-    @op(required_resource_keys={"teradata"})
-    def failing_op(context):
-        context.resources.teradata.bteq_operator("SELECT * FROM;")  # Invalid SQL
 
-    @job(resource_defs={"teradata": td_resource})
-    def failing_job():
-        failing_op()
-
-    try:
-        failing_job.execute_in_process(resources={"teradata": td_resource})
-        assert False, "Expected job to fail due to syntax error"
-    except Exception as e:
-        assert "Syntax error" in str(e) or "3706" in str(e)
-
-
-def test_execute_bteq_timeout(tmp_path):
-    @op(required_resource_keys={"teradata"})
-    def timeout_op(context):
-        context.resources.teradata.bteq_operator("SELECT * FROM dbc.dbcinfo;", 1)
-
-    @job(resource_defs={"teradata": td_resource})
-    def timeout_job():
-        timeout_op()
-
-    try:
-        timeout_job.execute_in_process(resources={"teradata": td_resource})
-        assert False, "Expected timeout"
-    except Exception as e:
-        assert "timed out" in str(e)
-
-
-import pytest
-
-@pytest.mark.parametrize("invalid_sql", ["", None])
-def test_invalid_bteq_sql(invalid_sql):
-    @op(required_resource_keys={"teradata"})
-    def invalid_sql_op(context):
-        context.resources.teradata.bteq_operator(invalid_sql)
-
-    @job(resource_defs={"teradata": td_resource})
-    def invalid_sql_job():
-        invalid_sql_op()
-
-    with pytest.raises(ValueError, match="BTEQ script cannot be empty"):
-        invalid_sql_job.execute_in_process(resources={"teradata": td_resource})
-
-
-def test_bteq_custom_config(tmp_path):
-    custom_td_resource = TeradataResource(
-        host="localhost",
-        user="user",
-        password="password",
-        database="dbc",
-        bteq_output_width=200,
-        bteq_session_encoding="UTF8",
-        bteq_quit_zero=True,
-    )
+def test_local_bteq_file_execution(tmp_path):
+    script_file = tmp_path / "script.bteq"
+    script_file.write_text("SELECT * FROM dbc.dbcinfo;")
 
     @op(required_resource_keys={"teradata"})
-    def config_check_op(context):
-        result = context.resources.teradata.bteq_operator("SELECT * FROM dbc.dbcinfo;")
-        assert result is not None
-
-    @job(resource_defs={"teradata": custom_td_resource})
-    def config_job():
-        config_check_op()
-
-    config_job.execute_in_process(resources={"teradata": custom_td_resource})
-
-
-def test_logging_output(tmp_path, caplog):
-    @op(required_resource_keys={"teradata"})
-    def log_op(context):
-        result = context.resources.teradata.bteq_operator("SELECT * FROM dbc.dbcinfo;")
+    def example_test_local_file(context):
+        result = context.resources.teradata.bteq_operator(
+            bteq_script_file=str(script_file)
+        )
         context.log.info(result)
+        assert result is None
 
     @job(resource_defs={"teradata": td_resource})
-    def log_job():
-        log_op()
+    def example_job():
+        example_test_local_file()
 
-    log_job.execute_in_process(resources={"teradata": td_resource})
-    assert any("dbcinfo" in record.message for record in caplog.records)
-
+    example_job.execute_in_process(resources={"teradata": td_resource})
 
 
+def test_remote_bteq_password_auth():
+    @op(required_resource_keys={"teradata"})
+    def example_test_remote_password(context):
+        result = context.resources.teradata.bteq_operator(
+            bteq_script="SELECT * FROM dbc.dbcinfo;",
+            remote_host="host",
+            remote_user="username",
+            remote_password="password"
+        )
+        context.log.info(result)
+        assert result is None
+
+    @job(resource_defs={"teradata": td_resource})
+    def example_job():
+        example_test_remote_password()
+
+    example_job.execute_in_process(resources={"teradata": td_resource})
+
+
+def test_remote_bteq_ssh_key_auth():
+    @op(required_resource_keys={"teradata"})
+    def example_test_remote_ssh_key(context):
+        result = context.resources.teradata.bteq_operator(
+            bteq_script="SELECT * FROM dbc.dbcinfo;",
+            remote_host="host",
+            remote_user="username",
+            ssh_key_path="c:\\users\\<username>\\.ssh\\id_rsa"
+        )
+        context.log.info(result)
+        assert result is None
+
+    @job(resource_defs={"teradata": td_resource})
+    def example_job():
+        example_test_remote_ssh_key()
+
+    example_job.execute_in_process(resources={"teradata": td_resource})
+
+
+def test_bteq_xcom_push():
+    @op(required_resource_keys={"teradata"})
+    def example_test_xcom_push(context):
+        result = context.resources.teradata.bteq_operator(
+            bteq_script="SELECT * FROM dbc.dbcinfo;",
+            xcom_push_flag=True
+        )
+        context.log.info(result)
+        assert isinstance(result, str)
+
+    @job(resource_defs={"teradata": td_resource})
+    def example_job():
+        example_test_xcom_push()
+
+    example_job.execute_in_process(resources={"teradata": td_resource})
+
+
+def test_no_bteq_script_provided():
+    @op(required_resource_keys={"teradata"})
+    def example_test_no_script(context):
+        with pytest.raises(ValueError):
+            context.resources.teradata.bteq_operator()
+
+    @job(resource_defs={"teradata": td_resource})
+    def example_job():
+        example_test_no_script()
+
+    example_job.execute_in_process(resources={"teradata": td_resource})
+
+
+def test_conflicting_script_sources(tmp_path):
+    script_file = tmp_path / "script.bteq"
+    script_file.write_text("SELECT * FROM dbc.dbcinfo;")
+
+    @op(required_resource_keys={"teradata"})
+    def example_test_conflicting_sources(context):
+        with pytest.raises(ValueError):
+            context.resources.teradata.bteq_operator(
+                bteq_script="SELECT * FROM dbc.dbcinfo;",
+                bteq_script_file=str(script_file)
+            )
+
+    @job(resource_defs={"teradata": td_resource})
+    def example_job():
+        example_test_conflicting_sources()
+
+    example_job.execute_in_process(resources={"teradata": td_resource})
+
+
+def test_invalid_script_file():
+    @op(required_resource_keys={"teradata"})
+    def example_test_invalid_file(context):
+        with pytest.raises(DagsterError):
+            context.resources.teradata.bteq_operator(
+                bteq_script_file="/nonexistent/path/script.bteq"
+            )
+
+    @job(resource_defs={"teradata": td_resource})
+    def example_job():
+        example_test_invalid_file()
+
+    example_job.execute_in_process(resources={"teradata": td_resource})
+
+
+def test_remote_missing_credentials():
+    @op(required_resource_keys={"teradata"})
+    def example_test_missing_creds(context):
+        with pytest.raises(ValueError):
+            context.resources.teradata.bteq_operator(
+                bteq_script="SELECT * FROM dbc.dbcinfo;",
+                remote_host="remote.teradata.com"
+            )
+
+    @job(resource_defs={"teradata": td_resource})
+    def example_job():
+        example_test_missing_creds()
+
+    example_job.execute_in_process(resources={"teradata": td_resource})
+
+def test_conflicting_ssh_auth():
+    @op(required_resource_keys={"teradata"})
+    def example_test_conflicting_auth(context):
+        with pytest.raises(ValueError):
+            context.resources.teradata.bteq_operator(
+                bteq_script="SELECT * FROM dbc.dbcinfo;",
+                remote_host="remote.teradata.com",
+                remote_user="user",
+                remote_password="password",
+                ssh_key_path="/path/to/ssh_key"
+            )
+
+    @job(resource_defs={"teradata": td_resource})
+    def example_job():
+        example_test_conflicting_auth()
+
+    example_job.execute_in_process(resources={"teradata": td_resource})

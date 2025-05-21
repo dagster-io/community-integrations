@@ -226,11 +226,35 @@ class TeradataDagsterConnection:
                         results = results.append(cursor.fetchall())  # type: ignore
                         return results
 
-    def bteq_operator(self, bteq_script: str, timeout: int = None) -> None:
-        """Executes BTEQ sentences using BTEQ binary.
+    def bteq_operator(
+            self,
+            bteq_script: str = None,
+            bteq_script_file: str = None,
+            timeout: int = None,
+            xcom_push_flag: bool = False,
+            remote_host: Optional[str] = None,
+            remote_user: Optional[str] = None,
+            remote_password: Optional[str] = None,
+            ssh_key_path: Optional[str] = None,
+            remote_port: int = 22,
+            remote_working_dir: str = "/tmp"
+    ) -> Optional[str]:
+        """Executes BTEQ sentences using BTEQ binary, either locally or remotely via SSH.
 
         Args:
             bteq_script (str): String of BTEQ sentences to be executed.
+            bteq_script_file (str): Path to a file containing BTEQ sentences to be executed.
+            timeout (int, optional): Timeout in seconds for the BTEQ execution.
+            xcom_push_flag (bool, optional): Flag for pushing last line of BTEQ Log to XCom.
+            remote_host (str, optional): Remote host to execute BTEQ on (None for local execution).
+            remote_user (str, optional): SSH username for remote execution.
+            remote_password (str, optional): SSH password (optional if using key-based auth).
+            ssh_key_path (str, optional): Path to SSH private key (alternative to password).
+            remote_port (int, optional): SSH port (default: 22).
+            remote_working_dir (str, optional): Working directory on remote host (default: /tmp).
+
+        Returns:
+            Optional[str]: The last line of the BTEQ log if xcom_push_flag is True, otherwise None.
 
         Examples:
             .. code-block:: python
@@ -238,9 +262,60 @@ class TeradataDagsterConnection:
                 @op
                 def execute_bteq(teradata: TeradataResource):
                     bteq = "SELECT * FROM dbc.dbcinfo"
-                    teradata.execute_bteq(bteq)
+                    # Local execution
+                    teradata.bteq_operator(bteq)
+
+                    # Remote execution with password
+                    teradata.bteq_operator(
+                        bteq,
+                        remote_host="remote.server.com",
+                        remote_user="myuser",
+                        remote_password="mypassword"
+                    )
+
+                    # Remote execution with SSH key
+                    teradata.bteq_operator(
+                        bteq,
+                        remote_host="remote.server.com",
+                        remote_user="myuser",
+                        ssh_key_path="~/.ssh/id_rsa"
+                    )
         """
-        self.bteq.bteq_operator(bteq_script, timeout)
+
+        # Validate input
+        if not bteq_script and not bteq_script_file:
+            raise ValueError("Either bteq_script or bteq_script_file must be provided")
+
+        if bteq_script and bteq_script_file:
+            raise ValueError("Cannot specify both bteq_script and bteq_script_file")
+
+        if remote_host:
+            if not remote_user:
+                raise ValueError("remote_user must be provided for remote execution")
+            if not ssh_key_path and not remote_password:
+                raise ValueError(
+                    "Either ssh_key_path or remote_password must be provided for remote execution"
+                )
+            if remote_password and ssh_key_path:
+                raise ValueError(
+                    "Cannot specify both remote_password and ssh_key_path for remote execution"
+                )
+
+        if remote_port < 1 or remote_port > 65535:
+            raise ValueError("remote_port must be a valid port number (1-65535)")
+
+        return self.bteq.bteq_operator(
+            bteq_script=bteq_script,
+            bteq_script_file=bteq_script_file,
+            xcom_push_flag=xcom_push_flag,
+            timeout=timeout,
+            remote_host=remote_host,
+            remote_user=remote_user,
+            remote_password=remote_password,
+            ssh_key_path=ssh_key_path,
+            remote_port=remote_port,
+            remote_working_dir=remote_working_dir
+        )
 
     def drop_database(self, databases: Union[str, Sequence[str]]) -> None:
         """
