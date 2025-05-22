@@ -237,7 +237,9 @@ class TeradataDagsterConnection:
             remote_password: Optional[str] = None,
             ssh_key_path: Optional[str] = None,
             remote_port: int = 22,
-            remote_working_dir: str = "/tmp"
+            remote_working_dir: str = "/tmp",
+            expected_return_code: int = 0,
+
     ) -> Optional[str]:
         """Executes BTEQ sentences using BTEQ binary, either locally or remotely via SSH.
 
@@ -252,6 +254,7 @@ class TeradataDagsterConnection:
             ssh_key_path (str, optional): Path to SSH private key (alternative to password).
             remote_port (int, optional): SSH port (default: 22).
             remote_working_dir (str, optional): Working directory on remote host (default: /tmp).
+            expected_return_code (int, optional): Expected return code for BTEQ execution.
 
         Returns:
             Optional[str]: The last line of the BTEQ log if xcom_push_flag is True, otherwise None.
@@ -314,7 +317,8 @@ class TeradataDagsterConnection:
             remote_password=remote_password,
             ssh_key_path=ssh_key_path,
             remote_port=remote_port,
-            remote_working_dir=remote_working_dir
+            remote_working_dir=remote_working_dir,
+            expected_return_code = expected_return_code
         )
 
     def drop_database(self, databases: Union[str, Sequence[str]]) -> None:

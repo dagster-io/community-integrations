@@ -26,6 +26,43 @@ def test_local_bteq_script_execution():
 
     example_job.execute_in_process(resources={"teradata": td_resource})
 
+def test_local_expected_return_code():
+    @op(required_resource_keys={"teradata"})
+    def example_test_local_expected_return_code(context):
+        result = context.resources.teradata.bteq_operator(
+            bteq_script="delete from abcdefgh;",
+            expected_return_code=8
+        )
+        context.log.info(result)
+        assert result is None
+
+    @job(resource_defs={"teradata": td_resource})
+    def example_job():
+        example_test_local_expected_return_code()
+
+    example_job.execute_in_process(resources={"teradata": td_resource})
+
+
+def test_remote_expected_return_code():
+    @op(required_resource_keys={"teradata"})
+    def example_test_local_expected_return_code(context):
+        result = context.resources.teradata.bteq_operator(
+            bteq_script="delete from abcdefgh;",
+            remote_host="host",
+            remote_user="username",
+            remote_password="password",
+            expected_return_code=8
+        )
+        context.log.info(result)
+        assert result is None
+
+    @job(resource_defs={"teradata": td_resource})
+    def example_job():
+        example_test_local_expected_return_code()
+
+    example_job.execute_in_process(resources={"teradata": td_resource})
+
+
 
 def test_local_bteq_file_execution(tmp_path):
     script_file = tmp_path / "script.bteq"

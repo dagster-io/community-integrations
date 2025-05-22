@@ -285,7 +285,8 @@ class Bteq:
             remote_password: Optional[str] = None,
             ssh_key_path: Optional[str] = None,
             remote_port: int = 22,
-            remote_working_dir: str = "/tmp"
+            remote_working_dir: str = "/tmp",
+            expected_return_code: int = 0,
     ) -> Optional[str]:
         """
         Main BTEQ operator method that executes BTEQ scripts (string or file) either locally or remotely.
@@ -301,7 +302,7 @@ class Bteq:
             ssh_key_path: Path to SSH private key for authentication
             remote_port: SSH port (default: 22)
             remote_working_dir: Remote working directory (default: /tmp)
-
+            expected_return_code: Expected return code for successful execution (default: 0)
         Returns:
             str: Last line of output if xcom_push_flag=True, otherwise None
 
@@ -443,7 +444,7 @@ class Bteq:
                         raise DagsterError(f"BTEQ command timed out after {timeout} seconds")
 
                 # Check return code
-                if conn["sp"].returncode:
+                if conn["sp"].returncode != expected_return_code:
                     raise DagsterError(
                         f"BTEQ command exited with return code {conn['sp'].returncode} due to: {failure_message}"
                     )
