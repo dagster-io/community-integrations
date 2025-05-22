@@ -1,6 +1,6 @@
 # Dagster Pipes - Java protocol implementation
 
-This project provides a Java implementation of the Dagster Pipes protocol. It can be used to orchestrate data processing pipelines written in Java from Dagster, while recieving logs and metadata from the Java application.
+This project provides a Java implementation of the Dagster Pipes protocol. It can be used to orchestrate data processing pipelines written in Java from Dagster, while receiving logs and metadata from the Java application.
 
 # Examples
 
@@ -53,4 +53,31 @@ The tests are written in Python and can be run with `pytest`. The Java project w
 
 ```shell
 uv run pytest
+```
+
+## Deployment
+
+The _pipes_ package is hosted on the Maven Central Repository at:
+
+- https://central.sonatype.com/artifact/io.dagster/pipes
+
+And published using either the GitHub action, or the following command:
+
+```
+$ dotenv run ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache --stacktrace
+```
+
+Requiring the following environment variables if run locally:
+
+```
+MAVEN_CENTRAL_USERNAME=
+MAVEN_CENTRAL_PASSWORD=
+PGP_PRIVATE_KEY=
+PGP_KEY_ID=
+PGP_PRIVATE_KEY_PASSWORD=
+ORG_GRADLE_PROJECT_mavenCentralUsername=
+ORG_GRADLE_PROJECT_mavenCentralPassword=
+ORG_GRADLE_PROJECT_signingInMemoryKey=
+ORG_GRADLE_PROJECT_signingInMemoryKeyId=
+ORG_GRADLE_PROJECT_signingInMemoryKeyPassword=
 ```
