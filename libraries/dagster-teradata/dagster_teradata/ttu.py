@@ -444,7 +444,13 @@ class Bteq:
                         raise DagsterError(f"BTEQ command timed out after {timeout} seconds")
 
                 # Check return code
-                if conn["sp"].returncode != expected_return_code:
+
+                if isinstance(expected_return_code, int):
+                    expected_return_codes = [expected_return_code]
+                else:
+                    expected_return_codes = expected_return_code
+
+                if conn["sp"].returncode not in expected_return_codes:
                     raise DagsterError(
                         f"BTEQ command exited with return code {conn['sp'].returncode} due to: {failure_message}"
                     )

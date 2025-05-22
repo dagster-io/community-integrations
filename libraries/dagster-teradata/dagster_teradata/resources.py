@@ -238,7 +238,7 @@ class TeradataDagsterConnection:
             ssh_key_path: Optional[str] = None,
             remote_port: int = 22,
             remote_working_dir: str = "/tmp",
-            expected_return_code: int = 0,
+            expected_return_code: Union[int, List[int]] = 0,
 
     ) -> Optional[str]:
         """Executes BTEQ sentences using BTEQ binary, either locally or remotely via SSH.
@@ -254,7 +254,7 @@ class TeradataDagsterConnection:
             ssh_key_path (str, optional): Path to SSH private key (alternative to password).
             remote_port (int, optional): SSH port (default: 22).
             remote_working_dir (str, optional): Working directory on remote host (default: /tmp).
-            expected_return_code (int, optional): Expected return code for BTEQ execution.
+            expected_return_code (Union[int, List[int]], optional): Expected return code(s) from BTEQ execution.
 
         Returns:
             Optional[str]: The last line of the BTEQ log if xcom_push_flag is True, otherwise None.
