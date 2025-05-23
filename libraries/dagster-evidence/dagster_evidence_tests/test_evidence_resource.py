@@ -138,12 +138,14 @@ def test_evidence_resource_error_handling(evidence_resource, mock_subprocess_run
 
 def test_load_evidence_asset_specs(mock_evidence_project):
     """Test that load_evidence_asset_specs returns the correct asset specs."""
-    resource = EvidenceResource(project_path=mock_evidence_project)
+    resource = EvidenceResource(
+        project_path=mock_evidence_project, deploy_command="echo 'deploy'"
+    )
     specs = load_evidence_asset_specs(resource)
 
     assert len(specs) == 1
     asset_def = specs[0]
-    assert len(asset_def.specs) == 5
+    assert len(list(asset_def.specs)) == 5
 
     asset_keys = {spec.key for spec in asset_def.specs}
     expected_keys = {
@@ -158,14 +160,17 @@ def test_load_evidence_asset_specs(mock_evidence_project):
 
 def test_load_evidence_asset_specs_with_filter(mock_evidence_project):
     """Test that load_evidence_asset_specs respects the EvidenceFilter."""
-    resource = EvidenceResource(project_path=mock_evidence_project)
+    resource = EvidenceResource(
+        project_path=mock_evidence_project, deploy_command="echo 'deploy'"
+    )
 
     filter = EvidenceFilter(dashboard_directories=["marketing-dashboard"])
     specs = load_evidence_asset_specs(resource, evidence_filter=filter)
     assert len(specs) == 1
     asset_def = specs[0]
-    assert len(asset_def.specs) == 3
+    assert len(list(asset_def.specs)) == 3
 
+    # Verify filtered assets
     asset_keys = {spec.key for spec in asset_def.specs}
     expected_keys = {
         dg.AssetKey(["funnel"]),
@@ -180,7 +185,7 @@ def test_load_evidence_asset_specs_with_filter(mock_evidence_project):
     multi_specs = load_evidence_asset_specs(resource, evidence_filter=multi_filter)
     assert len(multi_specs) == 1
     asset_def_multi = multi_specs[0]
-    assert len(asset_def_multi.specs) == 4
+    assert len(list(asset_def_multi.specs)) == 4
 
     multi_asset_keys = {spec.key for spec in asset_def_multi.specs}
     multi_expected_keys = {
