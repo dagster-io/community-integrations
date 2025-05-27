@@ -6,7 +6,6 @@ import dagster as dg
 from pydantic import Field
 from dagster import AssetSpec, multi_asset
 from dataclasses import dataclass
-from pathlib import Path
 
 
 class EvidenceResource(dg.ConfigurableResource):
@@ -18,14 +17,19 @@ class EvidenceResource(dg.ConfigurableResource):
     Examples:
         .. code-block:: python
             import dagster as dg
-            from dagster_evidence import EvidenceResource, load_evidence_asset_specs
+            from dagster_evidence import EvidenceResource
 
             @dg.asset
-            def evidence_dashboard(evidence: EvidenceResource):
+            def evidence_application(evidence: EvidenceResource):
                 evidence.build()
 
+            evidence_resource = EvidenceResource(
+                project_path="/path/to/evidence/project",
+                deploy_command="your-deploy-command",
+            )
+
             defs = dg.Definitions(
-                assets=evidence_specs,
+                assets=[evidence_application],
                 resources={"evidence": evidence_resource}
             )
 
@@ -70,9 +74,21 @@ class EvidenceResource(dg.ConfigurableResource):
         )
 
     def build(self) -> None:
-        """Build the Evidence project by running the sources and build commands."""
-        self._run_cmd([self.npm_executable, "run", "sources"])
+        """Build the Evidence project."""
         self._run_cmd([self.npm_executable, "run", "build"])
+
+    def sources(self, source: Optional[str] = None) -> None:
+        """Run sources from the specified source.
+
+        Args:
+            source: The name of the source to run. If None, runs all sources.
+        """
+        cmd = [self.npm_executable, "run", "sources"]
+
+        if source:
+            cmd.append(f"--sources={source}")
+
+        self._run_cmd(cmd)
 
 
 @dataclass
@@ -80,11 +96,11 @@ class EvidenceFilter:
     """Filter for Evidence assets.
 
     Args:
-        dashboard_directories: List of dashboard directory paths to include. If None, all dashboards are included.
+        sources: List of source names to include. If None, all sources are included.
         only_fetch_dashboards: If True, only fetch dashboards and skip other assets.
     """
 
-    dashboard_directories: Optional[List[str]] = None
+    sources: Optional[List[str]] = None
     only_fetch_dashboards: bool = False
 
 
@@ -103,44 +119,25 @@ def load_evidence_asset_specs(
     """
     evidence_filter = evidence_filter or EvidenceFilter()
 
-    project_path = Path(evidence_resource.project_path)
-    pages_dir = project_path / "pages"
-
     specs = []
-    for md_file in pages_dir.rglob("*.md"):
-        # Skip files not in filtered directories if filter is provided
-        if evidence_filter.dashboard_directories:
-            relative_path = md_file.relative_to(pages_dir)
-            parent_dir = relative_path.parent
-            if str(parent_dir) not in evidence_filter.dashboard_directories:
-                continue
-
-        asset_key = md_file.with_suffix("").name
-
-        specs.append(
-            AssetSpec(
-                key=asset_key,
-                group_name="evidence",
-                description=f"Evidence page: {md_file.relative_to(pages_dir)}",
-            )
-        )
-
-    if not evidence_filter.only_fetch_dashboards:
-        specs.extend(
-            [
+    if evidence_filter.sources is not None:
+        for source in evidence_filter.sources:
+            specs.append(
                 AssetSpec(
-                    key="evidence_build",
+                    key=source,
                     group_name="evidence",
-                    description="Build Evidence project",
-                ),
-            ]
-        )
+                    description=f"Evidence source: {source}",
+                )
+            )
 
     @multi_asset(
         specs=specs,
     )
     def evidence_assets(evidence_resource: EvidenceResource):
-        """Evidence assets for building and deploying dashboards."""
+        """Evidence assets for running sources and building dashboards."""
+        if evidence_filter.sources is not None:
+            for source in evidence_filter.sources:
+                evidence_resource.sources(source=source)
         evidence_resource.build()
         return None
 
