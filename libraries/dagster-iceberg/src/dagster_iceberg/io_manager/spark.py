@@ -114,15 +114,15 @@ class SparkIcebergDbClient(DbClient[SparkSession]):
         context: OutputContext | InputContext,
         table_slice: TableSlice,
     ) -> Iterator[SparkSession]:
-        builder = cast(SparkSession.Builder, SparkSession.builder)
+        builder = cast("SparkSession.Builder", SparkSession.builder)
         if context.resource_config is not None:
             if (spark_config := context.resource_config["spark_config"]) is not None:
                 builder.config(
-                    map=cast(dict[str, "OptionalPrimitiveType"], spark_config)
+                    map=cast("dict[str, OptionalPrimitiveType]", spark_config)
                 )
 
             if (remote_url := context.resource_config["remote_url"]) is not None:
-                builder.remote(cast(str, remote_url))
+                builder.remote(cast("str", remote_url))
 
         yield builder.getOrCreate()
 
@@ -218,7 +218,7 @@ def _partition_where_clause(
 
 
 def _time_window_where_clause(table_partition: TablePartitionDimension) -> str:
-    partition = cast(TimeWindow, table_partition.partitions)
+    partition = cast("TimeWindow", table_partition.partitions)
     start_dt, end_dt = partition
     start_dt_str = start_dt.isoformat()
     end_dt_str = end_dt.isoformat()

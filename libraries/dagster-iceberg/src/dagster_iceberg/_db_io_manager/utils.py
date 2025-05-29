@@ -96,7 +96,7 @@ def generate_multi_partitions_dimension(
     """
     partition_dimensions: list[TablePartitionDimension] = []
     multi_partition_key_mappings = [
-        cast(MultiPartitionKey, partition_key).keys_by_dimension
+        cast("MultiPartitionKey", partition_key).keys_by_dimension
         for partition_key in asset_partition_keys
     ]
     for part in asset_partitions_def.partitions_defs:
@@ -122,7 +122,7 @@ def generate_multi_partitions_dimension(
         partitions_: TimeWindow | Sequence[str]
         if all(isinstance(partition, TimeWindow) for partition in partitions):
             checker = MultiTimePartitionsChecker(
-                partitions=cast(list[TimeWindow], partitions),
+                partitions=cast("list[TimeWindow]", partitions),
             )
             if not checker.is_consecutive():
                 raise ValueError("Dates are not consecutive.")
@@ -131,12 +131,12 @@ def generate_multi_partitions_dimension(
                 end=checker.end,
             )
         elif all(isinstance(partition, str) for partition in partitions):
-            partitions_ = list(set(cast(list[str], partitions)))
+            partitions_ = list(set(cast("list[str]", partitions)))
         else:
             raise ValueError("Unknown partition type")
         partition_dimensions.append(
             TablePartitionDimension(
-                partition_expr=cast(str, partition_expr_str),
+                partition_expr=cast("str", partition_expr_str),
                 partitions=partitions_,
             ),
         )

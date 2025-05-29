@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
 import pyarrow as pa
 from dagster import (
@@ -13,9 +13,11 @@ from dagster._annotations import public
 from dagster._core.storage.db_io_manager import DbTypeHandler, TableSlice
 from pyiceberg import table as ibt
 from pyiceberg.catalog import Catalog
-from pyiceberg.table.snapshots import Snapshot
 
 from dagster_iceberg._utils import preview, table_writer
+
+if TYPE_CHECKING:
+    from pyiceberg.table.snapshots import Snapshot
 
 U = TypeVar("U")
 
@@ -69,7 +71,7 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
 
         table_ = connection.load_table(f"{table_slice.schema}.{table_slice.table}")
 
-        current_snapshot = cast(Snapshot, table_.current_snapshot())
+        current_snapshot = cast("Snapshot", table_.current_snapshot())
 
         context.add_output_metadata(
             {
