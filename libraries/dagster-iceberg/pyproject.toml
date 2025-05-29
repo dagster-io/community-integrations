@@ -42,7 +42,7 @@ polars = [
   "polars>=1.0.0",
 ]
 spark = [
-  "pyspark[connect]>=3.4.0",
+  "pyspark[connect]~=3.4",
 ]
 
 [tool.ruff]
