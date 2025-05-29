@@ -1,5 +1,4 @@
-from collections.abc import Mapping
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from dagster import (
     InputContext,
@@ -18,6 +17,9 @@ from .utils import (
     generate_multi_partitions_dimension,
     generate_single_partition_dimension,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 
 class CustomDbIOManager(DbIOManager):
@@ -39,7 +41,7 @@ class CustomDbIOManager(DbIOManager):
         asset_key_path = context.asset_key.path
         # schema order of precedence: metadata, I/O manager 'schema' config, key_prefix
         if output_context_metadata.get("schema"):
-            schema = cast(str, output_context_metadata["schema"])
+            schema = cast("str", output_context_metadata["schema"])
         elif self._schema:
             schema = self._schema
         elif len(asset_key_path) > 1:
@@ -75,13 +77,13 @@ class CustomDbIOManager(DbIOManager):
                     partition_dimensions = generate_multi_partitions_dimension(
                         asset_partition_keys=context.asset_partition_keys,
                         asset_partitions_def=context.asset_partitions_def,
-                        partition_expr=cast(Mapping[str, str], partition_expr),
+                        partition_expr=cast("Mapping[str, str]", partition_expr),
                         asset_key=context.asset_key,
                     )
                 else:
                     partition_dimensions = [
                         generate_single_partition_dimension(
-                            partition_expr=cast(str, partition_expr),
+                            partition_expr=cast("str", partition_expr),
                             asset_partition_keys=context.asset_partition_keys,
                             asset_partitions_time_window=(
                                 context.asset_partitions_time_window
@@ -96,7 +98,7 @@ class CustomDbIOManager(DbIOManager):
         else:
             table = output_context.name
             if output_context_metadata.get("schema"):
-                schema = cast(str, output_context_metadata["schema"])
+                schema = cast("str", output_context_metadata["schema"])
             elif self._schema:
                 schema = self._schema
             else:

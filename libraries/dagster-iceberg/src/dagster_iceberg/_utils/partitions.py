@@ -60,7 +60,7 @@ class DagsterPartitionToPredicateMapper(Generic[K]):
     ) -> K:
         return self._partition_filters_to_predicates(
             partition_expr=table_partition.partition_expr,
-            partition_filters=cast(Sequence[str], table_partition.partitions),
+            partition_filters=cast("Sequence[str]", table_partition.partitions),
         )
 
     def _time_window_partition_filter(
@@ -81,7 +81,7 @@ class DagsterPartitionToPredicateMapper(Generic[K]):
         Returns:
             List[E.BooleanExpression]: List of iceberg filters with start and end dates
         """
-        partition = cast(TimeWindow, table_partition.partitions)
+        partition = cast("TimeWindow", table_partition.partitions)
         start_dt, end_dt = partition
         if isinstance(start_dt, dt.datetime):
             start_dt = start_dt.replace(tzinfo=None)
@@ -213,7 +213,7 @@ def update_table_partition_spec(
     partition_spec_update_mode: str,
 ):
     partition_dimensions = cast(
-        Sequence[TablePartitionDimension],
+        "Sequence[TablePartitionDimension]",
         table_slice.partition_dimensions,
     )
     PyIcebergPartitionSpecUpdaterWithRetry(table=table).execute(
@@ -378,7 +378,7 @@ class PartitionMapper:
         time_partition = next(iter(self.dagster_time_partitions), None)
         updated_field_name: str | None = None
         if time_partition is not None:
-            time_partition_partitions = cast(TimeWindow, time_partition.partitions)
+            time_partition_partitions = cast("TimeWindow", time_partition.partitions)
             time_partition_transformation = diff_to_transformation(
                 time_partition_partitions.start,
                 time_partition_partitions.end,
@@ -489,13 +489,13 @@ class IcebergTableSpecUpdater:
                     match type_:
                         case "new":
                             partition_ = cast(
-                                TablePartitionDimension,
+                                "TablePartitionDimension",
                                 partition,
                             )
                             self._spec_new(update=update, partition=partition_)
                         case "updated":
                             partition_ = cast(
-                                TablePartitionDimension,
+                                "TablePartitionDimension",
                                 partition,
                             )
                             self._spec_update(
@@ -503,7 +503,7 @@ class IcebergTableSpecUpdater:
                                 partition=partition_,
                             )
                         case "deleted":
-                            partition_ = cast(PartitionField, partition)
+                            partition_ = cast("PartitionField", partition)
                             self._spec_delete(
                                 update=update,
                                 partition_name=partition_.name,
