@@ -126,6 +126,7 @@ docs = [
   "mkdocstrings[python]>=0.26.2",
 ]
 dev = [
+  "aiohttp<3.12.4",  # Temporary pin due to https://github.com/aio-libs/aiohttp/issues/11091
   "dagit>=1.8.8",
   "dagster>=1.10.5",
   "dagster-polars[patito]>=0.26.1",
