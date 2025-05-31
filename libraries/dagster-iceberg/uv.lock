@@ -497,7 +497,7 @@ spark = [
 dev = [
     { name = "dagit" },
     { name = "dagster" },
-    { name = "dagster-polars" },
+    { name = "dagster-polars", extra = ["patito"] },
     { name = "dagster-pyspark" },
     { name = "docker" },
     { name = "fsspec", extra = ["http"] },
@@ -531,7 +531,7 @@ provides-extras = ["daft", "pandas", "polars", "spark"]
 dev = [
     { name = "dagit", specifier = ">=1.8.8" },
     { name = "dagster", specifier = ">=1.10.5" },
-    { name = "dagster-polars", specifier = ">=0.26.1" },
+    { name = "dagster-polars", extras = ["patito"], specifier = ">=0.26.1" },
     { name = "dagster-pyspark", specifier = ">=0.26.1" },
     { name = "docker" },
     { name = "fsspec", extras = ["http"], specifier = ">=2025.2.0" },
@@ -571,6 +571,11 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/66/d7/6ab8e10cb9d4204e99c7a09418aa5a6d584f546e99b8020ab112885f9aef/dagster_polars-0.27.2.tar.gz", hash = "sha256:690689462943025d4932bfebc4d18ed19692b0f6fe2c36d2bc307572bb4e9fba", size = 109001, upload_time = "2025-04-30T20:13:40.842Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c5/4e/c70117e0695b6507509bb7885427360386918a4733ef7bd1d27d2487cffb/dagster_polars-0.27.2-py3-none-any.whl", hash = "sha256:60b62a367ee1863537fdb0b51bfcad77ea17dfbe45d75acb7a90bdfc62c998a2", size = 22078, upload_time = "2025-04-30T20:13:39.648Z" },
+]
+
+[package.optional-dependencies]
+patito = [
+    { name = "patito" },
 ]
 
 [[package]]
@@ -1633,6 +1638,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ca/bc/f35b8446f4531a7cb215605d100cd88b7ac6f44ab3fc94870c120ab3adbf/pathspec-0.12.1.tar.gz", hash = "sha256:a482d51503a1ab33b1c67a6c3813a26953dbdc71c31dacaef9a838c4e29f5712", size = 51043, upload_time = "2023-12-10T22:30:45Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cc/20/ff623b09d963f88bfde16306a54e12ee5ea43e9b597108672ff3a408aad6/pathspec-0.12.1-py3-none-any.whl", hash = "sha256:a0d503e138a4c123b27490a4f7beda6a01c6f288df0e4a8b79c7eb0dc7b4cc08", size = 31191, upload_time = "2023-12-10T22:30:43.14Z" },
+]
+
+[[package]]
+name = "patito"
+version = "0.8.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "polars" },
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4f/77/376b341a49cf5fb2db16daae561f248fb504d65453f137eeda2a1cbbb443/patito-0.8.3.tar.gz", hash = "sha256:aba7ac6bb640a075e1c22862dd577519a615724db0694ac3ae81a6a3f3993fb1", size = 42640, upload_time = "2024-12-26T18:15:32.582Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/72/f1/4a71d8a974d8f5625045b5351e91e4f93b9a3c14aacbd2777de63c53a851/patito-0.8.3-py3-none-any.whl", hash = "sha256:cc4dd90ec8a867806548a5161af4cf195f3d223fcae24d879285cc003ab89ed4", size = 43331, upload_time = "2024-12-26T18:15:30.644Z" },
 ]
 
 [[package]]
