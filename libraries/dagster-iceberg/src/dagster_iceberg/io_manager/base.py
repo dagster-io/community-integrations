@@ -88,7 +88,7 @@ class IcebergDbClient(DbClient):
     @contextmanager
     def connect(context, table_slice: TableSlice) -> Iterator[Catalog]:
         resource_config = cast(
-            _IcebergTableIOManagerResourceConfig,
+            "_IcebergTableIOManagerResourceConfig",
             context.resource_config,
         )
         # Config passed as env variables or using config file.
@@ -236,7 +236,7 @@ def _partition_where_clause(
 
 
 def _time_window_where_clause(table_partition: TablePartitionDimension) -> str:
-    partition = cast(TimeWindow, table_partition.partitions)
+    partition = cast("TimeWindow", table_partition.partitions)
     start_dt, end_dt = partition
     start_dt_str = start_dt.isoformat()
     end_dt_str = end_dt.isoformat()

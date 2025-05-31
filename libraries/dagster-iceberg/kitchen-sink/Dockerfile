@@ -31,16 +31,16 @@ RUN apt-get -qq update && \
 # Optional env variables
 ENV SPARK_HOME=${SPARK_HOME:-"/opt/spark"}
 ENV HADOOP_HOME=${HADOOP_HOME:-"/opt/hadoop"}
-ENV PYTHONPATH=$SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.9.7-src.zip:$PYTHONPATH
+ENV PYTHONPATH=$SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.9.9-src.zip:$PYTHONPATH
 
 RUN mkdir -p ${HADOOP_HOME} && mkdir -p ${SPARK_HOME} && mkdir -p /home/iceberg/spark-events
 WORKDIR ${SPARK_HOME}
 
 # Remember to also update `tests/conftest`'s spark setting
-ENV SPARK_VERSION=3.5.5
+ENV SPARK_VERSION=3.5.6
 ENV ICEBERG_SPARK_RUNTIME_VERSION=3.5_2.12
-ENV ICEBERG_VERSION=1.8.0
-ENV PYICEBERG_VERSION=0.8.1
+ENV ICEBERG_VERSION=1.9.1
+ENV PYICEBERG_VERSION=0.9.1
 
 RUN curl --retry 5 -s -C - https://dlcdn.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz -o spark-${SPARK_VERSION}-bin-hadoop3.tgz \
  && tar xzf spark-${SPARK_VERSION}-bin-hadoop3.tgz --directory /opt/spark --strip-components 1 \
