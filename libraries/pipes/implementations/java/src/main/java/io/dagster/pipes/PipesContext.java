@@ -28,12 +28,12 @@ public class PipesContext {
         final PipesContextLoader contextLoader,
         final PipesMessageWriter<? extends PipesMessageWriterChannel> messageWriter
     ) throws DagsterPipesException {
-        Optional<Map<String, Object>> contextParams = paramsLoader.loadContextParams();
-        Optional<Map<String, Object>> messageParams = paramsLoader.loadMessagesParams();
+        final Optional<Map<String, Object>> contextParams = paramsLoader.loadContextParams();
+        final Optional<Map<String, Object>> messageParams = paramsLoader.loadMessagesParams();
         if (contextParams.isPresent() && messageParams.isPresent()) {
             this.data = contextLoader.loadContext(contextParams.get());
             this.messageChannel = messageWriter.open(messageParams.get());
-            Map<String, Object> openedPayload = messageWriter.getOpenedPayload();
+            final Map<String, Object> openedPayload = messageWriter.getOpenedPayload();
             this.messageChannel.writeMessage(PipesUtils.makeMessage(Method.OPENED, openedPayload));
         }
         this.materializedAssets = new HashSet<>();
@@ -49,7 +49,7 @@ public class PipesContext {
 
     public void close() throws DagsterPipesException {
         if (!this.closed) {
-            Map<String, Object> payload = new HashMap<>();
+            final Map<String, Object> payload = new HashMap<>();
             if (this.exception != null) {
                 payload.put("exception", new PipesException(exception));
             }
@@ -80,7 +80,7 @@ public class PipesContext {
     }
 
     public void reportCustomMessage(final Object payload) throws DagsterPipesException {
-        Map<String, Object> map = new HashMap<>();
+        final Map<String, Object> map = new HashMap<>();
         map.put("payload", payload);
         writeMessage(Method.REPORT_CUSTOM_MESSAGE, map);
     }
@@ -105,37 +105,37 @@ public class PipesContext {
     }
 
     public String getAssetKey() throws DagsterPipesException {
-        List<String> assetKeys = getAssetKeys();
+        final List<String> assetKeys = getAssetKeys();
         assertSingleAsset(assetKeys, "Asset key");
         return assetKeys.get(0);
     }
 
     public List<String> getAssetKeys() throws DagsterPipesException {
-        List<String> assetKeys = this.data.getAssetKeys();
+        final List<String> assetKeys = this.data.getAssetKeys();
         assertPresence(assetKeys, "Asset keys");
         return assetKeys;
     }
 
     public ProvenanceByAssetKey getProvenance() throws DagsterPipesException {
-        Map<String, ProvenanceByAssetKey> provenanceByAssetKey = getProvenanceByAssetKey();
+        final Map<String, ProvenanceByAssetKey> provenanceByAssetKey = getProvenanceByAssetKey();
         assertSingleAsset(provenanceByAssetKey, "Provenance");
         return provenanceByAssetKey.values().iterator().next();
     }
 
     public Map<String, ProvenanceByAssetKey> getProvenanceByAssetKey() throws DagsterPipesException {
-        Map<String, ProvenanceByAssetKey> provenanceByAssetKey = this.data.getProvenanceByAssetKey();
+        final Map<String, ProvenanceByAssetKey> provenanceByAssetKey = this.data.getProvenanceByAssetKey();
         assertPresence(provenanceByAssetKey, "Provenance by asset key");
         return provenanceByAssetKey;
     }
 
     public String getCodeVersion() throws DagsterPipesException {
-        Map<String, String> codeVersionByAssetKey = getCodeVersionByAssetKey();
+        final Map<String, String> codeVersionByAssetKey = getCodeVersionByAssetKey();
         assertSingleAsset(codeVersionByAssetKey, "Code version");
         return codeVersionByAssetKey.values().iterator().next();
     }
 
     public Map<String, String> getCodeVersionByAssetKey() throws DagsterPipesException {
-        Map<String, String> codeVersionByAssetKey = this.data.getCodeVersionByAssetKey();
+        final Map<String, String> codeVersionByAssetKey = this.data.getCodeVersionByAssetKey();
         assertPresence(codeVersionByAssetKey, "Code version by asset key");
         return codeVersionByAssetKey;
     }
@@ -145,19 +145,19 @@ public class PipesContext {
     }
 
     public String getPartitionKey() throws DagsterPipesException {
-        String partitionKey = this.data.getPartitionKey();
+        final String partitionKey = this.data.getPartitionKey();
         assertPresence(partitionKey, "Partition key");
         return partitionKey;
     }
 
     public PartitionKeyRange getPartitionKeyRange() throws DagsterPipesException {
-        PartitionKeyRange partitionKeyRange = this.data.getPartitionKeyRange();
+        final PartitionKeyRange partitionKeyRange = this.data.getPartitionKeyRange();
         assertPresence(partitionKeyRange, "Partition key range");
         return partitionKeyRange;
     }
 
     public PartitionTimeWindow getPartitionTimeWindow() throws DagsterPipesException {
-        PartitionTimeWindow partitionTimeWindow = this.data.getPartitionTimeWindow();
+        final PartitionTimeWindow partitionTimeWindow = this.data.getPartitionTimeWindow();
         assertPresence(partitionTimeWindow, "Partition time window");
         return partitionTimeWindow;
     }
@@ -175,7 +175,7 @@ public class PipesContext {
     }
 
     public Object getExtra(final String key) throws DagsterPipesException {
-        Map<String, Object> extras = this.data.getExtras();
+        final Map<String, Object> extras = this.data.getExtras();
         if (!extras.containsKey(key)) {
             throw new DagsterPipesException(
                 String.format("Extra %s is undefined. Extras must be provided by user.", key)
@@ -307,7 +307,7 @@ public class PipesContext {
         final String dataVersion,
         final Map<String, PipesMetadata> pipesMetadata
     ) {
-        Map<String, Object> message = new HashMap<>();
+        final Map<String, Object> message = new HashMap<>();
         message.put("asset_key", assetKey);
         message.put("data_version", dataVersion);
         message.put("metadata", pipesMetadata);
@@ -321,7 +321,7 @@ public class PipesContext {
         final PipesAssetCheckSeverity severity,
         final Map<String, PipesMetadata> pipesMetadata
     ) {
-        Map<String, Object> message = new HashMap<>();
+        final Map<String, Object> message = new HashMap<>();
         message.put("asset_key", assetKey);
         message.put("check_name", checkName);
         message.put("passed", passed);
@@ -334,7 +334,7 @@ public class PipesContext {
         final String assetKey,
         final Method method
     ) throws DagsterPipesException {
-        List<String> definedAssetKeys = this.data.getAssetKeys();
+        final List<String> definedAssetKeys = this.data.getAssetKeys();
         String resultAssetKey = assetKey;
         if (assetKey == null) {
             if (definedAssetKeys.size() != 1) {

@@ -22,12 +22,12 @@ public final class PipesUtils {
     }
 
     public static <T> T assertParamType(
-        Map<String, ?> envParams,
-        String key,
-        Class<T> expectedType,
-        Class<?> cls
+        final Map<String, ?> envParams,
+        final String key,
+        final Class<T> expectedType,
+        final Class<?> cls
     ) throws DagsterPipesException {
-        Object value = envParams.get(key);
+        final Object value = envParams.get(key);
 
         if (!expectedType.isInstance(value)) {
             throw new DagsterPipesException (
@@ -45,12 +45,12 @@ public final class PipesUtils {
         return expectedType.cast(value);
     }
 
-    public static PipesMessage makeMessage(Method method, Map<String, ?> params) {
+    public static PipesMessage makeMessage(final Method method, final Map<String, ?> params) {
         return new PipesMessage(PipesConstants.PIPES_PROTOCOL_VERSION.toString(), method.toValue(), params);
     }
 
     public static <T> Map<String, PipesMetadata> resolveMetadataMapping(final Map<String, T> metadataMapping) {
-        boolean containsNonPipesMetadata = metadataMapping.values().stream()
+        final boolean containsNonPipesMetadata = metadataMapping.values().stream()
             .anyMatch(value -> !(value instanceof PipesMetadata));
 
         return containsNonPipesMetadata
@@ -58,11 +58,11 @@ public final class PipesUtils {
             : (Map<String, PipesMetadata>) metadataMapping;
     }
 
-    public static Map<String, Object> decodeParam(String rawValue) throws DagsterPipesException {
+    public static Map<String, Object> decodeParam(final String rawValue) throws DagsterPipesException {
         try {
-            byte[] base64Decoded = Base64.getDecoder().decode(rawValue);
-            byte[] zlibDecompressed = zlibDecompress(base64Decoded);
-            ObjectMapper objectMapper = new ObjectMapper();
+            final byte[] base64Decoded = Base64.getDecoder().decode(rawValue);
+            final byte[] zlibDecompressed = zlibDecompress(base64Decoded);
+            final ObjectMapper objectMapper = new ObjectMapper();
             return objectMapper.readValue(
                     zlibDecompressed,
                     new TypeReference<Map<String, Object>>() {}
@@ -72,12 +72,12 @@ public final class PipesUtils {
         }
     }
 
-    public static byte[] zlibDecompress(byte[] data) throws IOException {
+    public static byte[] zlibDecompress(final byte[] data) throws IOException {
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(data);
              InflaterInputStream filterStream = new InflaterInputStream(inputStream);
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
 
-            byte[] buffer = new byte[1024];
+            final byte[] buffer = new byte[1024];
             int readChunk;
 
             while ((readChunk = filterStream.read(buffer)) != -1) {

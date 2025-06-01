@@ -17,15 +17,15 @@ public class PipesDefaultContextLoader extends PipesContextLoader {
     @Override
     public PipesContextData loadContext(final Map<String, Object> params) throws DagsterPipesException {
         if (params.containsKey(FILE_PATH_KEY)) {
-            String path = PipesUtils.assertParamType(
+            final String path = PipesUtils.assertParamType(
                 params, FILE_PATH_KEY, String.class, PipesDefaultContextLoader.class
             );
             return loadFromFile(path);
         } else if (params.containsKey(DIRECT_KEY)) {
-            Map<String, Object> data = PipesUtils.assertParamType(
+            final Map<String, Object> data = PipesUtils.assertParamType(
                 params, DIRECT_KEY, Map.class, PipesDefaultContextLoader.class
             );
-            ObjectMapper mapper = new ObjectMapper();
+            final ObjectMapper mapper = new ObjectMapper();
             return mapper.convertValue(data, PipesContextData.class);
         } else {
             throw new DagsterPipesException(
@@ -39,9 +39,9 @@ public class PipesDefaultContextLoader extends PipesContextLoader {
     }
 
     PipesContextData loadFromFile(final String path) throws DagsterPipesException {
-        ObjectMapper mapper = new ObjectMapper();
+        final ObjectMapper mapper = new ObjectMapper();
         try {
-            Map<String, Object> data = mapper.readValue(new File(path), Map.class);
+            final Map<String, Object> data = mapper.readValue(new File(path), Map.class);
             return mapper.convertValue(data, PipesContextData.class);
         } catch (IOException ioe) {
             throw new DagsterPipesException(

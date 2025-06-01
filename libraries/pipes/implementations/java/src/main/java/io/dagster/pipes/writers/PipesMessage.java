@@ -17,7 +17,7 @@ public class PipesMessage {
     private String method;
     private Map<String, ?> params;
 
-    public PipesMessage(String dagsterPipesVersion, String method, Map<String, ?> params) {
+    public PipesMessage(final String dagsterPipesVersion, final String method, final Map<String, ?> params) {
         this.dagsterPipesVersion = dagsterPipesVersion;
         this.method = method;
         this.params = params;
@@ -27,7 +27,7 @@ public class PipesMessage {
         return dagsterPipesVersion;
     }
 
-    public void setDagsterPipesVersion(String dagsterPipesVersion) {
+    public void setDagsterPipesVersion(final String dagsterPipesVersion) {
         this.dagsterPipesVersion = dagsterPipesVersion;
     }
 
@@ -35,7 +35,7 @@ public class PipesMessage {
         return method;
     }
 
-    public void setMethod(String method) {
+    public void setMethod(final String method) {
         this.method = method;
     }
 
@@ -43,7 +43,7 @@ public class PipesMessage {
         return params;
     }
 
-    public void setParams(Map<String, Object> params) {
+    public void setParams(final Map<String, Object> params) {
         this.params = params;
     }
 
@@ -53,7 +53,7 @@ public class PipesMessage {
 
     @Override
     public String toString() {
-        ObjectMapper objectMapper = new ObjectMapper();
+        final ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         String result;
         try {

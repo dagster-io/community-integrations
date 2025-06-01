@@ -24,14 +24,14 @@ public class PipesS3ContextLoader extends PipesContextLoader {
 
     @Override
     public PipesContextData loadContext(final Map<String, Object> params) throws DagsterPipesException {
-        String bucket = PipesUtils.assertParamType(params, "bucket", String.class, PipesS3ContextLoader.class);
-        String key = PipesUtils.assertParamType(params, "key", String.class, PipesS3ContextLoader.class);
-        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+        final String bucket = PipesUtils.assertParamType(params, "bucket", String.class, PipesS3ContextLoader.class);
+        final String key = PipesUtils.assertParamType(params, "key", String.class, PipesS3ContextLoader.class);
+        final GetObjectRequest getObjectRequest = GetObjectRequest.builder()
             .bucket(bucket)
             .key(key)
             .build();
         try (ResponseInputStream<GetObjectResponse> inputStream = client.getObject(getObjectRequest)) {
-            ObjectMapper objectMapper = new ObjectMapper();
+            final ObjectMapper objectMapper = new ObjectMapper();
             return objectMapper.readValue(inputStream, PipesContextData.class);
         } catch (IOException ioe) {
             throw new DagsterPipesException("Failed to load S3 object content!", ioe);

@@ -22,7 +22,7 @@ public class PipesCliArgsParamsLoader implements PipesParamsLoader {
     String pipesMessagesParams;
     
     public PipesCliArgsParamsLoader(final String... args) {
-        CommandLine commandLine = new CommandLine(this);
+        final CommandLine commandLine = new CommandLine(this);
         commandLine.setUnmatchedArgumentsAllowed(true);
         commandLine.setUnmatchedOptionsArePositionalParams(true);
 
@@ -31,7 +31,7 @@ public class PipesCliArgsParamsLoader implements PipesParamsLoader {
 
     @Override
     public boolean isDagsterPipesProcess() {
-        return !pipesContextParams.equals("");
+        return !"".equals(pipesContextParams);
     }
 
     @Override

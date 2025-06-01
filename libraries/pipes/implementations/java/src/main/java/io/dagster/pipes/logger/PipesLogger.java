@@ -43,7 +43,7 @@ public class PipesLogger {
     }
 
     private void log(final PipesLogLevel level, final String message) throws DagsterPipesException {
-        Map<String, String> logRecordParams = new HashMap<>();
+        final Map<String, String> logRecordParams = new HashMap<>();
         logRecordParams.put("message", message);
         logRecordParams.put("level", level.getName());
         this.writerChannel.writeMessage(PipesUtils.makeMessage(Method.LOG, logRecordParams));

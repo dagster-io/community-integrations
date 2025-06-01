@@ -20,7 +20,12 @@ public class PipesS3MessageWriterChannel extends PipesBlobStoreMessageWriterChan
      * @param keyPrefix An optional prefix for the keys of written blobs.
      * @param interval  The interval in seconds between upload chunk uploads.
      */
-    public PipesS3MessageWriterChannel(S3Client client, String bucket, String keyPrefix, float interval) {
+    public PipesS3MessageWriterChannel(
+        final S3Client client,
+        final String bucket,
+        final String keyPrefix,
+        final float interval
+    ) {
         super(interval);
         this.client = client;
         this.bucket = bucket;
@@ -34,7 +39,7 @@ public class PipesS3MessageWriterChannel extends PipesBlobStoreMessageWriterChan
      * @param index   The index used to construct the S3 key.
      */
     @Override
-    protected void uploadMessagesChunk(StringWriter payload, int index) {
+    protected void uploadMessagesChunk(final StringWriter payload, final int index) {
         String key = keyPrefix != null ? keyPrefix + "/" + index + ".json" : index + ".json";
         String content = payload.toString();
 

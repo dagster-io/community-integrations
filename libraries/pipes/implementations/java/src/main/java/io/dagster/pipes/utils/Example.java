@@ -16,7 +16,7 @@ import io.dagster.pipes.writers.PipesMessageWriterChannel;
 
 public class Example {
 
-    public static void main(String[] args) throws DagsterPipesException {
+    public static void main(final String[] args) throws DagsterPipesException {
         // Create loaders and writers for PipesSession
         final PipesParamsLoader paramsLoader = new PipesEnvVarParamsLoader();
         final PipesContextLoader contextLoader = new PipesDefaultContextLoader();
@@ -28,7 +28,7 @@ public class Example {
         session.runDagsterPipes(Example::userMethodExample);
     }
 
-    private static void userMethodExample(PipesContext context) throws DagsterPipesException {
+    private static void userMethodExample(final PipesContext context) throws DagsterPipesException {
         context.reportCustomMessage("Hello from external process!");
 
         final Map<String, Integer> people = new HashMap<>();
@@ -38,7 +38,7 @@ public class Example {
         people.put("Diana", 30);
         people.put("Edward", 16);
 
-        int adults = (int) people.values().stream()
+        final int adults = (int) people.values().stream()
             .filter(age -> age >= 18)
             .count();
         final Map<String, Integer> metaMap = new HashMap<>();

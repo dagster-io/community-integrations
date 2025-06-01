@@ -15,9 +15,9 @@ public class PipesDefaultMessageWriter extends PipesMessageWriter<PipesMessageWr
     private static final String STDOUT = "stdout";
 
     @Override
-    public PipesMessageWriterChannel open(Map<String, Object> params) throws DagsterPipesException {
+    public PipesMessageWriterChannel open(final Map<String, Object> params) throws DagsterPipesException {
         if (params.containsKey(PipesConstants.PATH_KEY.name)) {
-            String path = PipesUtils.assertParamType(
+            final String path = PipesUtils.assertParamType(
                 params,
                 PipesConstants.PATH_KEY.name,
                 String.class,
@@ -25,16 +25,16 @@ public class PipesDefaultMessageWriter extends PipesMessageWriter<PipesMessageWr
             );
             return new PipesFileMessageWriterChannel(path);
         } else if (params.containsKey(STDIO_KEY)) {
-            String stream = PipesUtils.assertParamType(
+            final String stream = PipesUtils.assertParamType(
                 params,
                 STDIO_KEY,
                 String.class,
                 PipesDefaultMessageWriter.class
             );
-            OutputStream target = getTarget(stream, STDIO_KEY);
+            final OutputStream target = getTarget(stream, STDIO_KEY);
             return new PipesStreamMessageWriterChannel(target);
         } else if (params.containsKey(BUFFERED_STDIO_KEY)) {
-            String stream = PipesUtils.assertParamType(
+            final String stream = PipesUtils.assertParamType(
                 params,
                 BUFFERED_STDIO_KEY,
                 String.class,
@@ -58,7 +58,7 @@ public class PipesDefaultMessageWriter extends PipesMessageWriter<PipesMessageWr
         }
     }
 
-    private static OutputStream getTarget(String stream, String ioKey) throws DagsterPipesException {
+    private static OutputStream getTarget(final String stream, final String ioKey) throws DagsterPipesException {
         if (!STDERR.equals(stream) && !STDOUT.equals(stream)) {
             throw new DagsterPipesException(String.format(
                 "Invalid value for key \"%s\", expected \"%s\" or \"%s\" but received \"%s\"",

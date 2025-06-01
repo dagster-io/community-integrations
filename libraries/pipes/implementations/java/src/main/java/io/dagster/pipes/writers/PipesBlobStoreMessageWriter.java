@@ -20,13 +20,14 @@ public abstract class PipesBlobStoreMessageWriter extends PipesMessageWriter<Pip
 
     @Override
     public PipesMessageWriterChannel open(final Map<String, Object> params) throws DagsterPipesException {
-        PipesBlobStoreMessageWriterChannel writerChannel = this.makeChannel(params, this.interval);
+        final PipesBlobStoreMessageWriterChannel writerChannel = this.makeChannel(params, this.interval);
         writerChannel.startBufferedUploadLoop();
         return writerChannel;
     }
 
     public abstract PipesBlobStoreMessageWriterChannel makeChannel(
-        final Map<String, Object> params, final float interval
+        Map<String, Object> params,
+        float interval
     ) throws DagsterPipesException;
 
 }
