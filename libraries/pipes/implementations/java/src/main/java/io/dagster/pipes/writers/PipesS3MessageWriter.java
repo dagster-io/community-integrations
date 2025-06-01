@@ -12,7 +12,7 @@ public class PipesS3MessageWriter extends PipesBlobStoreMessageWriter {
 
     private final S3Client client;
 
-    public PipesS3MessageWriter(S3Client client) {
+    public PipesS3MessageWriter(final S3Client client) {
         super(1000);
         this.client = client;
     }
@@ -23,7 +23,7 @@ public class PipesS3MessageWriter extends PipesBlobStoreMessageWriter {
      * @param client   An object representing the S3 client.
      * @param interval Interval in seconds between upload chunk uploads.
      */
-    public PipesS3MessageWriter(S3Client client, long interval) {
+    public PipesS3MessageWriter(final S3Client client, final long interval) {
         super(interval);
         this.client = client;
     }
@@ -35,7 +35,7 @@ public class PipesS3MessageWriter extends PipesBlobStoreMessageWriter {
      * @return A new instance of {@link PipesS3MessageWriterChannel}.
      */
     @Override
-    public PipesS3MessageWriterChannel makeChannel(Map<String, Object> params, float interval) throws DagsterPipesException {
+    public PipesS3MessageWriterChannel makeChannel(final Map<String, Object> params, final float interval) throws DagsterPipesException {
         String bucket = assertParamType(params, "bucket", String.class, PipesS3MessageWriter.class);
         String keyPrefix = assertParamType(params, "key_prefix", String.class, PipesS3MessageWriter.class);
         return new PipesS3MessageWriterChannel(client, bucket, keyPrefix, super.interval);

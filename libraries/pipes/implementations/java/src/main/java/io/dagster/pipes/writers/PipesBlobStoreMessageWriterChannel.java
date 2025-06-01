@@ -31,7 +31,7 @@ public abstract class PipesBlobStoreMessageWriterChannel implements PipesMessage
      * Adds a message to the buffer.
      */
     @Override
-    public void writeMessage(PipesMessage message) {
+    public void writeMessage(final PipesMessage message) {
         buffer.add(message);
     }
 
@@ -54,7 +54,7 @@ public abstract class PipesBlobStoreMessageWriterChannel implements PipesMessage
     /**
      * Uploads a chunk of messages.
      */
-    protected abstract void uploadMessagesChunk(StringWriter payload, int index);
+    protected abstract void uploadMessagesChunk(final StringWriter payload, final int index);
 
     /**
      * Starts a buffered upload loop in a separate thread.

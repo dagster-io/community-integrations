@@ -15,7 +15,7 @@ public class PipesDefaultContextLoader extends PipesContextLoader {
     private final static String DIRECT_KEY = "data";
 
     @Override
-    public PipesContextData loadContext(Map<String, Object> params) throws DagsterPipesException {
+    public PipesContextData loadContext(final Map<String, Object> params) throws DagsterPipesException {
         if (params.containsKey(FILE_PATH_KEY)) {
             String path = PipesUtils.assertParamType(
                 params, FILE_PATH_KEY, String.class, PipesDefaultContextLoader.class
@@ -38,7 +38,7 @@ public class PipesDefaultContextLoader extends PipesContextLoader {
         }
     }
 
-    PipesContextData loadFromFile(String path) throws DagsterPipesException {
+    PipesContextData loadFromFile(final String path) throws DagsterPipesException {
         ObjectMapper mapper = new ObjectMapper();
         try {
             Map<String, Object> data = mapper.readValue(new File(path), Map.class);

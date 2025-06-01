@@ -17,13 +17,13 @@ public class PipesS3ContextLoader extends PipesContextLoader {
 
     private final S3Client client;
 
-    public PipesS3ContextLoader(S3Client client) {
+    public PipesS3ContextLoader(final S3Client client) {
         super();
         this.client = client;
     }
 
     @Override
-    public PipesContextData loadContext(Map<String, Object> params) throws DagsterPipesException {
+    public PipesContextData loadContext(final Map<String, Object> params) throws DagsterPipesException {
         String bucket = PipesUtils.assertParamType(params, "bucket", String.class, PipesS3ContextLoader.class);
         String key = PipesUtils.assertParamType(params, "key", String.class, PipesS3ContextLoader.class);
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()

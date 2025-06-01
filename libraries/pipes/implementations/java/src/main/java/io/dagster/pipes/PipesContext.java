@@ -24,9 +24,9 @@ public class PipesContext {
     private Exception exception;
 
     public PipesContext(
-        PipesParamsLoader paramsLoader,
-        PipesContextLoader contextLoader,
-        PipesMessageWriter<? extends PipesMessageWriterChannel> messageWriter
+        final PipesParamsLoader paramsLoader,
+        final PipesContextLoader contextLoader,
+        final PipesMessageWriter<? extends PipesMessageWriterChannel> messageWriter
     ) throws DagsterPipesException {
         Optional<Map<String, Object>> contextParams = paramsLoader.loadContextParams();
         Optional<Map<String, Object>> messageParams = paramsLoader.loadMessagesParams();
@@ -43,7 +43,7 @@ public class PipesContext {
         );
     }
 
-    public void reportException(Exception exception) {
+    public void reportException(final Exception exception) {
         this.exception = exception;
     }
 
@@ -66,7 +66,7 @@ public class PipesContext {
         return instance != null;
     }
 
-    public static void set(PipesContext context) {
+    public static void set(final PipesContext context) {
         instance = context;
     }
 
@@ -79,15 +79,15 @@ public class PipesContext {
         return instance;
     }
 
-    public void reportCustomMessage(Object payload) throws DagsterPipesException {
+    public void reportCustomMessage(final Object payload) throws DagsterPipesException {
         Map<String, Object> map = new HashMap<>();
         map.put("payload", payload);
         writeMessage(Method.REPORT_CUSTOM_MESSAGE, map);
     }
 
     private void writeMessage(
-        Method method,
-        Map<String, Object> params
+        final Method method,
+        final Map<String, Object> params
     ) throws DagsterPipesException {
         if (this.closed) {
             throw new DagsterPipesException("Cannot send message after pipes context is closed.");
@@ -174,7 +174,7 @@ public class PipesContext {
         return this.data.getRetryNumber();
     }
 
-    public Object getExtra(String key) throws DagsterPipesException {
+    public Object getExtra(final String key) throws DagsterPipesException {
         Map<String, Object> extras = this.data.getExtras();
         if (!extras.containsKey(key)) {
             throw new DagsterPipesException(
@@ -192,7 +192,7 @@ public class PipesContext {
         return this.logger;
     }
 
-    private static void assertSingleAsset(Collection<?> collection, String name) throws DagsterPipesException {
+    private static void assertSingleAsset(final Collection<?> collection, final String name) throws DagsterPipesException {
         if (collection.size() != 1) {
             throw new DagsterPipesException(
                 String.format("%s is undefined. Current step targets multiple assets.", name)
@@ -200,7 +200,7 @@ public class PipesContext {
         }
     }
 
-    private static void assertSingleAsset(Map<?, ?> map, String name) throws DagsterPipesException {
+    private static void assertSingleAsset(final Map<?, ?> map, final String name) throws DagsterPipesException {
         if (map.size() != 1) {
             throw new DagsterPipesException(
                 String.format("%s is undefined. Current step targets multiple assets.", name)
@@ -208,7 +208,7 @@ public class PipesContext {
         }
     }
 
-    private static void assertPresence(Object object, String name) throws DagsterPipesException {
+    private static void assertPresence(final Object object, final String name) throws DagsterPipesException {
         if (object == null) {
             throw new DagsterPipesException(
                 String.format("%s is undefined. Current step does not target an asset.", name)
@@ -250,20 +250,20 @@ public class PipesContext {
     }
 
     public void reportAssetCheck(
-        String checkName,
-        boolean passed,
-        Map<String, ?> metadataMapping,
-        String assetKey
+        final String checkName,
+        final boolean passed,
+        final Map<String, ?> metadataMapping,
+        final String assetKey
     ) throws DagsterPipesException {
         reportAssetCheck(checkName, passed, PipesAssetCheckSeverity.ERROR, metadataMapping, assetKey);
     }
 
     public void reportAssetCheck(
-        String checkName,
-        boolean passed,
-        PipesAssetCheckSeverity severity,
-        Map<String, ?> metadataMapping,
-        String assetKey
+        final String checkName,
+        final boolean passed,
+        final PipesAssetCheckSeverity severity,
+        final Map<String, ?> metadataMapping,
+        final String assetKey
     ) throws DagsterPipesException {
         final Map<String, PipesMetadata> resolvedMetadata = PipesUtils
             .resolveMetadataMapping(metadataMapping);
@@ -287,7 +287,11 @@ public class PipesContext {
         );
     }
 
-    private void assertNotNull(Object value, Method method, String param) throws DagsterPipesException {
+    private void assertNotNull(
+        final Object value,
+        final Method method,
+        final String param
+    ) throws DagsterPipesException {
         if (value == null) {
             throw new DagsterPipesException(
                 String.format(
@@ -299,9 +303,9 @@ public class PipesContext {
     }
 
     private Map<String, Object> createMap(
-        String assetKey,
-        String dataVersion,
-        Map<String, PipesMetadata> pipesMetadata
+        final String assetKey,
+        final String dataVersion,
+        final Map<String, PipesMetadata> pipesMetadata
     ) {
         Map<String, Object> message = new HashMap<>();
         message.put("asset_key", assetKey);
@@ -311,11 +315,11 @@ public class PipesContext {
     }
 
     private Map<String, Object> createMap(
-        String assetKey,
-        String checkName,
-        boolean passed,
-        PipesAssetCheckSeverity severity,
-        Map<String, PipesMetadata> pipesMetadata
+        final String assetKey,
+        final String checkName,
+        final boolean passed,
+        final PipesAssetCheckSeverity severity,
+        final Map<String, PipesMetadata> pipesMetadata
     ) {
         Map<String, Object> message = new HashMap<>();
         message.put("asset_key", assetKey);
@@ -327,8 +331,8 @@ public class PipesContext {
     }
 
     private String resolveOptionallyPassedAssetKey(
-        String assetKey,
-        Method method
+        final String assetKey,
+        final Method method
     ) throws DagsterPipesException {
         List<String> definedAssetKeys = this.data.getAssetKeys();
         String resultAssetKey = assetKey;

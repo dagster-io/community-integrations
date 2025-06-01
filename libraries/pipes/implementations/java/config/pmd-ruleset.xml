@@ -16,7 +16,6 @@
     </rule>
 
     <rule ref="category/java/codestyle.xml">
-        <exclude name="MethodArgumentCouldBeFinal"/>
         <exclude name="LocalVariableCouldBeFinal"/>
         <exclude name="LongVariable"/>
         <exclude name="CommentDefaultAccessModifier"/>

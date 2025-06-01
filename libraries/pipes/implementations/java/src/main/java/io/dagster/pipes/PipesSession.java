@@ -19,14 +19,14 @@ public class PipesSession {
     private static final Logger LOGGER = Logger.getLogger(PipesSession.class.getName());
 
     public PipesSession(
-        PipesParamsLoader paramsLoader,
-        PipesContextLoader contextLoader,
-        PipesMessageWriter<? extends PipesMessageWriterChannel> messageWriter
+        final PipesParamsLoader paramsLoader,
+        final PipesContextLoader contextLoader,
+        final PipesMessageWriter<? extends PipesMessageWriterChannel> messageWriter
     ) throws DagsterPipesException {
         this.context = buildContext(paramsLoader, contextLoader, messageWriter);
     }
 
-    public void runDagsterPipes(ThrowingConsumer runnable) throws DagsterPipesException {
+    public void runDagsterPipes(final ThrowingConsumer runnable) throws DagsterPipesException {
         try {
             runnable.run(this.context);
         } catch (Exception exception) {
@@ -41,9 +41,9 @@ public class PipesSession {
     }
 
     private PipesContext buildContext(
-        PipesParamsLoader paramsLoader,
-        PipesContextLoader contextLoader,
-        PipesMessageWriter<? extends PipesMessageWriterChannel> messageWriter
+        final PipesParamsLoader paramsLoader,
+        final PipesContextLoader contextLoader,
+        final PipesMessageWriter<? extends PipesMessageWriterChannel> messageWriter
     ) throws DagsterPipesException {
         if (PipesContext.isInitialized()) {
             return PipesContext.get();

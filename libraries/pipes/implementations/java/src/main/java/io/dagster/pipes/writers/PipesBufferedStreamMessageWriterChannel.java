@@ -15,7 +15,7 @@ public class PipesBufferedStreamMessageWriterChannel implements PipesMessageWrit
     }
 
     @Override
-    public void writeMessage(PipesMessage message) {
+    public void writeMessage(final PipesMessage message) {
         buffer.add(message);
     }
 

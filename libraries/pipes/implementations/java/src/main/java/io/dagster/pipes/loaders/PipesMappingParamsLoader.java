@@ -1,24 +1,16 @@
 package io.dagster.pipes.loaders;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.dagster.pipes.DagsterPipesException;
 import io.dagster.pipes.data.PipesConstants;
 import io.dagster.pipes.utils.PipesUtils;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
-import java.util.zip.InflaterInputStream;
 
 public class PipesMappingParamsLoader implements PipesParamsLoader {
     private final Map<String, String> mapping;
 
-    public PipesMappingParamsLoader(Map<String, String> mapping) {
+    public PipesMappingParamsLoader(final Map<String, String> mapping) {
         this.mapping = mapping;
     }
 
