@@ -13,13 +13,13 @@ public class PipesCliArgsParamsLoader implements PipesParamsLoader {
         names = "--dagster-pipes-context", 
         description = "base64 encoded and zlib-compressed context loader params",
         defaultValue = "")
-    String pipesContextParams;
+    private String pipesContextParams;
 
     @Option(
         names = "--dagster-pipes-messages", 
         description = "base64 encoded and zlib-compressed messages params",
         defaultValue = "")
-    String pipesMessagesParams;
+    private String pipesMessagesParams;
     
     public PipesCliArgsParamsLoader(final String... args) {
         final CommandLine commandLine = new CommandLine(this);

@@ -18,6 +18,7 @@ public abstract class PipesBlobStoreMessageWriterChannel implements PipesMessage
     private final AtomicInteger counter;
     private final Lock lock;
     private Thread uploadThread;
+    @SuppressWarnings("PMD.AvoidUsingVolatile")
     private volatile boolean shouldClose;
 
     public PipesBlobStoreMessageWriterChannel(final float interval) {

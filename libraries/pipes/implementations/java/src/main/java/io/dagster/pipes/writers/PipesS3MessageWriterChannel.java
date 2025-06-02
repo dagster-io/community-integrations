@@ -40,10 +40,10 @@ public class PipesS3MessageWriterChannel extends PipesBlobStoreMessageWriterChan
      */
     @Override
     protected void uploadMessagesChunk(final StringWriter payload, final int index) {
-        String key = keyPrefix != null ? keyPrefix + "/" + index + ".json" : index + ".json";
-        String content = payload.toString();
+        final String key = keyPrefix != null ? keyPrefix + "/" + index + ".json" : index + ".json";
+        final String content = payload.toString();
 
-        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+        final PutObjectRequest putObjectRequest = PutObjectRequest.builder()
             .bucket(bucket)
             .key(key)
             .contentType("application/json")

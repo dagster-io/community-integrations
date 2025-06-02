@@ -20,7 +20,7 @@ public class PipesContext {
     private PipesMessageWriterChannel messageChannel;
     private final Set<String> materializedAssets;
     private boolean closed;
-    final PipesLogger logger;
+    private final PipesLogger logger;
     private Exception exception;
 
     public PipesContext(
