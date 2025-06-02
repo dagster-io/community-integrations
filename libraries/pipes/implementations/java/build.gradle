@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'pmd'
+    id 'checkstyle'
     id "com.vanniktech.maven.publish" version "0.30.0"
     id 'signing'
 }
@@ -79,9 +80,21 @@ pmd {
     pmdTest.enabled = false
 }
 
+checkstyle {
+    toolVersion = "8.29"
+    configFile = file("$rootDir/config/checkstyle/checkstyle.xml")
+}
+
 tasks.withType(Pmd) {
     // Exclude generated types files from analysis
     exclude '**/types/**'
     ruleSetFiles = files('config/pmd-ruleset.xml')
     ruleSets = [] // Disable default rulesets
+}
+
+tasks.withType(Checkstyle) {
+    reports {
+        xml.required = true
+        html.required = true
+    }
 }

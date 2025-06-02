@@ -1,0 +1,4 @@
+<suppressions>
+    <suppress files="/generated/" checks="\w+"/>
+    <suppress files="/test/" checks="\w+"/>
+</suppressions>
