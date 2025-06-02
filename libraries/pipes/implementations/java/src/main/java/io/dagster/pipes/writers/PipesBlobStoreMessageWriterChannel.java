@@ -81,7 +81,7 @@ public abstract class PipesBlobStoreMessageWriterChannel implements PipesMessage
      */
     private void uploadLoop() {
         LocalDateTime startOrLastUpload = LocalDateTime.now();
-        StringWriter payload;
+        final StringWriter payload = new StringWriter();
 
         while (!shouldClose) {
             try {
@@ -90,8 +90,9 @@ public abstract class PipesBlobStoreMessageWriterChannel implements PipesMessage
 
                 if (!buffer.isEmpty() && shouldUpload) {
                     final Queue<PipesMessage> messagesToUpload = flushMessages();
-                    payload = new StringWriter();
-                    for (final PipesMessage message: messagesToUpload) {
+                    payload.getBuffer().setLength(0);
+
+                    for (final PipesMessage message : messagesToUpload) {
                         payload.write(message.toString());
                         payload.write("\n");
                     }
@@ -106,9 +107,10 @@ public abstract class PipesBlobStoreMessageWriterChannel implements PipesMessage
                 Thread.currentThread().interrupt();
             }
         }
+
         final Queue<PipesMessage> messagesToUpload = flushMessages();
-        payload = new StringWriter();
-        for (final PipesMessage message: messagesToUpload) {
+        payload.getBuffer().setLength(0);
+        for (final PipesMessage message : messagesToUpload) {
             payload.write(message.toString());
             payload.write("\n");
         }

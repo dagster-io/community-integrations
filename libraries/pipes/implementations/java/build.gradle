@@ -75,11 +75,12 @@ jar {
 
 pmd {
     toolVersion = "6.48.0"
-    ignoreFailures = true
+    consoleOutput = true
+    pmdTest.enabled = false
 }
 
 tasks.withType(Pmd) {
-    // Exclude specific folders from analysis
+    // Exclude generated types files from analysis
     exclude '**/types/**'
     ruleSetFiles = files('config/pmd-ruleset.xml')
     ruleSets = [] // Disable default rulesets

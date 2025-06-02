@@ -10,7 +10,7 @@ public abstract class PipesMessageWriter<T extends PipesMessageWriterChannel> {
     public abstract T open(Map<String, Object> params) throws DagsterPipesException;
 
     public final Map<String, Object> getOpenedPayload() {
-        Map<String, Object> payload = new HashMap<>();
+        final Map<String, Object> payload = new HashMap<>();
         payload.put("extras", getOpenedExtras());
         return payload;
     }

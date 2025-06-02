@@ -38,7 +38,7 @@ public class PipesDefaultContextLoader extends PipesContextLoader {
         }
     }
 
-    PipesContextData loadFromFile(final String path) throws DagsterPipesException {
+    public PipesContextData loadFromFile(final String path) throws DagsterPipesException {
         final ObjectMapper mapper = new ObjectMapper();
         try {
             final Map<String, Object> data = mapper.readValue(new File(path), Map.class);

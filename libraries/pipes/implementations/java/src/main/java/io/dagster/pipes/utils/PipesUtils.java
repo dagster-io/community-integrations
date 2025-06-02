@@ -74,13 +74,17 @@ public final class PipesUtils {
 
     public static byte[] zlibDecompress(final byte[] data) throws IOException {
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(data);
-             InflaterInputStream filterStream = new InflaterInputStream(inputStream);
-             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            InflaterInputStream filterStream = new InflaterInputStream(inputStream);
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
 
             final byte[] buffer = new byte[1024];
             int readChunk;
 
-            while ((readChunk = filterStream.read(buffer)) != -1) {
+            while (true) {
+                readChunk = filterStream.read(buffer);
+                if (readChunk == -1) {
+                    break;
+                }
                 outputStream.write(buffer, 0, readChunk);
             }
 
