@@ -42,7 +42,7 @@
 
   <module name="LineLength">
     <property name="fileExtensions" value="java"/>
-    <property name="max" value="100"/>
+    <property name="max" value="120"/>
     <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
   </module>
 
@@ -217,7 +217,7 @@
     </module>
     <module name="Indentation">
       <property name="basicOffset" value="4"/>
-      <property name="braceAdjustment" value="4"/>
+
       <property name="caseIndent" value="4"/>
       <property name="throwsIndent" value="4"/>
       <property name="lineWrappingIndentation" value="4"/>
