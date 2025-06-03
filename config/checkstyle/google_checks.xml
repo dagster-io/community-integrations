@@ -1,0 +1,10 @@
+<!-- Download the official Google Checkstyle config and place it here.
+     You can get the latest from:
+     https://raw.githubusercontent.com/checkstyle/checkstyle/master/src/main/resources/google_checks.xml -->
+<!-- Example: -->
+<!DOCTYPE module PUBLIC
+        "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+        "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<module name="Checker">
+  <!-- Google Checks configuration content goes here -->
+</module>

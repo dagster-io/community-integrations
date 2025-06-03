@@ -81,8 +81,8 @@ pmd {
 }
 
 checkstyle {
-    toolVersion = "8.29"
-    configFile = file("$rootDir/config/checkstyle/checkstyle.xml")
+    toolVersion = '8.29'
+    configFile = file('config/checkstyle/google_checks.xml')
 }
 
 tasks.withType(Pmd) {
@@ -92,9 +92,14 @@ tasks.withType(Pmd) {
     ruleSets = [] // Disable default rulesets
 }
 
-tasks.withType(Checkstyle) {
+tasks.withType(Checkstyle).configureEach {
+    ignoreFailures = false
     reports {
-        xml.required = true
-        html.required = true
+        xml.required.set(false)
+        html.required.set(true)
+        html.outputLocation.set(file("$buildDir/reports/checkstyle/checkstyle.html"))
+    }
+    doLast {
+        println "Checkstyle HTML report: file://$buildDir/reports/checkstyle/checkstyle.html"
     }
 }
