@@ -85,6 +85,9 @@ checkstyle {
     configFile = file('config/checkstyle/google_checks.xml')
 }
 
+checkstyleMain
+    .exclude('**/types/**')
+
 tasks.withType(Pmd) {
     // Exclude generated types files from analysis
     exclude '**/types/**'
