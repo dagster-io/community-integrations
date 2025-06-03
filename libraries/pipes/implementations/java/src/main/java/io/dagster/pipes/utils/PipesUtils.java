@@ -1,20 +1,18 @@
 package io.dagster.pipes.utils;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.dagster.pipes.DagsterPipesException;
+import io.dagster.pipes.data.PipesConstants;
+import io.dagster.pipes.data.PipesMetadata;
+import io.dagster.pipes.writers.PipesMessage;
+import io.dagster.types.Method;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.Map;
 import java.util.zip.InflaterInputStream;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import io.dagster.pipes.DagsterPipesException;
-import io.dagster.pipes.data.PipesConstants;
-import io.dagster.pipes.data.PipesMetadata;
-import io.dagster.pipes.writers.PipesMessage;
-import io.dagster.types.Method;
 
 public final class PipesUtils {
 
@@ -30,10 +28,9 @@ public final class PipesUtils {
         final Object value = envParams.get(key);
 
         if (!expectedType.isInstance(value)) {
-            throw new DagsterPipesException (
+            throw new DagsterPipesException(
                 String.format(
-                    "Invalid type for parameter %s passed from orchestration side to %s." +
-                    "\nExpected %s, got %s.",
+                    "Invalid type for parameter %s passed from orchestration side to %s. Expected %s, got %s.",
                     key,
                     cls.getSimpleName(),
                     expectedType.getSimpleName(),

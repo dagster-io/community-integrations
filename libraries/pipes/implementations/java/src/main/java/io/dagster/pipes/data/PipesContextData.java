@@ -1,15 +1,13 @@
 package io.dagster.pipes.data;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.dagster.types.PartitionKeyRange;
 import io.dagster.types.PartitionTimeWindow;
 import io.dagster.types.ProvenanceByAssetKey;
-
 import java.util.List;
 import java.util.Map;
 
-@SuppressWarnings("PMD")
+@SuppressWarnings("PMD.DataClass")
 public class PipesContextData {
 
     @JsonProperty("asset_keys")
@@ -42,14 +40,11 @@ public class PipesContextData {
     @JsonProperty("extras")
     private Map<String, Object> extras;  // Required
 
-    public PipesContextData() {
-    }
-
     public List<String> getAssetKeys() {
         return assetKeys;
     }
 
-    public void setAssetKeys(List<String> assetKeys) {
+    public void setAssetKeys(final List<String> assetKeys) {
         this.assetKeys = assetKeys;
     }
 
@@ -57,7 +52,7 @@ public class PipesContextData {
         return codeVersionByAssetKey;
     }
 
-    public void setCodeVersionByAssetKey(Map<String, String> codeVersionByAssetKey) {
+    public void setCodeVersionByAssetKey(final Map<String, String> codeVersionByAssetKey) {
         this.codeVersionByAssetKey = codeVersionByAssetKey;
     }
 
@@ -65,7 +60,7 @@ public class PipesContextData {
         return provenanceByAssetKey;
     }
 
-    public void setProvenanceByAssetKey(Map<String, ProvenanceByAssetKey> provenanceByAssetKey) {
+    public void setProvenanceByAssetKey(final Map<String, ProvenanceByAssetKey> provenanceByAssetKey) {
         this.provenanceByAssetKey = provenanceByAssetKey;
     }
 
@@ -73,7 +68,7 @@ public class PipesContextData {
         return partitionKey;
     }
 
-    public void setPartitionKey(String partitionKey) {
+    public void setPartitionKey(final String partitionKey) {
         this.partitionKey = partitionKey;
     }
 
@@ -81,7 +76,7 @@ public class PipesContextData {
         return partitionKeyRange;
     }
 
-    public void setPartitionKeyRange(PartitionKeyRange partitionKeyRange) {
+    public void setPartitionKeyRange(final PartitionKeyRange partitionKeyRange) {
         this.partitionKeyRange = partitionKeyRange;
     }
 
@@ -89,7 +84,7 @@ public class PipesContextData {
         return partitionTimeWindow;
     }
 
-    public void setPartitionTimeWindow(PartitionTimeWindow partitionTimeWindow) {
+    public void setPartitionTimeWindow(final PartitionTimeWindow partitionTimeWindow) {
         this.partitionTimeWindow = partitionTimeWindow;
     }
 
@@ -97,7 +92,7 @@ public class PipesContextData {
         return runId;
     }
 
-    public void setRunId(String runId) {
+    public void setRunId(final String runId) {
         this.runId = runId;
     }
 
@@ -105,7 +100,7 @@ public class PipesContextData {
         return jobName;
     }
 
-    public void setJobName(String jobName) {
+    public void setJobName(final String jobName) {
         this.jobName = jobName;
     }
 
@@ -113,7 +108,7 @@ public class PipesContextData {
         return retryNumber;
     }
 
-    public void setRetryNumber(int retryNumber) {
+    public void setRetryNumber(final int retryNumber) {
         this.retryNumber = retryNumber;
     }
 
@@ -121,7 +116,7 @@ public class PipesContextData {
         return extras;
     }
 
-    public void setExtras(Map<String, Object> extras) {
+    public void setExtras(final Map<String, Object> extras) {
         this.extras = extras;
     }
 }

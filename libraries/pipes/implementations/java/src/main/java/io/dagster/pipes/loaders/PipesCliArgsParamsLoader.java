@@ -1,10 +1,9 @@
 package io.dagster.pipes.loaders;
 
-import java.util.Map;
-import java.util.Optional;
-
 import io.dagster.pipes.DagsterPipesException;
 import io.dagster.pipes.utils.PipesUtils;
+import java.util.Map;
+import java.util.Optional;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
@@ -20,7 +19,8 @@ public class PipesCliArgsParamsLoader implements PipesParamsLoader {
         description = "base64 encoded and zlib-compressed messages params",
         defaultValue = "")
     private String pipesMessagesParams;
-    
+
+    /** Constructor. */
     public PipesCliArgsParamsLoader(final String... args) {
         final CommandLine commandLine = new CommandLine(this);
         commandLine.setUnmatchedArgumentsAllowed(true);

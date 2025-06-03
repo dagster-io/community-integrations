@@ -1,18 +1,16 @@
 package io.dagster.pipes.loaders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.dagster.pipes.DagsterPipesException;
 import io.dagster.pipes.data.PipesContextData;
 import io.dagster.pipes.utils.PipesUtils;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
 public class PipesDefaultContextLoader extends PipesContextLoader {
-    private final static String FILE_PATH_KEY = "path";
-    private final static String DIRECT_KEY = "data";
+    private static final String FILE_PATH_KEY = "path";
+    private static final String DIRECT_KEY = "data";
 
     @Override
     public PipesContextData loadContext(final Map<String, Object> params) throws DagsterPipesException {
@@ -38,6 +36,13 @@ public class PipesDefaultContextLoader extends PipesContextLoader {
         }
     }
 
+    /**
+     * Load {@link PipesContextData} from file, specified by path.
+     *
+     * @param path The path to the target file
+     * @return The {@link PipesContextData}
+     * @throws DagsterPipesException If failed to read data from file
+     */
     public PipesContextData loadFromFile(final String path) throws DagsterPipesException {
         final ObjectMapper mapper = new ObjectMapper();
         try {

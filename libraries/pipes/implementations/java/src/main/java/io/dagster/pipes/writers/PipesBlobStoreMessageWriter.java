@@ -1,10 +1,9 @@
 package io.dagster.pipes.writers;
 
+import io.dagster.pipes.DagsterPipesException;
 import java.util.Map;
 
-import io.dagster.pipes.DagsterPipesException;
-
-public abstract class PipesBlobStoreMessageWriter extends PipesMessageWriter<PipesMessageWriterChannel>{
+public abstract class PipesBlobStoreMessageWriter extends PipesMessageWriter<PipesMessageWriterChannel> {
 
     protected final float interval;
 

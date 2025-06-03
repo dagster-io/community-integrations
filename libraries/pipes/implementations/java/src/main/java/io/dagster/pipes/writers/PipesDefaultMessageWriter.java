@@ -1,11 +1,11 @@
 package io.dagster.pipes.writers;
 
-import java.io.*;
-import java.util.Map;
-
 import io.dagster.pipes.DagsterPipesException;
 import io.dagster.pipes.data.PipesConstants;
 import io.dagster.pipes.utils.PipesUtils;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Map;
 
 public class PipesDefaultMessageWriter extends PipesMessageWriter<PipesMessageWriterChannel> {
 

@@ -1,12 +1,11 @@
 package io.dagster.pipes.writers;
 
+import io.dagster.pipes.DagsterPipesException;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
-
-import io.dagster.pipes.DagsterPipesException;
 
 public class PipesFileMessageWriterChannel implements PipesMessageWriterChannel {
 
@@ -40,5 +39,7 @@ public class PipesFileMessageWriterChannel implements PipesMessageWriterChannel 
     }
 
     @Override
-    public void close() {}
+    public void close() {
+
+    }
 }

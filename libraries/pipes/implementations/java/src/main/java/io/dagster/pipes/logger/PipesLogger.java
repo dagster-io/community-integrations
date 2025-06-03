@@ -1,15 +1,14 @@
 package io.dagster.pipes.logger;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
-
 import io.dagster.pipes.DagsterPipesException;
 import io.dagster.pipes.utils.PipesUtils;
 import io.dagster.pipes.writers.PipesMessageWriterChannel;
 import io.dagster.types.Method;
 import io.dagster.types.PipesLog;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 public class PipesLogger {
 

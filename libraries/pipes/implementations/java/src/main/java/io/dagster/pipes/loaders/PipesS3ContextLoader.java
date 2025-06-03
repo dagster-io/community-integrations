@@ -1,17 +1,15 @@
 package io.dagster.pipes.loaders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.dagster.pipes.DagsterPipesException;
 import io.dagster.pipes.data.PipesContextData;
 import io.dagster.pipes.utils.PipesUtils;
+import java.io.IOException;
+import java.util.Map;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-
-import java.io.IOException;
-import java.util.Map;
 
 public class PipesS3ContextLoader extends PipesContextLoader {
 

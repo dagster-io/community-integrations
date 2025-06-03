@@ -1,12 +1,9 @@
 package io.dagster.pipes.writers;
 
-import software.amazon.awssdk.services.s3.S3Client;
-
-import static io.dagster.pipes.utils.PipesUtils.assertParamType;
-
-import java.util.Map;
-
 import io.dagster.pipes.DagsterPipesException;
+import software.amazon.awssdk.services.s3.S3Client;
+import java.util.Map;
+import io.dagster.pipes.utils.PipesUtils;
 
 public class PipesS3MessageWriter extends PipesBlobStoreMessageWriter {
 
@@ -35,9 +32,16 @@ public class PipesS3MessageWriter extends PipesBlobStoreMessageWriter {
      * @return A new instance of {@link PipesS3MessageWriterChannel}.
      */
     @Override
-    public PipesS3MessageWriterChannel makeChannel(final Map<String, Object> params, final float interval) throws DagsterPipesException {
-        final String bucket = assertParamType(params, "bucket", String.class, PipesS3MessageWriter.class);
-        final String keyPrefix = assertParamType(params, "key_prefix", String.class, PipesS3MessageWriter.class);
+    public PipesS3MessageWriterChannel makeChannel(
+        final Map<String, Object> params,
+        final float interval
+    ) throws DagsterPipesException {
+        final String bucket = PipesUtils.assertParamType(
+            params, "bucket", String.class, PipesS3MessageWriter.class
+        );
+        final String keyPrefix = PipesUtils.assertParamType(
+            params, "key_prefix", String.class, PipesS3MessageWriter.class
+        );
         return new PipesS3MessageWriterChannel(client, bucket, keyPrefix, super.interval);
     }
 }

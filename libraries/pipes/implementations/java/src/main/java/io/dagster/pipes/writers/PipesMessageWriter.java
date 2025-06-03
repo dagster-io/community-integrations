@@ -1,9 +1,8 @@
 package io.dagster.pipes.writers;
 
+import io.dagster.pipes.DagsterPipesException;
 import java.util.HashMap;
 import java.util.Map;
-
-import io.dagster.pipes.DagsterPipesException;
 
 public abstract class PipesMessageWriter<T extends PipesMessageWriterChannel> {
 

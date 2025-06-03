@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-
 import java.util.Map;
 
 @SuppressWarnings({"PMD.DataClass", "PMD.AvoidThrowingRawExceptionTypes"})
@@ -17,6 +16,7 @@ public class PipesMessage {
     private String method;
     private Map<String, ?> params;
 
+    /** Constructor. */
     public PipesMessage(final String dagsterPipesVersion, final String method, final Map<String, ?> params) {
         this.dagsterPipesVersion = dagsterPipesVersion;
         this.method = method;
