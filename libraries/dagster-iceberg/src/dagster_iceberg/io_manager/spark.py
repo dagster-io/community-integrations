@@ -61,6 +61,12 @@ class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
 
         getattr(writer, mode)()
 
+    def _load_table(
+        self, table_slice: TableSlice, connection: SparkSession
+    ) -> DataFrame:
+        """Reads a PySpark dataframe from an Iceberg table."""
+        return connection.sql(SparkIcebergDbClient.get_select_statement(table_slice))
+
     def load_input(
         self,
         context: InputContext,
@@ -68,7 +74,7 @@ class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
         connection: SparkSession,
     ) -> DataFrame:
         """Reads a PySpark dataframe from an Iceberg table."""
-        return connection.sql(SparkIcebergDbClient.get_select_statement(table_slice))
+        return self._load_table(table_slice, connection)
 
     @property
     def supported_types(self) -> Sequence[type[object]]:
