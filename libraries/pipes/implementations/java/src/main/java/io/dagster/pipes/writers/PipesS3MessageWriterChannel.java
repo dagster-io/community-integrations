@@ -1,9 +1,9 @@
 package io.dagster.pipes.writers;
 
+import java.io.StringWriter;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import java.io.StringWriter;
 
 public class PipesS3MessageWriterChannel extends PipesBlobStoreMessageWriterChannel {
 

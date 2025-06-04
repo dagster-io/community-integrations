@@ -2,8 +2,6 @@ package io.dagster.pipes;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import io.dagster.pipes.DagsterPipesException;
 import io.dagster.pipes.data.PipesAssetCheckSeverity;
 import io.dagster.pipes.loaders.PipesContextLoader;
 import io.dagster.pipes.loaders.PipesDefaultContextLoader;
@@ -12,13 +10,12 @@ import io.dagster.pipes.writers.PipesDefaultMessageWriter;
 import io.dagster.pipes.writers.PipesMessageWriter;
 import io.dagster.pipes.writers.PipesMessageWriterChannel;
 import io.dagster.pipes.writers.PipesS3MessageWriter;
-import picocli.CommandLine;
-import software.amazon.awssdk.services.s3.S3Client;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import picocli.CommandLine;
+import software.amazon.awssdk.services.s3.S3Client;
 
 @SuppressWarnings({
     "PMD.AvoidThrowingRawExceptionTypes", "PMD.UnusedPrivateField",
@@ -134,7 +131,7 @@ public class MainTest implements Runnable {
                 String checkName = loadParamByWrapperKey("checkName", String.class);
                 boolean passed = loadParamByWrapperKey("passed", Boolean.class);
                 String assetKey = loadParamByWrapperKey("assetKey", String.class);
-		        PipesAssetCheckSeverity severity = PipesAssetCheckSeverity.valueOf(
+                PipesAssetCheckSeverity severity = PipesAssetCheckSeverity.valueOf(
                     loadParamByWrapperKey("severity", String.class)
                 );
                 pipesTests.setCheck(checkName, passed, assetKey, severity);

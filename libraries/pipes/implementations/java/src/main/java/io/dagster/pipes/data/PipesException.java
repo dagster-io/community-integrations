@@ -61,7 +61,7 @@ public class PipesException {
 
     @JsonProperty("stack")
     public String[] getStack() {
-        return this.stack;
+        return this.stack == null ? null : Arrays.copyOf(this.stack, this.stack.length);
     }
 
     @JsonProperty("stack")

@@ -9,7 +9,7 @@ import io.dagster.pipes.writers.PipesMessageWriter;
 import io.dagster.pipes.writers.PipesMessageWriterChannel;
 import java.util.logging.Logger;
 
-@SuppressWarnings("PMD.AvoidCatchingGenericException")
+@SuppressWarnings({"PMD.AvoidCatchingGenericException", "PMD.CommentSize"})
 public class PipesSession {
 
     private final PipesContext context;

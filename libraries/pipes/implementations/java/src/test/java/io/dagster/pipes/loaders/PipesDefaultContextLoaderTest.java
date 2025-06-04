@@ -1,9 +1,7 @@
 package io.dagster.pipes.loaders;
 
-import org.junit.jupiter.api.Test;
-
 import io.dagster.pipes.DagsterPipesException;
-import io.dagster.pipes.loaders.PipesDefaultContextLoader;
+import org.junit.jupiter.api.Test;
 
 class PipesDefaultContextLoaderTest {
 

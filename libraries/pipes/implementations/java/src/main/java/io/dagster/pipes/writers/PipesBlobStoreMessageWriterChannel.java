@@ -20,6 +20,7 @@ public abstract class PipesBlobStoreMessageWriterChannel implements PipesMessage
     @SuppressWarnings("PMD.AvoidUsingVolatile")
     private volatile boolean shouldClose;
 
+    /** Constructor. */
     public PipesBlobStoreMessageWriterChannel(final float interval) {
         this.interval = interval;
         this.buffer = new ConcurrentLinkedQueue<>();

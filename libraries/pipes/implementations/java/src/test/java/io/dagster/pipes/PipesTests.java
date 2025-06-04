@@ -1,21 +1,19 @@
 package io.dagster.pipes;
 
+import io.dagster.pipes.data.PipesAssetCheckSeverity;
+import io.dagster.pipes.data.PipesMetadata;
+import io.dagster.pipes.loaders.PipesContextLoader;
+import io.dagster.pipes.loaders.PipesDefaultContextLoader;
+import io.dagster.pipes.loaders.PipesEnvVarParamsLoader;
+import io.dagster.pipes.loaders.PipesParamsLoader;
+import io.dagster.pipes.writers.PipesMessageWriter;
+import io.dagster.pipes.writers.PipesMessageWriterChannel;
+import io.dagster.types.Type;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-
-import io.dagster.pipes.DagsterPipesException;
-import io.dagster.pipes.PipesContext;
-import io.dagster.pipes.PipesSession;
-import io.dagster.pipes.data.PipesAssetCheckSeverity;
-import io.dagster.pipes.data.PipesContextData;
-import io.dagster.pipes.data.PipesMetadata;
-import io.dagster.pipes.loaders.*;
-import io.dagster.pipes.writers.*;
-import io.dagster.types.Type;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @SuppressWarnings("PMD.JUnit5TestShouldBePackagePrivate")
 @Disabled
@@ -139,6 +137,9 @@ public class PipesTests {
         });
     }
 
+    /**
+     * Builds test metadata.
+     */
     public Map<String, PipesMetadata> buildTestMetadata() {
         if (this.metadata == null) {
             this.metadata = new HashMap<>();
