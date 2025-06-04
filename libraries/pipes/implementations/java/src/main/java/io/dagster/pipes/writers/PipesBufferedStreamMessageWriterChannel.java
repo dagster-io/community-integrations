@@ -24,8 +24,8 @@ public class PipesBufferedStreamMessageWriterChannel implements PipesMessageWrit
 
     /**
      * Writes all buffered messages to the underlying output stream and flushes it.
-     * <p>
-     * The underlying stream is guaranteed to be flushed even if an exception occurs during writing.
+     *
+     * <p>The underlying stream is guaranteed to be flushed even if an exception occurs during writing.
      *
      * @throws IOException if any I/O error occurs while writing to the stream or during final flushing
      */

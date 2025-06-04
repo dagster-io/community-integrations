@@ -1,9 +1,9 @@
 package io.dagster.pipes.writers;
 
 import io.dagster.pipes.DagsterPipesException;
-import software.amazon.awssdk.services.s3.S3Client;
-import java.util.Map;
 import io.dagster.pipes.utils.PipesUtils;
+import java.util.Map;
+import software.amazon.awssdk.services.s3.S3Client;
 
 public class PipesS3MessageWriter extends PipesBlobStoreMessageWriter {
 
