@@ -1,7 +1,7 @@
 from contextlib import closing, contextmanager
 from datetime import datetime
 from textwrap import dedent
-from typing import Any, List, Mapping, Optional, Sequence, Union, TYPE_CHECKING
+from typing import Any, List, Mapping, Optional, Sequence, Union, TYPE_CHECKING, Literal
 
 import dagster._check as check
 import teradatasql
@@ -17,7 +17,7 @@ from dagster._utils.cached_method import cached_method
 from pydantic import Field
 
 from dagster_teradata import constants
-from dagster_teradata.ttu import Bteq
+from dagster_teradata.ttu.bteq import Bteq
 from dagster_teradata.teradata_compute_cluster_manager import (
     TeradataComputeClusterManager,
 )
@@ -228,69 +228,28 @@ class TeradataDagsterConnection:
 
     def bteq_operator(
             self,
-            bteq_script: str = None,
-            bteq_script_file: str = None,
-            timeout: int = None,
-            xcom_push_flag: bool = False,
+            sql: str = None,
+            file_path: str = None,
             remote_host: Optional[str] = None,
             remote_user: Optional[str] = None,
             remote_password: Optional[str] = None,
             ssh_key_path: Optional[str] = None,
             remote_port: int = 22,
             remote_working_dir: str = "/tmp",
-            expected_return_code: Union[int, List[int]] = 0,
+            bteq_script_encoding: Optional[str] = 'utf-8',
+            bteq_session_encoding: Optional[str] = 'ASCII',
+            bteq_quit_rc: Union[int, List[int]] = 0,
+            timeout: int | Literal[600] = 600,  # Default to 10 minutes
+            timeout_rc: int | None = None,
 
     ) -> Optional[str]:
-        """Executes BTEQ sentences using BTEQ binary, either locally or remotely via SSH.
-
-        Args:
-            bteq_script (str): String of BTEQ sentences to be executed.
-            bteq_script_file (str): Path to a file containing BTEQ sentences to be executed.
-            timeout (int, optional): Timeout in seconds for the BTEQ execution.
-            xcom_push_flag (bool, optional): Flag for pushing last line of BTEQ Log to XCom.
-            remote_host (str, optional): Remote host to execute BTEQ on (None for local execution).
-            remote_user (str, optional): SSH username for remote execution.
-            remote_password (str, optional): SSH password (optional if using key-based auth).
-            ssh_key_path (str, optional): Path to SSH private key (alternative to password).
-            remote_port (int, optional): SSH port (default: 22).
-            remote_working_dir (str, optional): Working directory on remote host (default: /tmp).
-            expected_return_code (Union[int, List[int]], optional): Expected return code(s) from BTEQ execution.
-
-        Returns:
-            Optional[str]: The last line of the BTEQ log if xcom_push_flag is True, otherwise None.
-
-        Examples:
-            .. code-block:: python
-
-                @op
-                def execute_bteq(teradata: TeradataResource):
-                    bteq = "SELECT * FROM dbc.dbcinfo"
-                    # Local execution
-                    teradata.bteq_operator(bteq)
-
-                    # Remote execution with password
-                    teradata.bteq_operator(
-                        bteq,
-                        remote_host="remote.server.com",
-                        remote_user="myuser",
-                        remote_password="mypassword"
-                    )
-
-                    # Remote execution with SSH key
-                    teradata.bteq_operator(
-                        bteq,
-                        remote_host="remote.server.com",
-                        remote_user="myuser",
-                        ssh_key_path="~/.ssh/id_rsa"
-                    )
-        """
 
         # Validate input
-        if not bteq_script and not bteq_script_file:
-            raise ValueError("Either bteq_script or bteq_script_file must be provided")
+        if not sql and not file_path:
+            raise ValueError("BteqOperator requires either the 'sql' or 'file_path' parameter. Both are missing.")
 
-        if bteq_script and bteq_script_file:
-            raise ValueError("Cannot specify both bteq_script and bteq_script_file")
+        if sum(bool(x) for x in [sql, file_path]) > 1:
+            raise ValueError("BteqOperator requires either the 'sql' or 'file_path' parameter but not both.")
 
         if remote_host:
             if not remote_user:
@@ -307,18 +266,43 @@ class TeradataDagsterConnection:
         if remote_port < 1 or remote_port > 65535:
             raise ValueError("remote_port must be a valid port number (1-65535)")
 
+        # Validate and set BTEQ session and script encoding
+        temp_file_read_encoding = "UTF-8"
+        if not bteq_session_encoding or bteq_session_encoding == "ASCII":
+            bteq_session_encoding = ""
+            if bteq_script_encoding == "UTF8":
+                temp_file_read_encoding = "UTF-8"
+            elif bteq_script_encoding == "UTF16":
+                temp_file_read_encoding = "UTF-16"
+            bteq_script_encoding = ""
+        elif bteq_session_encoding == "UTF8" and (
+                not bteq_script_encoding or bteq_script_encoding == "ASCII"
+        ):
+            bteq_script_encoding = "UTF8"
+        elif bteq_session_encoding == "UTF16":
+            if not bteq_script_encoding or bteq_script_encoding == "ASCII":
+                bteq_script_encoding = "UTF8"
+        # for file reading in python. Mapping BTEQ encoding to Python encoding
+        if bteq_script_encoding == "UTF8":
+            temp_file_read_encoding = "UTF-8"
+        elif bteq_script_encoding == "UTF16":
+            temp_file_read_encoding = "UTF-16"
+
         return self.bteq.bteq_operator(
-            bteq_script=bteq_script,
-            bteq_script_file=bteq_script_file,
-            xcom_push_flag=xcom_push_flag,
-            timeout=timeout,
+            sql=sql,
+            file_path=file_path,
             remote_host=remote_host,
             remote_user=remote_user,
             remote_password=remote_password,
             ssh_key_path=ssh_key_path,
             remote_port=remote_port,
             remote_working_dir=remote_working_dir,
-            expected_return_code = expected_return_code
+            bteq_script_encoding=bteq_script_encoding,
+            bteq_session_encoding=bteq_session_encoding,
+            bteq_quit_rc = bteq_quit_rc,
+            timeout=timeout,
+            timeout_rc=timeout_rc,
+            temp_file_read_encoding=temp_file_read_encoding,
         )
 
     def drop_database(self, databases: Union[str, Sequence[str]]) -> None:
