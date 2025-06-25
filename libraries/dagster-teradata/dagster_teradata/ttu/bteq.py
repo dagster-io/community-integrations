@@ -167,6 +167,16 @@ class Bteq:
                     self.remote_port,
                 )
             if self.file_path:
+                if not self._setup_ssh_connection(
+                    host=self.remote_host,
+                    user=self.remote_user,
+                    password=self.remote_remote_password,
+                    key_path=self.ssh_key_path,
+                    port=self.remote_port,
+                ):
+                    raise DagsterError(
+                        "Failed to establish SSH connection. Please check the provided credentials."
+                )
                 if self.file_path and is_valid_remote_bteq_script_file(
                     self.ssh_client, self.file_path
                 ):
@@ -352,10 +362,8 @@ class Bteq:
             if failure_message:
                 self.log.warning(failure_message)
                 return exit_status
-            else:
-                raise DagsterError(
-                    "SSH connection is not established. `ssh_hook` is None or invalid."
-                )
+            # If we get here, everything succeeded
+            return exit_status  # Explicit return instead of else block
         except (OSError, socket.gaierror):
             raise DagsterError(
                 "SSH connection timed out. Please check the network or server availability."

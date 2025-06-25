@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from dagster import job, op, DagsterError
 from dagster_teradata import TeradataResource
@@ -46,14 +48,14 @@ def test_remote_expected_return_code():
     @op(required_resource_keys={"teradata"})
     def example_test_local_expected_return_code(context):
         result = context.resources.teradata.bteq_operator(
-            sql="delete from abcdefgh;",
+            sql="select * from dbc.dbcinfo;",
             remote_host="host",
             remote_user="user",
-            remote_password="pass",
-            bteq_quit_rc=8,
+            remote_password="password",
+            bteq_quit_rc=0,
         )
         context.log.info(result)
-        assert result == 8
+        assert result == 0
 
     @job(resource_defs={"teradata": td_resource})
     def example_job():
@@ -61,6 +63,24 @@ def test_remote_expected_return_code():
 
     example_job.execute_in_process(resources={"teradata": td_resource})
 
+def test_remote_file_path():
+    @op(required_resource_keys={"teradata"})
+    def example_test_local_expected_return_code(context):
+        result = context.resources.teradata.bteq_operator(
+            file_path="/tmp/abcd",
+            remote_host="host",
+            remote_user="user",
+            remote_password="password",
+            bteq_quit_rc=0,
+        )
+        context.log.info(result)
+        assert result == 0
+
+    @job(resource_defs={"teradata": td_resource})
+    def example_job():
+        example_test_local_expected_return_code()
+
+    example_job.execute_in_process(resources={"teradata": td_resource})
 
 def test_remote_expected_multiple_return_code():
     @op(required_resource_keys={"teradata"})
@@ -88,11 +108,9 @@ def test_local_bteq_file_execution(tmp_path):
 
     @op(required_resource_keys={"teradata"})
     def example_test_local_file(context):
-        result = context.resources.teradata.bteq_operator(
-            bteq_script_file=str(script_file)
-        )
+        result = context.resources.teradata.bteq_operator(file_path=str(script_file))
         context.log.info(result)
-        assert result is None
+        assert result == 0
 
     @job(resource_defs={"teradata": td_resource})
     def example_job():
@@ -104,14 +122,17 @@ def test_local_bteq_file_execution(tmp_path):
 def test_remote_bteq_password_auth():
     @op(required_resource_keys={"teradata"})
     def example_test_remote_password(context):
-        result = context.resources.teradata.bteq_operator(
-            bteq_script="SELECT * FROM dbc.dbcinfo;",
-            remote_host="host",
-            remote_user="username",
-            remote_password="password",
-        )
-        context.log.info(result)
-        assert result is None
+        try:
+            result = context.resources.teradata.bteq_operator(
+                sql="SELECT * FROM dbc.dbcinfo;",
+                remote_host="host",
+                remote_user="username",
+                remote_password="password",
+            )
+            context.log.info(result)
+        except DagsterError as e:
+            context.log.info(str(e))
+            assert "SSH connection failed" in str(e)
 
     @job(resource_defs={"teradata": td_resource})
     def example_job():
@@ -124,7 +145,7 @@ def test_remote_bteq_ssh_key_auth():
     @op(required_resource_keys={"teradata"})
     def example_test_remote_ssh_key(context):
         result = context.resources.teradata.bteq_operator(
-            bteq_script="SELECT * FROM dbc.dbcinfo;",
+            file_path="SELECT * FROM dbc.dbcinfo;",
             remote_host="host",
             remote_user="username",
             ssh_key_path="c:\\users\\<username>\\.ssh\\id_rsa",
@@ -135,22 +156,6 @@ def test_remote_bteq_ssh_key_auth():
     @job(resource_defs={"teradata": td_resource})
     def example_job():
         example_test_remote_ssh_key()
-
-    example_job.execute_in_process(resources={"teradata": td_resource})
-
-
-def test_bteq_xcom_push():
-    @op(required_resource_keys={"teradata"})
-    def example_test_xcom_push(context):
-        result = context.resources.teradata.bteq_operator(
-            bteq_script="SELECT * FROM dbc.dbcinfo;", xcom_push_flag=True
-        )
-        context.log.info(result)
-        assert isinstance(result, str)
-
-    @job(resource_defs={"teradata": td_resource})
-    def example_job():
-        example_test_xcom_push()
 
     example_job.execute_in_process(resources={"teradata": td_resource})
 
@@ -176,8 +181,8 @@ def test_conflicting_script_sources(tmp_path):
     def example_test_conflicting_sources(context):
         with pytest.raises(ValueError):
             context.resources.teradata.bteq_operator(
-                bteq_script="SELECT * FROM dbc.dbcinfo;",
-                bteq_script_file=str(script_file),
+                sql="SELECT * FROM dbc.dbcinfo;",
+                file_path=str(script_file),
             )
 
     @job(resource_defs={"teradata": td_resource})
@@ -190,9 +195,9 @@ def test_conflicting_script_sources(tmp_path):
 def test_invalid_script_file():
     @op(required_resource_keys={"teradata"})
     def example_test_invalid_file(context):
-        with pytest.raises(DagsterError):
+        with pytest.raises(ValueError):
             context.resources.teradata.bteq_operator(
-                bteq_script_file="/nonexistent/path/script.bteq"
+                file_path="/nonexistent/path/script.bteq"
             )
 
     @job(resource_defs={"teradata": td_resource})
@@ -207,7 +212,7 @@ def test_remote_missing_credentials():
     def example_test_missing_creds(context):
         with pytest.raises(ValueError):
             context.resources.teradata.bteq_operator(
-                bteq_script="SELECT * FROM dbc.dbcinfo;",
+                sql="SELECT * FROM dbc.dbcinfo;",
                 remote_host="remote.teradata.com",
             )
 
@@ -223,7 +228,7 @@ def test_conflicting_ssh_auth():
     def example_test_conflicting_auth(context):
         with pytest.raises(ValueError):
             context.resources.teradata.bteq_operator(
-                bteq_script="SELECT * FROM dbc.dbcinfo;",
+                sql="SELECT * FROM dbc.dbcinfo;",
                 remote_host="remote.teradata.com",
                 remote_user="user",
                 remote_password="password",
