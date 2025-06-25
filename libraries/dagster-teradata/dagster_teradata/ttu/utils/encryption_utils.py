@@ -22,6 +22,7 @@ import os
 import secrets
 import string
 import subprocess
+from datetime import datetime
 from typing import Optional
 
 from cryptography.fernet import Fernet
@@ -47,11 +48,11 @@ class SecureCredentialManager:
         """Load existing encryption key or generate new key with secure permissions."""
         try:
             if os.path.exists(self.key_file):
-                with open(self.key_file, 'rb') as f:
+                with open(self.key_file, "rb") as f:
                     self.key = f.read()
             else:
                 self.key = Fernet.generate_key()
-                with open(self.key_file, 'wb') as f:
+                with open(self.key_file, "wb") as f:
                     f.write(self.key)
                 os.chmod(self.key_file, 0o600)  # Restrict to owner-only permissions
         except Exception as e:
@@ -66,6 +67,7 @@ class SecureCredentialManager:
         """Decrypt encrypted string back to plaintext."""
         f = Fernet(self.key)
         return f.decrypt(encrypted_data.encode()).decode()
+
 
 def generate_random_password(length=12):
     # Define the character set: letters, digits, and special characters
@@ -95,7 +97,9 @@ def generate_encrypted_file_with_openssl(file_path: str, password: str, out_file
     subprocess.run(cmd, check=True)
 
 
-def decrypt_remote_file_to_string(ssh_client, remote_enc_file, password, bteq_command_str):
+def decrypt_remote_file_to_string(
+    ssh_client, remote_enc_file, password, bteq_command_str
+):
     # Run openssl decrypt command on remote machine
     quoted_password = shell_quote_single(password)
 
@@ -116,6 +120,7 @@ def shell_quote_single(s):
     # In shell, to include a single quote inside single quotes, close, add '\'' and reopen
     return "'" + s.replace("'", "'\\''") + "'"
 
+
 def store_credentials(self, host: str, user: str, password: str) -> bool:
     """Securely store SSH credentials in encrypted format."""
     cred_file = os.path.expanduser("~/.ssh/bteq_credentials.json")
@@ -124,21 +129,21 @@ def store_credentials(self, host: str, user: str, password: str) -> bool:
     creds = {}
     if os.path.exists(cred_file):
         try:
-            with open(cred_file, 'r') as f:
+            with open(cred_file, "r") as f:
                 creds = json.load(f)
         except Exception as e:
             self.log.error(f"Failed to read credentials: {e}")
 
     cred_key = f"{user}@{host}"
     creds[cred_key] = {
-        'username': user,
-        'password': self.cred_manager.encrypt(password),
-        'timestamp': datetime.utcnow().isoformat()
+        "username": user,
+        "password": self.cred_manager.encrypt(password),
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
     try:
         temp_file = f"{cred_file}.tmp"
-        with open(temp_file, 'w') as f:
+        with open(temp_file, "w") as f:
             json.dump(creds, f, indent=2)
         os.chmod(temp_file, 0o600)
         os.replace(temp_file, cred_file)
@@ -147,6 +152,7 @@ def store_credentials(self, host: str, user: str, password: str) -> bool:
         self.log.error(f"Failed to store credentials: {e}")
         return False
 
+
 def get_stored_credentials(self, host: str, user: str) -> Optional[dict]:
     """Retrieve stored SSH credentials if they exist."""
     cred_file = os.path.expanduser("~/.ssh/bteq_credentials.json")
@@ -154,7 +160,7 @@ def get_stored_credentials(self, host: str, user: str) -> Optional[dict]:
 
     try:
         if os.path.exists(cred_file):
-            with open(cred_file, 'r') as f:
+            with open(cred_file, "r") as f:
                 return json.load(f).get(cred_key)
     except Exception as e:
         self.log.warning(f"Failed to read credentials: {e}")

@@ -15,12 +15,13 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+
 from __future__ import annotations
 
 import os
 import shutil
 import stat
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from paramiko import SSHClient
@@ -31,7 +32,9 @@ from dagster import DagsterError
 def verify_bteq_installed():
     """Verify if BTEQ is installed and available in the system's PATH."""
     if shutil.which("bteq") is None:
-        raise DagsterError("BTEQ is not installed or not available in the system's PATH.")
+        raise DagsterError(
+            "BTEQ is not installed or not available in the system's PATH."
+        )
 
 
 def verify_bteq_installed_remote(ssh_client: SSHClient):
@@ -55,12 +58,12 @@ def transfer_file_sftp(ssh_client, local_path, remote_path):
 
 # We can not pass host details with bteq command when executing on remote machine. Instead, we will prepare .logon in bteq script itself to avoid risk of
 # exposing sensitive information
-def prepare_bteq_script_for_remote_execution(conn: dict[str, Any], sql: str) -> str:
+def prepare_bteq_script_for_remote_execution(teradata_connection_resource, sql) -> str:
     """Build a BTEQ script with necessary connection and session commands."""
     script_lines = []
-    host = conn["host"]
-    login = conn["login"]
-    password = conn["password"]
+    host = teradata_connection_resource.host
+    login = teradata_connection_resource.user
+    password = teradata_connection_resource.password
     script_lines.append(f" .LOGON {host}/{login},{password}")
     return _prepare_bteq_script(script_lines, sql)
 
@@ -106,20 +109,24 @@ def prepare_bteq_command_for_remote_execution(
     timeout_rc: int,
 ) -> str:
     """Prepare the BTEQ command with necessary parameters."""
-    bteq_core_cmd = _prepare_bteq_command(timeout, bteq_script_encoding, bteq_session_encoding, timeout_rc)
+    bteq_core_cmd = _prepare_bteq_command(
+        timeout, bteq_script_encoding, bteq_session_encoding, timeout_rc
+    )
     bteq_core_cmd.append('"')
     return " ".join(bteq_core_cmd)
 
 
 def prepare_bteq_command_for_local_execution(
-    teradata_connection_resource: TeradataResource,
+    teradata_connection_resource,
     timeout: int,
     bteq_script_encoding: str,
     bteq_session_encoding: str,
     timeout_rc: int,
 ) -> str:
     """Prepare the BTEQ command with necessary parameters."""
-    bteq_core_cmd = _prepare_bteq_command(timeout, bteq_script_encoding, bteq_session_encoding, timeout_rc)
+    bteq_core_cmd = _prepare_bteq_command(
+        timeout, bteq_script_encoding, bteq_session_encoding, timeout_rc
+    )
     host = teradata_connection_resource.host
     login = teradata_connection_resource.user
     password = teradata_connection_resource.password
@@ -161,7 +168,9 @@ def read_file(file_path: str, encoding: str = "UTF-8") -> str:
         return f.read()
 
 
-def is_valid_remote_bteq_script_file(ssh_client: SSHClient, remote_file_path: str, logger=None) -> bool:
+def is_valid_remote_bteq_script_file(
+    ssh_client: SSHClient, remote_file_path: str, logger=None
+) -> bool:
     """Check if the given remote file path is a valid BTEQ script file."""
     if remote_file_path:
         sftp_client = ssh_client.open_sftp()

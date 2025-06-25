@@ -16,7 +16,7 @@ from dagster._core.definitions.resource_definition import dagster_maintained_res
 from dagster._utils.cached_method import cached_method
 from pydantic import Field
 
-from dagster_teradata import constants
+from . import constants
 from dagster_teradata.ttu.bteq import Bteq
 from dagster_teradata.teradata_compute_cluster_manager import (
     TeradataComputeClusterManager,
@@ -227,29 +227,31 @@ class TeradataDagsterConnection:
                         return results
 
     def bteq_operator(
-            self,
-            sql: str = None,
-            file_path: str = None,
-            remote_host: Optional[str] = None,
-            remote_user: Optional[str] = None,
-            remote_password: Optional[str] = None,
-            ssh_key_path: Optional[str] = None,
-            remote_port: int = 22,
-            remote_working_dir: str = "/tmp",
-            bteq_script_encoding: Optional[str] = 'utf-8',
-            bteq_session_encoding: Optional[str] = 'ASCII',
-            bteq_quit_rc: Union[int, List[int]] = 0,
-            timeout: int | Literal[600] = 600,  # Default to 10 minutes
-            timeout_rc: int | None = None,
-
+        self,
+        sql: str = None,
+        file_path: str = None,
+        remote_host: Optional[str] = None,
+        remote_user: Optional[str] = None,
+        remote_password: Optional[str] = None,
+        ssh_key_path: Optional[str] = None,
+        remote_port: int = 22,
+        remote_working_dir: str = "/tmp",
+        bteq_script_encoding: Optional[str] = "utf-8",
+        bteq_session_encoding: Optional[str] = "ASCII",
+        bteq_quit_rc: Union[int, List[int]] = 0,
+        timeout: int | Literal[600] = 600,  # Default to 10 minutes
+        timeout_rc: int | None = None,
     ) -> Optional[str]:
-
         # Validate input
         if not sql and not file_path:
-            raise ValueError("BteqOperator requires either the 'sql' or 'file_path' parameter. Both are missing.")
+            raise ValueError(
+                "BteqOperator requires either the 'sql' or 'file_path' parameter. Both are missing."
+            )
 
         if sum(bool(x) for x in [sql, file_path]) > 1:
-            raise ValueError("BteqOperator requires either the 'sql' or 'file_path' parameter but not both.")
+            raise ValueError(
+                "BteqOperator requires either the 'sql' or 'file_path' parameter but not both."
+            )
 
         if remote_host:
             if not remote_user:
@@ -276,7 +278,7 @@ class TeradataDagsterConnection:
                 temp_file_read_encoding = "UTF-16"
             bteq_script_encoding = ""
         elif bteq_session_encoding == "UTF8" and (
-                not bteq_script_encoding or bteq_script_encoding == "ASCII"
+            not bteq_script_encoding or bteq_script_encoding == "ASCII"
         ):
             bteq_script_encoding = "UTF8"
         elif bteq_session_encoding == "UTF16":
@@ -299,7 +301,7 @@ class TeradataDagsterConnection:
             remote_working_dir=remote_working_dir,
             bteq_script_encoding=bteq_script_encoding,
             bteq_session_encoding=bteq_session_encoding,
-            bteq_quit_rc = bteq_quit_rc,
+            bteq_quit_rc=bteq_quit_rc,
             timeout=timeout,
             timeout_rc=timeout_rc,
             temp_file_read_encoding=temp_file_read_encoding,

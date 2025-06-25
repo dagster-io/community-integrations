@@ -1,24 +1,26 @@
-import os
-
 import pytest
 from dagster import job, op, DagsterError
 from dagster_teradata import TeradataResource
 
 td_resource = TeradataResource(
-    host=os.getenv("TERADATA_HOST"),
-    user=os.getenv("TERADATA_USER"),
-    password=os.getenv("TERADATA_PASSWORD"),
-    database=os.getenv("TERADATA_DATABASE"),
+    # host=os.getenv("TERADATA_HOST"),
+    # user=os.getenv("TERADATA_USER"),
+    # password=os.getenv("TERADATA_PASSWORD"),
+    # database=os.getenv("TERADATA_DATABASE"),
+    host="10.27.170.246",
+    user="mt255026",
+    password="mt255026",
 )
+
 
 def test_local_bteq_script_execution():
     @op(required_resource_keys={"teradata"})
     def example_test_local_script(context):
         result = context.resources.teradata.bteq_operator(
-            bteq_script="SELECT * FROM dbc.dbcinfo;"
+            sql="SELECT * FROM dbc.dbcinfo;"
         )
         context.log.info(result)
-        assert result is None
+        assert result == 0
 
     @job(resource_defs={"teradata": td_resource})
     def example_job():
@@ -26,15 +28,15 @@ def test_local_bteq_script_execution():
 
     example_job.execute_in_process(resources={"teradata": td_resource})
 
+
 def test_local_expected_return_code():
     @op(required_resource_keys={"teradata"})
     def example_test_local_expected_return_code(context):
         result = context.resources.teradata.bteq_operator(
-            bteq_script="delete from abcdefgh;",
-            expected_return_code= 8
+            sql="delete from abcdefgh;", bteq_quit_rc=8
         )
         context.log.info(result)
-        assert result is None
+        assert result == 8
 
     @job(resource_defs={"teradata": td_resource})
     def example_job():
@@ -47,14 +49,14 @@ def test_remote_expected_return_code():
     @op(required_resource_keys={"teradata"})
     def example_test_local_expected_return_code(context):
         result = context.resources.teradata.bteq_operator(
-            bteq_script="delete from abcdefgh;",
-            remote_host="host",
-            remote_user="username",
-            remote_password="password",
-            expected_return_code=8
+            sql="delete from abcdefgh;",
+            remote_host="10.27.170.246",
+            remote_user="root",
+            remote_password="Tdch@ties123",
+            bteq_quit_rc=8,
         )
         context.log.info(result)
-        assert result is None
+        assert result == 8
 
     @job(resource_defs={"teradata": td_resource})
     def example_job():
@@ -67,11 +69,11 @@ def test_remote_expected_multiple_return_code():
     @op(required_resource_keys={"teradata"})
     def example_test_local_expected_multiple_return_code(context):
         result = context.resources.teradata.bteq_operator(
-            bteq_script="delete from abcdefgh;",
+            sql="delete from abcdefgh;",
             remote_host="host",
             remote_user="username",
             remote_password="password",
-            expected_return_code= [0,8]
+            bteq_quit_rc=[0, 8],
         )
         context.log.info(result)
         assert result is None
@@ -81,6 +83,7 @@ def test_remote_expected_multiple_return_code():
         example_test_local_expected_multiple_return_code()
 
     example_job.execute_in_process(resources={"teradata": td_resource})
+
 
 def test_local_bteq_file_execution(tmp_path):
     script_file = tmp_path / "script.bteq"
@@ -108,7 +111,7 @@ def test_remote_bteq_password_auth():
             bteq_script="SELECT * FROM dbc.dbcinfo;",
             remote_host="host",
             remote_user="username",
-            remote_password="password"
+            remote_password="password",
         )
         context.log.info(result)
         assert result is None
@@ -127,7 +130,7 @@ def test_remote_bteq_ssh_key_auth():
             bteq_script="SELECT * FROM dbc.dbcinfo;",
             remote_host="host",
             remote_user="username",
-            ssh_key_path="c:\\users\\<username>\\.ssh\\id_rsa"
+            ssh_key_path="c:\\users\\<username>\\.ssh\\id_rsa",
         )
         context.log.info(result)
         assert result is None
@@ -143,8 +146,7 @@ def test_bteq_xcom_push():
     @op(required_resource_keys={"teradata"})
     def example_test_xcom_push(context):
         result = context.resources.teradata.bteq_operator(
-            bteq_script="SELECT * FROM dbc.dbcinfo;",
-            xcom_push_flag=True
+            bteq_script="SELECT * FROM dbc.dbcinfo;", xcom_push_flag=True
         )
         context.log.info(result)
         assert isinstance(result, str)
@@ -178,7 +180,7 @@ def test_conflicting_script_sources(tmp_path):
         with pytest.raises(ValueError):
             context.resources.teradata.bteq_operator(
                 bteq_script="SELECT * FROM dbc.dbcinfo;",
-                bteq_script_file=str(script_file)
+                bteq_script_file=str(script_file),
             )
 
     @job(resource_defs={"teradata": td_resource})
@@ -209,7 +211,7 @@ def test_remote_missing_credentials():
         with pytest.raises(ValueError):
             context.resources.teradata.bteq_operator(
                 bteq_script="SELECT * FROM dbc.dbcinfo;",
-                remote_host="remote.teradata.com"
+                remote_host="remote.teradata.com",
             )
 
     @job(resource_defs={"teradata": td_resource})
@@ -217,6 +219,7 @@ def test_remote_missing_credentials():
         example_test_missing_creds()
 
     example_job.execute_in_process(resources={"teradata": td_resource})
+
 
 def test_conflicting_ssh_auth():
     @op(required_resource_keys={"teradata"})
@@ -227,7 +230,7 @@ def test_conflicting_ssh_auth():
                 remote_host="remote.teradata.com",
                 remote_user="user",
                 remote_password="password",
-                ssh_key_path="/path/to/ssh_key"
+                ssh_key_path="/path/to/ssh_key",
             )
 
     @job(resource_defs={"teradata": td_resource})
