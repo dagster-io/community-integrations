@@ -228,8 +228,8 @@ class TeradataDagsterConnection:
 
     def bteq_operator(
         self,
-        sql: str = None,
-        file_path: str = None,
+        sql: Optional[str] = None,
+        file_path: Optional[str] = None,
         remote_host: Optional[str] = None,
         remote_user: Optional[str] = None,
         remote_password: Optional[str] = None,

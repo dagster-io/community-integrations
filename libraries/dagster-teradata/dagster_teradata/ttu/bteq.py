@@ -76,8 +76,8 @@ class Bteq:
 
     def bteq_operator(
         self,
-        sql: str = None,
-        file_path: str = None,
+        sql: Optional[str] = None,
+        file_path: Optional[str] = None,
         remote_host: Optional[str] = None,
         remote_user: Optional[str] = None,
         remote_password: Optional[str] = None,
@@ -245,9 +245,7 @@ class Bteq:
         ssh_key_path: str | None,
         remote_port: int = 22,
     ) -> int | None:
-        with (
-            self.preferred_temp_directory() as tmp_dir,
-        ):
+        with self.preferred_temp_directory() as tmp_dir:
             file_path = os.path.join(tmp_dir, "bteq_script.txt")
             with open(
                 file_path, "w", encoding=str(temp_file_read_encoding or "UTF-8")
