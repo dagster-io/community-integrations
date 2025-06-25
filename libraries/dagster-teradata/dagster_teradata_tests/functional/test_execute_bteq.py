@@ -1,5 +1,3 @@
-import os
-
 import pytest
 from dagster import job, op, DagsterError
 from dagster_teradata import TeradataResource
@@ -63,6 +61,7 @@ def test_remote_expected_return_code():
 
     example_job.execute_in_process(resources={"teradata": td_resource})
 
+
 def test_remote_file_path():
     @op(required_resource_keys={"teradata"})
     def example_test_local_expected_return_code(context):
@@ -81,6 +80,7 @@ def test_remote_file_path():
         example_test_local_expected_return_code()
 
     example_job.execute_in_process(resources={"teradata": td_resource})
+
 
 def test_remote_expected_multiple_return_code():
     @op(required_resource_keys={"teradata"})

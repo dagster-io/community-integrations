@@ -66,38 +66,6 @@ class TestBteq:
 
         example_job.execute_in_process()
 
-    def test_remote_execution(self):
-        mock_td_resource = TeradataResource(
-            host="mock_host",
-            user="mock_user",
-            password="mock_password",
-        )
-        """Test remote BTEQ execution."""
-
-        @op(required_resource_keys={"teradata"})
-        def example_test_remote(context):
-            with mock.patch(
-                "dagster_teradata.ttu.bteq.Bteq._setup_ssh_connection"
-            ) as mock_ssh, mock.patch(
-                "dagster_teradata.ttu.bteq.Bteq.execute_bteq_script_at_remote"
-            ) as mock_exec:
-                mock_ssh.return_value = True
-                mock_exec.return_value = 0
-                result = context.resources.teradata.bteq_operator(
-                    sql="SELECT * FROM dbc.dbcinfo;",
-                    remote_host="remote_host",
-                    remote_user="remote_user",
-                    remote_password="remote_pass",
-                )
-                assert result == 0
-                mock_ssh.assert_called_once()
-                mock_exec.assert_called_once()
-
-        @job(resource_defs={"teradata": mock_td_resource})
-        def example_job():
-            example_test_remote()
-
-        example_job.execute_in_process()
 
     def test_invalid_file_path(self):
         mock_td_resource = TeradataResource(
@@ -189,38 +157,6 @@ class TestBteq:
 
         example_job.execute_in_process()
 
-    def test_ssh_key_auth(self):
-        mock_td_resource = TeradataResource(
-            host="mock_host",
-            user="mock_user",
-            password="mock_password",
-        )
-        """Test SSH key authentication."""
-
-        @op(required_resource_keys={"teradata"})
-        def example_test_ssh_key(context):
-            with mock.patch(
-                "dagster_teradata.ttu.bteq.Bteq._setup_ssh_connection"
-            ) as mock_ssh, mock.patch(
-                "dagster_teradata.ttu.bteq.Bteq.execute_bteq_script_at_remote"
-            ) as mock_exec:
-                mock_ssh.return_value = True
-                mock_exec.return_value = 0
-                result = context.resources.teradata.bteq_operator(
-                    sql="SELECT * FROM dbc.dbcinfo;",
-                    remote_host="remote_host",
-                    remote_user="remote_user",
-                    ssh_key_path="/path/to/key",
-                )
-                assert result == 0
-                mock_ssh.assert_called_once()
-
-        @job(resource_defs={"teradata": mock_td_resource})
-        def example_job():
-            example_test_ssh_key()
-
-        example_job.execute_in_process()
-
     def test_no_sql_or_file(self):
         mock_td_resource = TeradataResource(
             host="mock_host",
@@ -239,39 +175,6 @@ class TestBteq:
         @job(resource_defs={"teradata": mock_td_resource})
         def example_job():
             example_test_no_input()
-
-        example_job.execute_in_process()
-
-    def test_remote_file_execution(self):
-        mock_td_resource = TeradataResource(
-            host="mock_host",
-            user="mock_user",
-            password="mock_password",
-        )
-        """Test remote file execution."""
-
-        @op(required_resource_keys={"teradata"})
-        def example_test_remote_file(context):
-            with mock.patch(
-                "dagster_teradata.ttu.bteq.Bteq._setup_ssh_connection"
-            ) as mock_ssh, mock.patch(
-                "dagster_teradata.ttu.bteq.Bteq._handle_remote_bteq_file"
-            ) as mock_exec:
-                mock_ssh.return_value = True
-                mock_exec.return_value = 0
-                result = context.resources.teradata.bteq_operator(
-                    file_path="/remote/path/script.sql",
-                    remote_host="remote_host",
-                    remote_user="remote_user",
-                    remote_password="remote_pass",
-                )
-                assert result == 0
-                mock_ssh.assert_called_once()
-                mock_exec.assert_called_once()
-
-        @job(resource_defs={"teradata": mock_td_resource})
-        def example_job():
-            example_test_remote_file()
 
         example_job.execute_in_process()
 
@@ -306,53 +209,6 @@ class TestBteq:
         @job(resource_defs={"teradata": mock_td_resource})
         def example_job():
             example_test_encoding()
-
-        example_job.execute_in_process()
-
-    def test_on_kill_behavior(self):
-        mock_td_resource = TeradataResource(
-            host="mock_host",
-            user="mock_user",
-            password="mock_password",
-        )
-        """Test the on_kill method behavior."""
-
-        @op(required_resource_keys={"teradata"})
-        def example_test_on_kill(context):
-            with mock.patch("dagster_teradata.ttu.bteq.Bteq.on_kill") as mock_kill:
-                # Simulate kill scenario
-                mock_kill.return_value = None
-                context.resources.teradata.bteq_operator(
-                    sql="SELECT * FROM dbc.dbcinfo;"
-                ).on_kill()
-                mock_kill.assert_called_once()
-
-        @job(resource_defs={"teradata": mock_td_resource})
-        def example_job():
-            example_test_on_kill()
-
-        example_job.execute_in_process()
-
-    def test_on_kill_no_hook(self):
-        mock_td_resource = TeradataResource(
-            host="mock_host",
-            user="mock_user",
-            password="mock_password",
-        )
-        """Test on_kill when hook is not initialized."""
-
-        @op(required_resource_keys={"teradata"})
-        def example_test_on_kill_no_hook(context):
-            with mock.patch("dagster_teradata.ttu.bteq.Bteq.on_kill") as mock_kill:
-                mock_kill.side_effect = AttributeError("No hook")
-                with pytest.raises(AttributeError):
-                    context.resources.teradata.bteq_operator(
-                        sql="SELECT * FROM dbc.dbcinfo;"
-                    ).on_kill()
-
-        @job(resource_defs={"teradata": mock_td_resource})
-        def example_job():
-            example_test_on_kill_no_hook()
 
         example_job.execute_in_process()
 

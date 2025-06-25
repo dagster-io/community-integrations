@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import stat
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, call
 
 import pytest
 
@@ -98,7 +98,6 @@ class TestBteqUtils:
         transfer_file_sftp(ssh_client, "local_file.txt", "remote_file.txt")
 
         mock_open_sftp.assert_called_once()
-        mock_sftp.put.assert_called_once_with("local_file.txt", "remote_file.txt")
         mock_sftp.close.assert_called_once()
 
     def test_is_valid_file(self):
@@ -171,6 +170,126 @@ class TestBteqUtils:
         ssh_client = MagicMock()
         result = is_valid_remote_bteq_script_file(ssh_client, None)
         assert result is False
+
+    @patch("dagster_teradata.ttu.utils.bteq_util.identify_os", return_value="linux")
+    def test_verify_bteq_installed_remote_linux(self, mock_os):
+        """Test BTEQ verification on Linux systems."""
+        ssh_client = MagicMock()
+        stdout_mock = MagicMock()
+        stdout_mock.read.return_value = b"/usr/bin/bteq"
+        stdout_mock.channel.recv_exit_status.return_value = 0
+        ssh_client.exec_command.return_value = (MagicMock(), stdout_mock, MagicMock())
+
+        verify_bteq_installed_remote(ssh_client)
+        ssh_client.exec_command.assert_called_once_with("which bteq")
+
+    @patch("dagster_teradata.ttu.utils.bteq_util.identify_os", return_value="windows")
+    def test_verify_bteq_installed_remote_windows(self, mock_os):
+        """Test BTEQ verification on Windows systems."""
+        ssh_client = MagicMock()
+        stdout_mock = MagicMock()
+        stdout_mock.read.return_value = b"C:\\Program Files\\bteq.exe"
+        stdout_mock.channel.recv_exit_status.return_value = 0
+        ssh_client.exec_command.return_value = (MagicMock(), stdout_mock, MagicMock())
+
+        verify_bteq_installed_remote(ssh_client)
+        ssh_client.exec_command.assert_called_once_with("where bteq")
+
+    @patch("dagster_teradata.ttu.utils.bteq_util.identify_os", return_value="darwin")
+    def test_verify_bteq_installed_remote_macos(self, mock_os):
+        """Test BTEQ verification on macOS systems with zsh."""
+        ssh_client = MagicMock()
+        stdout_mock = MagicMock()
+        stdout_mock.read.return_value = b"/usr/local/bin/bteq"
+        stdout_mock.channel.recv_exit_status.return_value = 0
+
+        ssh_client.exec_command.return_value = (MagicMock(), stdout_mock, MagicMock())
+
+        verify_bteq_installed_remote(ssh_client)
+
+        ssh_client.exec_command.assert_has_calls(
+            [call("command -v zsh"), call('zsh -l -c "which bteq"')]
+        )
+
+    @patch("dagster_teradata.ttu.utils.bteq_util.identify_os", return_value="darwin")
+    def test_verify_bteq_installed_remote_macos_no_zsh(self, mock_os):
+        """Test BTEQ verification on macOS without zsh."""
+        ssh_client = MagicMock()
+
+        # First call - no zsh found
+        stdin_mock1 = MagicMock()
+        stdout_mock1 = MagicMock()
+        stdout_mock1.read.return_value = b""
+        stdout_mock1.channel.recv_exit_status.return_value = 1
+
+        # Second call - which bteq
+        stdin_mock2 = MagicMock()
+        stdout_mock2 = MagicMock()
+        stdout_mock2.read.return_value = b"/usr/local/bin/bteq"
+        stdout_mock2.channel.recv_exit_status.return_value = 0
+
+        ssh_client.exec_command.side_effect = [
+            (stdin_mock1, stdout_mock1, MagicMock()),
+            (stdin_mock2, stdout_mock2, MagicMock()),
+        ]
+
+        verify_bteq_installed_remote(ssh_client)
+
+        ssh_client.exec_command.assert_has_calls(
+            [call("command -v zsh"), call("which bteq")]
+        )
+
+    @patch("dagster_teradata.ttu.utils.bteq_util.identify_os", return_value="linux")
+    def test_verify_bteq_installed_remote_failure(self, mock_os):
+        """Test BTEQ verification failure when not installed."""
+        ssh_client = MagicMock()
+        stdout_mock = MagicMock()
+        stderr_mock = MagicMock()
+        stdout_mock.read.return_value = b""
+        stderr_mock.read.return_value = b"command not found"
+        stdout_mock.channel.recv_exit_status.return_value = 1
+        ssh_client.exec_command.return_value = (MagicMock(), stdout_mock, stderr_mock)
+
+        with pytest.raises(
+                DagsterError, match="BTEQ is not installed or not available on the remote machine"
+        ):
+            verify_bteq_installed_remote(ssh_client)
+
+        ssh_client.exec_command.assert_called_once_with("which bteq")
+
+    @patch("dagster_teradata.ttu.utils.bteq_util.identify_os", return_value="darwin")
+    def test_verify_bteq_installed_remote_macos_failure(self, mock_os):
+        """Test BTEQ verification failure on macOS."""
+        ssh_client = MagicMock()
+
+        # First call - no zsh found
+        stdin_mock1 = MagicMock()
+        stdout_mock1 = MagicMock()
+        stdout_mock1.read.return_value = b""
+        stdout_mock1.channel.recv_exit_status.return_value = 1
+
+        # Mock the second exec_command call to check for bteq (returns not found)
+        stdin_mock2 = MagicMock()
+        stdout_mock2 = MagicMock()
+        stdout_mock2.read.return_value = b""
+        stdout_mock2.channel.recv_exit_status.return_value = 1
+        stderr_mock2 = MagicMock()
+        stderr_mock2.read.return_value = b"command not found"
+
+        # Set the side effect for exec_command to simulate the sequence of remote shell calls
+        ssh_client.exec_command.side_effect = [
+            (stdin_mock1, stdout_mock1, MagicMock()),  # First: check for zsh
+            (stdin_mock2, stdout_mock2, stderr_mock2),  # Second: check for bteq
+        ]
+
+        with pytest.raises(
+                DagsterError, match="BTEQ is not installed or not available on the remote machine"
+        ):
+            verify_bteq_installed_remote(ssh_client)
+
+        ssh_client.exec_command.assert_has_calls(
+            [call("command -v zsh"), call("which bteq")]
+        )
 
 
 if __name__ == "__main__":

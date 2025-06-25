@@ -36,11 +36,22 @@ from dagster_teradata.ttu.utils.encryption_utils import (
 
 class Bteq:
     """
-    Main BTEQ operator class with enhanced features:
-    - Directory processing
-    - Force login from script
-    - Secure credential handling
-    - Remote execution via SSH
+    Main BTEQ operator class for executing Teradata BTEQ commands either locally or remotely.
+
+    Features:
+    - Local and remote execution via SSH
+    - Secure credential handling and encryption
+    - File-based and direct SQL execution
+    - Timeout and error handling
+    - Encoding support (ASCII, UTF-8, UTF-16)
+    - Temporary file management
+
+    Attributes:
+        connection: Legacy connection object (maintained for compatibility)
+        teradata_connection_resource: Contains Teradata connection parameters
+        log: Logger instance for operation logging
+        cred_manager: SecureCredentialManager instance for encryption/decryption
+        ssh_client: Active SSH connection for remote execution (None for local)
     """
 
     def __init__(self, connection, teradata_connection_resource, log):
@@ -50,6 +61,7 @@ class Bteq:
         Args:
             connection: Legacy connection object (maintained for compatibility)
             teradata_connection_resource: Contains Teradata connection parameters
+                including host, username, password
             log: Logger instance for operation logging
         """
         self.remote_port = None
@@ -72,8 +84,6 @@ class Bteq:
         self.cred_manager = SecureCredentialManager()
         self.ssh_client = None  # Will hold active SSH connection if remote execution
 
-    # Core Methods ============================================================
-
     def bteq_operator(
         self,
         sql: Optional[str] = None,
@@ -87,10 +97,36 @@ class Bteq:
         bteq_script_encoding: Optional[str] = "utf-8",
         bteq_session_encoding: Optional[str] = "ASCII",
         bteq_quit_rc: Union[int, List[int]] = 0,
-        timeout: int | Literal[600] = 600,  # Default to 10 minutes
+        timeout: int | Literal[600] = 600,
         timeout_rc: int | None = None,
         temp_file_read_encoding: Optional[str] = "UTF-8",
     ) -> int | None:
+        """
+        Execute BTEQ commands either locally or remotely.
+
+        Args:
+            sql: SQL commands to execute directly
+            file_path: Path to file containing SQL commands
+            remote_host: Hostname for remote execution (None for local)
+            remote_user: Username for remote authentication
+            remote_password: Password for remote authentication
+            ssh_key_path: Path to SSH private key for authentication
+            remote_port: SSH port (default: 22)
+            remote_working_dir: Remote working directory (default: '/tmp')
+            bteq_script_encoding: Encoding for BTEQ script file
+            bteq_session_encoding: Encoding for BTEQ session
+            bteq_quit_rc: Acceptable return codes (default: 0)
+            timeout: Maximum execution time in seconds (default: 600)
+            timeout_rc: Specific return code for timeout cases
+            temp_file_read_encoding: Encoding for reading temporary files
+
+        Returns:
+            int: Exit status code from BTEQ execution, or None if no execution occurred
+
+        Raises:
+            ValueError: For invalid input parameters
+            DagsterError: For execution failures or timeouts
+        """
         self.sql = sql
         self.file_path = file_path
         self.remote_host = remote_host
@@ -106,16 +142,10 @@ class Bteq:
         self.timeout_rc = timeout_rc
         self.temp_file_read_encoding = temp_file_read_encoding
 
-        """Execute the BTEQ script either in local machine or on remote host based on ssh_conn_id."""
-        # Remote execution
-        if not self.remote_working_dir:
-            self.remote_working_dir = "/tmp"
-        # Handling execution on local:
+        # Local execution
         if not self.remote_host:
             if self.sql:
-                bteq_script = prepare_bteq_script_for_local_execution(
-                    sql=self.sql,
-                )
+                bteq_script = prepare_bteq_script_for_local_execution(sql=self.sql)
                 self.log.info("Executing BTEQ script with SQL content: %s", bteq_script)
                 return self.execute_bteq_script(
                     bteq_script,
@@ -142,9 +172,9 @@ class Bteq:
                         errmsg = f"The provided file '{self.file_path}' encoding is different from the specified BTEQ I/O encoding '{self.bteq_script_encoding}'."
                     raise ValueError(errmsg) from e
                 return self._handle_local_bteq_file(file_path=self.file_path)
-        # Execution on Remote machine
+
+        # Remote execution
         elif self.remote_host:
-            # When sql statement is provided as input through sql parameter, Preparing the bteq script
             if self.sql:
                 bteq_script = prepare_bteq_script_for_remote_execution(
                     teradata_connection_resource=self.teradata_connection_resource,
@@ -176,7 +206,7 @@ class Bteq:
                 ):
                     raise DagsterError(
                         "Failed to establish SSH connection. Please check the provided credentials."
-                )
+                    )
                 if self.file_path and is_valid_remote_bteq_script_file(
                     self.ssh_client, self.file_path
                 ):
@@ -209,11 +239,32 @@ class Bteq:
         ssh_key_path: str | None = None,
         remote_port: int = 22,
     ) -> int | None:
-        """Execute the BTEQ script either in local machine or on remote host based on ssh_conn_id."""
-        # Remote execution
-        if self.remote_host:
-            # Write script to local temp file
-            # Encrypt the file locally
+        """
+        Execute BTEQ script either locally or remotely.
+
+        Args:
+            bteq_script: The BTEQ script content to execute
+            remote_working_dir: Working directory for remote execution
+            bteq_script_encoding: Encoding for BTEQ script file
+            timeout: Maximum execution time in seconds
+            timeout_rc: Return code for timeout cases
+            bteq_session_encoding: Encoding for BTEQ session
+            bteq_quit_rc: Acceptable return codes
+            temp_file_read_encoding: Encoding for reading temporary files
+            remote_host: Remote hostname (None for local)
+            remote_user: Remote username
+            remote_password: Remote password
+            ssh_key_path: Path to SSH private key
+            remote_port: SSH port
+
+        Returns:
+            int: Exit status code from BTEQ execution
+
+        Note:
+            Delegates to execute_bteq_script_at_local or execute_bteq_script_at_remote
+            based on whether remote_host is specified
+        """
+        if remote_host:
             return self.execute_bteq_script_at_remote(
                 bteq_script=bteq_script,
                 remote_working_dir=remote_working_dir,
@@ -255,6 +306,30 @@ class Bteq:
         ssh_key_path: str | None,
         remote_port: int = 22,
     ) -> int | None:
+        """
+        Execute BTEQ script on a remote machine via SSH.
+
+        Args:
+            bteq_script: The BTEQ script content to execute
+            remote_working_dir: Working directory on remote machine
+            bteq_script_encoding: Encoding for BTEQ script file
+            timeout: Maximum execution time in seconds
+            timeout_rc: Return code for timeout cases
+            bteq_session_encoding: Encoding for BTEQ session
+            bteq_quit_rc: Acceptable return codes
+            temp_file_read_encoding: Encoding for reading temporary files
+            remote_host: Remote hostname
+            remote_user: Remote username
+            remote_password: Remote password
+            ssh_key_path: Path to SSH private key
+            remote_port: SSH port
+
+        Returns:
+            int: Exit status code from BTEQ execution
+
+        Raises:
+            DagsterError: For SSH failures, execution errors, or timeouts
+        """
         with self.preferred_temp_directory() as tmp_dir:
             file_path = os.path.join(tmp_dir, "bteq_script.txt")
             with open(
@@ -293,6 +368,31 @@ class Bteq:
         ssh_key_path: str | None = None,
         remote_port: int = 22,
     ) -> int | None:
+        """
+        Transfer and execute BTEQ script on remote machine with encryption.
+
+        Args:
+            file_path: Local path to BTEQ script file
+            remote_working_dir: Remote working directory
+            bteq_script_encoding: Encoding for BTEQ script file
+            timeout: Maximum execution time in seconds
+            timeout_rc: Return code for timeout cases
+            bteq_quit_rc: Acceptable return codes
+            bteq_session_encoding: Encoding for BTEQ session
+            tmp_dir: Local temporary directory
+            remote_host: Remote hostname
+            remote_user: Remote username
+            remote_password: Remote password
+            ssh_key_path: Path to SSH private key
+            remote_port: SSH port
+
+        Returns:
+            int: Exit status code from BTEQ execution
+
+        Note:
+            - Uses OpenSSL AES-256-CBC encryption for secure file transfer
+            - Automatically cleans up temporary files
+        """
         encrypted_file_path = None
         remote_encrypted_path = None
         try:
@@ -402,6 +502,24 @@ class Bteq:
         bteq_session_encoding: str | None,
         temp_file_read_encoding: str | None,
     ) -> int | None:
+        """
+        Execute BTEQ script on local machine.
+
+        Args:
+            bteq_script: The BTEQ script content to execute
+            bteq_script_encoding: Encoding for BTEQ script file
+            timeout: Maximum execution time in seconds
+            timeout_rc: Return code for timeout cases
+            bteq_quit_rc: Acceptable return codes
+            bteq_session_encoding: Encoding for BTEQ session
+            temp_file_read_encoding: Encoding for reading temporary files
+
+        Returns:
+            int: Exit status code from BTEQ execution
+
+        Raises:
+            DagsterError: For execution failures or timeouts
+        """
         verify_bteq_installed()
         bteq_command_str = prepare_bteq_command_for_local_execution(
             teradata_connection_resource=self.teradata_connection_resource,
@@ -464,7 +582,7 @@ class Bteq:
         return process.returncode
 
     def contains_template(parameter_value):
-        # Check if the parameter contains Jinja templating syntax
+        """Check if the parameter contains Jinja templating syntax."""
         return "{{" in parameter_value and "}}" in parameter_value
 
     def on_kill(self):
@@ -484,11 +602,23 @@ class Bteq:
                 self.log.error("Failed to terminate subprocess: %s", str(e))
 
     def get_airflow_home_dir(self) -> str:
-        """Get the AIRFLOW_HOME directory."""
+        """Get the AIRFLOW_HOME directory from environment variables."""
         return os.environ.get("AIRFLOW_HOME", "~/airflow")
 
     @contextmanager
     def preferred_temp_directory(self, prefix="bteq_"):
+        """
+        Context manager for creating a temporary directory.
+
+        Args:
+            prefix: Prefix for the temporary directory name
+
+        Yields:
+            str: Path to the created temporary directory
+
+        Note:
+            Falls back to AIRFLOW_HOME if system temp directory is not usable
+        """
         try:
             temp_dir = tempfile.gettempdir()
             if not os.path.isdir(temp_dir) or not os.access(temp_dir, os.W_OK):
@@ -502,6 +632,19 @@ class Bteq:
     def _handle_remote_bteq_file(
         self, ssh_client: SSHClient, file_path: str | None
     ) -> int | None:
+        """
+        Handle execution of a remote BTEQ script file.
+
+        Args:
+            ssh_client: Active SSH connection
+            file_path: Path to remote BTEQ script file
+
+        Returns:
+            int: Exit status code from BTEQ execution
+
+        Raises:
+            ValueError: For invalid file path
+        """
         if file_path:
             with ssh_client:
                 sftp = ssh_client.open_sftp()
@@ -512,9 +655,6 @@ class Bteq:
                         )
                 finally:
                     sftp.close()
-                # rendered_content = original_content
-                # if self.contains_template(original_content):
-                #     rendered_content = self.render_template(original_content, context)
                 bteq_script = prepare_bteq_script_for_remote_execution(
                     teradata_connection_resource=self.teradata_connection_resource,
                     sql=file_content,
@@ -541,14 +681,19 @@ class Bteq:
             )
 
     def _handle_local_bteq_file(self, file_path: str) -> int | None:
+        """
+        Handle execution of a local BTEQ script file.
+
+        Args:
+            file_path: Path to local BTEQ script file
+
+        Returns:
+            int: Exit status code from BTEQ execution, or None if file is invalid
+        """
         if file_path and is_valid_file(file_path):
             file_content = read_file(
                 file_path, encoding=str(self.temp_file_read_encoding or "UTF-8")
             )
-            # Manually render using operator's context
-            # rendered_content = file_content
-            # if self.contains_template(file_content):
-            #     rendered_content = self.render_template(file_content, context)
             bteq_script = prepare_bteq_script_for_local_execution(
                 sql=file_content,
             )
@@ -574,7 +719,27 @@ class Bteq:
         key_path: Optional[str],
         port: int,
     ) -> bool:
-        """Establish SSH connection using either password or key auth."""
+        """
+        Establish SSH connection using either password or key authentication.
+
+        Args:
+            host: Remote hostname
+            user: Remote username
+            password: Remote password (optional if key_path provided)
+            key_path: Path to SSH private key (optional if password provided)
+            port: SSH port
+
+        Returns:
+            bool: True if connection succeeded, False otherwise
+
+        Raises:
+            DagsterError: If connection fails
+
+        Note:
+            - Tries stored credentials if no password provided
+            - Prompts for password if no credentials available
+            - Stores new credentials if successfully authenticated
+        """
         try:
             self.ssh_client = paramiko.SSHClient()
             self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
