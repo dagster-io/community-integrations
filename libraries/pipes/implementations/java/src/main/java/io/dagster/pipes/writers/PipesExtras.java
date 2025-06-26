@@ -11,7 +11,7 @@ public class PipesExtras {
         this.extras = new HashMap<>();
     }
 
-    public PipesExtras(Map<String, Object> extras) {
+    public PipesExtras(final Map<String, Object> extras) {
         this.extras = extras != null ? extras : new HashMap<>();
     }
 
@@ -19,11 +19,11 @@ public class PipesExtras {
         return extras;
     }
 
-    public void addExtra(String key, Object value) {
+    public void addExtra(final String key, final Object value) {
         this.extras.put(key, value);
     }
 
-    public Object getExtra(String key) {
+    public Object getExtra(final String key) {
         return this.extras.get(key);
     }
 }

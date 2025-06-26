@@ -1,17 +1,41 @@
 package io.dagster.pipes;
 
-import java.util.*;
-import java.util.logging.Logger;
-
-import io.dagster.pipes.data.*;
+import io.dagster.pipes.data.PipesAssetCheckSeverity;
+import io.dagster.pipes.data.PipesContextData;
+import io.dagster.pipes.data.PipesException;
+import io.dagster.pipes.data.PipesMetadata;
 import io.dagster.pipes.loaders.PipesContextLoader;
 import io.dagster.pipes.loaders.PipesParamsLoader;
 import io.dagster.pipes.logger.PipesLogger;
 import io.dagster.pipes.utils.PipesUtils;
 import io.dagster.pipes.writers.PipesMessageWriter;
 import io.dagster.pipes.writers.PipesMessageWriterChannel;
-import io.dagster.types.*;
+import io.dagster.types.Method;
+import io.dagster.types.PartitionKeyRange;
+import io.dagster.types.PartitionTimeWindow;
+import io.dagster.types.ProvenanceByAssetKey;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.logging.Logger;
 
+/**
+ * Provides execution context and communication mechanisms for Dagster pipes.
+ * This singleton class manages asset materialization tracking, message writing,
+ * and context data access for external execution environments.
+ *
+ * <p>Key responsibilities include:
+ * <ul>
+ *   <li>Initializing and managing communication channels with Dagster</li>
+ *   <li>Tracking asset materialization state</li>
+ *   <li>Providing access to execution context (assets, partitions, run info)</li>
+ *   <li>Reporting results and exceptions back to Dagster</li>
+ * </ul>
+ */
 @SuppressWarnings({"PMD.GodClass", "PMD.TooManyMethods", "PMD.ImmutableField"})
 public class PipesContext {
 
@@ -20,20 +44,28 @@ public class PipesContext {
     private PipesMessageWriterChannel messageChannel;
     private final Set<String> materializedAssets;
     private boolean closed;
-    final PipesLogger logger;
+    private final PipesLogger logger;
     private Exception exception;
 
+    /**
+     * Constructor.
+     *
+     * @param paramsLoader Loader for context and message parameters
+     * @param contextLoader Loader for deserializing context data
+     * @param messageWriter Writer for opening message channels
+     * @throws DagsterPipesException If initialization fails or required parameters are missing
+     */
     public PipesContext(
-        PipesParamsLoader paramsLoader,
-        PipesContextLoader contextLoader,
-        PipesMessageWriter<? extends PipesMessageWriterChannel> messageWriter
+        final PipesParamsLoader paramsLoader,
+        final PipesContextLoader contextLoader,
+        final PipesMessageWriter<? extends PipesMessageWriterChannel> messageWriter
     ) throws DagsterPipesException {
-        Optional<Map<String, Object>> contextParams = paramsLoader.loadContextParams();
-        Optional<Map<String, Object>> messageParams = paramsLoader.loadMessagesParams();
+        final Optional<Map<String, Object>> contextParams = paramsLoader.loadContextParams();
+        final Optional<Map<String, Object>> messageParams = paramsLoader.loadMessagesParams();
         if (contextParams.isPresent() && messageParams.isPresent()) {
             this.data = contextLoader.loadContext(contextParams.get());
             this.messageChannel = messageWriter.open(messageParams.get());
-            Map<String, Object> openedPayload = messageWriter.getOpenedPayload();
+            final Map<String, Object> openedPayload = messageWriter.getOpenedPayload();
             this.messageChannel.writeMessage(PipesUtils.makeMessage(Method.OPENED, openedPayload));
         }
         this.materializedAssets = new HashSet<>();
@@ -43,13 +75,26 @@ public class PipesContext {
         );
     }
 
-    public void reportException(Exception exception) {
+    /**
+     * Reports an exception that should terminate execution. The exception will be
+     * propagated to Dagster when the context is closed.
+     *
+     * @param exception Exception to report
+     */
+    public void reportException(final Exception exception) {
         this.exception = exception;
     }
 
+    /**
+     * Closes the context and flushes pending messages. This must be called to
+     * ensure proper cleanup and exception reporting.
+     *
+     * @throws DagsterPipesException If an error occurs during close or if a
+     *         previously reported exception exists
+     */
     public void close() throws DagsterPipesException {
         if (!this.closed) {
-            Map<String, Object> payload = new HashMap<>();
+            final Map<String, Object> payload = new HashMap<>();
             if (this.exception != null) {
                 payload.put("exception", new PipesException(exception));
             }
@@ -62,14 +107,30 @@ public class PipesContext {
         }
     }
 
+    /**
+     * Checks if the context has been initialized.
+     *
+     * @return True or false
+     */
     public static boolean isInitialized() {
         return instance != null;
     }
 
-    public static void set(PipesContext context) {
+    /**
+     * Sets the global context instance (singleton pattern).
+     *
+     * @param context Context to set
+     */
+    public static void set(final PipesContext context) {
         instance = context;
     }
 
+    /**
+     * Retrieves the global context instance.
+     *
+     * @return Initialized context instance
+     * @throws IllegalStateException If context has not been initialized via {@link #set(PipesContext)}
+     */
     public static PipesContext get() {
         if (instance == null) {
             throw new IllegalStateException(
@@ -79,15 +140,21 @@ public class PipesContext {
         return instance;
     }
 
-    public void reportCustomMessage(Object payload) throws DagsterPipesException {
-        Map<String, Object> map = new HashMap<>();
+    /**
+     * Reports a custom message payload.
+     *
+     * @param payload Custom data to report (will be serialized)
+     * @throws DagsterPipesException If context is already closed
+     */
+    public void reportCustomMessage(final Object payload) throws DagsterPipesException {
+        final Map<String, Object> map = new HashMap<>();
         map.put("payload", payload);
         writeMessage(Method.REPORT_CUSTOM_MESSAGE, map);
     }
 
     private void writeMessage(
-        Method method,
-        Map<String, Object> params
+        final Method method,
+        final Map<String, Object> params
     ) throws DagsterPipesException {
         if (this.closed) {
             throw new DagsterPipesException("Cannot send message after pipes context is closed.");
@@ -96,86 +163,177 @@ public class PipesContext {
         this.messageChannel.writeMessage(PipesUtils.makeMessage(method, params));
     }
 
+    /**
+     * Checks if the context has been closed.
+     *
+     * @return True or false
+     */
     public boolean isClosed() {
         return this.closed;
     }
 
+    /**
+     * Determines if the current step targets assets.
+     *
+     * @return True if asset keys are defined in the context, flase otherwise
+     */
     public boolean isAssetStep() {
         return this.data.getAssetKeys() != null;
     }
 
+    /**
+     * Gets the single asset key for the current step. Valid only for single-asset steps.
+     *
+     * @return Single asset key
+     * @throws DagsterPipesException If no assets or multiple assets are targeted
+     */
     public String getAssetKey() throws DagsterPipesException {
-        List<String> assetKeys = getAssetKeys();
+        final List<String> assetKeys = getAssetKeys();
         assertSingleAsset(assetKeys, "Asset key");
         return assetKeys.get(0);
     }
 
+    /**
+     * Gets all asset keys targeted by the current step.
+     *
+     * @return List of asset keys (non-empty)
+     * @throws DagsterPipesException If no assets are targeted
+     */
     public List<String> getAssetKeys() throws DagsterPipesException {
-        List<String> assetKeys = this.data.getAssetKeys();
+        final List<String> assetKeys = this.data.getAssetKeys();
         assertPresence(assetKeys, "Asset keys");
         return assetKeys;
     }
 
+    /**
+     * Gets provenance data for the single asset in the current step.
+     *
+     * @return Provenance data for the asset
+     * @throws DagsterPipesException If no assets or multiple assets are targeted
+     */
     public ProvenanceByAssetKey getProvenance() throws DagsterPipesException {
-        Map<String, ProvenanceByAssetKey> provenanceByAssetKey = getProvenanceByAssetKey();
+        final Map<String, ProvenanceByAssetKey> provenanceByAssetKey = getProvenanceByAssetKey();
         assertSingleAsset(provenanceByAssetKey, "Provenance");
         return provenanceByAssetKey.values().iterator().next();
     }
 
+    /**
+     * Gets provenance data by asset key.
+     *
+     * @return Map of asset keys to provenance data (non-empty)
+     * @throws DagsterPipesException If no assets are targeted
+     */
     public Map<String, ProvenanceByAssetKey> getProvenanceByAssetKey() throws DagsterPipesException {
-        Map<String, ProvenanceByAssetKey> provenanceByAssetKey = this.data.getProvenanceByAssetKey();
+        final Map<String, ProvenanceByAssetKey> provenanceByAssetKey = this.data.getProvenanceByAssetKey();
         assertPresence(provenanceByAssetKey, "Provenance by asset key");
         return provenanceByAssetKey;
     }
 
+    /**
+     * Gets code version for the single asset in the current step.
+     *
+     * @return Code version string
+     * @throws DagsterPipesException If no assets or multiple assets are targeted
+     */
     public String getCodeVersion() throws DagsterPipesException {
-        Map<String, String> codeVersionByAssetKey = getCodeVersionByAssetKey();
+        final Map<String, String> codeVersionByAssetKey = getCodeVersionByAssetKey();
         assertSingleAsset(codeVersionByAssetKey, "Code version");
         return codeVersionByAssetKey.values().iterator().next();
     }
 
+    /**
+     * Gets code versions keyed by asset.
+     *
+     * @return Map of asset keys to code versions (non-empty)
+     * @throws DagsterPipesException If no assets are targeted
+     */
     public Map<String, String> getCodeVersionByAssetKey() throws DagsterPipesException {
-        Map<String, String> codeVersionByAssetKey = this.data.getCodeVersionByAssetKey();
+        final Map<String, String> codeVersionByAssetKey = this.data.getCodeVersionByAssetKey();
         assertPresence(codeVersionByAssetKey, "Code version by asset key");
         return codeVersionByAssetKey;
     }
 
+    /**
+     * Determines if the current step is partitioned.
+     *
+     * @return True if partition data exists in context, false otherwise
+     */
     public boolean isPartitionStep() {
         return this.data.getPartitionKeyRange() != null;
     }
 
+    /**
+     * Gets the partition key for the current step.
+     *
+     * @return Current partition key
+     * @throws DagsterPipesException If no partition is defined
+     */
     public String getPartitionKey() throws DagsterPipesException {
-        String partitionKey = this.data.getPartitionKey();
+        final String partitionKey = this.data.getPartitionKey();
         assertPresence(partitionKey, "Partition key");
         return partitionKey;
     }
 
+    /**
+     * Gets the partition key range for the current step.
+     *
+     * @return Partition key range
+     * @throws DagsterPipesException If no partition range is defined
+     */
     public PartitionKeyRange getPartitionKeyRange() throws DagsterPipesException {
-        PartitionKeyRange partitionKeyRange = this.data.getPartitionKeyRange();
+        final PartitionKeyRange partitionKeyRange = this.data.getPartitionKeyRange();
         assertPresence(partitionKeyRange, "Partition key range");
         return partitionKeyRange;
     }
 
+    /**
+     * Gets the partition time window for the current step.
+     *
+     * @return Partition time window
+     * @throws DagsterPipesException If no time window is defined
+     */
     public PartitionTimeWindow getPartitionTimeWindow() throws DagsterPipesException {
-        PartitionTimeWindow partitionTimeWindow = this.data.getPartitionTimeWindow();
+        final PartitionTimeWindow partitionTimeWindow = this.data.getPartitionTimeWindow();
         assertPresence(partitionTimeWindow, "Partition time window");
         return partitionTimeWindow;
     }
 
+    /**
+     * Gets the Dagster run ID.
+     *
+     * @return Run ID string
+     */
     public String getRunId() {
         return this.data.getRunId();
     }
 
+    /**
+     * Gets the Dagster job name.
+     *
+     * @return Job name string
+     */
     public String getJobName() {
         return this.data.getJobName();
     }
 
+    /**
+     * Gets the current retry attempt number.
+     *
+     * @return Integer retry number
+     */
     public int getRetryNumber() {
         return this.data.getRetryNumber();
     }
 
-    public Object getExtra(String key) throws DagsterPipesException {
-        Map<String, Object> extras = this.data.getExtras();
+    /**
+     * Gets a specific extra context parameter by key.
+     *
+     * @param key The key to retrieve
+     * @return Parameter value
+     * @throws DagsterPipesException If key is not found in extras
+     */
+    public Object getExtra(final String key) throws DagsterPipesException {
+        final Map<String, Object> extras = this.data.getExtras();
         if (!extras.containsKey(key)) {
             throw new DagsterPipesException(
                 String.format("Extra %s is undefined. Extras must be provided by user.", key)
@@ -184,15 +342,28 @@ public class PipesContext {
         return extras.get(key);
     }
 
+    /**
+     * Gets all extra context parameters.
+     *
+     * @return Map of extra parameters
+     */
     public Map<String, Object> getExtras() {
         return this.data.getExtras();
     }
 
+    /**
+     * Gets the {@link PipesLogger} instance.
+     *
+     * @return The {@link PipesLogger} instance
+     */
     public PipesLogger getLogger() {
         return this.logger;
     }
 
-    private static void assertSingleAsset(Collection<?> collection, String name) throws DagsterPipesException {
+    private static void assertSingleAsset(
+        final Collection<?> collection,
+        final String name
+    ) throws DagsterPipesException {
         if (collection.size() != 1) {
             throw new DagsterPipesException(
                 String.format("%s is undefined. Current step targets multiple assets.", name)
@@ -200,7 +371,7 @@ public class PipesContext {
         }
     }
 
-    private static void assertSingleAsset(Map<?, ?> map, String name) throws DagsterPipesException {
+    private static void assertSingleAsset(final Map<?, ?> map, final String name) throws DagsterPipesException {
         if (map.size() != 1) {
             throw new DagsterPipesException(
                 String.format("%s is undefined. Current step targets multiple assets.", name)
@@ -208,7 +379,7 @@ public class PipesContext {
         }
     }
 
-    private static void assertPresence(Object object, String name) throws DagsterPipesException {
+    private static void assertPresence(final Object object, final String name) throws DagsterPipesException {
         if (object == null) {
             throw new DagsterPipesException(
                 String.format("%s is undefined. Current step does not target an asset.", name)
@@ -221,6 +392,15 @@ public class PipesContext {
         }
     }
 
+    /**
+     * Reports asset materialization.
+     *
+     * @param metadataMapping Metadata values keyed by label
+     * @param dataVersion Data version string
+     * @param assetKey Explicit asset key (null to use context's single asset)
+     * @throws DagsterPipesException If asset key is invalid or context is closed
+     * @throws IllegalStateException If asset has already been materialized
+     */
     public void reportAssetMaterialization(
         final Map<String, ?> metadataMapping,
         final String dataVersion,
@@ -249,21 +429,40 @@ public class PipesContext {
         materializedAssets.add(actualAssetKey);
     }
 
+    /**
+     * Reports an asset check result (convenience method with default ERROR severity).
+     *
+     * @param checkName Unique check identifier
+     * @param passed Whether the check succeeded
+     * @param metadataMapping Metadata keyed by label
+     * @param assetKey Explicit asset key (null to use context's single asset)
+     * @throws DagsterPipesException If asset key is invalid or context is closed
+     */
     public void reportAssetCheck(
-        String checkName,
-        boolean passed,
-        Map<String, ?> metadataMapping,
-        String assetKey
+        final String checkName,
+        final boolean passed,
+        final Map<String, ?> metadataMapping,
+        final String assetKey
     ) throws DagsterPipesException {
         reportAssetCheck(checkName, passed, PipesAssetCheckSeverity.ERROR, metadataMapping, assetKey);
     }
 
+    /**
+     * Reports an asset check result with custom severity.
+     *
+     * @param checkName Unique check identifier
+     * @param passed Whether the check succeeded
+     * @param severity Severity level
+     * @param metadataMapping Metadata keyed by label
+     * @param assetKey Explicit asset key (null to use context's single asset)
+     * @throws DagsterPipesException If parameters are invalid or context is closed
+     */
     public void reportAssetCheck(
-        String checkName,
-        boolean passed,
-        PipesAssetCheckSeverity severity,
-        Map<String, ?> metadataMapping,
-        String assetKey
+        final String checkName,
+        final boolean passed,
+        final PipesAssetCheckSeverity severity,
+        final Map<String, ?> metadataMapping,
+        final String assetKey
     ) throws DagsterPipesException {
         final Map<String, PipesMetadata> resolvedMetadata = PipesUtils
             .resolveMetadataMapping(metadataMapping);
@@ -287,7 +486,11 @@ public class PipesContext {
         );
     }
 
-    private void assertNotNull(Object value, Method method, String param) throws DagsterPipesException {
+    private void assertNotNull(
+        final Object value,
+        final Method method,
+        final String param
+    ) throws DagsterPipesException {
         if (value == null) {
             throw new DagsterPipesException(
                 String.format(
@@ -299,11 +502,11 @@ public class PipesContext {
     }
 
     private Map<String, Object> createMap(
-        String assetKey,
-        String dataVersion,
-        Map<String, PipesMetadata> pipesMetadata
+        final String assetKey,
+        final String dataVersion,
+        final Map<String, PipesMetadata> pipesMetadata
     ) {
-        Map<String, Object> message = new HashMap<>();
+        final Map<String, Object> message = new HashMap<>();
         message.put("asset_key", assetKey);
         message.put("data_version", dataVersion);
         message.put("metadata", pipesMetadata);
@@ -311,13 +514,13 @@ public class PipesContext {
     }
 
     private Map<String, Object> createMap(
-        String assetKey,
-        String checkName,
-        boolean passed,
-        PipesAssetCheckSeverity severity,
-        Map<String, PipesMetadata> pipesMetadata
+        final String assetKey,
+        final String checkName,
+        final boolean passed,
+        final PipesAssetCheckSeverity severity,
+        final Map<String, PipesMetadata> pipesMetadata
     ) {
-        Map<String, Object> message = new HashMap<>();
+        final Map<String, Object> message = new HashMap<>();
         message.put("asset_key", assetKey);
         message.put("check_name", checkName);
         message.put("passed", passed);
@@ -327,16 +530,17 @@ public class PipesContext {
     }
 
     private String resolveOptionallyPassedAssetKey(
-        String assetKey,
-        Method method
+        final String assetKey,
+        final Method method
     ) throws DagsterPipesException {
-        List<String> definedAssetKeys = this.data.getAssetKeys();
+        final List<String> definedAssetKeys = this.data.getAssetKeys();
         String resultAssetKey = assetKey;
         if (assetKey == null) {
             if (definedAssetKeys.size() != 1) {
                 throw new DagsterPipesException(
                     String.format(
-                        "Calling %s without passing an asset key is undefined. Current step targets multiple assets.",
+                        "Calling %s without passing an asset key is undefined. "
+                            + "Current step targets multiple assets.",
                         method.toValue()
                     )
                 );
@@ -356,7 +560,8 @@ public class PipesContext {
         if (resultAssetKey.isEmpty()) {
             throw new DagsterPipesException(
                 String.format(
-                    "Calling %s without passing an asset key is undefined. Current step does not target a specific asset.",
+                    "Calling %s without passing an asset key is undefined. "
+                        + "Current step does not target a specific asset.",
                     method.toValue()
                 )
             );

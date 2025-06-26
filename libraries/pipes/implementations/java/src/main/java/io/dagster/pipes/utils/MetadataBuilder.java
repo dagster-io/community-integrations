@@ -1,10 +1,11 @@
 package io.dagster.pipes.utils;
 
-import java.util.*;
-import java.util.function.Function;
-
 import io.dagster.pipes.data.PipesMetadata;
 import io.dagster.types.Type;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 public class MetadataBuilder {
 
@@ -20,6 +21,26 @@ public class MetadataBuilder {
         TYPE_ACTIONS.put(List.class, entry -> buildMetadata(entry, Type.JSON));
     }
 
+    /**
+     * Builds a metadata map from a generic key-value mapping by processing each entry.
+     * <p>
+     * This method iterates through each entry in the input map and converts it to one or more
+     * {@link PipesMetadata} entries using type-specific handlers registered in {@code TYPE_ACTIONS}.
+     * Processing stops immediately if an array value is encountered (after handling that array).
+     * </p>
+     *
+     * <p><b>Important behaviors:</b>
+     * <ul>
+     *   <li>Null values are strictly prohibited</li>
+     *   <li>Array values trigger special handling and terminate processing immediately</li>
+     *   <li>Values must be of a type supported by registered handlers in {@code TYPE_ACTIONS}</li>
+     * </ul>
+     * </p>
+     *
+     * @param mapping Source map containing metadata keys and values. Values must be non-null
+     *                and of a supported type (as defined in {@code TYPE_ACTIONS}).
+     * @return New map containing processed {@code PipesMetadata} entries
+     */
     public static Map<String, PipesMetadata> buildFrom(final Map<String, ?> mapping) {
         final Map<String, PipesMetadata> result = new HashMap<>();
         for (final Map.Entry<String, ?> entry: mapping.entrySet()) {

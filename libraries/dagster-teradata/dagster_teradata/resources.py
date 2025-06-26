@@ -71,6 +71,8 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
         description=("Name of the default database to use."),
     )
     query_band: Optional[str] = None
+    port: Optional[str] = None
+    tmode: Optional[str] = "ANSI"
     logmech: Optional[str] = None
     browser: Optional[str] = None
     browser_tab_timeout: Optional[int] = None
@@ -87,6 +89,22 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
     bteq_quit_zero: Optional[bool] = Field(
         default=False, description="BTEQ quit zero flag."
     )
+    http_proxy: Optional[str] = None
+    http_proxy_user: Optional[str] = None
+    http_proxy_password: Optional[str] = None
+    https_proxy: Optional[str] = None
+    https_proxy_user: Optional[str] = None
+    https_proxy_password: Optional[str] = None
+    proxy_bypass_hosts: Optional[str] = None
+    sslmode: Optional[str] = None
+    sslca: Optional[str] = None
+    sslcapath: Optional[str] = None
+    sslcrc: Optional[str] = None
+    sslcipher: Optional[str] = None
+    sslprotocol: Optional[str] = None
+    slcrl: Optional[bool] = None
+    sslocsp: Optional[bool] = None
+    oidc_sslmode: Optional[str] = None
 
     @property
     @cached_method
@@ -99,10 +117,28 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
                 "password",
                 "database",
                 "query_band",
+                "port",
+                "tmode",
                 "logmech",
                 "browser",
                 "browser_tab_timeout",
                 "browser_timeout",
+                "http_proxy",
+                "http_proxy_user",
+                "http_proxy_password",
+                "https_proxy",
+                "https_proxy_user",
+                "https_proxy_password",
+                "proxy_bypass_hosts",
+                "sslmode",
+                "sslca",
+                "sslcapath",
+                "sslcrc",
+                "sslcipher",
+                "sslprotocol",
+                "slcrl",
+                "sslocsp",
+                "oidc_sslmode",
             )
             if self._resolved_config_dict.get(k) is not None
         }
@@ -134,11 +170,48 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
             if not self.password:
                 raise ValueError("Password is required but not provided.")
             connection_params.update({"user": self.user, "password": self.password})
-
         if self.database is not None:
             connection_params["database"] = self.database
         if self.logmech is not None:
             connection_params["logmech"] = self.logmech
+        if self.port is not None:
+            connection_params["port"] = self.port
+        if self.tmode is not None:
+            connection_params["tmode"] = self.tmode
+        if self.logmech is not None:
+            connection_params["logmech"] = self.logmech
+        if self.http_proxy is not None:
+            connection_params["http_proxy"] = self.http_proxy
+        if self.http_proxy_user is not None:
+            connection_params["http_proxy_user"] = self.http_proxy_user
+        if self.http_proxy_password is not None:
+            connection_params["http_proxy_password"] = self.http_proxy_password
+        if self.https_proxy is not None:
+            connection_params["https_proxy"] = self.https_proxy
+        if self.https_proxy_user is not None:
+            connection_params["https_proxy_user"] = self.https_proxy_user
+        if self.https_proxy_password is not None:
+            connection_params["https_proxy_password"] = self.https_proxy_password
+        if self.proxy_bypass_hosts is not None:
+            connection_params["proxy_bypass_hosts"] = self.proxy_bypass_hosts
+        if self.sslmode is not None:
+            connection_params["sslmode"] = self.sslmode
+        if self.sslca is not None:
+            connection_params["sslca"] = self.sslca
+        if self.sslcapath is not None:
+            connection_params["sslcapath"] = self.sslcapath
+        if self.sslcrc is not None:
+            connection_params["sslcrc"] = self.sslcrc
+        if self.sslcipher is not None:
+            connection_params["sslcipher"] = self.sslcipher
+        if self.sslprotocol is not None:
+            connection_params["sslprotocol"] = self.sslprotocol
+        if self.slcrl is not None:
+            connection_params["slcrl"] = str(self.slcrl)
+        if self.sslocsp is not None:
+            connection_params["sslocsp"] = str(self.sslocsp)
+        if self.oidc_sslmode is not None:
+            connection_params["oidc_sslmode"] = self.oidc_sslmode
 
         teradata_conn = teradatasql.connect(**connection_params)
         self.set_query_band(self.query_band, teradata_conn)

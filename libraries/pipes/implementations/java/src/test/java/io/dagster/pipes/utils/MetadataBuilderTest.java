@@ -1,17 +1,12 @@
 package io.dagster.pipes.utils;
 
-import org.junit.jupiter.api.Test;
-
 import io.dagster.pipes.data.PipesMetadata;
-import io.dagster.pipes.utils.MetadataBuilder;
 import io.dagster.types.Type;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("PMD.JUnitAssertionsShouldIncludeMessage")
 class MetadataBuilderTest {
@@ -21,8 +16,8 @@ class MetadataBuilderTest {
         final Map<String, Object> testMap = new HashMap<>();
         testMap.put("test", 123F);
         final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(testMap);
-        assertTrue(meta.containsKey("test"));
-        assertEquals(meta.get("test").getType(), Type.FLOAT);
+        Assertions.assertTrue(meta.containsKey("test"));
+        Assertions.assertEquals(Type.FLOAT, meta.get("test").getType());
     }
 
     @Test
@@ -30,8 +25,8 @@ class MetadataBuilderTest {
         final Map<String, Object> testMap = new HashMap<>();
         testMap.put("test", 123);
         final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(testMap);
-        assertTrue(meta.containsKey("test"));
-        assertEquals(meta.get("test").getType(), Type.INT);
+        Assertions.assertTrue(meta.containsKey("test"));
+        Assertions.assertEquals(Type.INT, meta.get("test").getType());
     }
 
     @Test
@@ -39,32 +34,35 @@ class MetadataBuilderTest {
         final Map<String, Object> testMap = new HashMap<>();
         testMap.put("test", "123");
         final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(testMap);
-        assertTrue(meta.containsKey("test"));
-        assertEquals(meta.get("test").getType(), Type.TEXT);
+        Assertions.assertTrue(meta.containsKey("test"));
+        Assertions.assertEquals(Type.TEXT, meta.get("test").getType());
     }
+
     @Test
     void testBuildFromBoolean() {
         final Map<String, Object> testMap = new HashMap<>();
         testMap.put("test", true);
         final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(testMap);
-        assertTrue(meta.containsKey("test"));
-        assertEquals(meta.get("test").getType(), Type.BOOL);
+        Assertions.assertTrue(meta.containsKey("test"));
+        Assertions.assertEquals(Type.BOOL, meta.get("test").getType());
     }
+
     @Test
     void testBuildFromMap() {
         final Map<String, Object> testMap = new HashMap<>();
         testMap.put("test", new HashMap<>());
         final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(testMap);
-        assertTrue(meta.containsKey("test"));
-        assertEquals(meta.get("test").getType(), Type.JSON);
+        Assertions.assertTrue(meta.containsKey("test"));
+        Assertions.assertEquals(Type.JSON, meta.get("test").getType());
     }
+
     @Test
     void testBuildFromList() {
         final Map<String, Object> testMap = new HashMap<>();
         testMap.put("test", new ArrayList<>());
         final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(testMap);
-        assertTrue(meta.containsKey("test"));
-        assertEquals(meta.get("test").getType(), Type.JSON);
+        Assertions.assertTrue(meta.containsKey("test"));
+        Assertions.assertEquals(Type.JSON, meta.get("test").getType());
     }
 
     @Test
@@ -72,8 +70,8 @@ class MetadataBuilderTest {
         final Map<String, Object> testMap = new HashMap<>();
         testMap.put("test", new int[]{});
         final Map<String, PipesMetadata> meta = MetadataBuilder.buildFrom(testMap);
-        assertTrue(meta.containsKey("test"));
-        assertEquals(meta.get("test").getType(), Type.JSON);
+        Assertions.assertTrue(meta.containsKey("test"));
+        Assertions.assertEquals(Type.JSON, meta.get("test").getType());
     }
 
 }

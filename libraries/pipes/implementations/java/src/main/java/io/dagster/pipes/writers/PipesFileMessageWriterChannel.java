@@ -1,25 +1,24 @@
 package io.dagster.pipes.writers;
 
+import io.dagster.pipes.DagsterPipesException;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 
-import io.dagster.pipes.DagsterPipesException;
-
 public class PipesFileMessageWriterChannel implements PipesMessageWriterChannel {
 
     private final String path;
 
-    public PipesFileMessageWriterChannel(String path) {
+    public PipesFileMessageWriterChannel(final String path) {
         this.path = path;
     }
 
     @Override
-    public void writeMessage(PipesMessage message) throws DagsterPipesException {
-        File file = new File(this.path);
-        File parentDir = file.getParentFile();
+    public void writeMessage(final PipesMessage message) throws DagsterPipesException {
+        final File file = new File(this.path);
+        final File parentDir = file.getParentFile();
         if (parentDir != null && !parentDir.exists() && !parentDir.mkdirs()) {
             throw new DagsterPipesException("Failed to create directories for file: " + path);
         }
@@ -40,5 +39,7 @@ public class PipesFileMessageWriterChannel implements PipesMessageWriterChannel 
     }
 
     @Override
-    public void close() {}
+    public void close() {
+
+    }
 }

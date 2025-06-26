@@ -7,12 +7,12 @@ public class PipesStreamMessageWriterChannel implements PipesMessageWriterChanne
 
     private final PrintWriter writer;
 
-    public PipesStreamMessageWriterChannel(OutputStream outputStream) {
+    public PipesStreamMessageWriterChannel(final OutputStream outputStream) {
         this.writer = new PrintWriter(outputStream, true);
     }
 
     @Override
-    public void writeMessage(PipesMessage message) {
+    public void writeMessage(final PipesMessage message) {
         writer.println(message.toString());
     }
 

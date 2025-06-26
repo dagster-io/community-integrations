@@ -42,7 +42,7 @@ polars = [
   "polars>=1.0.0",
 ]
 spark = [
-  "pyspark[connect]>=3.4.0",
+  "pyspark[connect]~=3.4",
 ]
 
 [tool.ruff]
@@ -128,7 +128,7 @@ docs = [
 dev = [
   "dagit>=1.8.8",
   "dagster>=1.10.5",
-  "dagster-polars>=0.26.1",
+  "dagster-polars[patito]>=0.26.1",
   "dagster-pyspark>=0.26.1",
   "docker",
   "fsspec[http]>=2025.2.0",

@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'pmd'
+    id 'checkstyle'
     id "com.vanniktech.maven.publish" version "0.30.0"
     id 'signing'
 }
@@ -75,12 +76,33 @@ jar {
 
 pmd {
     toolVersion = "6.48.0"
-    ignoreFailures = true
+    consoleOutput = true
+    pmdTest.enabled = false
 }
 
+checkstyle {
+    toolVersion = '8.29'
+    configFile = file('config/checkstyle/google_checks.xml')
+}
+
+checkstyleMain
+    .exclude('**/types/**')
+
 tasks.withType(Pmd) {
-    // Exclude specific folders from analysis
-    exclude 'types/**'
+    // Exclude generated types files from analysis
+    exclude '**/types/**'
     ruleSetFiles = files('config/pmd-ruleset.xml')
     ruleSets = [] // Disable default rulesets
+}
+
+tasks.withType(Checkstyle).configureEach {
+    ignoreFailures = false
+    reports {
+        xml.required.set(false)
+        html.required.set(true)
+        html.outputLocation.set(file("$buildDir/reports/checkstyle/checkstyle.html"))
+    }
+    doLast {
+        println "Checkstyle HTML report: file://$buildDir/reports/checkstyle/checkstyle.html"
+    }
 }

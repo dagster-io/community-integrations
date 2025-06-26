@@ -1,24 +1,17 @@
 package io.dagster.pipes.writers;
 
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import io.dagster.pipes.DagsterPipesException;
 import io.dagster.pipes.PipesTests;
-import io.dagster.pipes.writers.PipesBufferedStreamMessageWriterChannel;
-import io.dagster.pipes.writers.PipesFileMessageWriterChannel;
-import io.dagster.pipes.writers.PipesMessage;
-import io.dagster.pipes.writers.PipesStreamMessageWriterChannel;
 import io.dagster.types.Method;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class PipesMessageWriterChannelTest {
 
@@ -45,7 +38,7 @@ class PipesMessageWriterChannelTest {
         );
         fileWriter.writeMessage(message);
         String content = Files.readAllLines(filePath).get(0);
-        assertEquals(VALID_JSON, content);
+        Assertions.assertEquals(VALID_JSON, content);
     }
 
     @Test
@@ -54,7 +47,7 @@ class PipesMessageWriterChannelTest {
         PipesStreamMessageWriterChannel channel = new PipesStreamMessageWriterChannel(outputStream);
         channel.writeMessage(message);
         String result = outputStream.toString();
-        assertEquals(VALID_JSON + System.lineSeparator(), result);
+        Assertions.assertEquals(VALID_JSON + System.lineSeparator(), result);
     }
 
     @Test
@@ -65,6 +58,6 @@ class PipesMessageWriterChannelTest {
         channel.writeMessage(message);
         channel.flush();
         String result = outputStream.toString();
-        assertEquals(VALID_JSON + System.lineSeparator(), result);
+        Assertions.assertEquals(VALID_JSON + System.lineSeparator(), result);
     }
 }

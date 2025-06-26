@@ -61,6 +61,12 @@ class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
 
         getattr(writer, mode)()
 
+    def _load_table(
+        self, table_slice: TableSlice, connection: SparkSession
+    ) -> DataFrame:
+        """Reads a PySpark dataframe from an Iceberg table."""
+        return connection.sql(SparkIcebergDbClient.get_select_statement(table_slice))
+
     def load_input(
         self,
         context: InputContext,
@@ -68,7 +74,7 @@ class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
         connection: SparkSession,
     ) -> DataFrame:
         """Reads a PySpark dataframe from an Iceberg table."""
-        return connection.sql(SparkIcebergDbClient.get_select_statement(table_slice))
+        return self._load_table(table_slice, connection)
 
     @property
     def supported_types(self) -> Sequence[type[object]]:
@@ -114,15 +120,15 @@ class SparkIcebergDbClient(DbClient[SparkSession]):
         context: OutputContext | InputContext,
         table_slice: TableSlice,
     ) -> Iterator[SparkSession]:
-        builder = cast(SparkSession.Builder, SparkSession.builder)
+        builder = cast("SparkSession.Builder", SparkSession.builder)
         if context.resource_config is not None:
             if (spark_config := context.resource_config["spark_config"]) is not None:
                 builder.config(
-                    map=cast(dict[str, "OptionalPrimitiveType"], spark_config)
+                    map=cast("dict[str, OptionalPrimitiveType]", spark_config)
                 )
 
             if (remote_url := context.resource_config["remote_url"]) is not None:
-                builder.remote(cast(str, remote_url))
+                builder.remote(cast("str", remote_url))
 
         yield builder.getOrCreate()
 
@@ -218,7 +224,7 @@ def _partition_where_clause(
 
 
 def _time_window_where_clause(table_partition: TablePartitionDimension) -> str:
-    partition = cast(TimeWindow, table_partition.partitions)
+    partition = cast("TimeWindow", table_partition.partitions)
     start_dt, end_dt = partition
     start_dt_str = start_dt.isoformat()
     end_dt_str = end_dt.isoformat()
