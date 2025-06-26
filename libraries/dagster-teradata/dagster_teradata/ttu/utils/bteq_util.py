@@ -103,6 +103,7 @@ def transfer_file_sftp(ssh_client: SSHClient, local_path: str, remote_path: str)
         This appears to be a placeholder implementation.
     """
     sftp = ssh_client.open_sftp()
+    sftp.put(local_path, remote_path)
     sftp.close()
 
 
