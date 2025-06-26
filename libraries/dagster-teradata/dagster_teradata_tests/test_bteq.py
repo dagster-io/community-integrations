@@ -66,7 +66,6 @@ class TestBteq:
 
         example_job.execute_in_process()
 
-
     def test_invalid_file_path(self):
         mock_td_resource = TeradataResource(
             host="mock_host",

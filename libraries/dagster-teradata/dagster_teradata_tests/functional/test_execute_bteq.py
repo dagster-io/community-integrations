@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from dagster import job, op, DagsterError
 from dagster_teradata import TeradataResource

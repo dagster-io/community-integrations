@@ -122,6 +122,64 @@ def test_create_teradata_compute_cluster(tmp_path):
         }
     )
 ```
+## BTEQ Operator
+
+The `bteq_operator` method enables execution of Teradata BTEQ commands either locally or on a remote machine via SSH. It supports direct SQL input or file-based scripts, custom encoding, timeout controls, and both password and SSH key authentication for remote execution.
+
+### Key Features
+
+- Local or remote BTEQ execution
+- Accepts SQL string or file path (mutually exclusive)
+- Supports custom script/session encoding
+- Timeout and return code handling
+- Remote authentication via password or SSH key
+
+### Parameters
+
+- `sql`: SQL commands to execute directly (optional, mutually exclusive with `file_path`)
+- `file_path`: Path to SQL script file (optional, mutually exclusive with `sql`)
+- `remote_host`: Hostname/IP for remote execution (optional)
+- `remote_user`: Username for remote authentication (required if `remote_host` is set)
+- `remote_password`: Password for remote authentication (alternative to `ssh_key_path`)
+- `ssh_key_path`: Path to SSH private key (alternative to `remote_password`)
+- `remote_port`: SSH port (default: 22)
+- `remote_working_dir`: Working directory on remote machine (default: `/tmp`)
+- `bteq_script_encoding`: Encoding for BTEQ script file (default: `utf-8`)
+- `bteq_session_encoding`: Encoding for BTEQ session (default: `ASCII`)
+- `bteq_quit_rc`: Acceptable return code(s) for BTEQ execution (default: 0)
+- `timeout`: Maximum execution time in seconds (default: 600)
+- `timeout_rc`: Return code for timeout cases (optional)
+
+### Returns
+
+- Output of the BTEQ execution, or `None` if no output was produced.
+
+### Raises
+
+- `ValueError`: For invalid input or configuration
+- `DagsterError`: If BTEQ execution fails or times out
+
+### Notes
+
+- Either `sql` or `file_path` must be provided, but not both.
+- For remote execution, provide either `remote_password` or `ssh_key_path` (not both).
+- Encoding and timeout handling are customizable.
+- Validates remote port and authentication parameters.
+
+### Example Usage
+
+```python
+# Local execution with direct SQL
+output = bteq_operator(sql="SELECT * FROM table;")
+
+# Remote execution with file
+output = bteq_operator(
+    file_path="script.sql",
+    remote_host="example.com",
+    remote_user="user",
+    ssh_key_path="/path/to/key.pem"
+)
+```
 
 ## Development
 

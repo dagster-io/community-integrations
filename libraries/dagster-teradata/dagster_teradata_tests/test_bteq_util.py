@@ -251,7 +251,8 @@ class TestBteqUtils:
         ssh_client.exec_command.return_value = (MagicMock(), stdout_mock, stderr_mock)
 
         with pytest.raises(
-                DagsterError, match="BTEQ is not installed or not available on the remote machine"
+            DagsterError,
+            match="BTEQ is not installed or not available on the remote machine",
         ):
             verify_bteq_installed_remote(ssh_client)
 
@@ -283,7 +284,8 @@ class TestBteqUtils:
         ]
 
         with pytest.raises(
-                DagsterError, match="BTEQ is not installed or not available on the remote machine"
+            DagsterError,
+            match="BTEQ is not installed or not available on the remote machine",
         ):
             verify_bteq_installed_remote(ssh_client)
 

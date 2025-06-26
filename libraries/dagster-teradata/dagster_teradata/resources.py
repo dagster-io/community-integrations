@@ -53,15 +53,14 @@ def _handle_user_query_band_text(self, query_band_text) -> str:
                 query_band_text = updated_query_band_text
         else:
             # if appname doesn't exist in query_band, adding 'appname=dagster'
-            if len(query_band_text.strip()) > 0 and not query_band_text.endswith(
-                    ";"
-            ):
+            if len(query_band_text.strip()) > 0 and not query_band_text.endswith(";"):
                 query_band_text += ";"
             query_band_text += "appname=dagster;"
     else:
         query_band_text = "org=teradata-internal-telem;appname=dagster;"
 
     return query_band_text
+
 
 class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
     host: Optional[str] = Field(description="Teradata Database Hostname")
