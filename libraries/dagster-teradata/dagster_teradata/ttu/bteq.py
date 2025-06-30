@@ -3,7 +3,7 @@ import socket
 import subprocess
 import tempfile
 from contextlib import contextmanager
-from typing import Optional, List, Union, Literal, cast
+from typing import Optional, List, Union, Literal
 
 import paramiko
 from dagster import DagsterError
@@ -201,7 +201,7 @@ class Bteq:
             if self.file_path:
                 if not self._setup_ssh_connection(
                     host=self.remote_host,
-                    user=cast(str, self.remote_user),
+                    user=self.remote_user,
                     password=self.remote_remote_password,
                     key_path=self.ssh_key_path,
                     port=self.remote_port,
@@ -209,12 +209,8 @@ class Bteq:
                     raise DagsterError(
                         "Failed to establish SSH connection. Please check the provided credentials."
                     )
-                if (
-                    self.file_path
-                    and self.ssh_client
-                    and is_valid_remote_bteq_script_file(
-                        self.ssh_client, self.file_path
-                    )
+                if self.file_path and is_valid_remote_bteq_script_file(
+                    self.ssh_client, self.file_path
                 ):
                     return self._handle_remote_bteq_file(
                         ssh_client=self.ssh_client,
@@ -234,7 +230,7 @@ class Bteq:
         bteq_script: str,
         remote_working_dir: str | None,
         bteq_script_encoding: str | None,
-        timeout: Optional[int],  # or: timeout: int | None
+        timeout: int,
         timeout_rc: int | None,
         bteq_session_encoding: str | None,
         bteq_quit_rc: int | list[int] | tuple[int, ...] | None,
@@ -301,7 +297,7 @@ class Bteq:
         bteq_script: str,
         remote_working_dir: str | None,
         bteq_script_encoding: str | None,
-        timeout: Optional[int],  # or: timeout: int | None
+        timeout: int,
         timeout_rc: int | None,
         bteq_session_encoding: str | None,
         bteq_quit_rc: int | list[int] | tuple[int, ...] | None,
@@ -351,8 +347,8 @@ class Bteq:
                 bteq_quit_rc,
                 bteq_session_encoding,
                 tmp_dir,
-                cast(str, remote_host),
-                cast(str, remote_user),
+                remote_host,
+                remote_user,
                 remote_password,
                 ssh_key_path,
                 remote_port,
@@ -363,7 +359,7 @@ class Bteq:
         file_path: str,
         remote_working_dir: str | None,
         bteq_script_encoding: str | None,
-        timeout: Optional[int],  # or: timeout: int | None
+        timeout: int,
         timeout_rc: int | None,
         bteq_quit_rc: int | list[int] | tuple[int, ...] | None,
         bteq_session_encoding: str | None,
@@ -502,7 +498,7 @@ class Bteq:
         self,
         bteq_script: str,
         bteq_script_encoding: str | None,
-        timeout: Optional[int],  # or: timeout: int | None
+        timeout: int,
         timeout_rc: int | None,
         bteq_quit_rc: int | list[int] | tuple[int, ...] | None,
         bteq_session_encoding: str | None,
@@ -551,7 +547,7 @@ class Bteq:
         try:
             # https://docs.python.org/3.10/library/subprocess.html#subprocess.Popen.wait  timeout is in seconds
             process.wait(
-                timeout=(timeout or 0) + 60
+                timeout=timeout + 60
             )  # Adding 1 minute extra for BTEQ script timeout
         except subprocess.TimeoutExpired:
             self.on_kill()
@@ -586,6 +582,10 @@ class Bteq:
             self.log.warning(failure_message)
 
         return process.returncode
+
+    def contains_template(parameter_value):
+        """Check if the parameter contains Jinja templating syntax."""
+        return "{{" in parameter_value and "}}" in parameter_value
 
     def on_kill(self):
         """Terminate the subprocess if running."""
@@ -677,7 +677,7 @@ class Bteq:
                     remote_user=self.remote_user,
                     remote_password=self.remote_remote_password,
                     ssh_key_path=self.ssh_key_path,
-                    remote_port=self.remote_port or 22,
+                    remote_port=self.remote_port,
                 )
         else:
             raise ValueError(
@@ -718,7 +718,7 @@ class Bteq:
     def _setup_ssh_connection(
         self,
         host: str,
-        user: Optional[str],
+        user: str,
         password: Optional[str],
         key_path: Optional[str],
         port: int,
@@ -753,11 +753,6 @@ class Bteq:
                 self.ssh_client.connect(host, port=port, username=user, pkey=key)
             else:
                 if not password:
-                    if user is None:
-                        raise ValueError(
-                            "Username is required to fetch stored credentials"
-                        )
-                    # Attempt to retrieve stored credentials
                     creds = get_stored_credentials(self, host, user)
                     password = (
                         self.cred_manager.decrypt(creds["password"]) if creds else None

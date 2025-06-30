@@ -70,8 +70,6 @@ class SecureCredentialManager:
             >>> manager = SecureCredentialManager()
             >>> encrypted = manager.encrypt("my_password")
         """
-        if self.key is None:
-            raise ValueError("Encryption key is not initialized")
         f = Fernet(self.key)
         return f.encrypt(data.encode()).decode()
 
@@ -92,8 +90,6 @@ class SecureCredentialManager:
             >>> manager = SecureCredentialManager()
             >>> decrypted = manager.decrypt(encrypted_string)
         """
-        if self.key is None:
-            raise ValueError("Encryption key is not initialized")
         f = Fernet(self.key)
         return f.decrypt(encrypted_data.encode()).decode()
 
