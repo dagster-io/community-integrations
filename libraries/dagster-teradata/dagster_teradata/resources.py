@@ -1,8 +1,9 @@
 from contextlib import closing, contextmanager
 from datetime import datetime
 from textwrap import dedent
-from typing import Any, List, Mapping, Optional, Sequence, Union, TYPE_CHECKING
+from typing import Any, List, Mapping, Optional, Sequence, Union, TYPE_CHECKING, Literal
 
+import re
 import dagster._check as check
 import teradatasql
 from dagster import (
@@ -16,10 +17,49 @@ from dagster._core.definitions.resource_definition import dagster_maintained_res
 from dagster._utils.cached_method import cached_method
 from pydantic import Field
 
-from dagster_teradata import constants
+from . import constants
+from dagster_teradata.ttu.bteq import Bteq
 from dagster_teradata.teradata_compute_cluster_manager import (
     TeradataComputeClusterManager,
 )
+
+
+def _handle_user_query_band_text(self, query_band_text) -> str:
+    """Validate given query_band and append if required values missed in query_band."""
+    # Ensures 'appname=dagster' and 'org=teradata-internal-telem' are in query_band_text.
+    if query_band_text is not None:
+        # checking org doesn't exist in query_band, appending 'org=teradata-internal-telem'
+        #  If it exists, user might have set some value of their own, so doing nothing in that case
+        pattern = r"org\s*=\s*([^;]*)"
+        match = re.search(pattern, query_band_text)
+        if not match:
+            if not query_band_text.endswith(";"):
+                query_band_text += ";"
+            query_band_text += "org=teradata-internal-telem;"
+        # Making sure appname in query_band contains 'dagster'
+        pattern = r"appname\s*=\s*([^;]*)"
+        # Search for the pattern in the query_band_text
+        match = re.search(pattern, query_band_text)
+        if match:
+            appname_value = match.group(1).strip()
+            # if appname exists and dagster not exists in appname then appending 'dagster' to existing
+            # appname value
+            if "dagster" not in appname_value.lower():
+                new_appname_value = appname_value + "_dagster"
+                # Optionally, you can replace the original value in the query_band_text
+                updated_query_band_text = re.sub(
+                    pattern, f"appname={new_appname_value}", query_band_text
+                )
+                query_band_text = updated_query_band_text
+        else:
+            # if appname doesn't exist in query_band, adding 'appname=dagster'
+            if len(query_band_text.strip()) > 0 and not query_band_text.endswith(";"):
+                query_band_text += ";"
+            query_band_text += "appname=dagster;"
+    else:
+        query_band_text = "org=teradata-internal-telem;appname=dagster;"
+
+    return query_band_text
 
 
 class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
@@ -30,12 +70,25 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
         default=None,
         description=("Name of the default database to use."),
     )
+    query_band: Optional[str] = None
     port: Optional[str] = None
     tmode: Optional[str] = "ANSI"
     logmech: Optional[str] = None
     browser: Optional[str] = None
     browser_tab_timeout: Optional[int] = None
     browser_timeout: Optional[int] = None
+    console_output_encoding: Optional[str] = Field(
+        default="utf-8", description="Console output encoding."
+    )
+    bteq_session_encoding: Optional[str] = Field(
+        default="ASCII", description="BTEQ session encoding."
+    )
+    bteq_output_width: Optional[int] = Field(
+        default=65531, description="BTEQ output width."
+    )
+    bteq_quit_zero: Optional[bool] = Field(
+        default=False, description="BTEQ quit zero flag."
+    )
     http_proxy: Optional[str] = None
     http_proxy_user: Optional[str] = None
     http_proxy_password: Optional[str] = None
@@ -63,6 +116,7 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
                 "user",
                 "password",
                 "database",
+                "query_band",
                 "port",
                 "tmode",
                 "logmech",
@@ -158,8 +212,18 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
             connection_params["oidc_sslmode"] = self.oidc_sslmode
 
         teradata_conn = teradatasql.connect(**connection_params)
-
+        self.set_query_band(self.query_band, teradata_conn)
         yield teradata_conn
+
+    def set_query_band(self, query_band_text, teradata_conn):
+        """Set SESSION Query Band for each connection session."""
+        try:
+            query_band_text = _handle_user_query_band_text(self, query_band_text)
+            set_query_band_sql = f"SET QUERY_BAND='{query_band_text}' FOR SESSION"
+            with teradata_conn.cursor() as cur:
+                cur.execute(set_query_band_sql)
+        except Exception:
+            pass
 
     def get_object_to_set_on_execution_context(self) -> Any:
         # Directly create a TeradataDagsterConnection here for backcompat since the TeradataDagsterConnection
@@ -188,6 +252,7 @@ class TeradataDagsterConnection:
     ):
         self.teradata_connection_resource = teradata_connection_resource
         self.compute_cluster_manager = TeradataComputeClusterManager(self, log)
+        self.bteq = Bteq(self, teradata_connection_resource, log)
         self.log = log
 
     @public
@@ -282,6 +347,149 @@ class TeradataDagsterConnection:
                     if fetch_results:
                         results = results.append(cursor.fetchall())  # type: ignore
                         return results
+
+    def bteq_operator(
+        self,
+        sql: Optional[str] = None,
+        file_path: Optional[str] = None,
+        remote_host: Optional[str] = None,
+        remote_user: Optional[str] = None,
+        remote_password: Optional[str] = None,
+        ssh_key_path: Optional[str] = None,
+        remote_port: int = 22,
+        remote_working_dir: str = "/tmp",
+        bteq_script_encoding: Optional[str] = "utf-8",
+        bteq_session_encoding: Optional[str] = "ASCII",
+        bteq_quit_rc: Union[int, List[int]] = 0,
+        timeout: int | Literal[600] = 600,  # Default to 10 minutes
+        timeout_rc: int | None = None,
+    ) -> Optional[int]:
+        """
+        Execute BTEQ commands either locally or on a remote machine via SSH.
+
+        This method provides a unified interface to run BTEQ operations with various configurations:
+        - Local or remote execution
+        - Direct SQL input or file-based input
+        - Custom encoding settings
+        - Timeout controls
+        - Authentication via password or SSH key
+
+        Args:
+            sql (Optional[str]): SQL commands to execute directly. Mutually exclusive with file_path.
+            file_path (Optional[str]): [Optional] Path to an existing SQL or BTEQ script file.
+            remote_host (Optional[str]): Hostname or IP for remote execution. None for local execution.
+            remote_user (Optional[str]): Username for remote authentication. Required if remote_host specified.
+            remote_password (Optional[str]): Password for remote authentication. Alternative to ssh_key_path.
+            ssh_key_path (Optional[str]): Path to SSH private key for authentication. Alternative to remote_password.
+            remote_port (int): SSH port for remote connection. Defaults to 22.
+            remote_working_dir (str): Working directory on remote machine. Defaults to '/tmp'.
+            bteq_script_encoding (Optional[str]): Encoding for BTEQ script file. Defaults to 'utf-8'.
+            bteq_session_encoding (Optional[str]): Encoding for BTEQ session. Defaults to 'ASCII'.
+            bteq_quit_rc (Union[int, List[int]]): Acceptable return codes for BTEQ execution. Defaults to 0.
+            timeout (int | Literal[600]): Maximum execution time in seconds. Defaults to 600 (10 minutes).
+            timeout_rc (int | None): Specific return code to use for timeout cases. Defaults to None.
+
+        Returns:
+            Optional[str]: The output of the BTEQ execution, or None if no output was produced.
+
+        Raises:
+            ValueError: If input validation fails, including:
+                - Missing both sql and file_path
+                - Providing both sql and file_path
+                - Missing required remote authentication parameters
+                - Invalid remote port specification
+            DagsterError: If BTEQ execution fails or times out
+
+        Note:
+            - For remote execution, either remote_password or ssh_key_path must be provided (but not both)
+            - Encoding handling follows these rules:
+                * ASCII session encoding: Uses default system encoding
+                * UTF8/UTF16 session encoding: Forces corresponding script encoding
+            - Timeout handling:
+                * MAXREQTIME parameter sets maximum execution time per request
+                * EXITONDELAY forces exit if timeout occurs
+                * Timeout return code can be customized
+
+        Example:
+            # Local execution with direct SQL
+            >>> output = bteq_operator(sql="SELECT * FROM table;")
+
+            # Remote execution with file
+            >>> output = bteq_operator(
+            ...     file_path="script.sql",
+            ...     remote_host="example.com",
+            ...     remote_user="user",
+            ...     ssh_key_path="/path/to/key.pem"
+            ... )
+        """
+        # Validate input parameters
+        if not sql and not file_path:
+            raise ValueError(
+                "BteqOperator requires either the 'sql' or 'file_path' parameter. Both are missing."
+            )
+
+        if sum(bool(x) for x in [sql, file_path]) > 1:
+            raise ValueError(
+                "BteqOperator requires either the 'sql' or 'file_path' parameter but not both."
+            )
+
+        # Validate remote execution parameters if needed
+        if remote_host:
+            if not remote_user:
+                raise ValueError("remote_user must be provided for remote execution")
+            if not ssh_key_path and not remote_password:
+                raise ValueError(
+                    "Either ssh_key_path or remote_password must be provided for remote execution"
+                )
+            if remote_password and ssh_key_path:
+                raise ValueError(
+                    "Cannot specify both remote_password and ssh_key_path for remote execution"
+                )
+
+        # Validate network port
+        if remote_port < 1 or remote_port > 65535:
+            raise ValueError("remote_port must be a valid port number (1-65535)")
+
+        # Handle encoding configuration
+        temp_file_read_encoding = "UTF-8"
+        if not bteq_session_encoding or bteq_session_encoding == "ASCII":
+            bteq_session_encoding = ""
+            if bteq_script_encoding == "UTF8":
+                temp_file_read_encoding = "UTF-8"
+            elif bteq_script_encoding == "UTF16":
+                temp_file_read_encoding = "UTF-16"
+            bteq_script_encoding = ""
+        elif bteq_session_encoding == "UTF8" and (
+            not bteq_script_encoding or bteq_script_encoding == "ASCII"
+        ):
+            bteq_script_encoding = "UTF8"
+        elif bteq_session_encoding == "UTF16":
+            if not bteq_script_encoding or bteq_script_encoding == "ASCII":
+                bteq_script_encoding = "UTF8"
+
+        # Map BTEQ encoding to Python file reading encoding
+        if bteq_script_encoding == "UTF8":
+            temp_file_read_encoding = "UTF-8"
+        elif bteq_script_encoding == "UTF16":
+            temp_file_read_encoding = "UTF-16"
+
+        # Delegate execution to the underlying BTEQ implementation
+        return self.bteq.bteq_operator(
+            sql=sql,
+            file_path=file_path,
+            remote_host=remote_host,
+            remote_user=remote_user,
+            remote_password=remote_password,
+            ssh_key_path=ssh_key_path,
+            remote_port=remote_port,
+            remote_working_dir=remote_working_dir,
+            bteq_script_encoding=bteq_script_encoding,
+            bteq_session_encoding=bteq_session_encoding,
+            bteq_quit_rc=bteq_quit_rc,
+            timeout=timeout,
+            timeout_rc=timeout_rc,
+            temp_file_read_encoding=temp_file_read_encoding,
+        )
 
     def drop_database(self, databases: Union[str, Sequence[str]]) -> None:
         """

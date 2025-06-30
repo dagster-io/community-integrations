@@ -166,3 +166,4 @@ cython_debug/
 
 # NodeJS
 node_modules/
+/.idea
