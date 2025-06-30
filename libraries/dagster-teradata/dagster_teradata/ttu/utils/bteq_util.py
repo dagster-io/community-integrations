@@ -194,7 +194,7 @@ def _prepare_bteq_command(
     if timeout_rc is not None and timeout_rc >= 0:
         bteq_core_cmd.append(f" RC {timeout_rc}")
     bteq_core_cmd.append(";")
-    # Airflow doesn't display the script of BTEQ in UI but only in log so WIDTH is 500 enough
+    # Dagster doesn't display the script of BTEQ in UI but only in log so WIDTH is 500 enough
     bteq_core_cmd.append(" .SET WIDTH 500;")
     return bteq_core_cmd
 

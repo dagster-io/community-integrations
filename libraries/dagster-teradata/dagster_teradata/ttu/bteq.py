@@ -146,7 +146,7 @@ class Bteq:
         if not self.remote_host:
             if self.sql:
                 bteq_script = prepare_bteq_script_for_local_execution(sql=self.sql)
-                self.log.info("Executing BTEQ script with SQL content: %s", bteq_script)
+                self.log.debug("Executing BTEQ script with SQL content: %s", bteq_script)
                 return self.execute_bteq_script(
                     bteq_script,
                     self.remote_working_dir,
@@ -157,7 +157,7 @@ class Bteq:
                     self.bteq_quit_rc,
                     self.temp_file_read_encoding,
                 )
-            if self.file_path:
+            elif self.file_path:
                 if not is_valid_file(self.file_path):
                     raise ValueError(
                         f"The provided file path '{self.file_path}' is invalid or does not exist."
@@ -180,7 +180,7 @@ class Bteq:
                     teradata_connection_resource=self.teradata_connection_resource,
                     sql=self.sql,
                 )
-                self.log.info("Executing BTEQ script with SQL content: %s", bteq_script)
+                self.log.debug("Executing BTEQ script with SQL content: %s", bteq_script)
                 return self.execute_bteq_script(
                     bteq_script,
                     self.remote_working_dir,
@@ -352,6 +352,7 @@ class Bteq:
                 remote_port,
             )
 
+
     def _transfer_to_and_execute_bteq_on_remote(
         self,
         file_path: str,
@@ -430,7 +431,7 @@ class Bteq:
                 bteq_session_encoding=bteq_session_encoding or "",
                 timeout_rc=timeout_rc or -1,
             )
-            self.log.info("Executing BTEQ command: %s", bteq_command_str)
+            self.log.debug("Executing BTEQ command: %s", bteq_command_str)
 
             exit_status, stdout, stderr = decrypt_remote_file_to_string(
                 self.ssh_client,
@@ -440,9 +441,9 @@ class Bteq:
             )
 
             failure_message = None
-            self.log.info("stdout : %s", stdout)
-            self.log.info("stderr : %s", stderr)
-            self.log.info("exit_status : %s", exit_status)
+            self.log.debug("stdout : %s", stdout)
+            self.log.debug("stderr : %s", stderr)
+            self.log.debug("exit_status : %s", exit_status)
 
             if "Failure" in stderr or "Error" in stderr:
                 failure_message = stderr
@@ -528,7 +529,7 @@ class Bteq:
             bteq_session_encoding=bteq_session_encoding or "",
             timeout_rc=timeout_rc or -1,
         )
-        self.log.info("Executing BTEQ command: %s", bteq_command_str)
+        self.log.debug("Executing BTEQ command: %s", bteq_command_str)
 
         process = subprocess.Popen(
             bteq_command_str,
@@ -539,9 +540,9 @@ class Bteq:
             preexec_fn=os.setsid,
         )
         encode_bteq_script = bteq_script.encode(str(temp_file_read_encoding or "UTF-8"))
-        self.log.info("encode_bteq_script : %s", encode_bteq_script)
+        self.log.debug("encode_bteq_script : %s", encode_bteq_script)
         stdout_data, _ = process.communicate(input=encode_bteq_script)
-        self.log.info("stdout_data : %s", stdout_data)
+        self.log.debug("stdout_data : %s", stdout_data)
         try:
             # https://docs.python.org/3.10/library/subprocess.html#subprocess.Popen.wait  timeout is in seconds
             process.wait(
@@ -558,7 +559,7 @@ class Bteq:
         for line in stdout_data.splitlines():
             try:
                 decoded_line = line.decode("UTF-8").strip()
-                self.log.info("decoded_line : %s", decoded_line)
+                self.log.debug("decoded_line : %s", decoded_line)
             except UnicodeDecodeError:
                 self.log.warning("Failed to decode line: %s", line)
             if "Failure" in decoded_line or "Error" in decoded_line:
@@ -601,9 +602,9 @@ class Bteq:
             except Exception as e:
                 self.log.error("Failed to terminate subprocess: %s", str(e))
 
-    def get_airflow_home_dir(self) -> str:
-        """Get the AIRFLOW_HOME directory from environment variables."""
-        return os.environ.get("AIRFLOW_HOME", "~/airflow")
+    def get_dagster_home_dir(self) -> str:
+        """Get the DAGSTER_HOME directory from environment variables."""
+        return os.environ.get("DAGSTER_HOME", "~/.dagster_home")
 
     @contextmanager
     def preferred_temp_directory(self, prefix="bteq_"):
@@ -617,14 +618,14 @@ class Bteq:
             str: Path to the created temporary directory
 
         Note:
-            Falls back to AIRFLOW_HOME if system temp directory is not usable
+            Falls back to DAGSTER_HOME if system temp directory is not usable
         """
         try:
             temp_dir = tempfile.gettempdir()
             if not os.path.isdir(temp_dir) or not os.access(temp_dir, os.W_OK):
                 raise OSError("OS temp dir not usable")
         except Exception:
-            temp_dir = self.get_airflow_home_dir()
+            temp_dir = self.get_dagster_home_dir()
 
         with tempfile.TemporaryDirectory(dir=temp_dir, prefix=prefix) as tmp:
             yield tmp
@@ -659,7 +660,7 @@ class Bteq:
                     teradata_connection_resource=self.teradata_connection_resource,
                     sql=file_content,
                 )
-                self.log.info("Executing BTEQ script with SQL content: %s", bteq_script)
+                self.log.debug("Executing BTEQ script with SQL content: %s", bteq_script)
                 return self.execute_bteq_script_at_remote(
                     bteq_script,
                     self.remote_working_dir,
@@ -697,7 +698,7 @@ class Bteq:
             bteq_script = prepare_bteq_script_for_local_execution(
                 sql=file_content,
             )
-            self.log.info("Executing BTEQ script with SQL content: %s", bteq_script)
+            self.log.debug("Executing BTEQ script with SQL content: %s", bteq_script)
             result = self.execute_bteq_script(
                 bteq_script,
                 self.remote_working_dir,
@@ -753,10 +754,6 @@ class Bteq:
                     password = (
                         self.cred_manager.decrypt(creds["password"]) if creds else None
                     )
-
-                if not password:
-                    password = getpass.getpass(f"SSH password for {user}@{host}: ")
-                    store_credentials(self, host, user, password)
 
                 self.ssh_client.connect(
                     host, port=port, username=user, password=password

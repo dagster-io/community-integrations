@@ -124,31 +124,39 @@ def test_create_teradata_compute_cluster(tmp_path):
 ```
 ## BTEQ Operator
 
-The `bteq_operator` method enables execution of Teradata BTEQ commands either locally or on a remote machine via SSH. It supports direct SQL input or file-based scripts, custom encoding, timeout controls, and both password and SSH key authentication for remote execution.
+The bteq_operator method enables execution of SQL statements or BTEQ (Basic Teradata Query) scripts using the Teradata BTEQ utility. 
+It supports running commands either on the local machine or on a remote machine over SSH — in both cases, the BTEQ utility must be installed on the target system.
 
 ### Key Features
 
-- Local or remote BTEQ execution
-- Accepts SQL string or file path (mutually exclusive)
-- Supports custom script/session encoding
-- Timeout and return code handling
-- Remote authentication via password or SSH key
+- Executes SQL provided as a string or from a script file (only one can be used at a time).
+- Supports custom encoding for the script or session.
+- Configurable timeout and return code handling.
+- Remote execution supports authentication using a password or an SSH key.
+- Works in both local and remote setups, provided the BTEQ tool is installed on the system where execution takes place.
+
+> Ensure that the Teradata BTEQ utility is installed on the machine where the SQL statements or scripts will be executed.
+>
+> This could be:
+>  * The local machine where Dagster runs the task, for local execution.
+>  * The remote host accessed via SSH, for remote execution.
+>  * If executing remotely, also ensure that an SSH server (e.g., sshd) is running and accessible on the remote machine.
 
 ### Parameters
 
-- `sql`: SQL commands to execute directly (optional, mutually exclusive with `file_path`)
-- `file_path`: Path to SQL script file (optional, mutually exclusive with `sql`)
-- `remote_host`: Hostname/IP for remote execution (optional)
-- `remote_user`: Username for remote authentication (required if `remote_host` is set)
-- `remote_password`: Password for remote authentication (alternative to `ssh_key_path`)
-- `ssh_key_path`: Path to SSH private key (alternative to `remote_password`)
-- `remote_port`: SSH port (default: 22)
-- `remote_working_dir`: Working directory on remote machine (default: `/tmp`)
-- `bteq_script_encoding`: Encoding for BTEQ script file (default: `utf-8`)
-- `bteq_session_encoding`: Encoding for BTEQ session (default: `ASCII`)
-- `bteq_quit_rc`: Acceptable return code(s) for BTEQ execution (default: 0)
-- `timeout`: Maximum execution time in seconds (default: 600)
-- `timeout_rc`: Return code for timeout cases (optional)
+- `sql`: SQL statement(s) to be executed using BTEQ. (optional, mutually exclusive with `file_path`)
+- `file_path`: If provided, this file will be used instead of the `sql` content. This path represents remote file path when executing remotely via SSH, or local file path when executing locally. (optional, mutually exclusive with `sql`)
+- `remote_host`: Hostname or IP address for remote execution. If not provided, execution is assumed to be local. *(optional)*  
+- `remote_user`: Username used for SSH authentication on the remote host. Required if `remote_host` is specified.  
+- `remote_password`: Password for SSH authentication. Optional, and used as an alternative to `ssh_key_path`.  
+- `ssh_key_path`: Path to the SSH private key used for authentication. Optional, and used as an alternative to `remote_password`.  
+- `remote_port`: SSH port number for the remote host. Defaults to `22` if not specified. *(optional)*
+- `remote_working_dir`: Temporary directory location on the remote host (via SSH) where the BTEQ script will be transferred and executed. Defaults to `/tmp` if not specified. This is only applicable when `ssh_conn_id` is provided.
+- `bteq_script_encoding`: Character encoding for the BTEQ script file. Defaults to ASCII if not specified.
+- `bteq_session_encoding`: Character set encoding for the BTEQ session. Defaults to ASCII if not specified.
+- `bteq_quit_rc`: Accepts a single integer, list, or tuple of return codes. Specifies which BTEQ return codes should be treated as successful, allowing subsequent tasks to continue execution.
+- `timeout`: Timeout (in seconds) for executing the BTEQ command. Default is 600 seconds (10 minutes).
+- `timeout_rc`: Return code to use if the BTEQ execution fails due to a timeout. To allow Ops execution to continue after a timeout, include this value in `bteq_quit_rc`. If not specified, a timeout will raise an exception and stop the Ops.
 
 ### Returns
 

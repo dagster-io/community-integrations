@@ -172,8 +172,6 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
             connection_params.update({"user": self.user, "password": self.password})
         if self.database is not None:
             connection_params["database"] = self.database
-        if self.logmech is not None:
-            connection_params["logmech"] = self.logmech
         if self.port is not None:
             connection_params["port"] = self.port
         if self.tmode is not None:
@@ -378,7 +376,7 @@ class TeradataDagsterConnection:
 
         Args:
             sql (Optional[str]): SQL commands to execute directly. Mutually exclusive with file_path.
-            file_path (Optional[str]): Path to file containing SQL commands. Mutually exclusive with sql.
+            file_path (Optional[str]): [Optional] Path to an existing SQL or BTEQ script file.
             remote_host (Optional[str]): Hostname or IP for remote execution. None for local execution.
             remote_user (Optional[str]): Username for remote authentication. Required if remote_host specified.
             remote_password (Optional[str]): Password for remote authentication. Alternative to ssh_key_path.
