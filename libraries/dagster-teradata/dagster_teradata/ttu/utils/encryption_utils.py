@@ -50,6 +50,9 @@ class SecureCredentialManager:
                     self.key = f.read()
             else:
                 self.key = Fernet.generate_key()
+                key_dir = os.path.dirname(self.key_file)
+                os.makedirs(key_dir, exist_ok=True)
+
                 with open(self.key_file, "wb") as f:
                     f.write(self.key)
                 os.chmod(self.key_file, 0o600)  # Restrict to owner-only permissions
