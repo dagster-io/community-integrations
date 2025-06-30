@@ -8,13 +8,14 @@ try:
     from pyspark.sql.functions import days, hours, months
 except ImportError as e:
     raise ImportError("Please install dagster-iceberg with the 'spark' extra.") from e
-from dagster import ConfigurableIOManagerFactory
-from dagster._annotations import public
-from dagster._core.definitions.multi_dimensional_partitions import (
+from dagster import (
+    ConfigurableIOManagerFactory,
     MultiPartitionsDefinition,
+    PartitionsDefinition,
+    TimeWindow,
 )
-from dagster._core.definitions.partition import PartitionsDefinition, ScheduleType
-from dagster._core.definitions.time_window_partitions import TimeWindow
+from dagster._annotations import public
+from dagster._core.definitions.partitions.schedule_type import ScheduleType
 from dagster._core.execution.context.input import InputContext
 from dagster._core.execution.context.output import OutputContext
 from dagster._core.storage.db_io_manager import (

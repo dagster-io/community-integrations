@@ -9,7 +9,7 @@ from typing import (
     cast,
 )
 
-from dagster._core.definitions.time_window_partitions import TimeWindow
+from dagster._core.definitions import TimeWindow
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
 from pyiceberg import expressions as E
 from pyiceberg import types as T
