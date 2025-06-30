@@ -1,4 +1,3 @@
-import getpass
 import os
 import socket
 import subprocess
@@ -30,7 +29,6 @@ from dagster_teradata.ttu.utils.encryption_utils import (
     generate_encrypted_file_with_openssl,
     decrypt_remote_file_to_string,
     get_stored_credentials,
-    store_credentials,
 )
 
 
@@ -146,7 +144,9 @@ class Bteq:
         if not self.remote_host:
             if self.sql:
                 bteq_script = prepare_bteq_script_for_local_execution(sql=self.sql)
-                self.log.debug("Executing BTEQ script with SQL content: %s", bteq_script)
+                self.log.debug(
+                    "Executing BTEQ script with SQL content: %s", bteq_script
+                )
                 return self.execute_bteq_script(
                     bteq_script,
                     self.remote_working_dir,
@@ -180,7 +180,9 @@ class Bteq:
                     teradata_connection_resource=self.teradata_connection_resource,
                     sql=self.sql,
                 )
-                self.log.debug("Executing BTEQ script with SQL content: %s", bteq_script)
+                self.log.debug(
+                    "Executing BTEQ script with SQL content: %s", bteq_script
+                )
                 return self.execute_bteq_script(
                     bteq_script,
                     self.remote_working_dir,
@@ -351,7 +353,6 @@ class Bteq:
                 ssh_key_path,
                 remote_port,
             )
-
 
     def _transfer_to_and_execute_bteq_on_remote(
         self,
@@ -660,7 +661,9 @@ class Bteq:
                     teradata_connection_resource=self.teradata_connection_resource,
                     sql=file_content,
                 )
-                self.log.debug("Executing BTEQ script with SQL content: %s", bteq_script)
+                self.log.debug(
+                    "Executing BTEQ script with SQL content: %s", bteq_script
+                )
                 return self.execute_bteq_script_at_remote(
                     bteq_script,
                     self.remote_working_dir,
