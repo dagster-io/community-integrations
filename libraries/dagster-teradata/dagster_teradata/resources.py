@@ -218,7 +218,7 @@ class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
     def set_query_band(self, query_band_text, teradata_conn):
         """Set SESSION Query Band for each connection session."""
         try:
-            query_band_text = _handle_user_query_band_text(query_band_text)
+            query_band_text = _handle_user_query_band_text(self, query_band_text)
             set_query_band_sql = f"SET QUERY_BAND='{query_band_text}' FOR SESSION"
             with teradata_conn.cursor() as cur:
                 cur.execute(set_query_band_sql)

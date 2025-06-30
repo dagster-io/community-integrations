@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import shutil
 import stat
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from paramiko import SSHClient
@@ -200,7 +200,7 @@ def _prepare_bteq_command(
 
 
 def prepare_bteq_command_for_remote_execution(
-    timeout: int,
+    timeout: Optional[int],  # or: timeout: int | None
     bteq_script_encoding: str,
     bteq_session_encoding: str,
     timeout_rc: int,
@@ -218,7 +218,7 @@ def prepare_bteq_command_for_remote_execution(
         str: Complete BTEQ command string for remote execution.
     """
     bteq_core_cmd = _prepare_bteq_command(
-        timeout, bteq_script_encoding, bteq_session_encoding, timeout_rc
+        timeout or 600, bteq_script_encoding, bteq_session_encoding, timeout_rc
     )
     bteq_core_cmd.append('"')
     return " ".join(bteq_core_cmd)
@@ -226,7 +226,7 @@ def prepare_bteq_command_for_remote_execution(
 
 def prepare_bteq_command_for_local_execution(
     teradata_connection_resource,
-    timeout: int,
+    timeout: Optional[int],  # or: timeout: int | None
     bteq_script_encoding: str,
     bteq_session_encoding: str,
     timeout_rc: int,
@@ -245,7 +245,7 @@ def prepare_bteq_command_for_local_execution(
         str: Complete BTEQ command string for local execution including login details.
     """
     bteq_core_cmd = _prepare_bteq_command(
-        timeout, bteq_script_encoding, bteq_session_encoding, timeout_rc
+        timeout or 600, bteq_script_encoding, bteq_session_encoding, timeout_rc
     )
     host = teradata_connection_resource.host
     login = teradata_connection_resource.user
@@ -311,7 +311,7 @@ def read_file(file_path: str, encoding: str = "UTF-8") -> str:
 
 
 def is_valid_remote_bteq_script_file(
-    ssh_client: SSHClient, remote_file_path: str, logger=None
+    ssh_client: SSHClient, remote_file_path: str | None, logger=None
 ) -> bool:
     """
     Check if a remote file is a valid BTEQ script file.
