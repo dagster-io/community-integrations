@@ -29,12 +29,12 @@ from pydantic import Field
 from dagster_iceberg._utils import preview
 
 try:
-    from dagster._core.definitions.partitions.schedule_type import (
-        ScheduleType,  # type: ignore[reportMissingImports]
+    from dagster._core.definitions.partitions.schedule_type import (  # type: ignore[reportMissingImports]
+        ScheduleType,
     )
 except ImportError:
-    from dagster._core.definitions.partition import (
-        ScheduleType,  # type: ignore[reportMissingImports]
+    from dagster._core.definitions.partition import (  # type: ignore[reportMissingImports]
+        ScheduleType,
     )
 
 if TYPE_CHECKING:
