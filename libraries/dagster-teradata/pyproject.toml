@@ -29,7 +29,11 @@ requires = ["setuptools>=42"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["dagster_teradata"]
+packages = [
+    "dagster_teradata",
+    "dagster_teradata.ttu",
+    "dagster_teradata.ttu.utils"
+]
 
 [tool.setuptools.dynamic]
 version = {attr = "dagster_teradata.__version__"}
