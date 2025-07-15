@@ -162,9 +162,11 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
 
         if streaming:
             try:
-                return self.write_df_to_path(context, df.collect(engine="streaming"), path)  # type: ignore
+                return self.write_df_to_path(
+                    context, df.collect(engine="streaming"), path
+                )  # type: ignore
             except ValueError:
-            #ValueError: Invalid engine argument engine='streaming'
+                # ValueError: Invalid engine argument engine='streaming'
                 return self.write_df_to_path(context, df.collect(streaming=True), path)
 
         else:
