@@ -168,7 +168,7 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
             except ValueError:
                 # ValueError: Invalid engine argument engine='streaming'
                 # allow old syntax if installed polars version is older
-                return self.write_df_to_path(context, df.collect(streaming=True), path) # type: ignore
+                return self.write_df_to_path(context, df.collect(streaming=True), path)  # type: ignore
 
         else:
             return self.write_df_to_path(context, df.collect(), path)
