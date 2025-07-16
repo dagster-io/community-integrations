@@ -9,6 +9,7 @@ import polars as pl
 from dagster import InputContext, MetadataValue, MultiPartitionKey, OutputContext
 from dagster._core.errors import DagsterInvariantViolationError
 from dagster._core.storage.upath_io_manager import is_dict_type
+from packaging.version import parse
 
 from dagster_polars.io_managers.base import BasePolarsUPathIOManager
 
@@ -161,13 +162,12 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
         streaming = context_metadata.get("streaming", False)
 
         if streaming:
-            try:
+            # https://github.com/pola-rs/polars/issues/20947
+            if parse(pl.__version__) > parse("1.22.0"):
                 return self.write_df_to_path(
                     context, df.collect(engine="streaming"), path
                 )  # type: ignore
-            except ValueError:
-                # ValueError: Invalid engine argument engine='streaming'
-                # allow old syntax if installed polars version is older
+            else:
                 return self.write_df_to_path(context, df.collect(streaming=True), path)  # type: ignore
 
         else:
