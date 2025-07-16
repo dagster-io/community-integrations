@@ -86,6 +86,21 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
             def my_table() -> pl.DataFrame:
                 ...
 
+        Overwriting the schema if it has changed:
+
+        .. code-block:: python
+
+            @asset(
+                io_manager_key="polars_delta_io_manager",
+                metadata={
+                    "mode": "overwrite",
+                    "delta_write_options": {
+                        "schema_mode": "overwrite"
+                },
+            )
+            def my_table() -> pl.DataFrame:
+                ...
+
         Using native DeltaLake partitioning by storing different asset partitions in the same DeltaLake table:
 
         .. code-block:: python
@@ -148,7 +163,6 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
 
     extension: str = ".delta"  # pyright: ignore[reportIncompatibleVariableOverride]
     mode: DeltaWriteMode = DeltaWriteMode.overwrite.value  # type: ignore
-    overwrite_schema: bool = False
     version: Optional[int] = None
 
     def sink_df_to_path(
@@ -204,22 +218,15 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
                         f"Found: `{partition_by}`"
                     )
 
-                # rust is the default engine in newer versions of deltalake
-                if (engine := delta_write_options.get("engine", "rust")) == "rust":
-                    delta_write_options["predicate"] = self.get_predicate(context)
-
-                elif engine == "pyarrow":
-                    delta_write_options["partition_filters"] = (
-                        self.get_partition_filters(context)
-                    )
-
-                else:
-                    raise NotImplementedError(f"Invalid engine: {engine}")
+                delta_write_options["predicate"] = self.get_predicate(context)
 
         if delta_write_options is not None:
             context.log.debug(
                 f"Writing with delta_write_options: {pformat(delta_write_options)}"
             )
+            if delta_write_options.get("mode") and context_metadata.get("mode"):
+                # prevents: TypeError: deltalake.writer.writer.write_deltalake() got multiple values for keyword argument 'mode'
+                delta_write_options.pop("mode")
 
         storage_options = self.storage_options
         try:
@@ -230,8 +237,6 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
         df.write_delta(
             dt,
             mode=context_metadata.get("mode") or self.mode.value,
-            overwrite_schema=context_metadata.get("overwrite_schema")
-            or self.overwrite_schema,
             storage_options=storage_options,
             delta_write_options=delta_write_options,
         )
