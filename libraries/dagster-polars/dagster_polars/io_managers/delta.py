@@ -225,9 +225,10 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
                 f"Writing with delta_write_options: {pformat(delta_write_options)}"
             )
             if delta_write_options.get("mode"):
-                raise ValueError("Set mode directly in the context metadata, not in delta_write_options.")
+                raise ValueError(
+                    "Set mode directly in the context metadata, not in delta_write_options."
+                )
                 # prevents: TypeError: deltalake.writer.writer.write_deltalake() got multiple values for keyword argument 'mode'
-            
 
         storage_options = self.storage_options
         try:
