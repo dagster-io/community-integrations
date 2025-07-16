@@ -153,7 +153,7 @@ def test_polars_delta_io_manager_overwrite_schema(
     @asset(
         io_manager_def=polars_delta_io_manager,
         metadata={
-            "delta_write_options": {"schema_mode": "overwrite", "mode": "overwrite"}
+            "delta_write_options": {"schema_mode": "overwrite"}, "mode": "overwrite"
         },
     )
     def overwrite_schema_asset_2() -> pl.DataFrame:
@@ -238,7 +238,7 @@ def test_polars_delta_io_manager_overwrite_schema_lazy(
     @asset(
         io_manager_def=polars_delta_io_manager,
         metadata={
-            "delta_write_options": {"schema_mode": "overwrite", "mode": "overwrite"}
+            "delta_write_options": {"schema_mode": "overwrite"}, "mode": "overwrite"
         },
     )
     def overwrite_schema_asset_2() -> pl.LazyFrame:
