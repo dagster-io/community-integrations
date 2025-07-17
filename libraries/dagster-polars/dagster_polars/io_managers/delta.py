@@ -13,15 +13,28 @@ from dagster._core.storage.upath_io_manager import is_dict_type
 from dagster_polars.io_managers.base import BasePolarsUPathIOManager
 
 try:
+    import deltalake as dl
     from deltalake import DeltaTable
     from deltalake.exceptions import TableNotFoundError
-    import deltalake.__version__
-    deltalake_ver = packaging.version.parse(deltalake.__version__)
+
+    deltalake_ver = packaging.version.parse(dl.__version__)
     polars_ver = packaging.version.parse(pl.__version__)
-    if (deltalake_ver >= packaging.version.parse("1.0.0")) and (polars_ver < packaging.version.parse("1.31.0")):
+    if (deltalake_ver >= packaging.version.parse("1.0.0")) and (
+        polars_ver < packaging.version.parse("1.31.0")
+    ):
         raise ImportError(
             "polars>=1.31.0 is required for deltalake>=1.0.0, please upgrade polars."
         )
+    (
+        use_legacy_deltalake := (
+            polars_ver < packaging.version.parse("1.31.0")
+            and deltalake_ver < packaging.version.parse("1.0.0")
+        )
+    )
+    (
+        use_legacy_overwrite_schema_mode := polars_ver
+        < packaging.version.parse("0.20.14")
+    )
 except ImportError as e:
     if "deltalake" in str(e):
         raise ImportError(
@@ -225,7 +238,20 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
                         f"Found: `{partition_by}`"
                     )
 
-                delta_write_options["predicate"] = self.get_predicate(context)
+                if use_legacy_deltalake:
+                    # rust is the default engine in newer versions of deltalake
+                    if (engine := delta_write_options.get("engine", "rust")) == "rust":
+                        delta_write_options["predicate"] = self.get_predicate(context)
+
+                    elif engine == "pyarrow":
+                        delta_write_options["partition_filters"] = (
+                            self.get_partition_filters(context)
+                        )
+
+                    else:
+                        raise NotImplementedError(f"Invalid engine: {engine}")
+                else:
+                    delta_write_options["predicate"] = self.get_predicate(context)
 
         if delta_write_options is not None:
             context.log.debug(
@@ -243,12 +269,21 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
         except TableNotFoundError:
             dt = str(path)
 
-        df.write_delta(
-            dt,
-            mode=context_metadata.get("mode") or self.mode.value,
-            storage_options=storage_options,
-            delta_write_options=delta_write_options,
-        )
+        if use_legacy_overwrite_schema_mode:
+            df.write_delta(
+                dt,
+                mode=context_metadata.get("mode") or self.mode.value,
+                overwrite_schema=context_metadata.get("overwrite_schema") or False,
+                storage_options=storage_options,
+                delta_write_options=delta_write_options,
+            )
+        else:
+            df.write_delta(
+                dt,
+                mode=context_metadata.get("mode") or self.mode.value,
+                storage_options=storage_options,
+                delta_write_options=delta_write_options,
+            )
         if isinstance(dt, DeltaTable):
             current_version = dt.version()
         else:
