@@ -184,8 +184,8 @@ def test_polars_delta_io_manager_overwrite_schema(
         io_manager_def=PolarsDeltaIOManager(
             base_dir=dagster_instance.storage_directory(),
             mode=DeltaWriteMode.overwrite,
-            delta_write_options={"schema_mode": "overwrite"},
-        )
+        ),
+        metadata={"delta_write_options": {"schema_mode": "overwrite"}},
     )
     def overwrite_schema_asset_3() -> pl.DataFrame:
         return pl.DataFrame(
@@ -270,8 +270,8 @@ def test_polars_delta_io_manager_overwrite_schema_lazy(
         io_manager_def=PolarsDeltaIOManager(
             base_dir=dagster_instance.storage_directory(),
             mode=DeltaWriteMode.overwrite,
-            delta_write_options={"schema_mode": "overwrite"},
-        )
+        ),
+        metadata={"delta_write_options": {"schema_mode": "overwrite"}},
     )
     def overwrite_schema_asset_3() -> pl.LazyFrame:
         return pl.LazyFrame(
