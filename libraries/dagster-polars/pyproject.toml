@@ -15,7 +15,7 @@ classifiers = [
 ]
 dependencies = [
     "dagster",
-    "polars>=1.31.0",
+    "polars>=0.20.0",
     "pyarrow>=8.0.0",
     "typing-extensions>=4.7.0",
     "universal-pathlib>=0.1.4",
@@ -23,7 +23,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-deltalake = ["deltalake>=1.0.0"]
+deltalake = ["deltalake>=0.25.0"]
 gcp = ["dagster-gcp>=0.19.5"]
 patito = [
     "patito>=0.8.3",
