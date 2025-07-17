@@ -15,6 +15,13 @@ from dagster_polars.io_managers.base import BasePolarsUPathIOManager
 try:
     from deltalake import DeltaTable
     from deltalake.exceptions import TableNotFoundError
+    import deltalake.__version__
+    deltalake_ver = packaging.version.parse(deltalake.__version__)
+    polars_ver = packaging.version.parse(pl.__version__)
+    if (deltalake_ver >= packaging.version.parse("1.0.0")) and (polars_ver < packaging.version.parse("1.31.0")):
+        raise ImportError(
+            "polars>=1.31.0 is required for deltalake>=1.0.0, please upgrade polars."
+        )
 except ImportError as e:
     if "deltalake" in str(e):
         raise ImportError(
