@@ -89,14 +89,15 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
             )
 
 
-        Appending to a DeltaLake table:
+        Appending to a DeltaLake table and merging schema:
 
         .. code-block:: python
 
             @asset(
                 io_manager_key="polars_delta_io_manager",
                 metadata={
-                    "mode": "append"
+                    "mode": "append",
+                    "delta_write_options": {"schema_mode":"merge"},
                 },
             )
             def my_table() -> pl.DataFrame:
@@ -255,7 +256,7 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
             )
             if delta_write_options.get("mode"):
                 raise ValueError(
-                    "Set mode directly in the context metadata, not in delta_write_options."
+                    "Set `mode` as a key in the asset metadata, not in delta_write_options."
                 )
                 # prevents: TypeError: deltalake.writer.writer.write_deltalake() got multiple values for keyword argument 'mode'
 
