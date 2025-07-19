@@ -22,7 +22,7 @@ try:
     if (deltalake_ver >= packaging.version.parse("1.0.0")) and (
         polars_ver < packaging.version.parse("1.31.0")
     ):
-        raise ImportError(
+        raise ValueError(
             "polars>=1.31.0 is required for deltalake>=1.0.0, please upgrade polars."
         )
     (
@@ -30,10 +30,6 @@ try:
             polars_ver < packaging.version.parse("1.31.0")
             and deltalake_ver < packaging.version.parse("1.0.0")
         )
-    )
-    (
-        use_legacy_overwrite_schema_mode := polars_ver
-        < packaging.version.parse("0.20.14")
     )
 except ImportError as e:
     if "deltalake" in str(e):
@@ -269,21 +265,12 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
         except TableNotFoundError:
             dt = str(path)
 
-        if use_legacy_overwrite_schema_mode:
-            df.write_delta(
-                dt,
-                mode=context_metadata.get("mode") or self.mode.value,
-                overwrite_schema=context_metadata.get("overwrite_schema") or False,
-                storage_options=storage_options,
-                delta_write_options=delta_write_options,
-            )
-        else:
-            df.write_delta(
-                dt,
-                mode=context_metadata.get("mode") or self.mode.value,
-                storage_options=storage_options,
-                delta_write_options=delta_write_options,
-            )
+        df.write_delta(
+            dt,
+            mode=context_metadata.get("mode") or self.mode.value,
+            storage_options=storage_options,
+            delta_write_options=delta_write_options,
+        )
         if isinstance(dt, DeltaTable):
             current_version = dt.version()
         else:
