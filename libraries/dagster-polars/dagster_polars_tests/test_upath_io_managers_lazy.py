@@ -110,7 +110,7 @@ def test_polars_upath_io_manager_nested_dtypes(
 
     @asset(io_manager_def=manager)
     def downstream(upstream: pl.LazyFrame) -> pl.DataFrame:
-        return upstream.collect(engine="streaming")  # type: ignore
+        return upstream.collect()
 
     result = materialize(
         [upstream, downstream],

@@ -152,7 +152,10 @@ def test_polars_delta_io_manager_overwrite_schema(
 
     @asset(
         io_manager_def=polars_delta_io_manager,
-        metadata={"overwrite_schema": True, "mode": "overwrite"},
+        metadata={
+            "delta_write_options": {"schema_mode": "overwrite"},
+            "mode": "overwrite",
+        },
     )
     def overwrite_schema_asset_2() -> pl.DataFrame:
         return pl.DataFrame(
@@ -181,8 +184,8 @@ def test_polars_delta_io_manager_overwrite_schema(
         io_manager_def=PolarsDeltaIOManager(
             base_dir=dagster_instance.storage_directory(),
             mode=DeltaWriteMode.overwrite,
-            overwrite_schema=True,
-        )
+        ),
+        metadata={"delta_write_options": {"schema_mode": "overwrite"}},
     )
     def overwrite_schema_asset_3() -> pl.DataFrame:
         return pl.DataFrame(
@@ -235,7 +238,10 @@ def test_polars_delta_io_manager_overwrite_schema_lazy(
 
     @asset(
         io_manager_def=polars_delta_io_manager,
-        metadata={"overwrite_schema": True, "mode": "overwrite"},
+        metadata={
+            "delta_write_options": {"schema_mode": "overwrite"},
+            "mode": "overwrite",
+        },
     )
     def overwrite_schema_asset_2() -> pl.LazyFrame:
         return pl.LazyFrame(
@@ -264,8 +270,8 @@ def test_polars_delta_io_manager_overwrite_schema_lazy(
         io_manager_def=PolarsDeltaIOManager(
             base_dir=dagster_instance.storage_directory(),
             mode=DeltaWriteMode.overwrite,
-            overwrite_schema=True,
-        )
+        ),
+        metadata={"delta_write_options": {"schema_mode": "overwrite"}},
     )
     def overwrite_schema_asset_3() -> pl.LazyFrame:
         return pl.LazyFrame(
@@ -290,11 +296,9 @@ def test_polars_delta_io_manager_overwrite_schema_lazy(
     )
 
 
-@pytest.mark.parametrize("engine", ["pyarrow", "rust"])
 def test_polars_delta_native_partitioning(
     polars_delta_io_manager: PolarsDeltaIOManager,
     df_for_delta: pl.DataFrame,
-    engine: str,
 ):
     manager = polars_delta_io_manager
     df = df_for_delta
@@ -306,7 +310,6 @@ def test_polars_delta_native_partitioning(
         partitions_def=partitions_def,
         metadata={
             "partition_by": "partition",
-            "delta_write_options": {"engine": engine},
         },
     )
     def upstream_partitioned(context: OpExecutionContext) -> pl.DataFrame:
@@ -337,11 +340,9 @@ def test_polars_delta_native_partitioning(
     )
 
 
-@pytest.mark.parametrize("engine", ["pyarrow", "rust"])
 def test_polars_delta_native_multi_partitions(
     polars_delta_io_manager: PolarsDeltaIOManager,
     df_for_delta: pl.DataFrame,
-    engine: str,
 ):
     manager = polars_delta_io_manager
     df = df_for_delta
@@ -358,7 +359,6 @@ def test_polars_delta_native_multi_partitions(
         partitions_def=partitions_def,
         metadata={
             "partition_by": {"time": "date", "category": "category"},
-            "delta_write_options": {"engine": engine},
         },
     )
     def upstream_partitioned(context: OpExecutionContext) -> pl.DataFrame:
@@ -393,11 +393,9 @@ def test_polars_delta_native_multi_partitions(
     )
 
 
-@pytest.mark.parametrize("engine", ["pyarrow", "rust"])
 def test_polars_delta_native_partitioning_loading_single_partition(
     polars_delta_io_manager: PolarsDeltaIOManager,
     df_for_delta: pl.DataFrame,
-    engine: str,
 ):
     manager = polars_delta_io_manager
     df = df_for_delta
@@ -409,7 +407,6 @@ def test_polars_delta_native_partitioning_loading_single_partition(
         partitions_def=partitions_def,
         metadata={
             "partition_by": "partition",
-            "delta_write_options": {"engine": engine},
         },
     )
     def upstream_partitioned(context: OpExecutionContext) -> pl.DataFrame:
