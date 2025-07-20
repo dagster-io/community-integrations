@@ -25,6 +25,16 @@ try:
         raise ValueError(
             "polars>=1.31.0 is required for deltalake>=1.0.0, please upgrade polars."
         )
+    # even if polars definesa lower bound for deltalake in
+    # https://github.com/pola-rs/polars/blob/main/py-polars/pyproject.toml
+    # it is possible for uv to install new polars and old deltalake because
+    # deltalake is an extra in both polars and dagster-polars
+    if (deltalake_ver < packaging.version.parse("1.0.0")) and (
+        polars_ver >= packaging.version.parse("1.31.0")
+    ):
+        raise ValueError(
+            "deltalake>=1.0.0 is required for polars>=1.31.0, please upgrade deltalake."
+        )
     (
         use_legacy_deltalake := (
             polars_ver < packaging.version.parse("1.31.0")
