@@ -4,12 +4,11 @@ from enum import Enum
 from pprint import pformat
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-import packaging.version
 import polars as pl
 from dagster import InputContext, MetadataValue, MultiPartitionKey, OutputContext
 from dagster._core.errors import DagsterInvariantViolationError
 from dagster._core.storage.upath_io_manager import is_dict_type
-from packaging.version import parse
+from packaging.version import parse as parse_version
 
 from dagster_polars.io_managers.base import BasePolarsUPathIOManager
 
@@ -18,10 +17,10 @@ try:
     from deltalake import DeltaTable
     from deltalake.exceptions import TableNotFoundError
 
-    deltalake_ver = packaging.version.parse(dl.__version__)
-    polars_ver = packaging.version.parse(pl.__version__)
-    if (deltalake_ver >= packaging.version.parse("1.0.0")) and (
-        polars_ver < packaging.version.parse("1.31.0")
+    deltalake_ver = parse_version(dl.__version__)
+    polars_ver = parse_version(pl.__version__)
+    if (deltalake_ver >= parse_version("1.0.0")) and (
+        polars_ver < parse_version("1.31.0")
     ):
         raise ValueError(
             "polars>=1.31.0 is required for deltalake>=1.0.0, please upgrade polars."
@@ -30,14 +29,14 @@ try:
     # https://github.com/pola-rs/polars/blob/main/py-polars/pyproject.toml
     # it is possible for uv to install new polars and old deltalake because
     # deltalake is an extra in both polars and dagster-polars
-    if (deltalake_ver < packaging.version.parse("1.0.0")) and (
-        polars_ver >= packaging.version.parse("1.31.0")
+    if (deltalake_ver < parse_version("1.0.0")) and (
+        polars_ver >= parse_version("1.31.0")
     ):
         raise ValueError(
             "deltalake>=1.0.0 is required for polars>=1.31.0, please upgrade deltalake."
         )
-    use_legacy_deltalake = (polars_ver < packaging.version.parse("1.31.0")) and (
-        deltalake_ver < packaging.version.parse("1.0.0")
+    use_legacy_deltalake = (polars_ver < parse_version("1.31.0")) and (
+        deltalake_ver < parse_version("1.0.0")
     )
 except ImportError as e:
     if "deltalake" in str(e):
@@ -201,7 +200,7 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
 
         if streaming:
             # https://github.com/pola-rs/polars/issues/20947
-            if parse(pl.__version__) > parse("1.22.0"):
+            if parse_version(pl.__version__) > parse_version("1.22.0"):
                 return self.write_df_to_path(
                     context, df.collect(engine="streaming"), path
                 )  # type: ignore
@@ -584,6 +583,6 @@ def _get_pyarrow_options_kwargs(
     pyarrow_options: Mapping[str, object],
 ) -> Mapping[str, Any]:
     kwargs: dict[str, object] = {"pyarrow_options": pyarrow_options}
-    if packaging.version.parse(pl.__version__) >= packaging.version.parse("1.14.0"):
+    if parse_version(pl.__version__) >= parse_version("1.14.0"):
         kwargs["use_pyarrow"] = True
     return kwargs
