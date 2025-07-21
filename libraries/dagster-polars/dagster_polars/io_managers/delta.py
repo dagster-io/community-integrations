@@ -148,6 +148,40 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
             def my_table() -> pl.DataFrame:
                 ...
 
+        Customizing delta merge logic:
+
+        .. code-block:: python
+
+            @asset(
+                io_manager_key="polars_delta_io_manager",
+                metadata={
+                    "mode": "merge",
+                    "delta_merge_options": {
+                        "source_alias": "s",
+                        "target_alias": "t",
+                        "predicate": "s.id == t.id",
+                    },
+                    "when_not_matched_insert": {
+                        "updates": {"id": "s.id", "val": "s.val"},
+                        "predicate": "s.id == 123",
+                    }, #or ... : "all"
+                    "when_matched_update": {
+                        "updates": {"val": "s.val"},
+                        "predicate": "t.id == 234",
+                    }, #or ... : "all"
+                    "when_matched_delete": {"predicate": "t.id == 345"},
+                    "when_not_matched_by_source_update": {
+                        "updates": {"val": "NA"},
+                        "predicate": "t.id == 456",
+                    },
+                    "when_not_matched_by_source_delete": {
+                        "predicate": "t.id == 567",
+                    }, #or ... : "all"
+                },
+            )
+            def my_table() -> pl.DataFrame:
+                ...
+
         Using native DeltaLake partitioning by storing different asset partitions in the same DeltaLake table:
 
         .. code-block:: python

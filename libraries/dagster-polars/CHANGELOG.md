@@ -2,6 +2,7 @@
 
 ## Fixes
 
+- Add support for delta merge operation.
 - Fixed `ImportError` when `patito` is not installed
 
 ## 0.27.2
