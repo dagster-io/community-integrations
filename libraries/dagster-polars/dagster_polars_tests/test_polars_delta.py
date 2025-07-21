@@ -712,14 +712,102 @@ def test_polars_delta_merge_with_partitioning(
     saved_path = get_saved_path(result, "merge_partitioned")
 
     # After merge, both partitions should exist and be correct
-    merged = pl.read_delta(saved_path).sort(["partition", "id"])
+    merged = pl.read_delta(saved_path).sort("id")
     expected = pl.DataFrame(
         {"id": [1, 2, 3], "val": ["a", "newB", "c"], "partition": ["x", "y", "x"]}
-    ).sort(["partition", "id"])
+    ).sort("id")
     pl_testing.assert_frame_equal(merged, expected)
 
 
-# TODO:
-# - override merge update and insert to perform upsert on selected fields
-# - delete on match
-# - upsert on unmatched
+def test_granular_merge_selectors_and_predicates(polars_delta_io_manager: PolarsDeltaIOManager):
+    df1 = pl.DataFrame({"id": [1, 2, 3], "val": ["a", "b", "c"]})
+    df2 = pl.DataFrame({"id": [2, 3, 4], "val": ["newB", "c", "d"]})
+
+    @asset(io_manager_def=polars_delta_io_manager)
+    def merge_asset() -> pl.DataFrame:
+        return df1
+
+    result = materialize([merge_asset])
+    saved_path = get_saved_path(result, "merge_asset")
+
+    # Only update row with id=2, insert only id=4, delete id=3
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+        metadata={
+            "mode": "merge",
+            "delta_merge_options": {
+                "source_alias": "s",
+                "target_alias": "t",
+                "predicate": "s.id == t.id",
+            },
+            "when_not_matched_insert": {
+                "updates": {"id": "s.id", "val": "s.val"},
+                "predicate": "s.id == 4",
+            },
+            "when_matched_update": {
+                "updates": {"val": "s.val"},
+                "predicate": "t.id == 2",
+            },
+            "when_matched_delete": {"predicate": "t.id == 3"},
+        },
+    )
+    def merge_asset() -> pl.DataFrame:
+        return df2
+
+    materialize([merge_asset])
+    expected = pl.DataFrame({"id": [1, 2, 4], "val": ["a", "newB", "d"]})
+    actual = pl.read_delta(saved_path).sort("id")
+    pl_testing.assert_frame_equal(actual, expected.sort("id"))
+
+
+def test_granular_merge_selectors_and_predicates_partitioned(
+    polars_delta_io_manager: PolarsDeltaIOManager,
+):
+    df1 = pl.DataFrame({"id": [1, 2], "val": ["a", "b"], "partition": ["x", "y"]})
+    df2 = pl.DataFrame({"id": [1, 2, 3, 4], "val": [None, "newB", "c", "notMerged"], "partition": ["x", "y", "x", "y"]})
+    partitions_def = StaticPartitionsDefinition(["x", "y"])
+
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+        partitions_def=partitions_def,
+        metadata={"partition_by": "partition"},
+    )
+    def merge_partitioned(context: OpExecutionContext) -> pl.DataFrame:
+        return df1.filter(pl.col("partition") == context.partition_key)
+
+    for partition_key in ["x", "y"]:
+        result = materialize([merge_partitioned], partition_key=partition_key)
+    saved_path = get_saved_path(
+        result, "merge_partitioned"
+    )
+
+    # Only update id=2 in partition y, insert id=3 in partition x, delete id=1 in partition x
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+        metadata={
+            "mode": "merge",
+            "delta_merge_options": {
+                "source_alias": "s",
+                "target_alias": "t",
+                "predicate": "s.id == t.id and s.partition == t.partition",
+            },
+            "when_not_matched_insert": {
+                "updates": {"id":"s.id", "val":"s.val", "partition":"s.partition"},
+                "predicate": "s.id == 3",
+            },
+            "when_matched_update": {
+                "updates": {"val": "s.val"},
+                "predicate": "t.id == 2",
+            },
+            "when_matched_delete": {"predicate": "t.id == 1"},
+        },
+    )
+    def merge_partitioned() -> pl.DataFrame:
+        return df2
+
+    materialize([merge_partitioned])
+    merged = pl.read_delta(saved_path).sort("id")
+    expected = pl.DataFrame(
+        {"id": [2, 3], "val": ["newB", "c"], "partition": ["y", "x"]}
+    ).sort("id")
+    pl_testing.assert_frame_equal(merged, expected)
