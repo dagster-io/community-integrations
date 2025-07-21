@@ -384,8 +384,14 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
                     )
 
             if context.has_asset_partitions:
-                # TODO(boccileonardo): perf optimization: https://delta-io.github.io/delta-rs/usage/merging-tables/#1-add-partition-columns-to-predicates
-                pass
+                # single partition key
+                if isinstance(delta_write_options["partition_by"], str):
+                    delta_merge_options["predicate"] = f"{delta_merge_options["predicate"]} AND {delta_merge_options["target_alias"]}.{delta_merge_options["partition_by"]} = {context.asset_partition_key}"
+                # multipartition key
+                else:
+                    #delta_write_options["partition_by"] is a list and each partition should be filtered by the correct asset_partition_key
+                    #TODO
+                    pass
 
             table_merger.execute()
         else:
