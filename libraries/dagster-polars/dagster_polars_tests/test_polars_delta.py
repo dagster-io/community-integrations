@@ -673,3 +673,47 @@ def test_override_default_merge_command(
     expected = pl.DataFrame({"id": [1], "val": ["a"]})
     actual = pl.read_delta(saved_path).sort("id")
     pl_testing.assert_frame_equal(actual, expected.sort("id"))
+
+
+def test_polars_delta_merge_with_partitioning(
+    polars_delta_io_manager: PolarsDeltaIOManager,
+):
+    df1 = pl.DataFrame({"id": [1, 2], "val": ["a", "b"], "partition": ["x", "y"]})
+    df2 = pl.DataFrame({"id": [2, 3], "val": ["newB", "c"], "partition": ["y", "x"]})
+
+    partitions_def = StaticPartitionsDefinition(["x", "y"])
+
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+        partitions_def=partitions_def,
+        metadata={"partition_by": "partition"},
+    )
+    def merge_partitioned(context: OpExecutionContext) -> pl.DataFrame:
+        return df1.filter(pl.col("partition") == context.partition_key)
+
+    for partition_key in ["x", "y"]:
+        materialize([merge_partitioned], partition_key=partition_key)
+
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+        metadata={
+            "mode": "merge",
+            "delta_merge_options": {
+                "source_alias": "s",
+                "target_alias": "t",
+                "predicate": "s.id == t.id and s.partition == t.partition",
+            },
+        },
+    )
+    def merge_partitioned() -> pl.DataFrame:
+        return df2
+
+    result = materialize([merge_partitioned])
+    saved_path = get_saved_path(result, "merge_partitioned")
+
+    # After merge, both partitions should exist and be correct
+    merged = pl.read_delta(saved_path).sort(["partition", "id"])
+    expected = pl.DataFrame(
+        {"id": [1, 2, 3], "val": ["a", "newB", "c"], "partition": ["x", "y", "x"]}
+    ).sort(["partition", "id"])
+    pl_testing.assert_frame_equal(merged, expected)
