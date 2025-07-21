@@ -4,6 +4,9 @@
 
 - Add support for delta merge operation.
 - Fixed `ImportError` when `patito` is not installed
+- Use new deltalake (>=1.0.0) syntax and arguments for delta io manager while retaining compatibility via version parsing and legacy syntax.
+- Bump polars dev dependency to support latest deltalake syntax
+
 
 ## 0.27.2
 
