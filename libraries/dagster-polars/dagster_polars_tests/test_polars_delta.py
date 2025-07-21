@@ -661,9 +661,9 @@ def test_override_default_merge_command(
                 "target_alias": "t",
                 "predicate": "s.id == t.id",
             },
-            "when_matched_update_all": False,
-            "when_not_matched_insert_all": False,
-            "when_not_matched_by_source_delete": True,
+            "when_matched_update": {},
+            "when_not_matched_insert": {},
+            "when_not_matched_by_source_delete": "all",
         },
     )
     def merge_schema_asset() -> pl.DataFrame:
@@ -717,3 +717,9 @@ def test_polars_delta_merge_with_partitioning(
         {"id": [1, 2, 3], "val": ["a", "newB", "c"], "partition": ["x", "y", "x"]}
     ).sort(["partition", "id"])
     pl_testing.assert_frame_equal(merged, expected)
+
+
+# TODO:
+# - override merge update and insert to perform upsert on selected fields
+# - delete on match
+# - upsert on unmatched

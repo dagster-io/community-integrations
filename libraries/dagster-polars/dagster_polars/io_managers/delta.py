@@ -16,6 +16,7 @@ try:
     import deltalake as dl
     from deltalake import DeltaTable
     from deltalake.exceptions import TableNotFoundError
+    from deltalake.table import TableMerger
 
     deltalake_ver = packaging.version.parse(dl.__version__)
     polars_ver = packaging.version.parse(pl.__version__)
@@ -296,21 +297,62 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
 
         if write_mode == DeltaWriteMode.merge.value:
             delta_merge_options = context_metadata.get("delta_merge_options")
-            table_merger = df.write_delta(
+            # TODO: this will fail if there is no target table created yet. Should we fallback to creating a new table in that case? @danielgafni
+            # or do we assume that if someone uses merge only when DDL statements were already run to create the target?
+            # it could be misleading to have merge conditions silently ignored when falling back but I can't think of a better solution.
+            table_merger: TableMerger = df.write_delta(
                 dt,
                 mode=write_mode,
                 storage_options=storage_options,
-                # TODO: Handle case where target table doesn't exist yet
                 delta_write_options=delta_write_options,
                 delta_merge_options=delta_merge_options,
-            )
-            if context_metadata.get("when_matched_update_all", True):
-                table_merger.when_matched_update_all()
-            if context_metadata.get("when_not_matched_insert_all", True):
-                table_merger.when_not_matched_insert_all()
-            if context_metadata.get("when_not_matched_by_source_delete", False):
-                table_merger.when_not_matched_by_source_delete()
-            # TODO: add support for other merge commands: https://delta-io.github.io/delta-rs/usage/merging-tables/
+            )  # type: ignore
+            # in case of multiple matches this will execute insert -> update -> delete
+            # https://delta-io.github.io/delta-rs/usage/merging-tables/#multiple-matches
+            # is this acceptable? #TODO
+            if inserts := context_metadata.get("when_not_matched_insert", "all"):
+                if inserts == "all":
+                    table_merger.when_not_matched_insert_all()
+                else:
+                    table_merger.when_not_matched_insert(
+                        updates=inserts["updates"],
+                        predicate=inserts.get("predicate"),
+                    )
+            if updates := context_metadata.get("when_matched_update", "all"):
+                if updates == "all":
+                    table_merger.when_matched_update_all()
+                else:
+                    table_merger.when_matched_update(
+                        updates=updates["updates"],
+                        predicate=updates.get("predicate"),
+                    )
+            if deletes := context_metadata.get("when_matched_delete", {}):
+                if deletes == "all":
+                    table_merger.when_matched_delete()
+                else:
+                    table_merger.when_matched_delete(predicate=deletes.get("predicate"))
+
+            if unmatched_updates := context_metadata.get(
+                "when_not_matched_by_source_update", {}
+            ):
+                table_merger.when_not_matched_by_source_update(
+                    updates=unmatched_updates["updates"],
+                    predicate=unmatched_updates.get("predicate"),
+                )
+            if unmatched_deletes := context_metadata.get(
+                "when_not_matched_by_source_delete", {}
+            ):
+                if unmatched_deletes == "all":
+                    table_merger.when_not_matched_by_source_delete()
+                else:
+                    table_merger.when_not_matched_by_source_delete(
+                        predicate=unmatched_deletes.get("predicate")
+                    )
+
+            if context.has_asset_partitions:
+                # TODO(boccileonardo): perf optimization: https://delta-io.github.io/delta-rs/usage/merging-tables/#1-add-partition-columns-to-predicates
+                pass
+
             table_merger.execute()
         else:
             if context_metadata.get("delta_merge_options"):
