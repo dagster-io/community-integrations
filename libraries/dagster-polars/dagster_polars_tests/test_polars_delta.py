@@ -719,7 +719,9 @@ def test_polars_delta_merge_with_partitioning(
     pl_testing.assert_frame_equal(merged, expected)
 
 
-def test_granular_merge_selectors_and_predicates(polars_delta_io_manager: PolarsDeltaIOManager):
+def test_granular_merge_selectors_and_predicates(
+    polars_delta_io_manager: PolarsDeltaIOManager,
+):
     df1 = pl.DataFrame({"id": [1, 2, 3], "val": ["a", "b", "c"]})
     df2 = pl.DataFrame({"id": [2, 3, 4], "val": ["newB", "c", "d"]})
 
@@ -764,7 +766,13 @@ def test_granular_merge_selectors_and_predicates_partitioned(
     polars_delta_io_manager: PolarsDeltaIOManager,
 ):
     df1 = pl.DataFrame({"id": [1, 2], "val": ["a", "b"], "partition": ["x", "y"]})
-    df2 = pl.DataFrame({"id": [1, 2, 3, 4], "val": [None, "newB", "c", "notMerged"], "partition": ["x", "y", "x", "y"]})
+    df2 = pl.DataFrame(
+        {
+            "id": [1, 2, 3, 4],
+            "val": [None, "newB", "c", "notMerged"],
+            "partition": ["x", "y", "x", "y"],
+        }
+    )
     partitions_def = StaticPartitionsDefinition(["x", "y"])
 
     @asset(
@@ -777,9 +785,7 @@ def test_granular_merge_selectors_and_predicates_partitioned(
 
     for partition_key in ["x", "y"]:
         result = materialize([merge_partitioned], partition_key=partition_key)
-    saved_path = get_saved_path(
-        result, "merge_partitioned"
-    )
+    saved_path = get_saved_path(result, "merge_partitioned")
 
     # Only update id=2 in partition y, insert id=3 in partition x, delete id=1 in partition x
     @asset(
@@ -792,7 +798,7 @@ def test_granular_merge_selectors_and_predicates_partitioned(
                 "predicate": "s.id == t.id and s.partition == t.partition",
             },
             "when_not_matched_insert": {
-                "updates": {"id":"s.id", "val":"s.val", "partition":"s.partition"},
+                "updates": {"id": "s.id", "val": "s.val", "partition": "s.partition"},
                 "predicate": "s.id == 3",
             },
             "when_matched_update": {
