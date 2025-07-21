@@ -36,11 +36,8 @@ try:
         raise ValueError(
             "deltalake>=1.0.0 is required for polars>=1.31.0, please upgrade deltalake."
         )
-    (
-        use_legacy_deltalake := (
-            polars_ver < packaging.version.parse("1.31.0")
-            and deltalake_ver < packaging.version.parse("1.0.0")
-        )
+    use_legacy_deltalake = (polars_ver < packaging.version.parse("1.31.0")) and (
+        deltalake_ver < packaging.version.parse("1.0.0")
     )
 except ImportError as e:
     if "deltalake" in str(e):
