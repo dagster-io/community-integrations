@@ -16,6 +16,7 @@ try:
     import deltalake as dl
     from deltalake import DeltaTable
     from deltalake.exceptions import TableNotFoundError
+    from deltalake.table import TableMerger
 
     deltalake_ver = packaging.version.parse(dl.__version__)
     polars_ver = packaging.version.parse(pl.__version__)
@@ -382,11 +383,13 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
             if context.has_asset_partitions:
                 # single partition key
                 if isinstance(delta_write_options["partition_by"], str):
-                    delta_merge_options["predicate"] = f"{delta_merge_options["predicate"]} AND {delta_merge_options["target_alias"]}.{delta_merge_options["partition_by"]} = {context.asset_partition_key}"
+                    delta_merge_options["predicate"] = (
+                        f"{delta_merge_options['predicate']} AND {delta_merge_options['target_alias']}.{delta_merge_options['partition_by']} = {context.asset_partition_key}"
+                    )
                 # multipartition key
                 else:
-                    #delta_write_options["partition_by"] is a list and each partition should be filtered by the correct asset_partition_key
-                    #TODO
+                    # delta_write_options["partition_by"] is a list and each partition should be filtered by the correct asset_partition_key
+                    # TODO
                     pass
 
             table_merger.execute()
