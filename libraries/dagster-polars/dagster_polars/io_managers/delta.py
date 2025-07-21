@@ -61,6 +61,7 @@ class DeltaWriteMode(str, Enum):
     append = "append"
     overwrite = "overwrite"
     ignore = "ignore"
+    merge = "merge"
 
 
 class PolarsDeltaIOManager(BasePolarsUPathIOManager):
@@ -123,6 +124,24 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
                     "mode": "overwrite",
                     "delta_write_options": {
                         "schema_mode": "overwrite"
+                },
+            )
+            def my_table() -> pl.DataFrame:
+                ...
+
+        Upserting using delta merge:
+
+        .. code-block:: python
+
+            @asset(
+                io_manager_key="polars_delta_io_manager",
+                metadata={
+                    "mode": "merge",
+                    "delta_merge_options": {
+                        "source_alias": "s",
+                        "target_alias": "t",
+                        "predicate": "s.id == t.id",
+                        "merge_schema": True
                 },
             )
             def my_table() -> pl.DataFrame:
@@ -214,9 +233,8 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
         path: "UPath",
     ):
         context_metadata = context.definition_metadata or {}
-        delta_write_options = context_metadata.get(
-            "delta_write_options"
-        )  # This needs to be gone and just only key value on the metadata
+        write_mode = context_metadata.get("mode") or self.mode.value
+        delta_write_options = context_metadata.get("delta_write_options")
 
         if context.has_asset_partitions:
             delta_write_options = delta_write_options or {}
@@ -276,12 +294,35 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
         except TableNotFoundError:
             dt = str(path)
 
-        df.write_delta(
-            dt,
-            mode=context_metadata.get("mode") or self.mode.value,
-            storage_options=storage_options,
-            delta_write_options=delta_write_options,
-        )
+        if write_mode == DeltaWriteMode.merge.value:
+            delta_merge_options = context_metadata.get("delta_merge_options")
+            table_merger = df.write_delta(
+                dt,
+                mode=write_mode,
+                storage_options=storage_options,
+                # TODO: Handle case where target table doesn't exist yet
+                delta_write_options=delta_write_options,
+                delta_merge_options=delta_merge_options,
+            )
+            if context_metadata.get("when_matched_update_all", True):
+                table_merger.when_matched_update_all()
+            if context_metadata.get("when_not_matched_insert_all", True):
+                table_merger.when_not_matched_insert_all()
+            if context_metadata.get("when_not_matched_by_source_delete", False):
+                table_merger.when_not_matched_by_source_delete()
+            # TODO: add support for other merge commands: https://delta-io.github.io/delta-rs/usage/merging-tables/
+            table_merger.execute()
+        else:
+            if context_metadata.get("delta_merge_options"):
+                context.log.warning(
+                    "Ignoring provided delta_merge_options because write mode is not set to merge."
+                )
+            df.write_delta(
+                dt,
+                mode=write_mode,
+                storage_options=storage_options,
+                delta_write_options=delta_write_options,
+            )
         if isinstance(dt, DeltaTable):
             current_version = dt.version()
         else:
