@@ -386,7 +386,11 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
                         predicate=unmatched_deletes.get("predicate")
                     )
 
-            if context.has_asset_partitions:
+            if (
+                context.has_asset_partitions
+                and delta_write_options
+                and delta_merge_options
+            ):
                 # single partition key
                 if isinstance(delta_write_options["partition_by"], str):
                     delta_merge_options["predicate"] = (
