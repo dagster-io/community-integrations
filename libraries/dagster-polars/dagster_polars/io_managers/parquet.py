@@ -71,7 +71,19 @@ def scan_parquet(path: "UPath", context: InputContext) -> pl.LazyFrame:
         kwargs["row_count_name"] = context_metadata.get("row_count_name", None)
         kwargs["row_count_offset"] = context_metadata.get("row_count_offset", 0)
 
-    return pl.scan_parquet(str(path), storage_options=storage_options, **kwargs)  # type: ignore
+    # gh issue [dagster-io/dagster#28633]()
+    INCOMPATIBLE_FSSPEC_KEYS = ["client_options"]
+    pl_storage_options = (
+        None
+        if storage_options is None
+        else {
+            k: v
+            for k, v in storage_options.items()
+            if k not in INCOMPATIBLE_FSSPEC_KEYS
+        }
+    )
+
+    return pl.scan_parquet(str(path), storage_options=pl_storage_options, **kwargs)  # type: ignore
 
 
 class PolarsParquetIOManager(BasePolarsUPathIOManager):
