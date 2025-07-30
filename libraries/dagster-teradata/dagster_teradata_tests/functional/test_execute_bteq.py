@@ -1,14 +1,15 @@
-import os
-
 import pytest
 from dagster import job, op, DagsterError
 from dagster_teradata import TeradataResource
 
 td_resource = TeradataResource(
-    host=os.getenv("TERADATA_HOST"),
-    user=os.getenv("TERADATA_USER"),
-    password=os.getenv("TERADATA_PASSWORD"),
-    database=os.getenv("TERADATA_DATABASE"),
+    # host=os.getenv("TERADATA_HOST"),
+    # user=os.getenv("TERADATA_USER"),
+    # password=os.getenv("TERADATA_PASSWORD"),
+    # database=os.getenv("TERADATA_DATABASE"),
+    host="10.27.170.246",
+    user="mt255026",
+    password="mt255026",
 )
 
 
@@ -49,9 +50,9 @@ def test_remote_expected_return_code():
     def example_test_local_expected_return_code(context):
         result = context.resources.teradata.bteq_operator(
             sql="select * from dbc.dbcinfo;",
-            remote_host="host",
-            remote_user="user",
-            remote_password="password",
+            remote_host="10.27.170.246",
+            remote_user="root",
+            remote_password="Tdch@ties123",
             bteq_quit_rc=0,
         )
         context.log.info(result)
