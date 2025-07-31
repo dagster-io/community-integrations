@@ -328,7 +328,7 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
             and len(context.asset_partition_keys) > 0
             and context.has_asset_key is not None
             and context.has_asset_partitions is not None
-            and context.asset_partition_keys
+            and set(context.asset_partition_keys)
             != set(
                 context.upstream_output.asset_partitions_def.get_partition_keys(
                     dynamic_partitions_store=context.instance

@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, cast
 
 import polars as pl
 import polars.testing as pl_testing
@@ -19,7 +19,7 @@ from dagster import (
     asset,
     materialize,
 )
-
+import dagster as dg
 from dagster_polars import (
     BasePolarsUPathIOManager,
     LazyFramePartitions,
@@ -27,6 +27,7 @@ from dagster_polars import (
     PolarsParquetIOManager,
 )
 from dagster_polars_tests.utils import get_saved_path
+import polars.testing as pl_test
 
 
 def test_polars_upath_io_manager_stats_metadata(
@@ -367,3 +368,52 @@ def test_polars_upath_io_manager_input_dict_optional_lazy(
     materialize(
         [upstream.to_source_asset(), downstream],
     )
+
+
+def test_defs_load_asset_value(
+    io_manager_and_df: tuple[BasePolarsUPathIOManager, pl.DataFrame],
+):
+    io_manager, df = io_manager_and_df
+
+    @asset(io_manager_def=io_manager)
+    def my_df() -> pl.LazyFrame:
+        return df.lazy()
+
+    defs = dg.Definitions(
+        assets=[my_df],
+        resources={"io_manager": io_manager},
+    )
+
+    with dg.DagsterInstance.ephemeral() as instance:
+        materialize(
+            [my_df],
+            instance=instance,
+        )
+        loaded_df = cast(
+            pl.LazyFrame,
+            defs.load_asset_value(asset_key=my_df.key, python_type=pl.LazyFrame),
+        )
+        pl_test.assert_frame_equal(loaded_df, df.lazy())
+
+
+def test_asset_execution_context_load_asset_value(
+    io_manager_and_df: tuple[BasePolarsUPathIOManager, pl.DataFrame],
+):
+    io_manager, df = io_manager_and_df
+
+    @asset(io_manager_def=io_manager)
+    def my_df() -> pl.LazyFrame:
+        return df.lazy()
+
+    @asset(deps=[my_df])
+    def check(context: dg.AssetExecutionContext):
+        loaded_df = cast(
+            pl.LazyFrame, context.load_asset_value(my_df.key, python_type=pl.LazyFrame)
+        )
+        pl_test.assert_frame_equal(loaded_df, df.lazy())
+
+    with dg.DagsterInstance.ephemeral() as instance:
+        materialize(
+            [my_df, check],
+            instance=instance,
+        )

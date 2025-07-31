@@ -42,6 +42,7 @@ dev-dependencies = [
     "pytest-cases>=3.6.14",
     "pytest-mock",
     "pyright>=1.1.386",
+    "dagster>=1.11.3",
 ]
 
 [build-system]
