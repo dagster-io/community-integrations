@@ -74,24 +74,11 @@ public class PipesContextImpl implements PipesContext {
         );
     }
 
-    /**
-     * Reports an exception that should terminate execution. The exception will be
-     * propagated to Dagster when the context is closed.
-     *
-     * @param exception Exception to report
-     */
     @Override
     public void reportException(final Exception exception) {
         this.exception = exception;
     }
 
-    /**
-     * Closes the context and flushes pending messages. This must be called to
-     * ensure proper cleanup and exception reporting.
-     *
-     * @throws DagsterPipesException If an error occurs during close or if a
-     *         previously reported exception exists
-     */
     @Override
     public void close() throws DagsterPipesException {
         if (!this.closed) {
@@ -108,12 +95,6 @@ public class PipesContextImpl implements PipesContext {
         }
     }
 
-    /**
-     * Reports a custom message payload.
-     *
-     * @param payload Custom data to report (will be serialized)
-     * @throws DagsterPipesException If context is already closed
-     */
     @Override
     public void reportCustomMessage(final Object payload) throws DagsterPipesException {
         final Map<String, Object> map = new HashMap<>();
@@ -132,32 +113,17 @@ public class PipesContextImpl implements PipesContext {
         this.messageChannel.writeMessage(PipesUtils.makeMessage(method, params));
     }
 
-    /**
-     * Checks if the context has been closed.
-     *
-     * @return True or false
-     */
+
     @Override
     public boolean isClosed() {
         return this.closed;
     }
 
-    /**
-     * Determines if the current step targets assets.
-     *
-     * @return True if asset keys are defined in the context, flase otherwise
-     */
     @Override
     public boolean isAssetStep() {
         return this.data.getAssetKeys() != null;
     }
 
-    /**
-     * Gets the single asset key for the current step. Valid only for single-asset steps.
-     *
-     * @return Single asset key
-     * @throws DagsterPipesException If no assets or multiple assets are targeted
-     */
     @Override
     public String getAssetKey() throws DagsterPipesException {
         final List<String> assetKeys = getAssetKeys();
@@ -165,12 +131,6 @@ public class PipesContextImpl implements PipesContext {
         return assetKeys.get(0);
     }
 
-    /**
-     * Gets all asset keys targeted by the current step.
-     *
-     * @return List of asset keys (non-empty)
-     * @throws DagsterPipesException If no assets are targeted
-     */
     @Override
     public List<String> getAssetKeys() throws DagsterPipesException {
         final List<String> assetKeys = this.data.getAssetKeys();
@@ -178,12 +138,6 @@ public class PipesContextImpl implements PipesContext {
         return assetKeys;
     }
 
-    /**
-     * Gets provenance data for the single asset in the current step.
-     *
-     * @return Provenance data for the asset
-     * @throws DagsterPipesException If no assets or multiple assets are targeted
-     */
     @Override
     public ProvenanceByAssetKey getProvenance() throws DagsterPipesException {
         final Map<String, ProvenanceByAssetKey> provenanceByAssetKey = getProvenanceByAssetKey();
@@ -191,12 +145,6 @@ public class PipesContextImpl implements PipesContext {
         return provenanceByAssetKey.values().iterator().next();
     }
 
-    /**
-     * Gets provenance data by asset key.
-     *
-     * @return Map of asset keys to provenance data (non-empty)
-     * @throws DagsterPipesException If no assets are targeted
-     */
     @Override
     public Map<String, ProvenanceByAssetKey> getProvenanceByAssetKey() throws DagsterPipesException {
         final Map<String, ProvenanceByAssetKey> provenanceByAssetKey = this.data.getProvenanceByAssetKey();
@@ -204,12 +152,6 @@ public class PipesContextImpl implements PipesContext {
         return provenanceByAssetKey;
     }
 
-    /**
-     * Gets code version for the single asset in the current step.
-     *
-     * @return Code version string
-     * @throws DagsterPipesException If no assets or multiple assets are targeted
-     */
     @Override
     public String getCodeVersion() throws DagsterPipesException {
         final Map<String, String> codeVersionByAssetKey = getCodeVersionByAssetKey();
@@ -217,12 +159,6 @@ public class PipesContextImpl implements PipesContext {
         return codeVersionByAssetKey.values().iterator().next();
     }
 
-    /**
-     * Gets code versions keyed by asset.
-     *
-     * @return Map of asset keys to code versions (non-empty)
-     * @throws DagsterPipesException If no assets are targeted
-     */
     @Override
     public Map<String, String> getCodeVersionByAssetKey() throws DagsterPipesException {
         final Map<String, String> codeVersionByAssetKey = this.data.getCodeVersionByAssetKey();
@@ -230,22 +166,12 @@ public class PipesContextImpl implements PipesContext {
         return codeVersionByAssetKey;
     }
 
-    /**
-     * Determines if the current step is partitioned.
-     *
-     * @return True if partition data exists in context, false otherwise
-     */
+
     @Override
     public boolean isPartitionStep() {
         return this.data.getPartitionKeyRange() != null;
     }
 
-    /**
-     * Gets the partition key for the current step.
-     *
-     * @return Current partition key
-     * @throws DagsterPipesException If no partition is defined
-     */
     @Override
     public String getPartitionKey() throws DagsterPipesException {
         final String partitionKey = this.data.getPartitionKey();
@@ -253,12 +179,6 @@ public class PipesContextImpl implements PipesContext {
         return partitionKey;
     }
 
-    /**
-     * Gets the partition key range for the current step.
-     *
-     * @return Partition key range
-     * @throws DagsterPipesException If no partition range is defined
-     */
     @Override
     public PartitionKeyRange getPartitionKeyRange() throws DagsterPipesException {
         final PartitionKeyRange partitionKeyRange = this.data.getPartitionKeyRange();
@@ -266,12 +186,6 @@ public class PipesContextImpl implements PipesContext {
         return partitionKeyRange;
     }
 
-    /**
-     * Gets the partition time window for the current step.
-     *
-     * @return Partition time window
-     * @throws DagsterPipesException If no time window is defined
-     */
     @Override
     public PartitionTimeWindow getPartitionTimeWindow() throws DagsterPipesException {
         final PartitionTimeWindow partitionTimeWindow = this.data.getPartitionTimeWindow();
@@ -279,43 +193,21 @@ public class PipesContextImpl implements PipesContext {
         return partitionTimeWindow;
     }
 
-    /**
-     * Gets the Dagster run ID.
-     *
-     * @return Run ID string
-     */
     @Override
     public String getRunId() {
         return this.data.getRunId();
     }
 
-    /**
-     * Gets the Dagster job name.
-     *
-     * @return Job name string
-     */
     @Override
     public String getJobName() {
         return this.data.getJobName();
     }
 
-    /**
-     * Gets the current retry attempt number.
-     *
-     * @return Integer retry number
-     */
     @Override
     public int getRetryNumber() {
         return this.data.getRetryNumber();
     }
 
-    /**
-     * Gets a specific extra context parameter by key.
-     *
-     * @param key The key to retrieve
-     * @return Parameter value
-     * @throws DagsterPipesException If key is not found in extras
-     */
     @Override
     public Object getExtra(final String key) throws DagsterPipesException {
         final Map<String, Object> extras = this.data.getExtras();
@@ -327,21 +219,11 @@ public class PipesContextImpl implements PipesContext {
         return extras.get(key);
     }
 
-    /**
-     * Gets all extra context parameters.
-     *
-     * @return Map of extra parameters
-     */
     @Override
     public Map<String, Object> getExtras() {
         return this.data.getExtras();
     }
 
-    /**
-     * Gets the {@link PipesLogger} instance.
-     *
-     * @return The {@link PipesLogger} instance
-     */
     @Override
     public PipesLogger getLogger() {
         return this.logger;
@@ -379,15 +261,6 @@ public class PipesContextImpl implements PipesContext {
         }
     }
 
-    /**
-     * Reports asset materialization.
-     *
-     * @param metadataMapping Metadata values keyed by label
-     * @param dataVersion Data version string
-     * @param assetKey Explicit asset key (null to use context's single asset)
-     * @throws DagsterPipesException If asset key is invalid or context is closed
-     * @throws IllegalStateException If asset has already been materialized
-     */
     @Override
     public void reportAssetMaterialization(
             final Map<String, ?> metadataMapping,
@@ -417,15 +290,6 @@ public class PipesContextImpl implements PipesContext {
         materializedAssets.add(actualAssetKey);
     }
 
-    /**
-     * Reports an asset check result (convenience method with default ERROR severity).
-     *
-     * @param checkName Unique check identifier
-     * @param passed Whether the check succeeded
-     * @param metadataMapping Metadata keyed by label
-     * @param assetKey Explicit asset key (null to use context's single asset)
-     * @throws DagsterPipesException If asset key is invalid or context is closed
-     */
     @Override
     public void reportAssetCheck(
             final String checkName,
@@ -436,16 +300,6 @@ public class PipesContextImpl implements PipesContext {
         reportAssetCheck(checkName, passed, PipesAssetCheckSeverity.ERROR, metadataMapping, assetKey);
     }
 
-    /**
-     * Reports an asset check result with custom severity.
-     *
-     * @param checkName Unique check identifier
-     * @param passed Whether the check succeeded
-     * @param severity Severity level
-     * @param metadataMapping Metadata keyed by label
-     * @param assetKey Explicit asset key (null to use context's single asset)
-     * @throws DagsterPipesException If parameters are invalid or context is closed
-     */
     @Override
     public void reportAssetCheck(
             final String checkName,
