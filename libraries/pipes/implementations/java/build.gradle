@@ -58,7 +58,6 @@ dependencies {
     annotationProcessor 'info.picocli:picocli-codegen:4.7.6'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
     testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
-    testImplementation group: 'org.mockito', name: 'mockito-core', version: '4.11.0'
     implementation group: 'software.amazon.awssdk', name: 's3', version: '2.29.17'
 }
 
