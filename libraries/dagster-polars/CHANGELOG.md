@@ -9,6 +9,7 @@
 - Fixed use of deprecated streaming engine selector in polars collect.
 - Bump polars dev dependency to support latest deltalake syntax
 - Fixed `ImportError` when `patito` is not installed
+- Fixed groupings of iomanager config allowing inclusion of s3fs and polars options.
 
 ## 0.27.2
 
