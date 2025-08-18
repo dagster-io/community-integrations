@@ -1,0 +1,29 @@
+[project]
+name = "dagster-dataform"
+description = "A Dagster integration for Dataform"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "dagster-webserver>=1.8.12",
+    "dagster==1.11.4",
+    "google-cloud-dataform>=0.6.2",
+]
+dynamic = ["version"]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest",
+    "pyright>=1.1.386",
+    "dagster==1.11.4",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_dataform"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_dataform.__version__"}
