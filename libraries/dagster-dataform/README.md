@@ -125,6 +125,13 @@ defs = Definitions(
 )
 ```
 
+For freshness checks to show up in the Dagster UI, add a `dagster.yaml` file at the root of your project with the following content:
+
+```yaml
+freshness:
+  enabled: True
+```
+
 ### Library Objects and Functions
 
 This section describes the core objects and functions provided by the dagster-dataform integration, including their parameters, return types, and usage examples.
