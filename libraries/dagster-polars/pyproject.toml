@@ -48,8 +48,10 @@ dev-dependencies = [
 requires = ["setuptools>=42"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["dagster_polars"]
+[tool.setuptools.packages.find]
+include = ["dagster_polars*"]
+exclude = ["dagster_polars_tests*"]
+namespaces = false
 
 [tool.setuptools.package-data]
 dagster_polars = ["py.typed"]
