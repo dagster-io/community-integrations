@@ -81,6 +81,7 @@ MOCK_WORKFLOW_INVOCATION_ACTION_FAILED = dataform_v1.WorkflowInvocationAction(
     ),
 )
 
+
 @pytest.fixture
 def mock_dataform_client(request):
     # This allows us to parametrize the test with different values for the git commitish, default database, default schema, default location, and assertion schema if necesessary (see test_dataform_repository_resource_get_latest_compilation_result_name_wrong_environment)
