@@ -1,0 +1,12 @@
+name: quality-check-dagster-dataform
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'libraries/dagster-dataform/**'
+
+jobs:
+  check:
+    uses: ./.github/workflows/template-quality-check.yml
+    with:
+      working_directory: ./libraries/dagster-dataform

@@ -1,0 +1,14 @@
+name: build-and-release-dagster-dataform
+
+on:
+  push:
+    tags:
+      - 'dagster_dataform-*.*.*'
+
+jobs:
+  build-and-release-dagster-dataform:
+    uses: ./.github/workflows/template-release.yml
+    with:
+      library_name: dagster-dataform
+      working_directory: ./libraries/dagster-dataform
+    secrets: inherit
