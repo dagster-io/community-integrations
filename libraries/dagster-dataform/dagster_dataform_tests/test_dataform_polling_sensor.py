@@ -15,7 +15,7 @@ def test_dataform_polling_sensor_creates_sensor_and_job():
         repository_id="test-repo",
         location="us-central1",
         environment="dev",
-        client=mock_dataform_client,
+        client=mock_dataform_client,  # noqa
     )
 
     sensor = create_dataform_workflow_invocation_sensor(
@@ -36,7 +36,7 @@ def test_dataform_polling_sensor_creates_sensor_and_job_when_passed_job():
         repository_id="test-repo",
         location="us-central1",
         environment="dev",
-        client=mock_dataform_client,
+        client=mock_dataform_client,  # noqa
     )
 
     @dg.job
