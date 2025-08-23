@@ -17,7 +17,7 @@ from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import Schema
 from pyiceberg.table import Table
 from pyiceberg.table.update.spec import UpdateSpec
-from pyiceberg.transforms import IdentityTransform
+from pyiceberg.transforms import IdentityTransform, Transform
 
 from dagster_iceberg._utils.retries import IcebergOperationWithRetry
 from dagster_iceberg._utils.transforms import diff_to_transformation
@@ -26,6 +26,17 @@ time_partition_dt_types = (T.TimestampType, T.DateType)
 partition_types = T.StringType
 
 K = TypeVar("K")
+
+
+def _generate_partition_field_name(
+    source_column_name: str, transform: Transform
+) -> str:
+    """Generate partition field name that avoids Iceberg naming conflicts."""
+    if isinstance(transform, IdentityTransform):
+        return source_column_name
+
+    transform_name = transform.__class__.__name__.lower().replace("transform", "")
+    return f"{source_column_name}_{transform_name}"
 
 
 class DagsterPartitionToPredicateMapper(Generic[K]):
@@ -302,13 +313,20 @@ class PartitionMapper:
         self,
         name: str,
     ) -> PartitionField | None:
-        """Retrieve an iceberg partition field by its partition field spec name."""
-        partition_field: PartitionField | None = None
+        """Find partition field by name or source column."""
+        # Direct name match
         for field in self.iceberg_partition_spec.fields:
             if field.name == name:
-                partition_field = field
-                break
-        return partition_field
+                return field
+
+        # Fallback: check if name is source column, find by source_id
+        source_field = self.iceberg_table_schema.find_field(name)
+        if source_field:
+            for field in self.iceberg_partition_spec.fields:
+                if field.source_id == source_field.field_id:
+                    return field
+
+        return None
 
     def get_dagster_partition_dimension_names(
         self,
@@ -456,16 +474,19 @@ class IcebergTableSpecUpdater:
             transform = diff_to_transformation(*partition.partitions)
         else:
             transform = IdentityTransform()
+
+        partition_field_name = _generate_partition_field_name(
+            partition.partition_expr, transform
+        )
+
         self.logger.debug("Setting new partition column: %s", partition.partition_expr)
+        self.logger.debug("Generated partition field name: %s", partition_field_name)
         self.logger.debug("Using transform: %s", transform)
+
         update.add_field(
             source_column_name=partition.partition_expr,
             transform=transform,
-            # Name the partition field spec the same as the column name.
-            #  We rely on this throughout this codebase because it makes
-            #  it a lot easier to make the mapping between dagster partitions
-            #  and Iceberg partition fields.
-            partition_field_name=partition.partition_expr,
+            partition_field_name=partition_field_name,
         )
 
     @property
