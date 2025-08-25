@@ -17,6 +17,7 @@ class DataformRepositoryResource:
         environment: str,
         sensor_minimum_interval_seconds: int = 120,
         client: Optional[dataform_v1.DataformClient] = None,
+        asset_fresh_policy_lag_minutes: float = 1440,
     ):
         self.project_id = project_id
         self.location = location
@@ -25,8 +26,9 @@ class DataformRepositoryResource:
         self.client = client if client is not None else dataform_v1.DataformClient()
         self.logger = dg.get_dagster_logger()
         self.sensor_minimum_interval_seconds = sensor_minimum_interval_seconds
+        self.asset_fresh_policy_lag_minutes = asset_fresh_policy_lag_minutes
 
-        self.assets = self.load_dataform_assets()
+        self.assets = self.load_dataform_assets(fresh_policy_lag_minutes=self.asset_fresh_policy_lag_minutes)
         self.asset_checks = self.load_dataform_asset_check_specs()
 
     def create_compilation_result(
