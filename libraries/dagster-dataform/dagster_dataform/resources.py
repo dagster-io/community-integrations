@@ -148,7 +148,7 @@ class DataformRepositoryResource:
 
         if not name:
             self.logger.error("No workflow invocation name available")
-            return []  # noqa
+            return []  # pyright: ignore[reportReturnType]
 
         self.logger.info(f"Querying workflow invocation: {name}")
 
@@ -163,7 +163,7 @@ class DataformRepositoryResource:
         # self.logger.info(f"Found {len(response)} workflow invocation actions")
 
         # Handle the response
-        return response  # noqa
+        return response  # pyright: ignore[reportReturnType]
 
     def create_workflow_invocation(
         self, compilation_result_name: str
@@ -213,7 +213,7 @@ def load_dataform_assets(
         try:
             spec = AssetSpec(
                 key=asset.target.name,
-                kinds=["bigquery"],  # noqa
+                kinds=["bigquery"],  # pyright: ignore[reportArgumentType]
                 metadata={
                     "Project ID": asset.target.database,
                     "Dataset": asset.target.schema,

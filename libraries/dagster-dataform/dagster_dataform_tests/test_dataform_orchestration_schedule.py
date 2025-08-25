@@ -14,7 +14,7 @@ def test_dataform_orchestration_schedule_creates_schedule_and_job():
         repository_id="test-repo",
         location="us-central1",
         environment="dev",
-        client=mock_dataform_client,  # noqa
+        client=mock_dataform_client,  # pyright: ignore[reportArgumentType]
     )
 
     schedule = create_dataform_orchestration_schedule(
