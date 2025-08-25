@@ -94,7 +94,7 @@ class DataformRepositoryResource:
                 return compilation_result.name
 
         self.logger.error(
-            "No compilation result for dev branch in the last 10 compilation results"
+            f"No compilation result for {self.environment} branch in the last 10 compilation results"
         )
         return None
 
