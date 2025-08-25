@@ -26,6 +26,9 @@ class DataformRepositoryResource:
         self.logger = dg.get_dagster_logger()
         self.sensor_minimum_interval_seconds = sensor_minimum_interval_seconds
 
+        self.assets = self.load_dataform_assets()
+        self.asset_checks = self.load_dataform_asset_check_specs()
+
     def create_compilation_result(
         self,
         git_commitish: str,
@@ -196,97 +199,101 @@ class DataformRepositoryResource:
 
         return response
 
-
-def load_dataform_assets(
-    resource: DataformRepositoryResource,
-    fresh_policy_lag_minutes: float = 1440,
-) -> List[dg.AssetSpec]:
-    logger = dg.get_dagster_logger()
-    logger.info("Starting to load Dataform assets")
-
-    assets = []
-    compilation_actions = resource.query_compilation_result()
-
-    logger.info(f"Processing {len(compilation_actions)} compilation actions")
-
-    for asset in compilation_actions:
-        try:
-            spec = dg.AssetSpec(
-                key=asset.target.name,
-                kinds=["bigquery"],  # pyright: ignore[reportArgumentType]
-                metadata={
-                    "Project ID": asset.target.database,
-                    "Dataset": asset.target.schema,
-                    "Asset Name": asset.target.name,
-                    "Docs Link": dg.MetadataValue.url(
-                        f"https://cvsdigital.atlassian.net/wiki/spaces/EDMLABCCM/pages/4616946342/Case+Activities+Entity+Data+Stream#{asset.target.name}"
-                    ),
-                    # "github link": MetadataValue.url(f"https://github.com/cvs-health-source-code/hcm-cm-de-clinical-analytics-nexus-dataform/blob/{client.environment}/definitions/{asset.target.schema.split('_')[4]}/{asset.target.name}.sqlx")
-                    "Asset SQL Code": dg.MetadataValue.md(
-                        f"```sql\n{asset.relation.select_query}\n```"
-                    ),
-                },
-                group_name=asset.target.schema,
-                tags={tag: "" for tag in asset.relation.tags},
-                deps=[target.name for target in asset.relation.dependency_targets],
-                legacy_freshness_policy=dg.LegacyFreshnessPolicy(
-                    maximum_lag_minutes=fresh_policy_lag_minutes
-                ),
-            )
-            assets.append(spec)
-            logger.debug(f"Created asset spec for: {asset.target.name}")
-        except Exception as e:
-            logger.error(
-                f"Failed to create asset spec for {asset.target.name}: {str(e)}"
-            )
-
-    logger.info(f"Successfully created {len(assets)} assets")
-    return assets
+    
 
 
-def load_dataform_asset_check_specs(
-    resource: DataformRepositoryResource,
-) -> List[dg.AssetCheckSpec]:
-    logger = dg.get_dagster_logger()
-    logger.info("Starting to load Dataform asset check specs")
+    def load_dataform_assets(
+        self,
+        fresh_policy_lag_minutes: float = 1440,
+    ) -> List[dg.AssetSpec]:
+        logger = dg.get_dagster_logger()
+        logger.info("Starting to load Dataform assets")
 
-    asset_checks = []
-    compilation_actions = resource.query_compilation_result()
+        assets = []
+        self.create_compilation_result(git_commitish=self.environment)
+        compilation_actions = self.query_compilation_result()
 
-    logger.info(f"Processing {len(compilation_actions)} compilation actions")
+        logger.info(f"Processing {len(compilation_actions)} compilation actions")
 
-    for asset in compilation_actions:
-        if asset.assertion:
+        for asset in compilation_actions:
             try:
-                logger.error(asset.assertion.dependency_targets[0].name)
-                asset_key = asset.assertion.parent_action.name
-
-                # Convert string to AssetKey
-                asset_key_obj = dg.AssetKey(asset_key)
-
-                spec = dg.AssetCheckSpec(
-                    asset=asset_key_obj,  # Use AssetKey object, not string
-                    name=asset.target.name,
-                )
-
-                definition = dg.AssetChecksDefinition.create(
-                    keys_by_input_name={
-                        asset_key: asset_key_obj
-                    },  # Use AssetKey object
-                    node_def=dg.OpDefinition(
-                        name=asset.target.name,
-                        compute_fn=empty_fn,  # We want to simply define the asset check specifications, not a computations for the check. These checks will not be computed on the Dagster side.
+                spec = dg.AssetSpec(
+                    key=asset.target.name,
+                    kinds=["bigquery"], # noqa
+                    metadata={
+                        "Project ID": asset.target.database,
+                        "Dataset": asset.target.schema,
+                        "Asset Name": asset.target.name,
+                        "Docs Link": dg.MetadataValue.url(
+                            f"https://cvsdigital.atlassian.net/wiki/spaces/EDMLABCCM/pages/4616946342/Case+Activities+Entity+Data+Stream#{asset.target.name}"
+                        ),
+                        # "github link": MetadataValue.url(f"https://github.com/cvs-health-source-code/hcm-cm-de-clinical-analytics-nexus-dataform/blob/{client.environment}/definitions/{asset.target.schema.split('_')[4]}/{asset.target.name}.sqlx")
+                        "Asset SQL Code": dg.MetadataValue.md(
+                            f"```sql\n{asset.relation.select_query}\n```"
+                        ),
+                    },
+                    group_name=asset.target.schema,
+                    tags={tag: "" for tag in asset.relation.tags},
+                    deps=[target.name for target in asset.relation.dependency_targets],
+                    legacy_freshness_policy=dg.LegacyFreshnessPolicy(
+                        maximum_lag_minutes=fresh_policy_lag_minutes
                     ),
-                    check_specs_by_output_name={spec.name: spec},
-                    can_subset=False,
                 )
-
-                asset_checks.append(definition)
-                logger.debug(f"Created asset check spec for: {asset.target.name}")
+                assets.append(spec)
+                logger.debug(f"Created asset spec for: {asset.target.name}")
             except Exception as e:
                 logger.error(
-                    f"Failed to create asset check spec for {asset.target.name}: {str(e)}"
+                    f"Failed to create asset spec for {asset.target.name}: {str(e)}"
                 )
 
-    logger.error(f"Successfully created {len(asset_checks)} asset check specs")
-    return asset_checks
+        logger.info(f"Successfully created {len(assets)} assets")
+        return assets
+
+
+    def load_dataform_asset_check_specs(
+        self,
+    ) -> List[dg.AssetCheckSpec]:
+        logger = dg.get_dagster_logger()
+        logger.info("Starting to load Dataform asset check specs")
+
+        asset_checks = []
+        self.create_compilation_result(git_commitish=self.environment)
+        compilation_actions = self.query_compilation_result()
+
+        logger.info(f"Processing {len(compilation_actions)} compilation actions")
+
+        for asset in compilation_actions:
+            if asset.assertion:
+                try:
+                    logger.error(asset.assertion.dependency_targets[0].name)
+                    asset_key = asset.assertion.parent_action.name
+
+                    # Convert string to AssetKey
+                    asset_key_obj = dg.AssetKey(asset_key)
+
+                    spec = dg.AssetCheckSpec(
+                        asset=asset_key_obj,  # Use AssetKey object, not string
+                        name=asset.target.name,
+                    )
+
+                    definition = dg.AssetChecksDefinition.create(
+                        keys_by_input_name={
+                            "asset_key": asset_key_obj
+                        },  # Use AssetKey object
+                        node_def=dg.OpDefinition(
+                            name=asset.target.name,
+                            compute_fn=empty_fn,  # We want to simply define the asset check specifications, not a computations for the check. These checks will not be computed on the Dagster side.
+                        ),
+                        check_specs_by_output_name={"spec": spec},
+                        can_subset=False,
+                    )
+
+                    asset_checks.append(definition)
+                    logger.debug(f"Created asset check spec for: {asset.target.name}")
+                except Exception as e:
+                    logger.error(
+                        f"Failed to create asset check spec for {asset.target.name}: {str(e)}"
+                    )
+
+        logger.error(f"Successfully created {len(asset_checks)} asset check specs")
+        return asset_checks
