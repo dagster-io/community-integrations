@@ -142,8 +142,36 @@ def create_dataform_workflow_invocation_sensor(
                         # Don't update cursor for running workflows - they might not complete
 
                     elif action.state.name != "SUCCEEDED":
+                        if (
+                            json.loads(action.internal_metadata)["labels"][
+                                "dataform-action-type"
+                            ]
+                            == "assertion"
+                        ):
+                            try:
+                                asset_check_evaluation = handle_asset_check_evaluation(
+                                    action=action,
+                                    asset_checks=resource.asset_checks,
+                                )
+                            except ValueError as e:
+                                context.log.error(e)
+                                continue
+
+                            context.log.info(
+                                f"Workflow invocation was an assertion. Outcome: {'PASSED' if asset_check_evaluation.passed else 'FAILED'}"
+                            )
+
+                            asset_events.append(asset_check_evaluation)
+
+                            # Update cursor for failed workflows - they are complete
+                            dataform_workflow_invocation_cursors[asset_name] = (
+                                workflow_invocation_start_time_secs
+                            )
+
+                            continue
+
                         context.log.info(
-                            f"Creating asset materialization for {asset_name}"
+                            f"Asset {asset_name} has had failed workflow invocation"
                         )
 
                         if (
@@ -196,22 +224,23 @@ def create_dataform_workflow_invocation_sensor(
                         )
 
                     else:
-                        context.log.info(
-                            f"Asset {asset_name} has had a successful workflow invocation"
-                        )
-
                         if (
                             json.loads(action.internal_metadata)["labels"][
                                 "dataform-action-type"
                             ]
                             == "assertion"
                         ):
-                            asset_check_evaluation = handle_asset_check_evaluation(
-                                action
-                            )
+                            try:
+                                asset_check_evaluation = handle_asset_check_evaluation(
+                                    action=action,
+                                    asset_checks=resource.asset_checks,
+                                )
+                            except ValueError as e:
+                                context.log.error(e)
+                                continue
 
                             context.log.info(
-                                f"Found asset check evaluation: {asset_check_evaluation}"
+                                f"Workflow invocation was an assertion. Outcome: {'PASSED' if asset_check_evaluation.passed else 'FAILED'}"
                             )
 
                             asset_events.append(asset_check_evaluation)
@@ -222,6 +251,10 @@ def create_dataform_workflow_invocation_sensor(
                             )
 
                             continue
+
+                        context.log.info(
+                            f"Asset {asset_name} has had a successful workflow invocation"
+                        )
 
                         asset_events.append(
                             dg.AssetMaterialization(
