@@ -6,13 +6,14 @@ from datetime import datetime
 import pytz
 import re
 from typing import Optional, List
+from dagster_dataform.utils import handle_asset_check_evaluation
 
 
 def create_dataform_workflow_invocation_sensor(
     resource: DataformRepositoryResource,
     minutes_ago: int,
     job: Optional[dg.JobDefinition] = None,
-    exclusion_patterns: Optional[List[str]] = None,
+    inclusion_patterns: Optional[List[str]] = None,
 ):
     """
     This function creates a sensor that polls the Dataform API for workflow invocations. It has the following capabilities:
@@ -27,7 +28,7 @@ def create_dataform_workflow_invocation_sensor(
     Args:
         resource: The DataformRepositoryResource to use for the sensor.
         job: The job to use for the sensor. If not provided, the sensor will not run any jobs.
-        exclusion_patterns: A list of regex patterns to use for excluding workflow invocation event targets (by asset name) from being processed by the sensor. If not provided, the sensor will not exclude any workflow invocations actions.
+        inclusion_patterns: A list of regex patterns to use for including workflow invocation event targets (by asset name) from being processed by the sensor. If included, the sensor will only process workflow invocations actions for assets that match one of the patterns. If not provided, the sensor will detect and process any workflow invocations actions it finds.
         minutes_ago: The number of minutes to look back for workflow invocations. This should be greater than the average time it takes for a workflow invocation to complete.
     """
 
@@ -87,11 +88,12 @@ def create_dataform_workflow_invocation_sensor(
                 context.log.info(
                     f"Target Asset for action {index+1} of {len(workflow_invocation_details.workflow_invocation_actions)}: {action.target.name}, State: {action.state.name}"
                 )
+
                 asset_name = action.target.name
 
                 # skip if the asset name matches any of the exclusion patterns
-                if exclusion_patterns and not any(
-                    re.match(pattern, asset_name) for pattern in exclusion_patterns
+                if inclusion_patterns and not any(
+                    re.match(pattern, asset_name) for pattern in inclusion_patterns
                 ):
                     context.log.info(
                         f"Skipping asset {asset_name} because it matches an exclusion pattern"
@@ -138,10 +140,34 @@ def create_dataform_workflow_invocation_sensor(
                     if action.state.name == "RUNNING":
                         context.log.info(f"Asset {asset_name} is still running")
                         # Don't update cursor for running workflows - they might not complete
+
                     elif action.state.name != "SUCCEEDED":
                         context.log.info(
                             f"Creating asset materialization for {asset_name}"
                         )
+
+                        if (
+                            json.loads(action.internal_metadata)["labels"][
+                                "dataform-action-type"
+                            ]
+                            == "assertion"
+                        ):
+                            asset_check_evaluation = handle_asset_check_evaluation(
+                                action
+                            )
+
+                            context.log.info(
+                                f"Found asset check evaluation: {asset_check_evaluation}"
+                            )
+
+                            asset_events.append(asset_check_evaluation)
+
+                            # Update cursor for failed workflows - they are complete
+                            dataform_workflow_invocation_cursors[asset_name] = (
+                                workflow_invocation_start_time_secs
+                            )
+
+                            continue
 
                         asset_events.append(
                             dg.AssetObservation(
@@ -158,20 +184,45 @@ def create_dataform_workflow_invocation_sensor(
                             )
                         )
 
+                        # Update cursor for failed workflows - they are complete
+                        dataform_workflow_invocation_cursors[asset_name] = (
+                            workflow_invocation_start_time_secs
+                        )
+
                         run_requests.append(
                             dg.RunRequest(
                                 run_key=f"materialized-{asset_name}-{action.invocation_timing.start_time.seconds}"
                             )
                         )
 
-                        # Update cursor for failed workflows - they are complete
-                        dataform_workflow_invocation_cursors[asset_name] = (
-                            workflow_invocation_start_time_secs
-                        )
                     else:
                         context.log.info(
                             f"Asset {asset_name} has had a successful workflow invocation"
                         )
+
+                        if (
+                            json.loads(action.internal_metadata)["labels"][
+                                "dataform-action-type"
+                            ]
+                            == "assertion"
+                        ):
+                            asset_check_evaluation = handle_asset_check_evaluation(
+                                action
+                            )
+
+                            context.log.info(
+                                f"Found asset check evaluation: {asset_check_evaluation}"
+                            )
+
+                            asset_events.append(asset_check_evaluation)
+
+                            # Update cursor for failed workflows - they are complete
+                            dataform_workflow_invocation_cursors[asset_name] = (
+                                workflow_invocation_start_time_secs
+                            )
+
+                            continue
+
                         asset_events.append(
                             dg.AssetMaterialization(
                                 asset_key=asset_name,
