@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, timedelta
-
+from typing import List
 import dagster as dg
 from google.cloud import dataform_v1
 
@@ -14,8 +14,18 @@ def get_epoch_time_ago(minutes: int) -> int:
     return int(time_ago_utc.timestamp())
 
 
-def handle_asset_check_evaluation(action: dataform_v1.WorkflowInvocationAction):
-    asset_key = action.target.name.split("_assertions")[0]
+def handle_asset_check_evaluation(
+    action: dataform_v1.WorkflowInvocationAction,
+    asset_checks: List[dg.AssetChecksDefinition],
+):
+    for asset_check in asset_checks:
+        if action.target.name == asset_check.check_specs_by_output_name["spec"].name:
+            asset_key = asset_check.keys_by_input_name["asset_key"].path[0]
+            break
+    
+    if not asset_key:
+        raise ValueError(f"Asset Check not found in compilation current compilation result: {action.target.name}")
+
     asset_check_evaluation = dg.AssetCheckEvaluation(
         asset_key=dg.AssetKey(
             asset_key
