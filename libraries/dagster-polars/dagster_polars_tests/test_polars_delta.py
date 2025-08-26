@@ -540,3 +540,280 @@ def test_partition_filters_predicate(
 
     assert PolarsDeltaIOManager.get_partition_filters(context) == expected_filters
     assert PolarsDeltaIOManager.get_predicate(context) == expected_predicate
+
+
+def test_delta_merge_options_ignored_outside_merge(
+    polars_delta_io_manager: PolarsDeltaIOManager,
+):
+    df = pl.DataFrame({"a": [1, 2], "b": ["a", "b"]})
+
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+        metadata={
+            "mode": "append",  # not 'merge'
+            "delta_merge_options": {"predicate": "id == id"},
+        },
+    )
+    def asset_with_merge_options() -> pl.DataFrame:
+        return df
+
+    result = materialize([asset_with_merge_options])
+    saved_path = get_saved_path(result, "asset_with_merge_options")
+
+    pl_testing.assert_frame_equal(
+        df,
+        pl.read_delta(saved_path),
+    )
+
+
+def test_merge_data(polars_delta_io_manager: PolarsDeltaIOManager):
+    df1 = pl.DataFrame({"id": [1, 2], "val": ["a", "oldB"]})
+    df2 = pl.DataFrame({"id": [2, 3], "val": ["newB", "c"]})
+
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+    )
+    def merge_asset() -> pl.DataFrame:
+        return df1
+
+    result = materialize([merge_asset])
+    saved_path = get_saved_path(result, "merge_asset")
+
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+        metadata={
+            "mode": "merge",
+            "delta_merge_options": {
+                "source_alias": "s",
+                "target_alias": "t",
+                "predicate": "s.id == t.id",
+            },
+        },
+    )
+    def merge_asset() -> pl.DataFrame:
+        return df2
+
+    materialize([merge_asset])
+    expected = pl.DataFrame({"id": [1, 2, 3], "val": ["a", "newB", "c"]})
+    actual = pl.read_delta(saved_path).sort("id")
+    pl_testing.assert_frame_equal(actual, expected.sort("id"))
+
+
+def test_merge_data_and_schema(polars_delta_io_manager: PolarsDeltaIOManager):
+    df1 = pl.DataFrame({"id": [1, 2], "val": ["a", "oldB"]})
+    df2 = pl.DataFrame({"id": [2, 3], "val": ["newB", "c"], "extra": [10, 20]})
+
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+    )
+    def merge_schema_asset() -> pl.DataFrame:
+        return df1
+
+    result = materialize([merge_schema_asset])
+    saved_path = get_saved_path(result, "merge_schema_asset")
+
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+        metadata={
+            "mode": "merge",
+            "delta_merge_options": {
+                "source_alias": "s",
+                "target_alias": "t",
+                "predicate": "s.id == t.id",
+                "merge_schema": True,
+            },
+        },
+    )
+    def merge_schema_asset() -> pl.DataFrame:
+        return df2
+
+    materialize([merge_schema_asset])
+    expected = pl.DataFrame(
+        {"id": [1, 2, 3], "val": ["a", "newB", "c"], "extra": [None, 10, 20]}
+    )
+    actual = pl.read_delta(saved_path).sort("id")
+    pl_testing.assert_frame_equal(actual, expected.sort("id"))
+
+
+def test_override_default_merge_command(
+    polars_delta_io_manager: PolarsDeltaIOManager,
+):
+    df1 = pl.DataFrame({"id": [1, 2], "val": ["a", "willBeDeletedByMerge"]})
+    df2 = pl.DataFrame(
+        {"id": [1, 3], "val": ["willNotInsertNewValue", "willNotInsert"]}
+    )
+
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+    )
+    def merge_schema_asset() -> pl.DataFrame:
+        return df1
+
+    result = materialize([merge_schema_asset])
+    saved_path = get_saved_path(result, "merge_schema_asset")
+
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+        metadata={
+            "mode": "merge",
+            "delta_merge_options": {
+                "source_alias": "s",
+                "target_alias": "t",
+                "predicate": "s.id == t.id",
+            },
+            "when_matched_update": {},
+            "when_not_matched_insert": {},
+            "when_not_matched_by_source_delete": "all",
+        },
+    )
+    def merge_schema_asset() -> pl.DataFrame:
+        return df2
+
+    materialize([merge_schema_asset])
+    expected = pl.DataFrame({"id": [1], "val": ["a"]})
+    actual = pl.read_delta(saved_path).sort("id")
+    pl_testing.assert_frame_equal(actual, expected.sort("id"))
+
+
+def test_polars_delta_merge_with_partitioning(
+    polars_delta_io_manager: PolarsDeltaIOManager,
+):
+    df1 = pl.DataFrame({"id": [1, 2], "val": ["a", "b"], "partition": ["x", "y"]})
+    df2 = pl.DataFrame({"id": [2, 3], "val": ["newB", "c"], "partition": ["y", "x"]})
+
+    partitions_def = StaticPartitionsDefinition(["x", "y"])
+
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+        partitions_def=partitions_def,
+        metadata={"partition_by": "partition"},
+    )
+    def merge_partitioned(context: OpExecutionContext) -> pl.DataFrame:
+        return df1.filter(pl.col("partition") == context.partition_key)
+
+    for partition_key in ["x", "y"]:
+        materialize([merge_partitioned], partition_key=partition_key)
+
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+        metadata={
+            "mode": "merge",
+            "delta_merge_options": {
+                "source_alias": "s",
+                "target_alias": "t",
+                "predicate": "s.id == t.id and s.partition == t.partition",
+            },
+        },
+    )
+    def merge_partitioned() -> pl.DataFrame:
+        return df2
+
+    result = materialize([merge_partitioned])
+    saved_path = get_saved_path(result, "merge_partitioned")
+
+    # After merge, both partitions should exist and be correct
+    merged = pl.read_delta(saved_path).sort("id")
+    expected = pl.DataFrame(
+        {"id": [1, 2, 3], "val": ["a", "newB", "c"], "partition": ["x", "y", "x"]}
+    ).sort("id")
+    pl_testing.assert_frame_equal(merged, expected)
+
+
+def test_granular_merge_selectors_and_predicates(
+    polars_delta_io_manager: PolarsDeltaIOManager,
+):
+    df1 = pl.DataFrame({"id": [1, 2, 3], "val": ["a", "b", "c"]})
+    df2 = pl.DataFrame({"id": [2, 3, 4], "val": ["newB", "c", "d"]})
+
+    @asset(io_manager_def=polars_delta_io_manager)
+    def merge_asset() -> pl.DataFrame:
+        return df1
+
+    result = materialize([merge_asset])
+    saved_path = get_saved_path(result, "merge_asset")
+
+    # Only update row with id=2, insert only id=4, delete id=3
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+        metadata={
+            "mode": "merge",
+            "delta_merge_options": {
+                "source_alias": "s",
+                "target_alias": "t",
+                "predicate": "s.id == t.id",
+            },
+            "when_not_matched_insert": {
+                "updates": {"id": "s.id", "val": "s.val"},
+                "predicate": "s.id == 4",
+            },
+            "when_matched_update": {
+                "updates": {"val": "s.val"},
+                "predicate": "t.id == 2",
+            },
+            "when_matched_delete": {"predicate": "t.id == 3"},
+        },
+    )
+    def merge_asset() -> pl.DataFrame:
+        return df2
+
+    materialize([merge_asset])
+    expected = pl.DataFrame({"id": [1, 2, 4], "val": ["a", "newB", "d"]})
+    actual = pl.read_delta(saved_path).sort("id")
+    pl_testing.assert_frame_equal(actual, expected.sort("id"))
+
+
+def test_granular_merge_selectors_and_predicates_partitioned(
+    polars_delta_io_manager: PolarsDeltaIOManager,
+):
+    df1 = pl.DataFrame({"id": [1, 2], "val": ["a", "b"], "partition": ["x", "y"]})
+    df2 = pl.DataFrame(
+        {
+            "id": [1, 2, 3, 4],
+            "val": [None, "newB", "c", "notMerged"],
+            "partition": ["x", "y", "x", "y"],
+        }
+    )
+    partitions_def = StaticPartitionsDefinition(["x", "y"])
+
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+        partitions_def=partitions_def,
+        metadata={"partition_by": "partition"},
+    )
+    def merge_partitioned(context: OpExecutionContext) -> pl.DataFrame:
+        return df1.filter(pl.col("partition") == context.partition_key)
+
+    for partition_key in ["x", "y"]:
+        result = materialize([merge_partitioned], partition_key=partition_key)
+    saved_path = get_saved_path(result, "merge_partitioned")
+
+    # Only update id=2 in partition y, insert id=3 in partition x, delete id=1 in partition x
+    @asset(
+        io_manager_def=polars_delta_io_manager,
+        metadata={
+            "mode": "merge",
+            "delta_merge_options": {
+                "source_alias": "s",
+                "target_alias": "t",
+                "predicate": "s.id == t.id and s.partition == t.partition",
+            },
+            "when_not_matched_insert": {
+                "updates": {"id": "s.id", "val": "s.val", "partition": "s.partition"},
+                "predicate": "s.id == 3",
+            },
+            "when_matched_update": {
+                "updates": {"val": "s.val"},
+                "predicate": "t.id == 2",
+            },
+            "when_matched_delete": {"predicate": "t.id == 1"},
+        },
+    )
+    def merge_partitioned() -> pl.DataFrame:
+        return df2
+
+    materialize([merge_partitioned])
+    merged = pl.read_delta(saved_path).sort("id")
+    expected = pl.DataFrame(
+        {"id": [2, 3], "val": ["newB", "c"], "partition": ["y", "x"]}
+    ).sort("id")
+    pl_testing.assert_frame_equal(merged, expected)
