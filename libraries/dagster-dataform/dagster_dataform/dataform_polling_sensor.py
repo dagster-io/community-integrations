@@ -86,7 +86,7 @@ def create_dataform_workflow_invocation_sensor(
                 workflow_invocation_details.workflow_invocation_actions
             ):
                 context.log.info(
-                    f"Target Asset for action {index+1} of {len(workflow_invocation_details.workflow_invocation_actions)}: {action.target.name}, State: {action.state.name}"
+                    f"  Target Asset for action {index+1} of {len(workflow_invocation_details.workflow_invocation_actions)}: {action.target.name}, State: {action.state.name}"
                 )
 
                 asset_name = action.target.name
@@ -96,7 +96,7 @@ def create_dataform_workflow_invocation_sensor(
                     re.match(pattern, asset_name) for pattern in inclusion_patterns
                 ):
                     context.log.info(
-                        f"Skipping asset {asset_name} because it matches an exclusion pattern"
+                        f"  Skipping asset {asset_name} because it matches an exclusion pattern"
                     )
                     continue
 
@@ -116,7 +116,7 @@ def create_dataform_workflow_invocation_sensor(
                     external_asset_last_updated_at_ms = 0
 
                 context.log.info(
-                    f"Invocation Start Time: {workflow_invocation_start_time_secs}; External asset last updated at: {external_asset_last_updated_at_ms}"
+                    f"  Invocation Start Time: {workflow_invocation_start_time_secs}; External asset last updated at: {external_asset_last_updated_at_ms}"
                 )
 
                 if (
@@ -134,11 +134,11 @@ def create_dataform_workflow_invocation_sensor(
                     eastern_datetime = utc_datetime.astimezone(eastern)
 
                     context.log.info(
-                        f"Asset {asset_name} has been updated since {external_asset_last_updated_at_ms} : Invocation Start Time: {eastern_datetime}"
+                        f"  Asset {asset_name} has been updated since {external_asset_last_updated_at_ms} : Invocation Start Time: {eastern_datetime}"
                     )
 
                     if action.state.name == "RUNNING":
-                        context.log.info(f"Asset {asset_name} is still running")
+                        context.log.info(f"  Asset {asset_name} is still running")
                         # Don't update cursor for running workflows - they might not complete
 
                     elif action.state.name != "SUCCEEDED":
@@ -158,7 +158,7 @@ def create_dataform_workflow_invocation_sensor(
                                 continue
 
                             context.log.info(
-                                f"Workflow invocation was an assertion. Outcome: {'PASSED' if asset_check_evaluation.passed else 'FAILED'}"
+                                f"  Workflow invocation was an assertion. Outcome: {'PASSED' if asset_check_evaluation.passed else 'FAILED'}"
                             )
 
                             asset_events.append(asset_check_evaluation)
@@ -171,7 +171,7 @@ def create_dataform_workflow_invocation_sensor(
                             continue
 
                         context.log.info(
-                            f"Asset {asset_name} has had failed workflow invocation"
+                            f"  Asset {asset_name} has had failed workflow invocation"
                         )
 
                         if (
@@ -185,7 +185,7 @@ def create_dataform_workflow_invocation_sensor(
                             )
 
                             context.log.info(
-                                f"Found asset check evaluation: {asset_check_evaluation}"
+                                f"  Found asset check evaluation: {asset_check_evaluation}"
                             )
 
                             asset_events.append(asset_check_evaluation)
@@ -240,7 +240,7 @@ def create_dataform_workflow_invocation_sensor(
                                 continue
 
                             context.log.info(
-                                f"Workflow invocation was an assertion. Outcome: {'PASSED' if asset_check_evaluation.passed else 'FAILED'}"
+                                f"  Workflow invocation was an assertion. Outcome: {'PASSED' if asset_check_evaluation.passed else 'FAILED'}"
                             )
 
                             asset_events.append(asset_check_evaluation)
@@ -253,7 +253,7 @@ def create_dataform_workflow_invocation_sensor(
                             continue
 
                         context.log.info(
-                            f"Asset {asset_name} has had a successful workflow invocation"
+                            f"  Asset {asset_name} has had a successful workflow invocation"
                         )
 
                         asset_events.append(
@@ -275,7 +275,7 @@ def create_dataform_workflow_invocation_sensor(
                         )
                 else:
                     context.log.info(
-                        f"Asset {asset_name} has not been updated since {external_asset_last_updated_at_ms}"
+                        f"  Asset {asset_name} has not been updated since {external_asset_last_updated_at_ms}"
                     )
 
         context.log.debug(f"Asset events length: {len(asset_events)}")
