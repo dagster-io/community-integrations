@@ -8,7 +8,20 @@ from dagster import build_schedule_context
 import pytest
 
 
-def test_dataform_orchestration_schedule_creates_schedule_and_job():
+@pytest.mark.parametrize(
+    "mock_dataform_client",
+    [
+        {
+            "git_commitish": "test-commitish",
+            "default_database": "test-database",
+            "default_schema": "test-schema",
+            "default_location": "us-central1",
+            "assertion_schema": "test-assertion-schema",
+        }
+    ],
+    indirect=True,
+)
+def test_dataform_orchestration_schedule_creates_schedule_and_job(mock_dataform_client):
     resource = DataformRepositoryResource(
         project_id="test-project",
         repository_id="test-repo",
