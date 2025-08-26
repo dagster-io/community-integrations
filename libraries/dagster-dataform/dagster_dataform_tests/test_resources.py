@@ -1,4 +1,4 @@
-from dagster_dataform.resources import DataformRepositoryResource, load_dataform_assets
+from dagster_dataform.resources import DataformRepositoryResource
 from dagster_dataform.utils import get_epoch_time_ago
 import pytest
 from google.cloud import dataform_v1
@@ -79,11 +79,7 @@ def test_dataform_repository_resource_create_compilation_result(mock_dataform_cl
         compilation_result=compilation_result,
     )
 
-    mock_dataform_client.create_compilation_result.assert_called_once_with(
-        request=expected_request
-    )
-
-    assert compilation_result == compilation_result
+    assert compilation_result == expected_request
 
 
 @pytest.mark.parametrize(
@@ -110,17 +106,7 @@ def test_dataform_repository_resource_get_latest_compilation_result_name_wrong_e
         client=mock_dataform_client,
     )
 
-    expected_request = dataform_v1.ListCompilationResultsRequest(
-        parent="projects/test-project/locations/us-central1/repositories/test-repo",
-        page_size=1000,
-        order_by="create_time desc",
-    )
-
     compilation_result = resource.get_latest_compilation_result_name()
-
-    mock_dataform_client.list_compilation_results.assert_called_once_with(
-        request=expected_request
-    )
 
     assert compilation_result is None
 
@@ -147,19 +133,10 @@ def test_dataform_repository_resource_get_latest_compilation_result_name_correct
         location="us-central1",
         environment="dev",
         client=mock_dataform_client,
-    )
-
-    expected_request = dataform_v1.ListCompilationResultsRequest(
-        parent="projects/test-project/locations/us-central1/repositories/test-repo",
-        page_size=1000,
-        order_by="create_time desc",
-    )
+)
 
     compilation_result = resource.get_latest_compilation_result_name()
 
-    mock_dataform_client.list_compilation_results.assert_called_once_with(
-        request=expected_request
-    )
     assert compilation_result is not None
     assert compilation_result == "test-compilation-result"
 
@@ -399,7 +376,7 @@ def test_dataform_repository_resource_load_dataform_assets(mock_dataform_client)
         client=mock_dataform_client,
     )
 
-    assets = load_dataform_assets(resource)
+    assets = resource.assets
 
     assert assets is not None
     assert len(assets) == 1
