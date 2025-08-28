@@ -2,7 +2,7 @@ from dagster_dataform.resources import DataformRepositoryResource
 from dagster_dataform.utils import get_epoch_time_ago
 import pytest
 from google.cloud import dataform_v1
-from dagster import AssetSpec
+from dagster import AssetSpec, AssetChecksDefinition, AssetKey
 
 
 @pytest.mark.parametrize(
@@ -64,8 +64,9 @@ def test_dataform_repository_resource_create_compilation_result(mock_dataform_cl
         assertion_schema="test-assertion-schema",
     )
 
-    compilation_result = dataform_v1.CompilationResult(
+    expected_compilation_result = dataform_v1.CompilationResult(
         git_commitish="test-commitish",
+        name="test-compilation-result",
         code_compilation_config=dataform_v1.CodeCompilationConfig(
             default_database="test-database",
             default_schema="test-schema",
@@ -74,12 +75,7 @@ def test_dataform_repository_resource_create_compilation_result(mock_dataform_cl
         ),
     )
 
-    expected_request = dataform_v1.CreateCompilationResultRequest(
-        parent="projects/test-project/locations/us-central1/repositories/test-repo",
-        compilation_result=compilation_result,
-    )
-
-    assert compilation_result == expected_request
+    assert compilation_result == expected_compilation_result
 
 
 @pytest.mark.parametrize(
@@ -382,6 +378,36 @@ def test_dataform_repository_resource_load_dataform_assets(mock_dataform_client)
     assert len(assets) == 1
     assert isinstance(assets[0], AssetSpec)
     assert assets[0].kinds == {"bigquery"}
-    assert assets[0].metadata["Project ID"] == "test-database"
+    assert assets[0].metadata["Project ID"] == "test_database"
     assert assets[0].metadata["Dataset"] == "test_schema"
-    assert assets[0].metadata["Asset Name"] == "test-asset"
+    assert assets[0].metadata["Asset Name"] == "test_asset"
+
+@pytest.mark.parametrize(
+    "mock_dataform_client",
+    [
+        {
+            "git_commitish": "dev",
+            "default_database": "test-database",
+            "default_schema": "test-schema",
+            "default_location": "us-central1",
+            "assertion_schema": "test-assertion-schema",
+        }
+    ],
+    indirect=True,
+)
+def test_dataform_repository_resource_load_dataform_asset_checks(mock_dataform_client):
+    resource = DataformRepositoryResource(
+        project_id="test-project",
+        repository_id="test-repo",
+        location="us-central1",
+        environment="dev",
+        client=mock_dataform_client,
+    )
+
+    asset_checks = resource.asset_checks
+
+    assert asset_checks is not None
+    assert len(asset_checks) == 1
+    assert isinstance(asset_checks[0], AssetChecksDefinition)
+    assert asset_checks[0].check_specs_by_output_name["spec"].name == "test_asset"
+    assert asset_checks[0].keys_by_input_name["asset_key"].path[0] == "parent_asset"
