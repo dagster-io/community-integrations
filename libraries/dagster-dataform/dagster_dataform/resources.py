@@ -132,7 +132,7 @@ class DataformRepositoryResource:
     #     """Create a workflow invocation."""
     #     pass
 
-    def get_latest_workflow_invocations(self, minutes_ago: int) -> List[Any]:
+    def get_latest_workflow_invocations(self, minutes_ago: int) -> dataform_v1.ListWorkflowInvocationsResponse:
         """Get the latest workflow invocation."""
         request = dataform_v1.ListWorkflowInvocationsRequest(
             parent=f"projects/{self.project_id}/locations/{self.location}/repositories/{self.repository_id}",
@@ -140,11 +140,13 @@ class DataformRepositoryResource:
             filter=f"invocation_timing.start_time.seconds > {get_epoch_time_ago(minutes=minutes_ago)}",
         )
 
+        self.logger.error(f"Request: {request}")
+
         response = self.client.list_workflow_invocations(request=request)
 
         self.logger.info(f"Found response: {response}")
 
-        return response.workflow_invocations
+        return response
 
     def query_workflow_invocation(
         self, name: str
