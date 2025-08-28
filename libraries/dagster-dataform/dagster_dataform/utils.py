@@ -22,9 +22,10 @@ def handle_asset_check_evaluation(
         if action.target.name == asset_check.check_specs_by_output_name["spec"].name:
             asset_key = asset_check.keys_by_input_name["asset_key"].path[0]
             break
-    
-    if not asset_key:
-        raise ValueError(f"Asset Check not found in compilation current compilation result: {action.target.name}")
+    try:
+        asset_key
+    except Exception as e:
+        raise ValueError(f"Asset Check not found in compilation current compilation result: {action.target.name}. Error: {e}")
 
     asset_check_evaluation = dg.AssetCheckEvaluation(
         asset_key=dg.AssetKey(
