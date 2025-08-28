@@ -140,8 +140,6 @@ class DataformRepositoryResource:
             filter=f"invocation_timing.start_time.seconds > {get_epoch_time_ago(minutes=minutes_ago)}",
         )
 
-        self.logger.error(f"Request: {request}")
-
         response = self.client.list_workflow_invocations(request=request)
 
         self.logger.info(f"Found response: {response}")
