@@ -245,7 +245,7 @@ def create_dataform_workflow_invocation_sensor(
                                 job_name=dataform_workflow_invocation_failure_notification_job.name,
                                 run_config=RunConfig(
                                     ops={
-                                        "workflow_invocation_failure_op": DataformFailureNotificationOpConfig(
+                                        "dataform_workflow_invocation_failure_notification_op": DataformFailureNotificationOpConfig(
                                             environment=resource.environment,
                                             asset_name=asset_name,
                                             workflow_invocation_start_time_secs=workflow_invocation_start_time_secs,
