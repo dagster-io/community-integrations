@@ -254,7 +254,7 @@ class DataformRepositoryResource:
 
     def load_dataform_asset_check_specs(
         self,
-    ) -> List[dg.AssetCheckSpec]:
+    ) -> List[dg.AssetChecksDefinition]:
         logger = dg.get_dagster_logger()
         logger.info("Starting to load Dataform asset check specs")
 
