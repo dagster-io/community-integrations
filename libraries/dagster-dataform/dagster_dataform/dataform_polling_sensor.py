@@ -107,7 +107,7 @@ def create_dataform_workflow_invocation_sensor(
             )
 
             context.log.info(
-                f"Processing workflow invocation {index+1} of {len(list(workflow_invocations))}: {workflow_invocation.name}" # pyright: ignore[reportArgumentType]
+                f"Processing workflow invocation {index+1} of {len(list(workflow_invocations))}: {workflow_invocation.name}"  # pyright: ignore[reportArgumentType]
             )
 
             for index, action in enumerate(
