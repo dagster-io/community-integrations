@@ -5,11 +5,15 @@ A Dagster integration for Google Cloud Dataform that provides asset definitions 
 ## Core Features
 
 ### Observability
-- **Asset Discovery**: Automatically creates Dagster assets from Dataform compilation results
+- **Asset Discovery**: Automatically creates Dagster assets from Dataform compilation results. 
+- **Asset Check Discovery**: Native functionality for ingesting Dataform SQL Assertions in repo as asset checks that are visible in the Dagster UI as asset checks on the assets they test. 
 - **Workflow Monitoring**: Real-time monitoring of Dataform workflow invocations via sensors
 - **Rich Metadata**: Asset metadata (retrieved at definition time) and materialization metadata (captured at runtime) offer a great degree of detail of remote BQ assets.
 - **SQL Query Tracking**: Preserves and displays SQL queries with proper formatting
 - **GCP Integration**: Seamless integration with Google Cloud Platform using default credentials
+
+> [!NOTE]  
+>  Everytime a code location is reloaded, a new compilation result is created for the targeted branch (environment). Therefore if changes are mode to the branch, all that is necessary to refresh Dataform Asset/Asset Check metadata in Dagster is to reload the code location.
 
 ### Orchestration
 Orchestrate Dataform invocations remotely via configuration of a dagster schedule automation. This configuration offers more flexibility than release and workflow configurations through the GCP Console in Dataform, including settings like assertion schema.
@@ -79,37 +83,38 @@ Your GCP credentials must have the following permissions:
 Create a `definitions.py` file in your Dagster project:
 
 ```python
-from dagster_dataform.resources import DataformRepositoryResource
-from dagster_dataform.dataform_polling_sensor import (
+from dagster_dataform import (
+    DataformRepositoryResource,
     create_dataform_workflow_invocation_sensor,
-)
-from dagster_dataform.resources import load_dataform_assets
-from dagster_dataform.asset_event_sensor import create_asset_event_sensor
-from dagster_dataform.dataform_orchestration_schedule import (
     create_dataform_orchestration_schedule,
 )
 
 from dagster import Definitions
+from .jobs import dataform_workflow_invocation_failure_notification_job, dataform_asset_check_failure_notification_job
 
 resource = DataformRepositoryResource(
-    project_id="anbc-dev-hcm-cm-de",
-    repository_id="clin-analytics-nexus-dataform",
+    project_id="your-project",
+    repository_id="your-repo",
     location="us-east4",
-    environment="dev",
+    environment="env", # github branch
     sensor_minimum_interval_seconds=30,
 )
 
-assets = load_dataform_assets(resource, fresh_policy_lag_minutes=1440)
+assets = resource.assets
+asset_checks = resource.asset_checks
 
 dataform_workflow_invocation_sensor = create_dataform_workflow_invocation_sensor(
     resource,
-    exclusion_patterns=[
+    inclusion_patterns=[
         r"^conform_.*",
         r"^stg_.*",
         r"^curated_.*",
         r"^consume_.*",
+        r".*assertions.*",
     ],
     minutes_ago=20,
+    workflow_invocation_failure_notification_job=dataform_workflow_invocation_failure_notification_job,
+    asset_check_failure_notification_job=dataform_asset_check_failure_notification_job,
 )
 
 dataform_orchestration_schedule = create_dataform_orchestration_schedule(
@@ -120,9 +125,11 @@ dataform_orchestration_schedule = create_dataform_orchestration_schedule(
 
 defs = Definitions(
     assets=assets,
+    asset_checks=asset_checks,
     sensors=[dataform_workflow_invocation_sensor],
     schedules=[dataform_orchestration_schedule],
 )
+
 ```
 
 For freshness checks to show up in the Dagster UI, add a `dagster.yaml` file at the root of your project with the following content:
@@ -130,6 +137,71 @@ For freshness checks to show up in the Dagster UI, add a `dagster.yaml` file at 
 ```yaml
 freshness:
   enabled: True
+```
+
+### Custom Alerting Jobs Definition
+This integration contains placeholder alerting jobs that are triggered on workflow invocation action failures (asset materialization or SQL Assertion failures). Users can pass their own valid Dagster jobs to the Dataform polling sensor creator function. There are two types of jobs that can be passed:
+- **workflow_invocation_failure_notification_job**: This job will be run for any workflow invocation action that *is not* an assertion with a terminal state != "SUCCEEDED"
+- **asset_check_failure_notification_job**: This job will be run for any workflow invocation action that *is* an assertion with a terminal state != "SUCCEEDED"
+
+There are a few constraints to be mindful of regarding these custome jobs:
+- The `workflow_invocation_failure_notification_job` must be named "dataform_workflow_invocation_failure_notification_job" (and the op must be named "dataform_workflow_invocation_failure_notification_op")
+- The `asset_check_failure_notification_job` must be named "dataform_asset_check_failure_notification_job" (and the op must be named "dataform_asset_check_failure_notification_op")
+
+Below is an example of some valid custom jobs that can be passed to the sensor creation function:
+
+```python
+from dagster import OpExecutionContext, job, op
+from dagster_msteams import MSTeamsResource
+from dagster_dataform import DataformFailureNotificationOpConfig
+from .utils import build_adaptive_card_payload
+
+workflow_invocation_failure_channel_msteams_resource = MSTeamsResource(
+    hook_url="**********",
+)
+
+asset_check_failure_channel_msteams_resource = MSTeamsResource(
+    hook_url="**********",
+)
+
+@op
+def dataform_workflow_invocation_failure_notification_op(context: OpExecutionContext, config: DataformFailureNotificationOpConfig):
+    context.log.info("Constructing Adaptive Card")
+    context.log.info("Sending Adaptive Card to microsoft teams")
+    workflow_invocation_failure_channel_msteams_resource.get_client().post_message(payload=build_adaptive_card_payload(
+        event_type="Dataform Workflow Invocation Action Failure",
+        card_description="materialization of an asset in a Dataform workflow invocation",
+        environment=config.environment,
+        asset_name=config.asset_name,
+        workflow_invocation_start_time_secs=config.workflow_invocation_start_time_secs,
+        workflow_invocation_state=config.workflow_invocation_state,
+        failure_reason=config.failure_reason,
+    ))
+    context.log.info("Adaptive Card sent to microsoft teams")
+
+@job
+def dataform_workflow_invocation_failure_notification_job():
+    dataform_workflow_invocation_failure_notification_op()
+
+@op
+def dataform_asset_check_failure_notification_op(context: OpExecutionContext, config: DataformFailureNotificationOpConfig):
+    context.log.info("Constructing Adaptive Card")
+    context.log.info("Sending Adaptive Card to microsoft teams")
+    asset_check_failure_channel_msteams_resource.get_client().post_message(payload=build_adaptive_card_payload(
+        event_type="Dataform Asset Check Failure",
+        card_description="execution of a Dataform SQL Assertion",
+        environment=config.environment,
+        asset_name=config.asset_name,
+        workflow_invocation_start_time_secs=config.workflow_invocation_start_time_secs,
+        workflow_invocation_state=config.workflow_invocation_state,
+        failure_reason=config.failure_reason,
+    ))
+    context.log.info("Adaptive Card sent to microsoft teams")
+
+@job
+def dataform_asset_check_failure_notification_job():
+    dataform_asset_check_failure_notification_op()
+
 ```
 
 ### Library Objects and Functions
@@ -147,12 +219,18 @@ The main resource class that provides access to Google Cloud Dataform services. 
 - `environment` (str, required): Environment name that matches your Dataform branch (e.g., "dev", "prod", "main")
 - `sensor_minimum_interval_seconds` (int, optional): Minimum polling interval for sensors in seconds (default: 120)
 
-**Key Methods:**
+**Key Methods:** (These methods do not need to be called directly by the user, but for informational purposes here they are)
 - `create_compilation_result()`: Creates a new compilation result in Dataform
 - `create_workflow_invocation()`: Initiates a workflow execution
 - `get_workflow_invocation_details()`: Retrieves status and details of workflow executions
 - `list_compilation_results()`: Lists available compilation results
 - `query_compilation_result_actions()`: Queries actions from compilation results
+- `load_dataform_assets()`: Automatically discovers and creates Dagster assets from your Dataform compilation results. This function analyzes your Dataform repository and generates asset definitions with proper dependencies and metadata.
+- `load_dataform_asset_checks()`: Automatically discovers and creates Dagster assets from your Dataform compilation results. This function analyzes your Dataform repository and generates asset definitions with proper dependencies and metadata.
+
+**Properties**
+- `assets`: List containing Dagster AssetSpec objects
+- `asset_checks`: List containing Dagster AssetCheckDefinition objects
 
 **Example:**
 ```python
@@ -163,31 +241,9 @@ resource = DataformRepositoryResource(
     environment="dev",
     sensor_minimum_interval_seconds=30,
 )
-```
 
-#### `load_dataform_assets()`
-
-Automatically discovers and creates Dagster assets from your Dataform compilation results. This function analyzes your Dataform repository and generates asset definitions with proper dependencies and metadata.
-
-**Parameters:**
-- `resource` (DataformRepositoryResource, required): The configured Dataform repository resource
-- `fresh_policy_lag_minutes` (int, optional): Freshness policy lag in minutes for data quality monitoring (default: 1440)
-
-**Returns:**
-- `List[AssetsDefinition]`: A list of Dagster asset definitions representing your Dataform tables and views
-
-**Features:**
-- Automatically infers asset dependencies from Dataform relationships
-- Includes rich metadata (SQL code, project info, documentation links)
-- Applies configurable freshness policies
-- Handles different asset types (tables, views, assertions)
-
-**Example:**
-```python
-assets = load_dataform_assets(
-    resource=resource,
-    fresh_policy_lag_minutes=1440  # 24 hours
-)
+assets = resource.assets
+asset_checks = resource.asset_checks
 ```
 
 #### `create_dataform_workflow_invocation_sensor()`
