@@ -72,7 +72,7 @@ def create_dataform_workflow_invocation_sensor(
 
     @dg.sensor(
         minimum_interval_seconds=resource.sensor_minimum_interval_seconds,
-        jobs=[ # pyright: ignore[reportArgumentType]
+        jobs=[  # pyright: ignore[reportArgumentType]
             workflow_invocation_failure_notification_job,
             asset_check_failure_notification_job,
         ],
@@ -101,7 +101,7 @@ def create_dataform_workflow_invocation_sensor(
 
         asset_events = []
         run_requests = []
-        for index, workflow_invocation in enumerate(workflow_invocations): # pyright: ignore[reportArgumentType]
+        for index, workflow_invocation in enumerate(workflow_invocations):  # pyright: ignore[reportArgumentType]
             workflow_invocation_details = resource.query_workflow_invocation(
                 workflow_invocation.name
             )
@@ -110,7 +110,7 @@ def create_dataform_workflow_invocation_sensor(
                 f"Processing workflow invocation {index+1} of : {workflow_invocation.name}"
             )
 
-            for index, action in enumerate( 
+            for index, action in enumerate(
                 workflow_invocation_details.workflow_invocation_actions
             ):
                 context.log.info(

@@ -148,7 +148,7 @@ class DataformRepositoryResource:
 
         self.logger.info(f"Found response: {response}")
 
-        return response # pyright: ignore[reportReturnType]
+        return response  # pyright: ignore[reportReturnType]
 
     def query_workflow_invocation(
         self, name: str
