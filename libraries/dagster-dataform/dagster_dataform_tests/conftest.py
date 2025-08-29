@@ -20,27 +20,60 @@ def create_compilation_result(
     )
 
 
-MOCK_COMPILATION_RESULT_ACTION = dataform_v1.CompilationResultAction(
-    target=dataform_v1.Target(
-        name="test-asset",
-        schema="test_schema",
-        database="test-database",
+MOCK_COMPILATION_RESULT_ACTIONS = [
+    dataform_v1.CompilationResultAction(
+        target=dataform_v1.Target(
+            name="test_asset",
+            schema="test_schema",
+            database="test_database",
+        ),
+        relation=dataform_v1.CompilationResultAction.Relation(
+            dependency_targets=[
+                dataform_v1.Target(
+                    name="test_asset_1",
+                    schema="test_schema_1",
+                    database="test-database-1",
+                ),
+                dataform_v1.Target(
+                    name="test_asset_2",
+                    schema="test_schema_2",
+                    database="test-database-2",
+                ),
+            ]
+        ),
     ),
-    relation=dataform_v1.CompilationResultAction.Relation(
-        dependency_targets=[
-            dataform_v1.Target(
-                name="test-asset-1",
-                schema="test_schema_1",
-                database="test-database-1",
+    dataform_v1.CompilationResultAction(
+        target=dataform_v1.Target(
+            name="assertion_1",
+            schema="test_schema",
+            database="test_database",
+        ),
+        relation=dataform_v1.CompilationResultAction.Relation(
+            dependency_targets=[
+                dataform_v1.Target(
+                    name="test_asset",
+                    schema="test_schema_1",
+                    database="test-database-1",
+                ),
+            ]
+        ),
+        assertion=dataform_v1.CompilationResultAction.Assertion(
+            dependency_targets=[
+                dataform_v1.Target(
+                    name="test_asset",
+                    schema="test_schema",
+                    database="test_database",
+                ),
+            ],
+            parent_action=dataform_v1.Target(
+                name="test_asset",
+                schema="test_schema",
+                database="test_database",
             ),
-            dataform_v1.Target(
-                name="test-asset-2",
-                schema="test_schema_2",
-                database="test-database-2",
-            ),
-        ]
+            select_query="SELECT 1",
+        ),
     ),
-)
+]
 
 MOCK_WORKFLOW_INVOCATION = dataform_v1.WorkflowInvocation(
     name="test-workflow-invocation",
@@ -54,10 +87,11 @@ MOCK_WORKFLOW_INVOCATION_ACTION_PASSED = dataform_v1.WorkflowInvocationAction(
     ),
     state=dataform_v1.WorkflowInvocationAction.State.SUCCEEDED,
     target=dataform_v1.Target(
-        name="test-asset",
+        name="test_asset",
         schema="test_schema",
         database="test-database",
     ),
+    internal_metadata='{"labels": {"dataform-action-type": "bigquery_action"}}',
     invocation_timing=interval_pb2.Interval(
         start_time=timestamp_pb2.Timestamp(seconds=1723958400),
         end_time=timestamp_pb2.Timestamp(seconds=1723958400),
@@ -71,16 +105,53 @@ MOCK_WORKFLOW_INVOCATION_ACTION_FAILED = dataform_v1.WorkflowInvocationAction(
     ),
     state=dataform_v1.WorkflowInvocationAction.State.FAILED,
     target=dataform_v1.Target(
-        name="test-asset",
+        name="test_asset",
         schema="test_schema",
         database="test-database",
     ),
+    internal_metadata='{"labels": {"dataform-action-type": "bigquery_action"}}',
     invocation_timing=interval_pb2.Interval(
         start_time=timestamp_pb2.Timestamp(seconds=1723958400),
         end_time=timestamp_pb2.Timestamp(seconds=1723958400),
     ),
 )
 
+MOCK_WORKFLOW_INVOCATION_ACTION_ASSERTION_FAILED = dataform_v1.WorkflowInvocationAction(
+    bigquery_action=dataform_v1.WorkflowInvocationAction.BigQueryAction(
+        sql_script="SELECT 1",
+        job_id="",
+    ),
+    state=dataform_v1.WorkflowInvocationAction.State.FAILED,
+    target=dataform_v1.Target(
+        name="assertion_1",
+        schema="test_schema",
+        database="test-database",
+    ),
+    internal_metadata='{"labels": {"dataform-action-type": "assertion"}}',
+    failure_reason="Test failure reason",
+    invocation_timing=interval_pb2.Interval(
+        start_time=timestamp_pb2.Timestamp(seconds=1723958400),
+        end_time=timestamp_pb2.Timestamp(seconds=1723958400),
+    ),
+)
+
+MOCK_WORKFLOW_INVOCATION_ACTION_ASSERTION_PASSED = dataform_v1.WorkflowInvocationAction(
+    bigquery_action=dataform_v1.WorkflowInvocationAction.BigQueryAction(
+        sql_script="SELECT 1",
+        job_id="",
+    ),
+    state=dataform_v1.WorkflowInvocationAction.State.SUCCEEDED,
+    target=dataform_v1.Target(
+        name="assertion_1",
+        schema="test_schema",
+        database="test-database",
+    ),
+    internal_metadata='{"labels": {"dataform-action-type": "assertion"}}',
+    invocation_timing=interval_pb2.Interval(
+        start_time=timestamp_pb2.Timestamp(seconds=1723958400),
+        end_time=timestamp_pb2.Timestamp(seconds=1723958400),
+    ),
+)
 
 @pytest.fixture
 def mock_dataform_client(request):
@@ -90,7 +161,7 @@ def mock_dataform_client(request):
     default_schema = request.param.get("default_schema", "test-schema")
     default_location = request.param.get("default_location", "us-central1")
     assertion_schema = request.param.get("assertion_schema", "test-assertion-schema")
-    workflow_invocation_passed = request.param.get("workflow_invocation_passed", True)
+    workflow_invocation_type = request.param.get("workflow_invocation_type", None)
 
     mock_client = Mock()
 
@@ -101,14 +172,16 @@ def mock_dataform_client(request):
         default_location,
         assertion_schema,
     )
-    mock_compilation_result_action = MOCK_COMPILATION_RESULT_ACTION
+    mock_compilation_result_actions = MOCK_COMPILATION_RESULT_ACTIONS
     mock_workflow_invocation = MOCK_WORKFLOW_INVOCATION
     mock_workflow_invocation_action_passed = MOCK_WORKFLOW_INVOCATION_ACTION_PASSED
     mock_workflow_invocation_action_failed = MOCK_WORKFLOW_INVOCATION_ACTION_FAILED
+    mock_workflow_invocation_action_assertion_passed = MOCK_WORKFLOW_INVOCATION_ACTION_ASSERTION_PASSED
+    mock_workflow_invocation_action_assertion_failed = MOCK_WORKFLOW_INVOCATION_ACTION_ASSERTION_FAILED
 
     mock_query_compilation_result_actions_response = (
         dataform_v1.QueryCompilationResultActionsResponse(
-            compilation_result_actions=[mock_compilation_result_action]
+            compilation_result_actions=mock_compilation_result_actions
         )
     )
 
@@ -116,22 +189,36 @@ def mock_dataform_client(request):
         compilation_results=[mock_create_compilation_result_response]
     )
 
-    mock_list_workflow_invocations_response = (
-        dataform_v1.ListWorkflowInvocationsResponse(
-            workflow_invocations=[mock_workflow_invocation]
-        )
-    )
+    mock_list_workflow_invocations_response = [mock_workflow_invocation]
 
-    if workflow_invocation_passed:
+    if workflow_invocation_type == "asset_passed":
         mock_query_workflow_invocation_actions_response = (
             dataform_v1.QueryWorkflowInvocationActionsResponse(
                 workflow_invocation_actions=[mock_workflow_invocation_action_passed]
             )
         )
-    else:
+    elif workflow_invocation_type == "asset_failed":
         mock_query_workflow_invocation_actions_response = (
             dataform_v1.QueryWorkflowInvocationActionsResponse(
                 workflow_invocation_actions=[mock_workflow_invocation_action_failed]
+            )
+        )
+    elif workflow_invocation_type == "assertion_passed":
+        mock_query_workflow_invocation_actions_response = (
+            dataform_v1.QueryWorkflowInvocationActionsResponse(
+                workflow_invocation_actions=[mock_workflow_invocation_action_assertion_passed]
+            )
+        )
+    elif workflow_invocation_type == "assertion_failed":
+        mock_query_workflow_invocation_actions_response = (
+            dataform_v1.QueryWorkflowInvocationActionsResponse(
+                workflow_invocation_actions=[mock_workflow_invocation_action_assertion_failed]
+            )
+        )
+    else:
+        mock_query_workflow_invocation_actions_response = (
+            dataform_v1.QueryWorkflowInvocationActionsResponse(
+                workflow_invocation_actions=[mock_workflow_invocation_action_passed]
             )
         )
 
