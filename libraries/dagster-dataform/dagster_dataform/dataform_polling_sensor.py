@@ -107,14 +107,14 @@ def create_dataform_workflow_invocation_sensor(
             )
 
             context.log.info(
-                f"Processing workflow invocation {index+1} of : {workflow_invocation.name}"
+                f"Processing workflow invocation {index+1} of {len(list(workflow_invocations))}: {workflow_invocation.name}" # pyright: ignore[reportArgumentType]
             )
 
             for index, action in enumerate(
                 workflow_invocation_details.workflow_invocation_actions
             ):
                 context.log.info(
-                    f"  Target Asset for action {index+1} of : {action.target.name}, State: {action.state.name}"
+                    f"  Target Asset for action {index+1} of {len(list(workflow_invocation_details.workflow_invocation_actions))}: {action.target.name}, State: {action.state.name}"
                 )
 
                 asset_name = action.target.name
