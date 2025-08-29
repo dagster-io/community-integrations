@@ -142,16 +142,6 @@ def create_dataform_workflow_invocation_sensor(
                     workflow_invocation_start_time_secs
                     > external_asset_last_updated_at_ms
                 ):
-                    utc_datetime = datetime.fromtimestamp(
-                        workflow_invocation_start_time_secs, tz=pytz.utc
-                    )
-
-                    # 2. Get the 'US/Eastern' timezone object
-                    eastern = pytz.timezone("US/Eastern")
-
-                    # 3. Convert the UTC datetime to the 'US/Eastern' timezone
-                    eastern_datetime = utc_datetime.astimezone(eastern)
-
                     context.log.debug(
                         f"  Asset {asset_name} has been updated since last cursor value"
                     )
