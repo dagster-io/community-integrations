@@ -23,14 +23,14 @@ def handle_asset_check_evaluation(
             asset_key = asset_check.keys_by_input_name["asset_key"].path[0]
             break
     try:
-        asset_key
+        asset_key # pyright: ignore[reportUnusedExpression, reportPossiblyUnboundVariable]
     except Exception as e:
         raise ValueError(
             f"Asset Check not found in compilation current compilation result: {action.target.name}. Error: {e}"
         )
 
     asset_check_evaluation = dg.AssetCheckEvaluation(
-        asset_key=dg.AssetKey(asset_key),
+        asset_key=dg.AssetKey(asset_key), # pyright: ignore[reportPossiblyUnboundVariable]
         check_name=action.target.name,
         passed=True if action.state.name == "SUCCEEDED" else False,
         metadata={

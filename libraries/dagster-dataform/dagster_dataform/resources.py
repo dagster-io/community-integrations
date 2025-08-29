@@ -148,7 +148,7 @@ class DataformRepositoryResource:
 
         self.logger.info(f"Found response: {response}")
 
-        return response
+        return response # pyright: ignore[reportReturnType]
 
     def query_workflow_invocation(
         self, name: str
@@ -222,7 +222,7 @@ class DataformRepositoryResource:
             try:
                 spec = dg.AssetSpec(
                     key=asset.target.name,
-                    kinds=["bigquery"],  # noqa
+                    kinds={"bigquery"},
                     metadata={
                         "Project ID": asset.target.database,
                         "Dataset": asset.target.schema,

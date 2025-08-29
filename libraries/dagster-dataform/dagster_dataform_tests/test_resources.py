@@ -207,8 +207,8 @@ def test_dataform_repository_resource_get_latest_workflow_invocations(
     )
 
     assert workflow_invocations is not None
-    assert len(workflow_invocations) == 1
-    assert workflow_invocations[0].name == "test-workflow-invocation"
+    assert len(workflow_invocations) == 1 # pyright: ignore[reportArgumentType]
+    assert workflow_invocations[0].name == "test-workflow-invocation" # pyright: ignore[reportIndexIssue]
 
 
 @pytest.mark.parametrize(
