@@ -2,11 +2,10 @@ import dagster as dg
 from dagster import MetadataValue, RunConfig
 from dagster_dataform.resources import DataformRepositoryResource
 import json
-from datetime import datetime
-import pytz
 import re
 from typing import Optional, List
 from dagster_dataform.utils import handle_asset_check_evaluation
+
 
 class DataformFailureNotificationOpConfig(dg.Config):
     environment: str
@@ -16,6 +15,7 @@ class DataformFailureNotificationOpConfig(dg.Config):
     workflow_invocation_state: str
     failure_reason: str
 
+
 @dg.op
 def dataform_workflow_invocation_failure_notification_op(
     context: dg.OpExecutionContext,
@@ -23,9 +23,11 @@ def dataform_workflow_invocation_failure_notification_op(
     context.log.info("This is the placeholder for the notification job")
     return "Notification sent"
 
+
 @dg.job
 def dataform_workflow_invocation_failure_notification_job():
     dataform_workflow_invocation_failure_notification_op()
+
 
 @dg.op
 def dataform_asset_check_failure_notification_op(
@@ -34,15 +36,21 @@ def dataform_asset_check_failure_notification_op(
     context.log.info("This is the placeholder for the notification job")
     return "Notification sent"
 
+
 @dg.job
 def dataform_asset_check_failure_notification_job():
     dataform_asset_check_failure_notification_op()
 
+
 def create_dataform_workflow_invocation_sensor(
     resource: DataformRepositoryResource,
     minutes_ago: int,
-    workflow_invocation_failure_notification_job: Optional[dg.JobDefinition] = dataform_workflow_invocation_failure_notification_job,
-    asset_check_failure_notification_job: Optional[dg.JobDefinition] = dataform_asset_check_failure_notification_job,
+    workflow_invocation_failure_notification_job: Optional[
+        dg.JobDefinition
+    ] = dataform_workflow_invocation_failure_notification_job,
+    asset_check_failure_notification_job: Optional[
+        dg.JobDefinition
+    ] = dataform_asset_check_failure_notification_job,
     inclusion_patterns: Optional[List[str]] = None,
 ):
     """
@@ -62,11 +70,12 @@ def create_dataform_workflow_invocation_sensor(
         minutes_ago: The number of minutes to look back for workflow invocations. This should be greater than the average time it takes for a workflow invocation to complete.
     """
 
-
-
     @dg.sensor(
         minimum_interval_seconds=resource.sensor_minimum_interval_seconds,
-        jobs=[workflow_invocation_failure_notification_job, asset_check_failure_notification_job]
+        jobs=[
+            workflow_invocation_failure_notification_job,
+            asset_check_failure_notification_job,
+        ],
     )
     def dataform_workflow_invocation_sensor(
         context: dg.SensorEvaluationContext,
@@ -180,8 +189,10 @@ def create_dataform_workflow_invocation_sensor(
                             dataform_workflow_invocation_cursors[asset_name] = (
                                 workflow_invocation_start_time_secs
                             )
-                            
-                            context.log.debug(f"  Adding run request for asset check failure notification job for asset {asset_name}")
+
+                            context.log.debug(
+                                f"  Adding run request for asset check failure notification job for asset {asset_name}"
+                            )
 
                             run_requests.append(
                                 dg.RunRequest(
@@ -198,7 +209,7 @@ def create_dataform_workflow_invocation_sensor(
                                                 failure_reason=action.failure_reason,
                                             )
                                         }
-                                    )
+                                    ),
                                 )
                             )
 
@@ -224,7 +235,9 @@ def create_dataform_workflow_invocation_sensor(
                             workflow_invocation_start_time_secs
                         )
 
-                        context.log.debug(f"Adding run request for workflow invocation failure notification job for asset {asset_name}")
+                        context.log.debug(
+                            f"Adding run request for workflow invocation failure notification job for asset {asset_name}"
+                        )
 
                         run_requests.append(
                             dg.RunRequest(
@@ -241,7 +254,7 @@ def create_dataform_workflow_invocation_sensor(
                                             failure_reason=action.failure_reason,
                                         )
                                     }
-                                )
+                                ),
                             )
                         )
 

@@ -2,7 +2,6 @@ from dagster_dataform.dataform_orchestration_schedule import (
     create_dataform_orchestration_schedule,
 )
 from dagster_dataform.resources import DataformRepositoryResource
-from dagster_dataform_tests.conftest import mock_dataform_client
 import dagster as dg
 from dagster import build_schedule_context
 import pytest

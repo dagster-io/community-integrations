@@ -25,12 +25,12 @@ def handle_asset_check_evaluation(
     try:
         asset_key
     except Exception as e:
-        raise ValueError(f"Asset Check not found in compilation current compilation result: {action.target.name}. Error: {e}")
+        raise ValueError(
+            f"Asset Check not found in compilation current compilation result: {action.target.name}. Error: {e}"
+        )
 
     asset_check_evaluation = dg.AssetCheckEvaluation(
-        asset_key=dg.AssetKey(
-            asset_key
-        ),
+        asset_key=dg.AssetKey(asset_key),
         check_name=action.target.name,
         passed=True if action.state.name == "SUCCEEDED" else False,
         metadata={

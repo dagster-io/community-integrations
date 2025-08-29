@@ -28,7 +28,9 @@ class DataformRepositoryResource:
         self.sensor_minimum_interval_seconds = sensor_minimum_interval_seconds
         self.asset_fresh_policy_lag_minutes = asset_fresh_policy_lag_minutes
 
-        self.assets = self.load_dataform_assets(fresh_policy_lag_minutes=self.asset_fresh_policy_lag_minutes)
+        self.assets = self.load_dataform_assets(
+            fresh_policy_lag_minutes=self.asset_fresh_policy_lag_minutes
+        )
         self.asset_checks = self.load_dataform_asset_check_specs()
 
     def create_compilation_result(
@@ -132,7 +134,9 @@ class DataformRepositoryResource:
     #     """Create a workflow invocation."""
     #     pass
 
-    def get_latest_workflow_invocations(self, minutes_ago: int) -> dataform_v1.ListWorkflowInvocationsResponse:
+    def get_latest_workflow_invocations(
+        self, minutes_ago: int
+    ) -> dataform_v1.ListWorkflowInvocationsResponse:
         """Get the latest workflow invocation."""
         request = dataform_v1.ListWorkflowInvocationsRequest(
             parent=f"projects/{self.project_id}/locations/{self.location}/repositories/{self.repository_id}",
@@ -201,9 +205,6 @@ class DataformRepositoryResource:
 
         return response
 
-    
-
-
     def load_dataform_assets(
         self,
         fresh_policy_lag_minutes: float = 1440,
@@ -221,7 +222,7 @@ class DataformRepositoryResource:
             try:
                 spec = dg.AssetSpec(
                     key=asset.target.name,
-                    kinds=["bigquery"], # noqa
+                    kinds=["bigquery"],  # noqa
                     metadata={
                         "Project ID": asset.target.database,
                         "Dataset": asset.target.schema,
@@ -250,7 +251,6 @@ class DataformRepositoryResource:
 
         logger.info(f"Successfully created {len(assets)} assets")
         return assets
-
 
     def load_dataform_asset_check_specs(
         self,

@@ -153,6 +153,7 @@ MOCK_WORKFLOW_INVOCATION_ACTION_ASSERTION_PASSED = dataform_v1.WorkflowInvocatio
     ),
 )
 
+
 @pytest.fixture
 def mock_dataform_client(request):
     # This allows us to parametrize the test with different values for the git commitish, default database, default schema, default location, and assertion schema if necesessary (see test_dataform_repository_resource_get_latest_compilation_result_name_wrong_environment)
@@ -176,8 +177,12 @@ def mock_dataform_client(request):
     mock_workflow_invocation = MOCK_WORKFLOW_INVOCATION
     mock_workflow_invocation_action_passed = MOCK_WORKFLOW_INVOCATION_ACTION_PASSED
     mock_workflow_invocation_action_failed = MOCK_WORKFLOW_INVOCATION_ACTION_FAILED
-    mock_workflow_invocation_action_assertion_passed = MOCK_WORKFLOW_INVOCATION_ACTION_ASSERTION_PASSED
-    mock_workflow_invocation_action_assertion_failed = MOCK_WORKFLOW_INVOCATION_ACTION_ASSERTION_FAILED
+    mock_workflow_invocation_action_assertion_passed = (
+        MOCK_WORKFLOW_INVOCATION_ACTION_ASSERTION_PASSED
+    )
+    mock_workflow_invocation_action_assertion_failed = (
+        MOCK_WORKFLOW_INVOCATION_ACTION_ASSERTION_FAILED
+    )
 
     mock_query_compilation_result_actions_response = (
         dataform_v1.QueryCompilationResultActionsResponse(
@@ -206,13 +211,17 @@ def mock_dataform_client(request):
     elif workflow_invocation_type == "assertion_passed":
         mock_query_workflow_invocation_actions_response = (
             dataform_v1.QueryWorkflowInvocationActionsResponse(
-                workflow_invocation_actions=[mock_workflow_invocation_action_assertion_passed]
+                workflow_invocation_actions=[
+                    mock_workflow_invocation_action_assertion_passed
+                ]
             )
         )
     elif workflow_invocation_type == "assertion_failed":
         mock_query_workflow_invocation_actions_response = (
             dataform_v1.QueryWorkflowInvocationActionsResponse(
-                workflow_invocation_actions=[mock_workflow_invocation_action_assertion_failed]
+                workflow_invocation_actions=[
+                    mock_workflow_invocation_action_assertion_failed
+                ]
             )
         )
     else:

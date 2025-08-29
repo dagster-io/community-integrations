@@ -2,7 +2,7 @@ from dagster_dataform.resources import DataformRepositoryResource
 from dagster_dataform.utils import get_epoch_time_ago
 import pytest
 from google.cloud import dataform_v1
-from dagster import AssetSpec, AssetChecksDefinition, AssetKey
+from dagster import AssetSpec, AssetChecksDefinition
 
 
 @pytest.mark.parametrize(
@@ -129,7 +129,7 @@ def test_dataform_repository_resource_get_latest_compilation_result_name_correct
         location="us-central1",
         environment="dev",
         client=mock_dataform_client,
-)
+    )
 
     compilation_result = resource.get_latest_compilation_result_name()
 
@@ -381,6 +381,7 @@ def test_dataform_repository_resource_load_dataform_assets(mock_dataform_client)
     assert assets[0].metadata["Project ID"] == "test_database"
     assert assets[0].metadata["Dataset"] == "test_schema"
     assert assets[0].metadata["Asset Name"] == "test_asset"
+
 
 @pytest.mark.parametrize(
     "mock_dataform_client",
