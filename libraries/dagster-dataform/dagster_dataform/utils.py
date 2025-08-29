@@ -30,7 +30,7 @@ def handle_asset_check_evaluation(
     asset_check_evaluation = dg.AssetCheckEvaluation(
         asset_key=dg.AssetKey(
             asset_key
-        ),  # TODO: This is a temporary solution to get the asset key. We should use the asset key from the asset check spec. See if we can search for asset checks by name.
+        ),
         check_name=action.target.name,
         passed=True if action.state.name == "SUCCEEDED" else False,
         metadata={
