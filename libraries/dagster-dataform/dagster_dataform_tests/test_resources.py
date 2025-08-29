@@ -162,7 +162,7 @@ def test_dataform_repository_resource_query_compilation_result(mock_dataform_cli
     compilation_result_actions = resource.query_compilation_result()
 
     assert compilation_result_actions is not None
-    assert len(compilation_result_actions) == 1
+    assert len(compilation_result_actions) == 2
     # Access the attributes through the mock response object
     assert hasattr(compilation_result_actions[0], "target")
     assert hasattr(compilation_result_actions[0].target, "name")
@@ -253,7 +253,7 @@ def test_dataform_repository_resource_query_workflow_invocation(mock_dataform_cl
         == dataform_v1.WorkflowInvocationAction.State.SUCCEEDED
     )
     assert (
-        workflow_invocation.workflow_invocation_actions[0].target.name == "test-asset"
+        workflow_invocation.workflow_invocation_actions[0].target.name == "test_asset"
     )
     assert (
         workflow_invocation.workflow_invocation_actions[0].target.schema
@@ -375,7 +375,7 @@ def test_dataform_repository_resource_load_dataform_assets(mock_dataform_client)
     assets = resource.assets
 
     assert assets is not None
-    assert len(assets) == 1
+    assert len(assets) == 2
     assert isinstance(assets[0], AssetSpec)
     assert assets[0].kinds == {"bigquery"}
     assert assets[0].metadata["Project ID"] == "test_database"
@@ -409,5 +409,5 @@ def test_dataform_repository_resource_load_dataform_asset_checks(mock_dataform_c
     assert asset_checks is not None
     assert len(asset_checks) == 1
     assert isinstance(asset_checks[0], AssetChecksDefinition)
-    assert asset_checks[0].check_specs_by_output_name["spec"].name == "test_asset"
-    assert asset_checks[0].keys_by_input_name["asset_key"].path[0] == "parent_asset"
+    assert asset_checks[0].check_specs_by_output_name["spec"].name == "assertion_1"
+    assert asset_checks[0].keys_by_input_name["asset_key"].path[0] == "test_asset"
