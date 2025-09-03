@@ -1,0 +1,31 @@
+[project]
+name = "dagster-datahub"
+description = "Dagster integration with datahub connectors"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "acryl-datahub>=1.0.0.2",
+    "dagster>=1.10.9",
+]
+dynamic = ["version"]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest",
+    "pyright>=1.1.386",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_datahub", "dagster_datahub.lib"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_datahub.__version__"}
+
+[project.entry-points]
+"dagster_dg.library" = { dagster_datahub = "dagster_datahub"}
+"dagster_dg.plugin" = { dagster_datahub = "dagster_datahub"}
