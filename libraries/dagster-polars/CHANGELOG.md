@@ -2,6 +2,7 @@
 
 ## Added
 
+- Add support for delta merge operation.
 - Use new deltalake (>=1.0.0) syntax and arguments for delta io manager while retaining compatibility via version parsing and legacy syntax.
 
 ## Fixes
