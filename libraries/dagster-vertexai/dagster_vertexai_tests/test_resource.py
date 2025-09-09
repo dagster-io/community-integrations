@@ -1,293 +1,266 @@
-from unittest.mock import MagicMock, patch
+import json
+from collections import defaultdict
+from contextlib import contextmanager
+from functools import wraps
+from typing import Generator, Optional, Union, Callable, Iterable
+from weakref import WeakKeyDictionary
 
-import pytest
+import google.auth
+import vertexai
 from dagster import (
     AssetExecutionContext,
     AssetKey,
-    AssetSpec,
-    Definitions,
-    MaterializeResult,
+    ConfigurableResource,
+    DagsterInvariantViolationError,
+    InitResourceContext,
     OpExecutionContext,
-    StaticPartitionsDefinition,
-    asset,
-    build_asset_context,
-    build_init_resource_context,
-    build_op_context,
-    graph_asset,
-    job,
-    materialize,
-    multi_asset,
-    op,
 )
-from dagster._core.errors import DagsterInvariantViolationError
-from vertexai.generative_models import GenerationResponse
+from dagster._annotations import public
+from google.auth.credentials import Credentials as GoogleCredentials
+from pydantic import Field, PrivateAttr
+from vertexai.generative_models import GenerationResponse, GenerativeModel
 
-from dagster_vertexai import VertexAIResource
-
-# Constants for Vertex AI configuration
-PROJECT_ID = "test-project-1234"
-LOCATION = "us-central1"
-MODEL_NAME = "gemini-1.5-flash-001"
+from dagster._annotations import preview
 
 
-@patch("vertexai.generative_models.GenerativeModel")
-@patch("vertexai.init")
-def test_vertexai_client(mock_init, mock_model_class) -> None:
-    """Tests that the resource calls vertexai.init and initializes the model on setup."""
-    vertexai_resource = VertexAIResource(
-        project_id=PROJECT_ID, location=LOCATION, generative_model_name=MODEL_NAME
-    )
-    context = build_init_resource_context()
-    vertexai_resource.setup_for_execution(context)
-
-    mock_init.assert_called_once_with(
-        project=PROJECT_ID, location=LOCATION, credentials=None, api_endpoint=None
-    )
-    mock_model_class.assert_called_once_with(model_name=MODEL_NAME)
+# A WeakKeyDictionary is used to track usage counters for each execution context.
+# This ensures that counters are automatically garbage-collected when the context is no longer in use,
+# preventing memory leaks in long-running Dagster processes.
+context_to_counters = WeakKeyDictionary()
 
 
-@patch("vertexai.generative_models.GenerativeModel")
-@patch("vertexai.init")
-def test_vertexai_resource_with_op(mock_init, mock_model_class):
-    """Tests that the resource can be used within an op."""
+def _add_to_asset_metadata(
+    context: AssetExecutionContext, usage_metadata: dict, output_name: Optional[str]
+) -> None:
+    """Adds and aggregates usage metadata to the current asset materialization."""
+    if context not in context_to_counters:
+        context_to_counters[context] = defaultdict(lambda: 0)
+    counters = context_to_counters[context]
 
-    @op
-    def vertexai_op(vertexai: VertexAIResource):
-        context = build_op_context(resources={"vertexai": vertexai})
-        with vertexai.get_model(context=context) as model:
-            assert model is not None
+    for metadata_key, delta in usage_metadata.items():
+        counters[metadata_key] += delta
+    context.add_output_metadata(dict(counters), output_name)
 
-    vertexai_job = job(name="vertexai_op_job")(vertexai_op)
 
-    defs = Definitions(
-        jobs=[vertexai_job],
-        resources={
-            "vertexai": VertexAIResource(
-                project_id=PROJECT_ID,
-                location=LOCATION,
-                generative_model_name=MODEL_NAME,
+def _with_usage_metadata(
+    context: AssetExecutionContext, output_name: Optional[str], func: Callable
+) -> Callable:
+    """A wrapper for the `generate_content` method to handle both streaming and non-streaming
+    responses, extracting and logging usage metadata correctly for each case.
+    """
+
+    @wraps(func)
+    def wrapper(
+        *args, **kwargs
+    ) -> Union[GenerationResponse, Iterable[GenerationResponse]]:
+        is_streaming = kwargs.get("stream", False)
+
+        if not is_streaming:
+            # Standard non-streaming request
+            response = func(*args, **kwargs)
+            if hasattr(response, "usage_metadata"):
+                usage = response.usage_metadata
+                usage_metadata = {
+                    "vertexai.calls": 1,
+                    "vertexai.candidates_token_count": usage.candidates_token_count,
+                    "vertexai.prompt_token_count": usage.prompt_token_count,
+                    "vertexai.total_token_count": usage.total_token_count,
+                }
+                _add_to_asset_metadata(context, usage_metadata, output_name)
+            return response
+
+        # Streaming request: must return a generator
+        def streaming_generator() -> Iterable[GenerationResponse]:
+            # The original function call returns an iterator
+            response_iterator = func(*args, **kwargs)
+            yield from response_iterator
+
+            # After the stream is exhausted, the iterator itself has the usage_metadata
+            if hasattr(response_iterator, "usage_metadata"):
+                usage = response_iterator.usage_metadata
+                usage_metadata = {
+                    "vertexai.calls": 1,
+                    "vertexai.candidates_token_count": usage.candidates_token_count,
+                    "vertexai.prompt_token_count": usage.prompt_token_count,
+                    "vertexai.total_token_count": usage.total_token_count,
+                }
+                _add_to_asset_metadata(context, usage_metadata, output_name)
+
+        return streaming_generator()
+
+    return wrapper
+
+
+@public
+@preview
+class VertexAIResource(ConfigurableResource):
+    """A Dagster resource for interacting with Google Cloud Vertex AI's generative models.
+
+    This resource provides a `vertexai.generative_models.GenerativeModel` instance, configured
+    for use in ops and assets. It automatically handles the initialization of the Vertex AI SDK
+    and logs API usage (token counts and call counts) as asset metadata.
+
+    **Authentication:**
+    Authentication is handled via `Application Default Credentials (ADC) <https://cloud.google.com/docs/authentication/application-default-credentials>`_
+    by default. To use a service account, provide the service account key as a JSON string via
+    the ``google_credentials`` configuration field.
+
+    **Dependencies:**
+    This resource requires the ``google-cloud-aiplatform`` library to be installed.
+    ``pip install google-cloud-aiplatform``
+
+    Examples:
+        .. code-block:: python
+
+            from dagster import AssetExecutionContext, Definitions, EnvVar, asset
+            from dagster_vertexai import VertexAIResource
+
+            @asset(compute_kind="vertexai")
+            def my_report(context: AssetExecutionContext, vertex_ai: VertexAIResource):
+                with vertex_ai.get_model(context) as model:
+                    response = model.generate_content(
+                        "Generate a business summary for a new marketing campaign."
+                    )
+                    return response.text
+
+            defs = Definitions(
+                assets=[my_report],
+                resources={
+                    "vertex_ai": VertexAIResource(
+                        project_id="my-gcp-project",
+                        location="us-central1",
+                        generative_model_name="gemini-1.5-flash-001"
+                    ),
+                },
             )
-        },
-    )
-    result = defs.get_job_def("vertexai_op_job").execute_in_process()
-    assert result.success
-    mock_init.assert_called_once()
-    mock_model_class.assert_called_once()
+    """
 
-
-@patch("vertexai.generative_models.GenerativeModel")
-@patch("vertexai.init")
-def test_vertexai_resource_with_asset(mock_init, mock_model_class):
-    """Tests that the resource can be used within an asset."""
-
-    @asset
-    def vertexai_asset(vertexai: VertexAIResource):
-        context = build_asset_context(resources={"vertexai": vertexai})
-        with vertexai.get_model(context=context) as model:
-            assert model is not None
-
-    result = materialize(
-        [vertexai_asset],
-        resources={
-            "vertexai": VertexAIResource(
-                project_id=PROJECT_ID,
-                location=LOCATION,
-                generative_model_name=MODEL_NAME,
-            )
-        },
-    )
-    assert result.success
-
-
-@patch("vertexai.generative_models.GenerativeModel")
-@patch("vertexai.init")
-def test_vertexai_resource_with_graph_backed_asset(mock_init, mock_model_class):
-    """Tests resource usage in a graph-backed asset, ensuring the wrapper is called."""
-    mock_model_instance = mock_model_class.return_value
-    mock_model_instance.generate_content.return_value = MagicMock(
-        spec=GenerationResponse
+    project_id: str = Field(description="The Google Cloud project ID.")
+    location: str = Field(
+        description="The Google Cloud location (e.g., 'us-central1')."
     )
 
-    @op
-    def message_op():
-        return "Say this is a test"
+    google_credentials: Optional[str] = Field(
+        default=None,
+        description=(
+            "A JSON string of Google Cloud service account credentials. If not provided, "
+            "Application Default Credentials (ADC) will be used."
+        ),
+    )
+    api_endpoint: Optional[str] = Field(
+        default=None,
+        description=(
+            "The regional API endpoint for Vertex AI. If not set, the SDK will determine it "
+            "based on the `location`. Example: 'us-central1-aiplatform.googleapis.com'"
+        ),
+    )
+    generative_model_name: str = Field(
+        description="The name of the generative model on Vertex AI (e.g., 'gemini-1.5-flash-001')."
+    )
 
-    @op
-    def vertexai_op(
-        context: OpExecutionContext, vertexai: VertexAIResource, message: str
-    ):
-        with vertexai.get_model(context=context) as model:
-            model.generate_content(message)
+    _generative_model: GenerativeModel = PrivateAttr()
 
-    @graph_asset
-    def vertexai_asset(vertexai: VertexAIResource):
-        return vertexai_op(vertexai, message_op())
+    @classmethod
+    def _is_dagster_maintained(cls) -> bool:
+        return False
 
-    with patch(
-        "dagster_vertexai.resources.VertexAIResource._wrap_for_usage_tracking"
-    ) as mock_wrapper:
-        result = materialize(
-            [vertexai_asset],
-            resources={
-                "vertexai": VertexAIResource(
-                    project_id=PROJECT_ID,
-                    location=LOCATION,
-                    generative_model_name=MODEL_NAME,
+    def setup_for_execution(self, context: InitResourceContext) -> None:
+        """Initializes the Vertex AI SDK and the generative model instance."""
+        creds: Optional[GoogleCredentials] = None
+        if self.google_credentials:
+            try:
+                creds_dict = json.loads(self.google_credentials)
+                creds, _ = google.auth.load_credentials_from_dict(creds_dict)
+            except (json.JSONDecodeError, TypeError) as e:
+                raise DagsterInvariantViolationError(
+                    "Failed to load Google credentials from 'google_credentials'. "
+                    f"Please ensure it is a valid JSON string. Error: {e}"
                 )
-            },
+
+        vertexai.init(
+            project=self.project_id,
+            location=self.location,
+            credentials=creds,
+            api_endpoint=self.api_endpoint,
         )
-        assert result.success
-        mock_wrapper.assert_called()
+        self._generative_model = GenerativeModel(model_name=self.generative_model_name)
 
+    @public
+    @contextmanager
+    def get_model(
+        self, context: Union[AssetExecutionContext, OpExecutionContext]
+    ) -> Generator[GenerativeModel, None, None]:
+        """Yields a ``vertexai.generative_models.GenerativeModel`` for interacting with Vertex AI.
 
-@patch("vertexai.generative_models.GenerativeModel")
-@patch("vertexai.init")
-def test_vertexai_resource_with_multi_asset(mock_init, mock_model_class):
-    """Tests multi-asset scenarios: success with get_model_for_asset, failure with get_model."""
+        When used within an asset's compute function, this method wraps the ``model.generate_content``
+        method to automatically log its usage to the asset's materialization metadata.
 
-    @multi_asset(
-        specs=[AssetSpec("status"), AssetSpec("result")],
-    )
-    def vertexai_multi_asset(
-        context: AssetExecutionContext, vertexai: VertexAIResource
+        Args:
+            context (Union[AssetExecutionContext, OpExecutionContext]): The Dagster execution context.
+        """
+        with self._get_model(context=context, asset_key=None) as model:
+            yield model
+
+    def _wrap_for_usage_tracking(
+        self, context: AssetExecutionContext, output_name: Optional[str]
     ):
-        with vertexai.get_model_for_asset(
-            context=context, asset_key=AssetKey("result")
-        ) as model:
-            model.generate_content("Say this is a test")
-
-        with pytest.raises(DagsterInvariantViolationError):
-            with vertexai.get_model(context=context):
-                pass
-
-    with patch(
-        "dagster_vertexai.resources.VertexAIResource._wrap_for_usage_tracking"
-    ) as mock_wrapper:
-        result = materialize(
-            [vertexai_multi_asset],
-            resources={
-                "vertexai": VertexAIResource(
-                    project_id=PROJECT_ID,
-                    location=LOCATION,
-                    generative_model_name=MODEL_NAME,
-                )
-            },
+        """Patches the `generate_content` method on the model instance for the current context."""
+        original_generate_content = self._generative_model.generate_content
+        self._generative_model.generate_content = _with_usage_metadata(
+            context, output_name, func=original_generate_content
         )
-        assert result.success
-        mock_wrapper.assert_called_once()
-        call_args = mock_wrapper.call_args[0]
-        assert call_args[1] == "result"
 
+    @public
+    @contextmanager
+    def get_model_for_asset(
+        self, context: AssetExecutionContext, asset_key: AssetKey
+    ) -> Generator[GenerativeModel, None, None]:
+        """Yields a ``vertexai.generative_models.GenerativeModel`` for a specific asset.
 
-@patch("vertexai.generative_models.GenerativeModel")
-@patch("vertexai.init")
-def test_vertexai_wrapper_with_asset(mock_init, mock_model_class):
-    """Tests that the metadata wrapper correctly logs usage for a simple asset."""
-    mock_response = MagicMock(spec=GenerationResponse)
-    # This is the correct, robust way to test: mock the interface, not the implementation.
-    # We create an object that has the attributes our code needs, without importing a private class.
-    mock_usage = MagicMock()
-    mock_usage.prompt_token_count = 1
-    mock_usage.candidates_token_count = 1
-    mock_usage.total_token_count = 2
-    mock_response.usage_metadata = mock_usage
-    mock_model_class.return_value.generate_content.return_value = mock_response
+        This method is for use in ``@multi_asset``s. It ensures that any usage metadata
+        is logged to the materialization of the asset specified by ``asset_key``.
 
-    @asset
-    def vertexai_asset(vertexai: VertexAIResource):
-        context = build_asset_context(resources={"vertexai": vertexai})
-        with vertexai.get_model(context=context) as model:
-            model.generate_content("say this is a test")
-        return MaterializeResult(asset_key="vertexai_asset")
+        Args:
+            context (AssetExecutionContext): The Dagster asset execution context.
+            asset_key (AssetKey): The key of the asset to associate the metadata with.
+        """
+        with self._get_model(context=context, asset_key=asset_key) as model:
+            yield model
 
-    result = materialize(
-        [vertexai_asset],
-        resources={
-            "vertexai": VertexAIResource(
-                project_id=PROJECT_ID,
-                location=LOCATION,
-                generative_model_name=MODEL_NAME,
-            )
-        },
-    )
-    assert result.success
-    mats = result.asset_materializations_for_node("vertexai_asset")
-    assert len(mats) == 1
-    mat = mats[0]
-    assert mat.metadata["vertexai.calls"].value == 1
-    assert mat.metadata["vertexai.total_token_count"].value == 2
+    @contextmanager
+    def _get_model(
+        self,
+        context: Union[AssetExecutionContext, OpExecutionContext],
+        asset_key: Optional[AssetKey] = None,
+    ) -> Generator[GenerativeModel, None, None]:
+        """Internal method to provide the model, applying usage tracking if in an asset context."""
+        # Store original method to restore later
+        original_generate_content = None
 
+        try:
+            if isinstance(context, AssetExecutionContext):
+                if asset_key is None:
+                    # For single assets or multi-assets with one output, determine the asset key from context.
+                    if len(context.assets_def.keys_by_output_name) > 1:
+                        raise DagsterInvariantViolationError(
+                            "The `asset_key` argument must be specified when calling `get_model` "
+                            "from a @multi_asset with more than one output. To specify the asset, "
+                            "use `get_model_for_asset` instead."
+                        )
+                    asset_key = context.asset_key
 
-@patch("vertexai.generative_models.GenerativeModel")
-@patch("vertexai.init")
-def test_vertexai_wrapper_with_op(mock_init, mock_model_class):
-    """Tests that usage metadata is NOT logged when used in an op context."""
-    mock_response = MagicMock(spec=GenerationResponse)
-    mock_usage = MagicMock()
-    mock_usage.prompt_token_count = 1
-    mock_usage.total_token_count = 1
-    mock_response.usage_metadata = mock_usage
-    mock_model_class.return_value.generate_content.return_value = mock_response
+                output_name = context.output_for_asset_key(asset_key)
+                # Store original method before wrapping
+                original_generate_content = self._generative_model.generate_content
+                self._wrap_for_usage_tracking(context=context, output_name=output_name)
 
-    @op
-    def vertexai_op(vertexai: VertexAIResource):
-        context = build_op_context(resources={"vertexai": vertexai})
-        context.add_output_metadata = MagicMock()
-        with vertexai.get_model(context=context) as model:
-            model.generate_content("Say this is a test")
-        context.add_output_metadata.assert_not_called()
+            yield self._generative_model
 
-    @job
-    def vertexai_job():
-        vertexai_op()
+        finally:
+            # Restore original method if we wrapped it
+            if original_generate_content is not None:
+                self._generative_model.generate_content = original_generate_content
 
-    result = vertexai_job.execute_in_process(
-        resources={
-            "vertexai": VertexAIResource(
-                project_id=PROJECT_ID,
-                location=LOCATION,
-                generative_model_name=MODEL_NAME,
-            )
-        }
-    )
-    assert result.success
-
-
-@patch("vertexai.generative_models.GenerativeModel")
-@patch("vertexai.init")
-def test_vertexai_wrapper_with_partitioned_asset(mock_init, mock_model_class):
-    """Tests metadata logging for a partitioned asset."""
-    mock_response = MagicMock(spec=GenerationResponse)
-    mock_usage = MagicMock()
-    mock_usage.prompt_token_count = 10
-    mock_usage.total_token_count = 10
-    mock_response.usage_metadata = mock_usage
-    mock_model_class.return_value.generate_content.return_value = mock_response
-
-    partitions_def = StaticPartitionsDefinition(["a", "b"])
-
-    @asset(partitions_def=partitions_def)
-    def vertexai_partitioned_asset(
-        context: AssetExecutionContext, vertexai: VertexAIResource
-    ):
-        with vertexai.get_model(context=context) as model:
-            model.generate_content(f"data for {context.partition_key}")
-        return MaterializeResult()
-
-    result = materialize(
-        [vertexai_partitioned_asset],
-        partition_key="a",
-        resources={
-            "vertexai": VertexAIResource(
-                project_id=PROJECT_ID,
-                location=LOCATION,
-                generative_model_name=MODEL_NAME,
-            )
-        },
-    )
-    assert result.success
-    mats = result.asset_materializations_for_node("vertexai_partitioned_asset")
-    assert len(mats) == 1
-    mat = mats[0]
-    assert mat.metadata["vertexai.calls"].value == 1
-    assert mat.metadata["vertexai.total_token_count"].value == 10
+    def teardown_after_execution(self, context: InitResourceContext) -> None:
+        """No explicit teardown is required for the Vertex AI SDK."""
+        pass

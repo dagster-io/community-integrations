@@ -1,5 +1,3 @@
-# dagster_vertexai/resources.py
-
 import json
 from collections import defaultdict
 from contextlib import contextmanager
@@ -66,7 +64,7 @@ def _with_usage_metadata(
                     "vertexai.calls": 1,
                     "vertexai.candidates_token_count": usage.candidates_token_count,
                     "vertexai.prompt_token_count": usage.prompt_token_count,
-                    "vertexai.total_token_count": usage.total_token_count,
+                    "vertexai.total_token_count": usage.total_tokens,
                 }
                 _add_to_asset_metadata(context, usage_metadata, output_name)
             return response
@@ -84,7 +82,7 @@ def _with_usage_metadata(
                     "vertexai.calls": 1,
                     "vertexai.candidates_token_count": usage.candidates_token_count,
                     "vertexai.prompt_token_count": usage.prompt_token_count,
-                    "vertexai.total_token_count": usage.total_token_count,
+                    "vertexai.total_token_count": usage.total_tokens,
                 }
                 _add_to_asset_metadata(context, usage_metadata, output_name)
 
@@ -200,7 +198,8 @@ class VertexAIResource(ConfigurableResource):
         Args:
             context (Union[AssetExecutionContext, OpExecutionContext]): The Dagster execution context.
         """
-        yield from self._get_model(context=context, asset_key=None)
+        with self._get_model(context=context, asset_key=None) as model:
+            yield model
 
     def _wrap_for_usage_tracking(
         self, context: AssetExecutionContext, output_name: Optional[str]
@@ -225,29 +224,42 @@ class VertexAIResource(ConfigurableResource):
             context (AssetExecutionContext): The Dagster asset execution context.
             asset_key (AssetKey): The key of the asset to associate the metadata with.
         """
-        yield from self._get_model(context=context, asset_key=asset_key)
+        with self._get_model(context=context, asset_key=asset_key) as model:
+            yield model
 
+    @contextmanager
     def _get_model(
         self,
         context: Union[AssetExecutionContext, OpExecutionContext],
         asset_key: Optional[AssetKey] = None,
     ) -> Generator[GenerativeModel, None, None]:
         """Internal method to provide the model, applying usage tracking if in an asset context."""
-        if isinstance(context, AssetExecutionContext):
-            if asset_key is None:
-                # For single assets or multi-assets with one output, determine the asset key from context.
-                if len(context.assets_def.keys_by_output_name) > 1:
-                    raise DagsterInvariantViolationError(
-                        "The `asset_key` argument must be specified when calling `get_model` "
-                        "from a @multi_asset with more than one output. To specify the asset, "
-                        "use `get_model_for_asset` instead."
-                    )
-                asset_key = context.asset_key
+        # Store the original generate_content method to restore it later
+        original_generate_content = None
 
-            output_name = context.output_for_asset_key(asset_key)
-            self._wrap_for_usage_tracking(context=context, output_name=output_name)
+        try:
+            if isinstance(context, AssetExecutionContext):
+                if asset_key is None:
+                    # For single assets or multi-assets with one output, determine the asset key from context.
+                    if len(context.assets_def.keys_by_output_name) > 1:
+                        raise DagsterInvariantViolationError(
+                            "The `asset_key` argument must be specified when calling `get_model` "
+                            "from a @multi_asset with more than one output. To specify the asset, "
+                            "use `get_model_for_asset` instead."
+                        )
+                    asset_key = context.asset_key
 
-        yield self._generative_model
+                output_name = context.output_for_asset_key(asset_key)
+                # Store the original method before wrapping
+                original_generate_content = self._generative_model.generate_content
+                self._wrap_for_usage_tracking(context=context, output_name=output_name)
+
+            yield self._generative_model
+
+        finally:
+            # Restore the original method if we wrapped it
+            if original_generate_content is not None:
+                self._generative_model.generate_content = original_generate_content
 
     def teardown_after_execution(self, context: InitResourceContext) -> None:
         """No explicit teardown is required for the Vertex AI SDK."""
