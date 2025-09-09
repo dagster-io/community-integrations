@@ -64,7 +64,7 @@ def _with_usage_metadata(
                     "vertexai.calls": 1,
                     "vertexai.candidates_token_count": usage.candidates_token_count,
                     "vertexai.prompt_token_count": usage.prompt_token_count,
-                    "vertexai.total_token_count": usage.total_tokens,
+                    "vertexai.total_token_count": usage.total_token_count,  # Fixed: Use correct attribute
                 }
                 _add_to_asset_metadata(context, usage_metadata, output_name)
             return response
@@ -82,7 +82,7 @@ def _with_usage_metadata(
                     "vertexai.calls": 1,
                     "vertexai.candidates_token_count": usage.candidates_token_count,
                     "vertexai.prompt_token_count": usage.prompt_token_count,
-                    "vertexai.total_token_count": usage.total_tokens,
+                    "vertexai.total_token_count": usage.total_token_count,  # Fixed: Use correct attribute
                 }
                 _add_to_asset_metadata(context, usage_metadata, output_name)
 
@@ -234,7 +234,7 @@ class VertexAIResource(ConfigurableResource):
         asset_key: Optional[AssetKey] = None,
     ) -> Generator[GenerativeModel, None, None]:
         """Internal method to provide the model, applying usage tracking if in an asset context."""
-        # Store the original generate_content method to restore it later
+        # Store original method to restore later
         original_generate_content = None
 
         try:
@@ -250,14 +250,15 @@ class VertexAIResource(ConfigurableResource):
                     asset_key = context.asset_key
 
                 output_name = context.output_for_asset_key(asset_key)
-                # Store the original method before wrapping
+                # Store original method before wrapping
                 original_generate_content = self._generative_model.generate_content
                 self._wrap_for_usage_tracking(context=context, output_name=output_name)
 
+            # Yield the model for both Asset and Op contexts
             yield self._generative_model
 
         finally:
-            # Restore the original method if we wrapped it
+            # Restore original method if we wrapped it
             if original_generate_content is not None:
                 self._generative_model.generate_content = original_generate_content
 
