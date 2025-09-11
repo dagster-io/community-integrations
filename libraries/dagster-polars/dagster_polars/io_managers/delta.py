@@ -16,6 +16,7 @@ try:
     import deltalake as dl
     from deltalake import DeltaTable
     from deltalake.exceptions import TableNotFoundError
+    from deltalake.table import TableMerger
 
     deltalake_ver = parse_version(dl.__version__)
     polars_ver = parse_version(pl.__version__)
@@ -58,6 +59,7 @@ class DeltaWriteMode(str, Enum):
     append = "append"
     overwrite = "overwrite"
     ignore = "ignore"
+    merge = "merge"
 
 
 class PolarsDeltaIOManager(BasePolarsUPathIOManager):
@@ -120,6 +122,58 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
                     "mode": "overwrite",
                     "delta_write_options": {
                         "schema_mode": "overwrite"
+                },
+            )
+            def my_table() -> pl.DataFrame:
+                ...
+
+        Upserting using delta merge:
+
+        .. code-block:: python
+
+            @asset(
+                io_manager_key="polars_delta_io_manager",
+                metadata={
+                    "mode": "merge",
+                    "delta_merge_options": {
+                        "source_alias": "s",
+                        "target_alias": "t",
+                        "predicate": "s.id == t.id",
+                        "merge_schema": True
+                },
+            )
+            def my_table() -> pl.DataFrame:
+                ...
+
+        Customizing delta merge logic:
+
+        .. code-block:: python
+
+            @asset(
+                io_manager_key="polars_delta_io_manager",
+                metadata={
+                    "mode": "merge",
+                    "delta_merge_options": {
+                        "source_alias": "s",
+                        "target_alias": "t",
+                        "predicate": "s.id == t.id",
+                    },
+                    "when_not_matched_insert": {
+                        "updates": {"id": "s.id", "val": "s.val"},
+                        "predicate": "s.id == 123",
+                    }, #or ... : "all"
+                    "when_matched_update": {
+                        "updates": {"val": "s.val"},
+                        "predicate": "t.id == 234",
+                    }, #or ... : "all"
+                    "when_matched_delete": {"predicate": "t.id == 345"},
+                    "when_not_matched_by_source_update": {
+                        "updates": {"val": "NA"},
+                        "predicate": "t.id == 456",
+                    },
+                    "when_not_matched_by_source_delete": {
+                        "predicate": "t.id == 567",
+                    }, #or ... : "all"
                 },
             )
             def my_table() -> pl.DataFrame:
@@ -217,9 +271,8 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
         path: "UPath",
     ):
         context_metadata = context.definition_metadata or {}
-        delta_write_options = context_metadata.get(
-            "delta_write_options"
-        )  # This needs to be gone and just only key value on the metadata
+        write_mode = context_metadata.get("mode") or self.mode.value
+        delta_write_options = context_metadata.get("delta_write_options")
 
         if context.has_asset_partitions:
             delta_write_options = delta_write_options or {}
@@ -279,12 +332,88 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
         except TableNotFoundError:
             dt = str(path)
 
-        df.write_delta(
-            dt,
-            mode=context_metadata.get("mode") or self.mode.value,
-            storage_options=storage_options,
-            delta_write_options=delta_write_options,
-        )
+        if write_mode == DeltaWriteMode.merge.value:
+            delta_merge_options = context_metadata.get("delta_merge_options")
+            # TODO: this will fail if there is no target table created yet. Should we fallback to creating a new table in that case? @danielgafni
+            # or do we assume that if someone uses merge only when DDL statements were already run to create the target?
+            # it could be misleading to have merge conditions silently ignored when falling back but I can't think of a better solution.
+            table_merger: TableMerger = df.write_delta(
+                dt,
+                mode=write_mode,
+                storage_options=storage_options,
+                delta_write_options=delta_write_options,
+                delta_merge_options=delta_merge_options,
+            )  # type: ignore
+            # in case of multiple matches this will execute insert -> update -> delete
+            # https://delta-io.github.io/delta-rs/usage/merging-tables/#multiple-matches
+            # is this acceptable? #TODO
+            if inserts := context_metadata.get("when_not_matched_insert", "all"):
+                if inserts == "all":
+                    table_merger.when_not_matched_insert_all()
+                else:
+                    table_merger.when_not_matched_insert(
+                        updates=inserts["updates"],
+                        predicate=inserts.get("predicate"),
+                    )
+            if updates := context_metadata.get("when_matched_update", "all"):
+                if updates == "all":
+                    table_merger.when_matched_update_all()
+                else:
+                    table_merger.when_matched_update(
+                        updates=updates["updates"],
+                        predicate=updates.get("predicate"),
+                    )
+            if deletes := context_metadata.get("when_matched_delete", {}):
+                if deletes == "all":
+                    table_merger.when_matched_delete()
+                else:
+                    table_merger.when_matched_delete(predicate=deletes.get("predicate"))
+
+            if unmatched_updates := context_metadata.get(
+                "when_not_matched_by_source_update", {}
+            ):
+                table_merger.when_not_matched_by_source_update(
+                    updates=unmatched_updates["updates"],
+                    predicate=unmatched_updates.get("predicate"),
+                )
+            if unmatched_deletes := context_metadata.get(
+                "when_not_matched_by_source_delete", {}
+            ):
+                if unmatched_deletes == "all":
+                    table_merger.when_not_matched_by_source_delete()
+                else:
+                    table_merger.when_not_matched_by_source_delete(
+                        predicate=unmatched_deletes.get("predicate")
+                    )
+
+            if (
+                context.has_asset_partitions
+                and delta_write_options
+                and delta_merge_options
+            ):
+                # single partition key
+                if isinstance(delta_write_options["partition_by"], str):
+                    delta_merge_options["predicate"] = (
+                        f"{delta_merge_options['predicate']} AND {delta_merge_options['target_alias']}.{delta_merge_options['partition_by']} = {context.asset_partition_key}"
+                    )
+                # multipartition key
+                else:
+                    # delta_write_options["partition_by"] is a list and each partition should be filtered by the correct asset_partition_key
+                    # TODO
+                    pass
+
+            table_merger.execute()
+        else:
+            if context_metadata.get("delta_merge_options"):
+                context.log.warning(
+                    "Ignoring provided delta_merge_options because write mode is not set to merge."
+                )
+            df.write_delta(
+                dt,
+                mode=write_mode,
+                storage_options=storage_options,
+                delta_write_options=delta_write_options,
+            )
         if isinstance(dt, DeltaTable):
             current_version = dt.version()
         else:
