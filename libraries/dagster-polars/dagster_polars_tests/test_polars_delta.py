@@ -24,7 +24,7 @@ from dagster import (
 from deltalake import DeltaTable  # noqa: TID253
 
 from dagster_polars import PolarsDeltaIOManager
-from dagster_polars.io_managers.delta import DeltaWriteMode
+from dagster_polars.io_managers.delta import DeltaSchemaMode, DeltaWriteMode
 from dagster_polars_tests.utils import get_saved_path
 
 
@@ -468,6 +468,30 @@ def test_polars_delta_time_travel(
             downstream_1,
         ]
     )
+
+
+def test_polars_delta_io_manager_schema_mode_set(dagster_instance: DagsterInstance):
+    manager = PolarsDeltaIOManager(
+        base_dir=dagster_instance.storage_directory(),
+        mode=DeltaWriteMode.overwrite,
+        schema_mode=DeltaSchemaMode.overwrite,
+    )
+
+    @asset(io_manager_def=manager, name="my_asset")
+    def asset_schema_1(context: OpExecutionContext) -> pl.DataFrame:
+        return pl.DataFrame({"foo": ["a", "b"]})
+
+    res = materialize([asset_schema_1])
+
+    assert pl.scan_delta(get_saved_path(res, "my_asset")).columns == ["foo"]
+
+    @asset(io_manager_def=manager, name="my_asset")
+    def asset_schema_2(context: OpExecutionContext) -> pl.DataFrame:
+        return pl.DataFrame({"bar": [1, 2, 3]})
+
+    materialize([asset_schema_2])
+
+    assert pl.scan_delta(get_saved_path(res, "my_asset")).columns == ["bar"]
 
 
 @pytest.mark.parametrize(

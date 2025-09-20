@@ -60,6 +60,11 @@ class DeltaWriteMode(str, Enum):
     ignore = "ignore"
 
 
+class DeltaSchemaMode(str, Enum):
+    merge = "merge"
+    overwrite = "overwrite"
+
+
 class PolarsDeltaIOManager(BasePolarsUPathIOManager):
     """Implements writing and reading DeltaLake tables.
 
@@ -187,6 +192,7 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
 
     extension: str = ".delta"  # pyright: ignore[reportIncompatibleVariableOverride]
     mode: DeltaWriteMode = DeltaWriteMode.overwrite.value  # type: ignore
+    schema_mode: Optional[DeltaSchemaMode] = None
     version: Optional[int] = None
 
     def sink_df_to_path(
@@ -218,8 +224,14 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
     ):
         context_metadata = context.definition_metadata or {}
         delta_write_options = context_metadata.get(
-            "delta_write_options"
+            "delta_write_options", {}
         )  # This needs to be gone and just only key value on the metadata
+
+        # rust is the default engine in newer versions of deltalake
+        engine = delta_write_options.get("engine", "rust")
+
+        if engine == "rust" and self.schema_mode is not None:
+            delta_write_options["schema_mode"] = self.schema_mode.value
 
         if context.has_asset_partitions:
             delta_write_options = delta_write_options or {}
@@ -249,8 +261,7 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
                     )
 
                 if use_legacy_deltalake:
-                    # rust is the default engine in newer versions of deltalake
-                    if (engine := delta_write_options.get("engine", "rust")) == "rust":
+                    if engine == "rust":
                         delta_write_options["predicate"] = self.get_predicate(context)
 
                     elif engine == "pyarrow":
@@ -263,7 +274,7 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
                 else:
                     delta_write_options["predicate"] = self.get_predicate(context)
 
-        if delta_write_options is not None:
+        if delta_write_options:
             context.log.debug(
                 f"Writing with delta_write_options: {pformat(delta_write_options)}"
             )
