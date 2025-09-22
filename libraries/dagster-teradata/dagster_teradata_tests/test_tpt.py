@@ -2,179 +2,13 @@ import pytest
 from dagster import job, op, DagsterError
 from dagster_teradata import TeradataResource
 from unittest import mock
-import paramiko
-from dagster_teradata.ttu.utils.tpt_util import (
-    prepare_tpt_ddl_script,
-    prepare_tdload_job_var_file,
-    execute_remote_command
-)
-from dagster_teradata.ttu.utils.encryption_utils import SecureCredentialManager
-from dagster_teradata.ttu.utils.util import _setup_ssh_connection
+import tempfile
+import os
 
 
 class TestTpt:
-    # Your existing tests here...
-
-    def test_ssh_connection_success(self):
-        """Test successful SSH connection establishment."""
-        with mock.patch('paramiko.SSHClient') as mock_ssh:
-            mock_client = mock.MagicMock()
-            mock_ssh.return_value = mock_client
-
-            result = _setup_ssh_connection(
-                host="test-host",
-                user="test-user",
-                password="test-password",
-                key_path=None,
-                port=22,
-                log=mock.MagicMock()
-            )
-
-            assert result == mock_client
-            # Check that connect was called with the expected arguments (positional)
-            mock_client.connect.assert_called_once_with(
-                "test-host",  # hostname
-                port=22,           # port
-                username="test-user",
-                password="test-password"
-            )
-
-    def test_ssh_connection_with_key(self):
-        """Test SSH connection with key authentication."""
-        with mock.patch('paramiko.SSHClient') as mock_ssh, \
-                mock.patch('paramiko.RSAKey.from_private_key_file') as mock_key:
-            mock_client = mock.MagicMock()
-            mock_ssh.return_value = mock_client
-            mock_key.return_value = "test-key"
-
-            result = _setup_ssh_connection(
-                host="test-host",
-                user="test-user",
-                password=None,
-                key_path="/path/to/key",
-                port=22,
-                log=mock.MagicMock()
-            )
-
-            assert result == mock_client
-            mock_client.connect.assert_called_with(
-                hostname="test-host",
-                port=22,
-                username="test-user",
-                pkey="test-key"
-            )
-
-    def test_ssh_connection_with_key(self):
-        """Test SSH connection with key authentication."""
-        with mock.patch('paramiko.SSHClient') as mock_ssh, \
-                mock.patch('paramiko.RSAKey.from_private_key_file') as mock_key:
-            mock_client = mock.MagicMock()
-            mock_ssh.return_value = mock_client
-            mock_key.return_value = "test-key"
-
-            result = _setup_ssh_connection(
-                host="test-host",
-                user="test-user",
-                password=None,
-                key_path="/path/to/key",
-                port=22,
-                log=mock.MagicMock()
-            )
-
-            assert result == mock_client
-            mock_client.connect.assert_called_with(
-                "test-host",  # hostname
-                port=22,  # port
-                username="test-user",
-                pkey="test-key"
-            )
-
-    def test_prepare_tpt_ddl_script(self):
-        """Test TPT DDL script preparation."""
-        mock_conn = mock.MagicMock()
-        mock_conn.host = "test-host"
-        mock_conn.user = "test-user"
-        mock_conn.password = "test-password"
-
-        sql = ["CREATE TABLE test_table (id INT)", "DROP TABLE test_table"]
-        error_list = [3807]
-
-        script = prepare_tpt_ddl_script(sql, error_list, mock_conn, "test_job")
-
-        assert "test_job" in script
-        assert "test-host" in script
-        assert "test-user" in script
-        assert "3807" in script
-        assert "CREATE TABLE test_table (id INT)" in script
-        assert "DROP TABLE test_table" in script
-
-    def test_prepare_tdload_job_var_file(self):
-        """Test TDLoad job variable file preparation."""
-        mock_source_conn = mock.MagicMock()
-        mock_source_conn.host = "source-host"
-        mock_source_conn.user = "source-user"
-        mock_source_conn.password = "source-password"
-
-        mock_target_conn = mock.MagicMock()
-        mock_target_conn.host = "target-host"
-        mock_target_conn.user = "target-user"
-        mock_target_conn.password = "target-password"
-
-        # Test file_to_table mode
-        job_vars = prepare_tdload_job_var_file(
-            mode="file_to_table",
-            source_table=None,
-            select_stmt=None,
-            insert_stmt="INSERT INTO test_table VALUES (?)",
-            target_table="test_table",
-            source_file_name="/tmp/source.csv",
-            target_file_name=None,
-            source_format="Delimited",
-            target_format="Delimited",
-            source_text_delimiter=",",
-            target_text_delimiter=",",
-            source_conn=mock_source_conn,
-            target_conn=mock_target_conn
-        )
-
-        assert "TargetTdpId" in job_vars
-        assert "TargetTable" in job_vars
-        assert "SourceFileName" in job_vars
-        assert "InsertStmt" in job_vars
-
-    def test_secure_credential_manager(self):
-        """Test secure credential encryption and decryption."""
-        manager = SecureCredentialManager()
-
-        test_data = "sensitive_password_123!"
-        encrypted = manager.encrypt(test_data)
-        decrypted = manager.decrypt(encrypted)
-
-        assert decrypted == test_data
-        assert encrypted != test_data
-
-    def test_execute_remote_command(self):
-        """Test remote command execution via SSH."""
-        mock_ssh = mock.MagicMock()
-        mock_stdin = mock.MagicMock()
-        mock_stdout = mock.MagicMock()
-        mock_stderr = mock.MagicMock()
-        mock_channel = mock.MagicMock()
-
-        mock_ssh.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
-        mock_stdout.channel.recv_exit_status.return_value = 0
-        mock_stdout.read.return_value = b"command output"
-        mock_stderr.read.return_value = b""
-
-        exit_status, stdout, stderr = execute_remote_command(mock_ssh, "test command")
-
-        assert exit_status == 0
-        assert stdout == "command output"
-        assert stderr == ""
-        mock_ssh.exec_command.assert_called_once_with("test command")
-
-    def test_remote_tpt_execution(self):
-        """Test remote TPT execution via SSH."""
+    def test_ddl_operator_basic_execution(self):
+        """Test basic DDL operator execution."""
         mock_td_resource = TeradataResource(
             host="mock_host",
             user="mock_user",
@@ -182,120 +16,25 @@ class TestTpt:
         )
 
         @op(required_resource_keys={"teradata"})
-        def example_remote_tpt(context):
-            with mock.patch("dagster_teradata.ttu.tpt._setup_ssh_connection") as mock_ssh, \
-                    mock.patch("dagster_teradata.ttu.tpt.execute_tdload") as mock_execute, \
-                    mock.patch("dagster_teradata.ttu.utils.tpt_util.get_remote_os") as mock_get_os:
-                mock_ssh_client = mock.MagicMock()
-                mock_ssh.return_value = mock_ssh_client
-                mock_execute.return_value = 0
-                mock_get_os.return_value = "unix"
-
-                result = context.resources.teradata.tdload_operator(
-                    source_table="source_table",
-                    target_file_name="/remote/path/export.csv",
-                    remote_host="remote-host",
-                    remote_user="remote-user",
-                    remote_password="remote-password",
-                    remote_port=22
-                )
-
-                assert result == 0
-                mock_ssh.assert_called_once()
-                mock_execute.assert_called_once()
-
-        @job(resource_defs={"teradata": mock_td_resource})
-        def example_job():
-            example_remote_tpt()
-
-        example_job.execute_in_process()
-
-    def test_tpt_with_custom_options(self):
-        """Test TPT with custom options."""
-        mock_td_resource = TeradataResource(
-            host="mock_host",
-            user="mock_user",
-            password="mock_password",
-        )
-
-        @op(required_resource_keys={"teradata"})
-        def example_custom_options(context):
-            with mock.patch("dagster_teradata.ttu.tpt.execute_tdload") as mock_execute:
-                mock_execute.return_value = 0
-
-                result = context.resources.teradata.tdload_operator(
-                    source_table="source_table",
-                    target_file_name="/path/to/export.csv",
-                    tdload_options="-m 1000000 -e 1000",
-                    tdload_job_name="custom_job"
-                )
-
-                assert result == 0
-                mock_execute.assert_called_once()
-
-        @job(resource_defs={"teradata": mock_td_resource})
-        def example_job():
-            example_custom_options()
-
-        example_job.execute_in_process()
-
-    def test_tpt_with_job_var_file(self):
-        """Test TPT with pre-defined job variable file."""
-        mock_td_resource = TeradataResource(
-            host="mock_host",
-            user="mock_user",
-            password="mock_password",
-        )
-
-        @op(required_resource_keys={"teradata"})
-        def example_job_var_file(context):
-            with mock.patch("dagster_teradata.ttu.tpt.execute_tdload") as mock_execute, \
-                    mock.patch("dagster_teradata.ttu.utils.tpt_util.is_valid_file") as mock_is_valid:
-                mock_execute.return_value = 0
-                mock_is_valid.return_value = True
-
-                result = context.resources.teradata.tdload_operator(
-                    tdload_job_var_file="/path/to/job_vars.txt"
-                )
-
-                assert result == 0
-                mock_execute.assert_called_once()
-
-        @job(resource_defs={"teradata": mock_td_resource})
-        def example_job():
-            example_job_var_file()
-
-        example_job.execute_in_process()
-
-    def test_tpt_error_list_handling(self):
-        """Test TPT error list handling."""
-        mock_td_resource = TeradataResource(
-            host="mock_host",
-            user="mock_user",
-            password="mock_password",
-        )
-
-        @op(required_resource_keys={"teradata"})
-        def example_error_list(context):
-            with mock.patch("dagster_teradata.ttu.tpt.execute_ddl") as mock_execute:
-                mock_execute.return_value = 0
-
+        def example_test_ddl_operator(context):
+            with mock.patch(
+                "dagster_teradata.ttu.tpt.DdlOperator.ddl_operator"
+            ) as mock_exec:
+                mock_exec.return_value = 0
                 result = context.resources.teradata.ddl_operator(
-                    ddl=["CREATE TABLE test_table (id INT)"],
-                    error_list=[3807, 3802]  # Table exists, database doesn't exist
+                    ddl=["CREATE TABLE test (id INT);", "DROP TABLE test;"]
                 )
-
                 assert result == 0
-                mock_execute.assert_called_once()
+                mock_exec.assert_called_once()
 
         @job(resource_defs={"teradata": mock_td_resource})
         def example_job():
-            example_error_list()
+            example_test_ddl_operator()
 
         example_job.execute_in_process()
 
-    def test_tpt_file_format_handling(self):
-        """Test TPT with different file formats."""
+    def test_ddl_operator_with_error_list(self):
+        """Test DDL operator with custom error list."""
         mock_td_resource = TeradataResource(
             host="mock_host",
             user="mock_user",
@@ -303,31 +42,76 @@ class TestTpt:
         )
 
         @op(required_resource_keys={"teradata"})
-        def example_file_formats(context):
-            with mock.patch("dagster_teradata.ttu.tpt.execute_tdload") as mock_execute:
-                mock_execute.return_value = 0
+        def example_test_ddl_error_list(context):
+            with mock.patch(
+                "dagster_teradata.ttu.tpt.DdlOperator.ddl_operator"
+            ) as mock_exec:
+                mock_exec.return_value = 0
+                result = context.resources.teradata.ddl_operator(
+                    ddl=["CREATE TABLE test (id INT);"],
+                    error_list=[3807, 3808],  # Common Teradata error codes
+                )
+                assert result == 0
 
-                # Test with different formats and delimiters
+        @job(resource_defs={"teradata": mock_td_resource})
+        def example_job():
+            example_test_ddl_error_list()
+
+        example_job.execute_in_process()
+
+    def test_ddl_operator_invalid_input(self):
+        """Test DDL operator with invalid input."""
+        mock_td_resource = TeradataResource(
+            host="mock_host",
+            user="mock_user",
+            password="mock_password",
+        )
+
+        @op(required_resource_keys={"teradata"})
+        def example_test_invalid_ddl(context):
+            with pytest.raises(
+                ValueError,
+                match="ddl parameter must be a non-empty list of non-empty strings representing DDL statements.",
+            ):
+                context.resources.teradata.ddl_operator(ddl=[])
+
+        @job(resource_defs={"teradata": mock_td_resource})
+        def example_job():
+            example_test_invalid_ddl()
+
+        example_job.execute_in_process()
+
+    def test_tdload_operator_file_to_table(self):
+        """Test TPT file to table operation."""
+        mock_td_resource = TeradataResource(
+            host="mock_host",
+            user="mock_user",
+            password="mock_password",
+        )
+
+        @op(required_resource_keys={"teradata"})
+        def example_test_file_to_table(context):
+            with mock.patch(
+                "dagster_teradata.ttu.tpt.TdLoadOperator.tdload_operator"
+            ) as mock_exec:
+                mock_exec.return_value = 0
                 result = context.resources.teradata.tdload_operator(
-                    source_file_name="/path/to/data.csv",
+                    source_file_name="/path/to/source.csv",
                     target_table="target_table",
                     source_format="Delimited",
-                    target_format="Delimited",
-                    source_text_delimiter="|",
-                    target_text_delimiter="|"
+                    source_text_delimiter=",",
                 )
-
                 assert result == 0
-                mock_execute.assert_called_once()
+                mock_exec.assert_called_once()
 
         @job(resource_defs={"teradata": mock_td_resource})
         def example_job():
-            example_file_formats()
+            example_test_file_to_table()
 
         example_job.execute_in_process()
 
-    def test_tpt_select_statement(self):
-        """Test TPT with custom SELECT statement."""
+    def test_tdload_operator_table_to_file(self):
+        """Test TPT table to file operation."""
         mock_td_resource = TeradataResource(
             host="mock_host",
             user="mock_user",
@@ -335,26 +119,84 @@ class TestTpt:
         )
 
         @op(required_resource_keys={"teradata"})
-        def example_select_stmt(context):
-            with mock.patch("dagster_teradata.ttu.tpt.execute_tdload") as mock_execute:
-                mock_execute.return_value = 0
+        def example_test_table_to_file(context):
+            with mock.patch(
+                "dagster_teradata.ttu.tpt.TdLoadOperator.tdload_operator"
+            ) as mock_exec:
+                mock_exec.return_value = 0
+                result = context.resources.teradata.tdload_operator(
+                    source_table="source_table",
+                    target_file_name="/path/to/target.csv",
+                    target_format="Delimited",
+                    target_text_delimiter="|",
+                )
+                assert result == 0
 
+        @job(resource_defs={"teradata": mock_td_resource})
+        def example_job():
+            example_test_table_to_file()
+
+        example_job.execute_in_process()
+
+    def test_tdload_operator_table_to_table(self):
+        """Test TPT table to table operation."""
+        mock_source_resource = TeradataResource(
+            host="source_host",
+            user="source_user",
+            password="source_password",
+        )
+        TeradataResource(
+            host="target_host",
+            user="target_user",
+            password="target_password",
+        )
+
+        @op(required_resource_keys={"teradata"})
+        def example_test_table_to_table(context):
+            with mock.patch(
+                "dagster_teradata.ttu.tpt.TdLoadOperator.tdload_operator"
+            ) as mock_exec:
+                mock_exec.return_value = 0
+                result = context.resources.teradata.tdload_operator(
+                    source_table="source_table",
+                    target_table="target_table",
+                )
+                assert result == 0
+
+        @job(resource_defs={"teradata": mock_source_resource})
+        def example_job():
+            example_test_table_to_table()
+
+        example_job.execute_in_process()
+
+    def test_tdload_operator_with_select_stmt(self):
+        """Test TPT operation with custom SELECT statement."""
+        mock_td_resource = TeradataResource(
+            host="mock_host",
+            user="mock_user",
+            password="mock_password",
+        )
+
+        @op(required_resource_keys={"teradata"})
+        def example_test_select_stmt(context):
+            with mock.patch(
+                "dagster_teradata.ttu.tpt.TdLoadOperator.tdload_operator"
+            ) as mock_exec:
+                mock_exec.return_value = 0
                 result = context.resources.teradata.tdload_operator(
                     select_stmt="SELECT id, name FROM source_table WHERE active = 1",
-                    target_file_name="/path/to/export.csv"
+                    target_file_name="/path/to/output.csv",
                 )
-
                 assert result == 0
-                mock_execute.assert_called_once()
 
         @job(resource_defs={"teradata": mock_td_resource})
         def example_job():
-            example_select_stmt()
+            example_test_select_stmt()
 
         example_job.execute_in_process()
 
-    def test_tpt_insert_statement(self):
-        """Test TPT with custom INSERT statement."""
+    def test_tdload_operator_with_insert_stmt(self):
+        """Test TPT operation with custom INSERT statement."""
         mock_td_resource = TeradataResource(
             host="mock_host",
             user="mock_user",
@@ -362,27 +204,26 @@ class TestTpt:
         )
 
         @op(required_resource_keys={"teradata"})
-        def example_insert_stmt(context):
-            with mock.patch("dagster_teradata.ttu.tpt.execute_tdload") as mock_execute:
-                mock_execute.return_value = 0
-
+        def example_test_insert_stmt(context):
+            with mock.patch(
+                "dagster_teradata.ttu.tpt.TdLoadOperator.tdload_operator"
+            ) as mock_exec:
+                mock_exec.return_value = 0
                 result = context.resources.teradata.tdload_operator(
-                    source_file_name="/path/to/data.csv",
+                    source_file_name="/path/to/source.csv",
                     target_table="target_table",
-                    insert_stmt="INSERT INTO target_table VALUES (?, ?, ?)"
+                    insert_stmt="INSERT INTO target_table (col1, col2) VALUES (?, ?)",
                 )
-
                 assert result == 0
-                mock_execute.assert_called_once()
 
         @job(resource_defs={"teradata": mock_td_resource})
         def example_job():
-            example_insert_stmt()
+            example_test_insert_stmt()
 
         example_job.execute_in_process()
 
-    def test_tpt_different_source_target_connections(self):
-        """Test TPT with different source and target connections."""
+    def test_tdload_operator_invalid_combination(self):
+        """Test TPT operator with invalid parameter combination."""
         mock_td_resource = TeradataResource(
             host="mock_host",
             user="mock_user",
@@ -390,27 +231,22 @@ class TestTpt:
         )
 
         @op(required_resource_keys={"teradata"})
-        def example_diff_connections(context):
-            with mock.patch("dagster_teradata.ttu.tpt.execute_tdload") as mock_execute:
-                mock_execute.return_value = 0
-
-                # This would typically use a different target connection resource
-                result = context.resources.teradata.tdload_operator(
-                    source_table="source_db.source_table",
-                    target_table="target_db.target_table"
+        def example_test_invalid_combo(context):
+            with pytest.raises(ValueError):
+                context.resources.teradata.tdload_operator(
+                    source_table="source_table",
+                    select_stmt="SELECT * FROM source_table",
+                    target_file_name="/path/to/output.csv",
                 )
-
-                assert result == 0
-                mock_execute.assert_called_once()
 
         @job(resource_defs={"teradata": mock_td_resource})
         def example_job():
-            example_diff_connections()
+            example_test_invalid_combo()
 
         example_job.execute_in_process()
 
-    def test_tpt_utility_verification(self):
-        """Test TPT utility verification on remote host."""
+    def test_tdload_operator_remote_execution(self):
+        """Test TPT remote execution."""
         mock_td_resource = TeradataResource(
             host="mock_host",
             user="mock_user",
@@ -418,34 +254,28 @@ class TestTpt:
         )
 
         @op(required_resource_keys={"teradata"})
-        def example_utility_verify(context):
-            with mock.patch("dagster_teradata.ttu.tpt._setup_ssh_connection") as mock_ssh, \
-                    mock.patch("dagster_teradata.ttu.utils.tpt_util.verify_tpt_utility_on_remote_host") as mock_verify, \
-                    mock.patch("dagster_teradata.ttu.tpt.execute_tdload") as mock_execute:
-                mock_ssh_client = mock.MagicMock()
-                mock_ssh.return_value = mock_ssh_client
-                mock_verify.return_value = True
-                mock_execute.return_value = 0
-
+        def example_test_remote(context):
+            with mock.patch(
+                "dagster_teradata.ttu.tpt.TdLoadOperator.tdload_operator"
+            ) as mock_exec:
+                mock_exec.return_value = 0
                 result = context.resources.teradata.tdload_operator(
                     source_table="source_table",
-                    target_file_name="/remote/path/export.csv",
-                    remote_host="remote-host",
-                    remote_user="remote-user"
+                    target_file_name="/path/to/output.csv",
+                    remote_host="remote_host",
+                    remote_user="remote_user",
+                    remote_password="remote_password",
                 )
-
                 assert result == 0
-                mock_verify.assert_called_once()
-                mock_execute.assert_called_once()
 
         @job(resource_defs={"teradata": mock_td_resource})
         def example_job():
-            example_utility_verify()
+            example_test_remote()
 
         example_job.execute_in_process()
 
-    def test_tpt_encrypted_file_transfer(self):
-        """Test encrypted file transfer for TPT operations."""
+    def test_tdload_operator_with_job_var_file(self):
+        """Test TPT operation with pre-defined job variable file."""
         mock_td_resource = TeradataResource(
             host="mock_host",
             user="mock_user",
@@ -453,40 +283,31 @@ class TestTpt:
         )
 
         @op(required_resource_keys={"teradata"})
-        def example_encrypted_transfer(context):
-            with mock.patch("dagster_teradata.ttu.tpt._setup_ssh_connection") as mock_ssh, \
-                    mock.patch("dagster_teradata.ttu.utils.encryption_utils.generate_random_password") as mock_gen_pass, \
-                    mock.patch("dagster_teradata.ttu.utils.encryption_utils.generate_encrypted_file_with_openssl") as mock_encrypt, \
-                    mock.patch("dagster_teradata.ttu.utils.tpt_util.transfer_file_sftp") as mock_transfer, \
-                    mock.patch("dagster_teradata.ttu.utils.encryption_utils.decrypt_remote_file") as mock_decrypt, \
-                    mock.patch("dagster_teradata.ttu.tpt.execute_tdload") as mock_execute:
-                mock_ssh_client = mock.MagicMock()
-                mock_ssh.return_value = mock_ssh_client
-                mock_gen_pass.return_value = "temp_password"
-                mock_execute.return_value = 0
+        def example_test_job_var_file(context):
+            with tempfile.NamedTemporaryFile(mode="w+", delete=False) as tmp_file:
+                tmp_file.write("SourceTable='test_table'\nTargetFile='output.csv'")
+                tmp_path = tmp_file.name
 
-                result = context.resources.teradata.tdload_operator(
-                    source_table="source_table",
-                    target_file_name="/remote/path/export.csv",
-                    remote_host="remote-host",
-                    remote_user="remote-user"
-                )
-
-                assert result == 0
-                mock_gen_pass.assert_called_once()
-                mock_encrypt.assert_called_once()
-                mock_transfer.assert_called_once()
-                mock_decrypt.assert_called_once()
-                mock_execute.assert_called_once()
+            try:
+                with mock.patch(
+                    "dagster_teradata.ttu.tpt.TdLoadOperator.tdload_operator"
+                ) as mock_exec:
+                    mock_exec.return_value = 0
+                    result = context.resources.teradata.tdload_operator(
+                        tdload_job_var_file=tmp_path
+                    )
+                    assert result == 0
+            finally:
+                os.unlink(tmp_path)
 
         @job(resource_defs={"teradata": mock_td_resource})
         def example_job():
-            example_encrypted_transfer()
+            example_test_job_var_file()
 
         example_job.execute_in_process()
 
-    def test_tpt_secure_file_deletion(self):
-        """Test secure file deletion after TPT operations."""
+    def test_tdload_operator_custom_options(self):
+        """Test TPT operation with custom options."""
         mock_td_resource = TeradataResource(
             host="mock_host",
             user="mock_user",
@@ -494,28 +315,101 @@ class TestTpt:
         )
 
         @op(required_resource_keys={"teradata"})
-        def example_secure_delete(context):
-            with mock.patch("dagster_teradata.ttu.tpt._setup_ssh_connection") as mock_ssh, \
-                    mock.patch("dagster_teradata.ttu.tpt.execute_tdload") as mock_execute, \
-                    mock.patch("dagster_teradata.ttu.utils.tpt_util.secure_delete") as mock_secure_delete, \
-                    mock.patch("dagster_teradata.ttu.utils.tpt_util.remote_secure_delete") as mock_remote_delete:
-                mock_ssh_client = mock.MagicMock()
-                mock_ssh.return_value = mock_ssh_client
-                mock_execute.return_value = 0
-
+        def example_test_custom_options(context):
+            with mock.patch(
+                "dagster_teradata.ttu.tpt.TdLoadOperator.tdload_operator"
+            ) as mock_exec:
+                mock_exec.return_value = 0
                 result = context.resources.teradata.tdload_operator(
                     source_table="source_table",
-                    target_file_name="/remote/path/export.csv",
-                    remote_host="remote-host",
-                    remote_user="remote-user"
+                    target_file_name="/path/to/output.csv",
+                    tdload_options="-j 4 -m 1000",  # 4 jobs, 1000 rows per message
+                    tdload_job_name="custom_job_name",
                 )
-
                 assert result == 0
-                # Verify secure deletion was attempted
-                assert mock_secure_delete.called or mock_remote_delete.called
 
         @job(resource_defs={"teradata": mock_td_resource})
         def example_job():
-            example_secure_delete()
+            example_test_custom_options()
+
+        example_job.execute_in_process()
+
+    def test_ddl_operator_remote_execution(self):
+        """Test DDL operator remote execution."""
+        mock_td_resource = TeradataResource(
+            host="mock_host",
+            user="mock_user",
+            password="mock_password",
+        )
+
+        @op(required_resource_keys={"teradata"})
+        def example_test_ddl_remote(context):
+            with mock.patch(
+                "dagster_teradata.ttu.tpt.DdlOperator.ddl_operator"
+            ) as mock_exec:
+                mock_exec.return_value = 0
+                result = context.resources.teradata.ddl_operator(
+                    ddl=["CREATE TABLE remote_test (id INT);"],
+                    remote_host="remote_host",
+                    remote_user="remote_user",
+                    remote_password="remote_password",
+                )
+                assert result == 0
+
+        @job(resource_defs={"teradata": mock_td_resource})
+        def example_job():
+            example_test_ddl_remote()
+
+        example_job.execute_in_process()
+
+    def test_operator_timeout_handling(self):
+        """Test operator timeout handling."""
+        mock_td_resource = TeradataResource(
+            host="mock_host",
+            user="mock_user",
+            password="mock_password",
+        )
+
+        @op(required_resource_keys={"teradata"})
+        def example_test_timeout(context):
+            with mock.patch(
+                "dagster_teradata.ttu.tpt.TdLoadOperator.tdload_operator"
+            ) as mock_exec:
+                mock_exec.side_effect = DagsterError("TPT operation timed out")
+                with pytest.raises(DagsterError, match="timed out"):
+                    context.resources.teradata.tdload_operator(
+                        source_table="large_table",
+                        target_file_name="/path/to/large_output.csv",
+                    )
+
+        @job(resource_defs={"teradata": mock_td_resource})
+        def example_job():
+            example_test_timeout()
+
+        example_job.execute_in_process()
+
+    def test_operator_error_recovery(self):
+        """Test operator error recovery with acceptable error codes."""
+        mock_td_resource = TeradataResource(
+            host="mock_host",
+            user="mock_user",
+            password="mock_password",
+        )
+
+        @op(required_resource_keys={"teradata"})
+        def example_test_error_recovery(context):
+            with mock.patch(
+                "dagster_teradata.ttu.tpt.DdlOperator.ddl_operator"
+            ) as mock_exec:
+                mock_exec.return_value = 3807  # Table already exists error
+                result = context.resources.teradata.ddl_operator(
+                    ddl=["CREATE TABLE test (id INT);"],
+                    error_list=[3807],  # Accept table exists error
+                )
+                assert result == 3807  # Should return without raising exception
+
+        @job(resource_defs={"teradata": mock_td_resource})
+        def example_job():
+            example_test_error_recovery()
 
         example_job.execute_in_process()

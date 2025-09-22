@@ -1,5 +1,5 @@
 import subprocess
-from typing import Optional, Dict, cast
+from typing import Optional, cast
 
 import paramiko
 from dagster import DagsterError
@@ -22,16 +22,10 @@ from dagster_teradata.ttu.tpt_executer import (
 
 from dagster_teradata.ttu.utils.encryption_utils import (
     SecureCredentialManager,
-    generate_random_password,
-    generate_encrypted_file_with_openssl,
-    decrypt_remote_file_to_string,
     get_stored_credentials,
 )
 
 from paramiko.client import SSHClient
-
-
-
 
 
 class DdlOperator:

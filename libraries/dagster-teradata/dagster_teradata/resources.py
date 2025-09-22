@@ -10,7 +10,6 @@ from typing import (
     Union,
     TYPE_CHECKING,
     Literal,
-    Dict,
 )
 
 import re

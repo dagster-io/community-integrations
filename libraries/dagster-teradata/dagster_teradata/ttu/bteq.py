@@ -416,7 +416,9 @@ class Bteq:
                 raise DagsterError(
                     "Failed to establish SSH connection. `ssh_client` is None."
                 )
-            self.log.info("Successfully established SSH connection with host: %s", remote_host)
+            self.log.info(
+                "Successfully established SSH connection with host: %s", remote_host
+            )
             verify_bteq_installed_remote(self.ssh_client)
             password = generate_random_password()  # Encryption/Decryption password
             encrypted_file_path = os.path.join(tmp_dir, "bteq_script.enc")

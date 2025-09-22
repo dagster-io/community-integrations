@@ -6,7 +6,6 @@ import uuid
 import socket
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Dict, List, Optional
 from dagster import DagsterError
 from dagster_teradata.ttu.utils.encryption_utils import (
     generate_random_password,
@@ -23,9 +22,6 @@ from dagster_teradata.ttu.utils.tpt_util import (
     secure_delete,
     set_local_file_permissions,
     terminate_subprocess,
-    prepare_tpt_script,
-    prepare_tpt_variables,
-    get_tpt_command,
 )
 from paramiko.client import SSHClient
 from paramiko.ssh_exception import SSHException
@@ -77,7 +73,9 @@ def _execute_tbuild_via_ssh(
 
         try:
             if self.ssh_client:
-                verify_tpt_utility_on_remote_host(ssh_client = self.ssh_client, utility = "tbuild", logger = self.log)
+                verify_tpt_utility_on_remote_host(
+                    ssh_client=self.ssh_client, utility="tbuild", logger=self.log
+                )
                 password = generate_random_password()
                 generate_encrypted_file_with_openssl(
                     local_script_file, password, encrypted_file_path
