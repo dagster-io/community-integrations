@@ -5,17 +5,18 @@ from dagster import DagsterError
 
 from dagster_teradata.ttu.utils.encryption_utils import (
     get_stored_credentials,
+    SecureCredentialManager,
 )
 from paramiko import SSHClient
 
 
 def _setup_ssh_connection(
-    self,
     host: str,
     user: Optional[str],
     password: Optional[str],
     key_path: Optional[str],
     port: int,
+    log=None,
 ) -> SSHClient:
     """
     Establish SSH connection using either password or key authentication.
@@ -26,38 +27,37 @@ def _setup_ssh_connection(
         password: Remote password (optional if key_path provided)
         key_path: Path to SSH private key (optional if password provided)
         port: SSH port
+        log: Optional logger instance
 
     Returns:
-        bool: True if connection succeeded, False otherwise
+        SSHClient: Established SSH connection
 
     Raises:
         DagsterError: If connection fails
-
-    Note:
-        - Tries stored credentials if no password provided
-        - Prompts for password if no credentials available
-        - Stores new credentials if successfully authenticated
     """
     try:
-        self.ssh_client = paramiko.SSHClient()
-        self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         if key_path:
             key = paramiko.RSAKey.from_private_key_file(key_path)
-            self.ssh_client.connect(host, port=port, username=user, pkey=key)
+            ssh_client.connect(host, port=port, username=user, pkey=key)
         else:
             if not password:
-                if user is None:
-                    raise ValueError("Username is required to fetch stored credentials")
                 # Attempt to retrieve stored credentials
-                creds = get_stored_credentials(self, host, user)
-                password = (
-                    self.cred_manager.decrypt(creds["password"]) if creds else None
-                )
+                creds = get_stored_credentials(host, user)
+                if creds:
+                    cred_manager = SecureCredentialManager()
+                    password = cred_manager.decrypt(creds["password"])
+                else:
+                    raise ValueError("No password or key provided for SSH connection")
 
-            self.ssh_client.connect(host, port=port, username=user, password=password)
+            ssh_client.connect(host, port=port, username=user, password=password)
 
-        self.log.info(f"SSH connected to {user}@{host}")
-        return self.ssh_client
+        if log:
+            log.info(f"SSH connected to {user}@{host}")
+        return ssh_client
     except Exception as e:
+        if log:
+            log.error(f"SSH connection failed: {e}")
         raise DagsterError(f"SSH connection failed: {e}")

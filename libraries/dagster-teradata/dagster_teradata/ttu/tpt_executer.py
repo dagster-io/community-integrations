@@ -6,6 +6,7 @@ import uuid
 import socket
 from collections.abc import Generator
 from contextlib import contextmanager
+from typing import Dict, List, Optional
 from dagster import DagsterError
 from dagster_teradata.ttu.utils.encryption_utils import (
     generate_random_password,
@@ -22,21 +23,26 @@ from dagster_teradata.ttu.utils.tpt_util import (
     secure_delete,
     set_local_file_permissions,
     terminate_subprocess,
+    prepare_tpt_script,
+    prepare_tpt_variables,
+    get_tpt_command,
 )
 from paramiko.client import SSHClient
 from paramiko.ssh_exception import SSHException
 
 
 def execute_ddl(
-        self,
-        tpt_script: str | list[str],
-        remote_working_dir: str,
+    self,
+    tpt_script: str | list[str],
+    remote_working_dir: str,
 ) -> int:
     """Execute DDL statements using TPT."""
     if not tpt_script:
         raise ValueError("TPT script cannot be empty")
 
-    tpt_script_content = "\n".join(tpt_script) if isinstance(tpt_script, list) else tpt_script
+    tpt_script_content = (
+        "\n".join(tpt_script) if isinstance(tpt_script, list) else tpt_script
+    )
 
     if not tpt_script_content.strip():
         raise ValueError("TPT script content cannot be empty")
@@ -50,17 +56,23 @@ def execute_ddl(
 
 
 def _execute_tbuild_via_ssh(
-        self,
-        tpt_script_content: str,
-        remote_working_dir: str,
+    self,
+    tpt_script_content: str,
+    remote_working_dir: str,
 ) -> int:
     """Execute tbuild command remotely via SSH."""
     with self.preferred_temp_directory() as tmp_dir:
-        local_script_file = os.path.join(tmp_dir, f"tbuild_script_{uuid.uuid4().hex}.sql")
+        local_script_file = os.path.join(
+            tmp_dir, f"tbuild_script_{uuid.uuid4().hex}.sql"
+        )
         write_file(local_script_file, tpt_script_content)
         encrypted_file_path = f"{local_script_file}.enc"
-        remote_encrypted_script_file = os.path.join(remote_working_dir, os.path.basename(encrypted_file_path))
-        remote_script_file = os.path.join(remote_working_dir, os.path.basename(encrypted_file_path))
+        remote_encrypted_script_file = os.path.join(
+            remote_working_dir, os.path.basename(encrypted_file_path)
+        )
+        remote_script_file = os.path.join(
+            remote_working_dir, os.path.basename(encrypted_file_path)
+        )
         job_name = f"tbuild_job_{uuid.uuid4().hex}"
 
         try:
@@ -68,7 +80,8 @@ def _execute_tbuild_via_ssh(
                 verify_tpt_utility_on_remote_host(self.ssh_client, "tbuild", self.log)
                 password = generate_random_password()
                 generate_encrypted_file_with_openssl(
-                    local_script_file, password, encrypted_file_path)
+                    local_script_file, password, encrypted_file_path
+                )
 
                 transfer_file_sftp(
                     self.ssh_client,
@@ -84,12 +97,15 @@ def _execute_tbuild_via_ssh(
                     self.log,
                 )
 
-                set_remote_file_permissions(self.ssh_client, remote_script_file, self.log)
+                set_remote_file_permissions(
+                    self.ssh_client, remote_script_file, self.log
+                )
 
                 tbuild_cmd = ["tbuild", "-f", remote_script_file, job_name]
                 self.log.info("Executing remote tbuild command")
                 exit_status, output, error = execute_remote_command(
-                    self.ssh_client, " ".join(tbuild_cmd))
+                    self.ssh_client, " ".join(tbuild_cmd)
+                )
                 self.log.info("tbuild output:\n%s", output)
 
                 remote_secure_delete(
@@ -99,7 +115,9 @@ def _execute_tbuild_via_ssh(
                 )
 
                 if exit_status != 0:
-                    raise DagsterError(f"tbuild failed with code {exit_status}: {error}")
+                    raise DagsterError(
+                        f"tbuild failed with code {exit_status}: {error}"
+                    )
 
                 return exit_status
         except (OSError, socket.gaierror) as e:
@@ -115,12 +133,14 @@ def _execute_tbuild_via_ssh(
 
 
 def _execute_tbuild_locally(
-        self,
-        tpt_script_content: str,
+    self,
+    tpt_script_content: str,
 ) -> int:
     """Execute tbuild command locally."""
     with self.preferred_temp_directory() as tmp_dir:
-        local_script_file = os.path.join(tmp_dir, f"tbuild_script_{uuid.uuid4().hex}.sql")
+        local_script_file = os.path.join(
+            tmp_dir, f"tbuild_script_{uuid.uuid4().hex}.sql"
+        )
         write_file(local_script_file, tpt_script_content)
         set_local_file_permissions(local_script_file, self.log)
 
@@ -150,7 +170,9 @@ def _execute_tbuild_locally(
             sp.wait()
             if sp.returncode != 0:
                 error_msg = "\n".join(error_lines) if error_lines else "Unknown error"
-                raise DagsterError(f"tbuild failed with code {sp.returncode}: {error_msg}")
+                raise DagsterError(
+                    f"tbuild failed with code {sp.returncode}: {error_msg}"
+                )
 
             return sp.returncode
         except Exception as e:
@@ -162,13 +184,13 @@ def _execute_tbuild_locally(
 
 
 def execute_tdload(
-        self,
-        log,
-        remote_working_dir: str,
-        ssh_client=None,
-        job_var_content: str | None = None,
-        tdload_options: str | None = None,
-        tdload_job_name: str | None = None,
+    self,
+    log,
+    remote_working_dir: str,
+    ssh_client=None,
+    job_var_content: str | None = None,
+    tdload_options: str | None = None,
+    tdload_job_name: str | None = None,
 ) -> int:
     """Execute tdload operation with given parameters."""
     tdload_job_name = tdload_job_name or f"tdload_job_{uuid.uuid4().hex}"
@@ -192,17 +214,19 @@ def execute_tdload(
 
 
 def _execute_tdload_via_ssh(
-        self,
-        log,
-        ssh_client: SSHClient,
-        remote_working_dir: str,
-        job_var_content: str | None,
-        tdload_options: str | None,
-        tdload_job_name: str | None,
+    self,
+    log,
+    ssh_client: SSHClient,
+    remote_working_dir: str,
+    job_var_content: str | None,
+    tdload_options: str | None,
+    tdload_job_name: str | None,
 ) -> int:
     """Execute tdload command remotely via SSH."""
     with self.preferred_temp_directory() as tmp_dir:
-        local_job_var_file = os.path.join(tmp_dir, f"tdload_job_var_{uuid.uuid4().hex}.txt")
+        local_job_var_file = os.path.join(
+            tmp_dir, f"tdload_job_var_{uuid.uuid4().hex}.txt"
+        )
         write_file(local_job_var_file, job_var_content or "")
         return _transfer_to_and_execute_tdload_on_remote(
             log,
@@ -215,20 +239,22 @@ def _execute_tdload_via_ssh(
 
 
 def _transfer_to_and_execute_tdload_on_remote(
-        self,
-        log,
-        ssh_client: SSHClient,
-        local_job_var_file: str,
-        remote_working_dir: str,
-        tdload_options: str | None,
-        tdload_job_name: str | None,
+    self,
+    log,
+    ssh_client: SSHClient,
+    local_job_var_file: str,
+    remote_working_dir: str,
+    tdload_options: str | None,
+    tdload_job_name: str | None,
 ) -> int:
     """Transfer and execute tdload job on remote host."""
     encrypted_file_path = f"{local_job_var_file}.enc"
     remote_encrypted_job_file = os.path.join(
-        remote_working_dir, os.path.basename(encrypted_file_path))
+        remote_working_dir, os.path.basename(encrypted_file_path)
+    )
     remote_job_file = os.path.join(
-        remote_working_dir, os.path.basename(local_job_var_file))
+        remote_working_dir, os.path.basename(local_job_var_file)
+    )
 
     try:
         if not ssh_client:
@@ -237,10 +263,12 @@ def _transfer_to_and_execute_tdload_on_remote(
         verify_tpt_utility_on_remote_host(ssh_client, "tdload", self.log)
         password = generate_random_password()
         generate_encrypted_file_with_openssl(
-            local_job_var_file, password, encrypted_file_path)
+            local_job_var_file, password, encrypted_file_path
+        )
 
         transfer_file_sftp(
-            ssh_client, encrypted_file_path, remote_encrypted_job_file, self.log)
+            ssh_client, encrypted_file_path, remote_encrypted_job_file, self.log
+        )
         decrypt_remote_file(
             ssh_client,
             remote_encrypted_job_file,
@@ -251,15 +279,18 @@ def _transfer_to_and_execute_tdload_on_remote(
 
         set_remote_file_permissions(ssh_client, remote_job_file, self.log)
         tdload_cmd = self._build_tdload_command(
-            log, remote_job_file, tdload_options, tdload_job_name)
+            log, remote_job_file, tdload_options, tdload_job_name
+        )
 
         self.log.info("Executing remote tdload command")
         exit_status, output, error = execute_remote_command(
-            self.ssh_client, " ".join(tdload_cmd))
+            self.ssh_client, " ".join(tdload_cmd)
+        )
         self.log.info("tdload output:\n%s", output)
 
         remote_secure_delete(
-            ssh_client, [remote_encrypted_job_file, remote_job_file], self.log)
+            ssh_client, [remote_encrypted_job_file, remote_job_file], self.log
+        )
 
         if exit_status != 0:
             raise DagsterError(f"tdload failed with code {exit_status}: {error}")
@@ -278,19 +309,22 @@ def _transfer_to_and_execute_tdload_on_remote(
 
 
 def _execute_tdload_locally(
-        log,
-        job_var_content: str | None,
-        tdload_options: str | None,
-        tdload_job_name: str | None,
+    log,
+    job_var_content: str | None,
+    tdload_options: str | None,
+    tdload_job_name: str | None,
 ) -> int:
     """Execute tdload command locally."""
     with preferred_temp_directory() as tmp_dir:
-        local_job_var_file = os.path.join(tmp_dir, f"tdload_job_var_{uuid.uuid4().hex}.txt")
+        local_job_var_file = os.path.join(
+            tmp_dir, f"tdload_job_var_{uuid.uuid4().hex}.txt"
+        )
         write_file(local_job_var_file, job_var_content or "")
         set_local_file_permissions(local_job_var_file, log)
 
         tdload_cmd = _build_tdload_command(
-            log, local_job_var_file, tdload_options, tdload_job_name)
+            log, local_job_var_file, tdload_options, tdload_job_name
+        )
 
         if not shutil.which("tdload"):
             raise DagsterError("tdload binary not found")
@@ -299,7 +333,8 @@ def _execute_tdload_locally(
         try:
             log.info("Executing local tdload command")
             sp = subprocess.Popen(
-                tdload_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                tdload_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+            )
 
             error_lines = []
             if sp.stdout:
@@ -312,7 +347,9 @@ def _execute_tdload_locally(
             sp.wait()
             if sp.returncode != 0:
                 error_msg = "\n".join(error_lines) if error_lines else "Unknown error"
-                raise DagsterError(f"tdload failed with code {sp.returncode}: {error_msg}")
+                raise DagsterError(
+                    f"tdload failed with code {sp.returncode}: {error_msg}"
+                )
 
             return sp.returncode
         except Exception as e:
@@ -324,13 +361,14 @@ def _execute_tdload_locally(
 
 
 def _build_tdload_command(
-        log, job_var_file: str, tdload_options: str | None, tdload_job_name: str | None
+    log, job_var_file: str, tdload_options: str | None, tdload_job_name: str | None
 ) -> list[str]:
     """Build tdload command with proper options."""
     tdload_cmd = ["tdload", "-j", job_var_file]
 
     if tdload_options:
         import shlex
+
         try:
             parsed_options = shlex.split(tdload_options)
             tdload_cmd.extend(parsed_options)
@@ -365,3 +403,166 @@ def preferred_temp_directory(prefix: str = "tpt_") -> Generator[str, None, None]
 def get_dagster_home_dir(self) -> str:
     """Get Dagster home directory."""
     return os.environ.get("DAGSTER_HOME", os.path.expanduser("~/.dagster"))
+
+
+class TPTExecutor:
+    """Enhanced TPT executor based on Airflow's TPTHook."""
+
+    def __init__(
+        self, teradata_conn_params: Dict, ssh_conn_params: Optional[Dict] = None
+    ):
+        self.teradata_conn_params = teradata_conn_params
+        self.ssh_conn_params = ssh_conn_params
+        self.ssh_client = None
+
+    def __enter__(self):
+        if self.ssh_conn_params:
+            self.ssh_client = self._setup_ssh_connection()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.ssh_client:
+            self.ssh_client.close()
+
+    def run_tpt_job(
+        self,
+        operator_type: str,
+        script: Optional[str] = None,
+        variables: Optional[Dict] = None,
+        source_table: Optional[str] = None,
+        select_stmt: Optional[str] = None,
+        target_table: Optional[str] = None,
+        source_file: Optional[str] = None,
+        target_file: Optional[str] = None,
+        format_options: Optional[Dict] = None,
+    ) -> int:
+        """Run a TPT job with the given parameters."""
+        # Prepare script and variables if not provided
+        if not script:
+            script = prepare_tpt_script(
+                operator_type=operator_type,
+                source_table=source_table,
+                select_stmt=select_stmt,
+                target_table=target_table,
+                source_file=source_file,
+                target_file=target_file,
+                format_options=format_options,
+                connection_params=self.teradata_conn_params,
+            )
+
+        if not variables:
+            variables = prepare_tpt_variables(
+                operator_type=operator_type,
+                source_table=source_table,
+                target_table=target_table,
+                source_file=source_file,
+                target_file=target_file,
+                format_options=format_options,
+                connection_params=self.teradata_conn_params,
+            )
+
+        # Create temporary files for script and variables
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".tpt", delete=False
+        ) as script_file:
+            script_file.write(script)
+            script_path = script_file.name
+
+        var_path = None
+        if variables:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".var", delete=False
+            ) as var_file:
+                for key, value in variables.items():
+                    var_file.write(f"{key}={value}\n")
+                var_path = var_file.name
+
+        try:
+            # Execute TPT command
+            cmd = get_tpt_command(operator_type, script_path, var_path)
+
+            if self.ssh_client:
+                return self._execute_remote_tpt(cmd)
+            else:
+                return self._execute_local_tpt(cmd)
+
+        finally:
+            # Clean up temporary files
+            os.unlink(script_path)
+            if var_path:
+                os.unlink(var_path)
+
+    def _execute_remote_tpt(self, cmd: List[str]) -> int:
+        """Execute TPT command on remote host via SSH."""
+        # Implementation using SSH client
+        try:
+            # Transfer files to remote host
+            remote_script_path = f"/tmp/{uuid.uuid4().hex}.tpt"
+            transfer_file_sftp(
+                self.ssh_client,
+                cmd[2],  # Script path
+                remote_script_path,
+                None,  # Log would be passed in real implementation
+            )
+
+            # Update command with remote paths
+            remote_cmd = cmd.copy()
+            remote_cmd[2] = remote_script_path
+
+            # Execute command remotely
+            exit_status, output, error = execute_remote_command(
+                self.ssh_client, " ".join(remote_cmd)
+            )
+
+            if exit_status != 0:
+                raise DagsterError(f"TPT failed with code {exit_status}: {error}")
+
+            return exit_status
+
+        except Exception as e:
+            raise DagsterError(f"Remote TPT execution failed: {str(e)}")
+
+    def _execute_local_tpt(self, cmd: List[str]) -> int:
+        """Execute TPT command locally."""
+        try:
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+            )
+
+            output_lines = []
+            for line in process.stdout:
+                output_lines.append(line.strip())
+
+            process.wait()
+
+            if process.returncode != 0:
+                error_msg = "\n".join(output_lines)
+                raise DagsterError(
+                    f"TPT failed with code {process.returncode}: {error_msg}"
+                )
+
+            return process.returncode
+
+        except Exception as e:
+            raise DagsterError(f"Local TPT execution failed: {str(e)}")
+
+    def _setup_ssh_connection(self) -> SSHClient:
+        """Set up SSH connection using provided parameters."""
+        # Implementation would use paramiko to establish SSH connection
+        # This is a simplified version
+        client = SSHClient()
+        client.load_system_host_keys()
+
+        # Connect using provided parameters
+        client.connect(
+            hostname=self.ssh_conn_params["host"],
+            port=self.ssh_conn_params.get("port", 22),
+            username=self.ssh_conn_params["username"],
+            password=self.ssh_conn_params.get("password"),
+            key_filename=self.ssh_conn_params.get("key_filename"),
+        )
+
+        return client

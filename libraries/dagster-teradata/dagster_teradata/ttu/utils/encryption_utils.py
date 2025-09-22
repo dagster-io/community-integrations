@@ -170,6 +170,34 @@ def generate_encrypted_file_with_openssl(
     subprocess.run(cmd, check=True)
 
 
+def decrypt_remote_file(
+    ssh_client, remote_enc_file: str, remote_dec_file: str, password: str, logger=None
+) -> int:
+    """
+    Decrypt a remote file using OpenSSL via SSH.
+
+    Args:
+        ssh_client: SSH client connection
+        remote_enc_file: Path to encrypted file on remote host
+        remote_dec_file: Path for decrypted file on remote host
+        password: Password used for decryption
+        logger: Optional logger instance
+
+    Returns:
+        int: Exit status of the decryption command
+    """
+    quoted_password = shell_quote_single(password)
+    decrypt_cmd = (
+        f"openssl enc -d -aes-256-cbc -salt -pbkdf2 "
+        f"-pass pass:{quoted_password} "
+        f"-in {remote_enc_file} -out {remote_dec_file}"
+    )
+
+    stdin, stdout, stderr = ssh_client.exec_command(decrypt_cmd)
+    exit_status = stdout.channel.recv_exit_status()
+    return exit_status
+
+
 def decrypt_remote_file_to_string(
     ssh_client, remote_enc_file: str, password: str, bteq_command_str: str
 ) -> tuple[int, str, str]:

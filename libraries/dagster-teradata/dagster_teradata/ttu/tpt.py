@@ -1,6 +1,6 @@
 import subprocess
-from typing import Optional, cast
-from dagster_shared.error import DagsterError
+from typing import Optional, Dict, cast
+from dagster import DagsterError
 from dagster_teradata.ttu.utils.encryption_utils import SecureCredentialManager
 from dagster_teradata.ttu.utils.tpt_util import (
     prepare_tpt_ddl_script,
@@ -16,6 +16,7 @@ from dagster_teradata.ttu.tpt_executer import (
     _execute_tdload_via_ssh,
     _execute_tdload_locally,
     execute_tdload,
+    TPTExecutor,
 )
 from paramiko.client import SSHClient
 
@@ -40,16 +41,16 @@ class DdlOperator:
         self.remote_port = None
 
     def ddl_operator(
-            self,
-            ddl: list[str] = None,
-            error_list: Optional[str] = None,
-            remote_working_dir: str = "/tmp",
-            ddl_job_name: Optional[str] = None,
-            remote_host: Optional[str] = None,
-            remote_user: Optional[str] = None,
-            remote_password: Optional[str] = None,
-            ssh_key_path: Optional[str] = None,
-            remote_port: int = 22,
+        self,
+        ddl: list[str] = None,
+        error_list: Optional[str] = None,
+        remote_working_dir: str = "/tmp",
+        ddl_job_name: Optional[str] = None,
+        remote_host: Optional[str] = None,
+        remote_user: Optional[str] = None,
+        remote_password: Optional[str] = None,
+        ssh_key_path: Optional[str] = None,
+        remote_port: int = 22,
     ) -> int | None:
         """Execute DDL operations on Teradata."""
         self.ddl = ddl
@@ -62,8 +63,11 @@ class DdlOperator:
         self.ssh_key_path = ssh_key_path
         self.remote_port = remote_port
 
-        if not self.ddl or not isinstance(self.ddl, list) or not all(
-                isinstance(stmt, str) and stmt.strip() for stmt in self.ddl):
+        if (
+            not self.ddl
+            or not isinstance(self.ddl, list)
+            or not all(isinstance(stmt, str) and stmt.strip() for stmt in self.ddl)
+        ):
             raise ValueError("DDL must be  non-empty list of valid SQL statements.")
 
         normalized_error_list = self._normalize_error_list(self.error_list)
@@ -106,7 +110,9 @@ class DdlOperator:
             return []
         if isinstance(error_list, int):
             return [error_list]
-        if isinstance(error_list, list) and all(isinstance(err, int) for err in error_list):
+        if isinstance(error_list, list) and all(
+            isinstance(err, int) for err in error_list
+        ):
             return error_list
         raise ValueError("error_list must be an int or list of ints")
 
@@ -129,11 +135,11 @@ class TdLoadOperator:
     """Operator for Teradata Parallel Transporter (TPT) operations."""
 
     def __init__(
-            self,
-            connection,
-            teradata_connection_resource,
-            target_teradata_connection_resource,
-            log,
+        self,
+        connection,
+        teradata_connection_resource,
+        target_teradata_connection_resource,
+        log,
     ) -> None:
         self.teradata_connection_resource = teradata_connection_resource
         self.target_teradata_connection_resource = target_teradata_connection_resource
@@ -162,26 +168,26 @@ class TdLoadOperator:
         self.remote_port = None
 
     def tdload_operator(
-            self,
-            source_table: Optional[str] = None,
-            select_stmt: Optional[str] = None,
-            insert_stmt: Optional[str] = None,
-            target_table: Optional[str] = None,
-            source_file_name: Optional[str] = None,
-            target_file_name: Optional[str] = None,
-            source_format: Optional[str] = None,
-            source_text_delimiter: Optional[str] = None,
-            target_format: Optional[str] = None,
-            target_text_delimiter: Optional[str] = None,
-            tdload_options: Optional[str] = None,
-            tdload_job_name: Optional[str] = None,
-            tdload_job_var_file: Optional[str] = None,
-            remote_working_dir: Optional[str] = None,
-            remote_host: Optional[str] = None,
-            remote_user: Optional[str] = None,
-            remote_password: Optional[str] = None,
-            ssh_key_path: Optional[str] = None,
-            remote_port: int = 22,
+        self,
+        source_table: Optional[str] = None,
+        select_stmt: Optional[str] = None,
+        insert_stmt: Optional[str] = None,
+        target_table: Optional[str] = None,
+        source_file_name: Optional[str] = None,
+        target_file_name: Optional[str] = None,
+        source_format: Optional[str] = None,
+        source_text_delimiter: Optional[str] = None,
+        target_format: Optional[str] = None,
+        target_text_delimiter: Optional[str] = None,
+        tdload_options: Optional[str] = None,
+        tdload_job_name: Optional[str] = None,
+        tdload_job_var_file: Optional[str] = None,
+        remote_working_dir: Optional[str] = None,
+        remote_host: Optional[str] = None,
+        remote_user: Optional[str] = None,
+        remote_password: Optional[str] = None,
+        ssh_key_path: Optional[str] = None,
+        remote_port: int = 22,
     ) -> int | None:
         """Execute TPT load operation based on configuration."""
         self.source_table = source_table
@@ -286,16 +292,16 @@ class TdLoadOperator:
         )
 
     def _execute_based_on_configuration(
-            self,
-            tdload_job_var_file: str | None,
-            tdload_job_var_content: str | None,
+        self,
+        tdload_job_var_file: str | None,
+        tdload_job_var_content: str | None,
     ) -> int | None:
         """Execute TPT operation based on configuration."""
         if self.remote_host:
             if tdload_job_var_file:
                 if self.ssh_client:
                     if is_valid_remote_job_var_file(
-                            self.ssh_client, tdload_job_var_file, self.log
+                        self.ssh_client, tdload_job_var_file, self.log
                     ):
                         return self._handle_remote_job_var_file(
                             ssh_client=self.ssh_client, file_path=tdload_job_var_file
@@ -329,7 +335,7 @@ class TdLoadOperator:
             )
 
     def _handle_remote_job_var_file(
-            self, ssh_client: SSHClient, file_path: str | None
+        self, ssh_client: SSHClient, file_path: str | None
     ) -> int | None:
         """Execute TPT using remote job variable file."""
         if not file_path:
@@ -356,8 +362,8 @@ class TdLoadOperator:
             raise
 
     def _handle_local_job_var_file(
-            self,
-            file_path: str | None,
+        self,
+        file_path: str | None,
     ) -> int | None:
         """Execute TPT using local job variable file."""
         if not file_path:
@@ -393,3 +399,54 @@ class TdLoadOperator:
                 process.kill()
             except Exception as e:
                 self.log.error("Process termination failed: %s", str(e))
+
+
+class TPTOperator:
+    """Enhanced TPT operator based on Airflow's TPTOperator."""
+
+    def __init__(
+        self,
+        teradata_connection_resource,
+        operator_type: str,
+        script: Optional[str] = None,
+        variables: Optional[Dict] = None,
+        source_table: Optional[str] = None,
+        select_stmt: Optional[str] = None,
+        target_table: Optional[str] = None,
+        source_file: Optional[str] = None,
+        target_file: Optional[str] = None,
+        format_options: Optional[Dict] = None,
+        ssh_conn_params: Optional[Dict] = None,
+        log=None,
+    ):
+        self.teradata_connection_resource = teradata_connection_resource
+        self.operator_type = operator_type
+        self.script = script
+        self.variables = variables or {}
+        self.source_table = source_table
+        self.select_stmt = select_stmt
+        self.target_table = target_table
+        self.source_file = source_file
+        self.target_file = target_file
+        self.format_options = format_options or {}
+        self.ssh_conn_params = ssh_conn_params
+        self.log = log
+
+    def execute(self) -> int:
+        """Execute the TPT operation."""
+        # Get connection parameters
+        conn_params = self.teradata_connection_resource._connection_args
+
+        # Create TPT executor
+        with TPTExecutor(conn_params, self.ssh_conn_params) as executor:
+            return executor.run_tpt_job(
+                operator_type=self.operator_type,
+                script=self.script,
+                variables=self.variables,
+                source_table=self.source_table,
+                select_stmt=self.select_stmt,
+                target_table=self.target_table,
+                source_file=self.source_file,
+                target_file=self.target_file,
+                format_options=self.format_options,
+            )
