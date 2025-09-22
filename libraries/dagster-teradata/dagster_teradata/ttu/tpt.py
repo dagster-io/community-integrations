@@ -1,7 +1,9 @@
 import subprocess
 from typing import Optional, Dict, cast
+
+import paramiko
 from dagster import DagsterError
-from dagster_teradata.ttu.utils.encryption_utils import SecureCredentialManager
+
 from dagster_teradata.ttu.utils.tpt_util import (
     prepare_tpt_ddl_script,
     get_remote_temp_directory,
@@ -10,15 +12,26 @@ from dagster_teradata.ttu.utils.tpt_util import (
     is_valid_file,
     read_file,
 )
-from dagster_teradata.ttu.utils.util import _setup_ssh_connection
+
 from dagster_teradata.ttu.tpt_executer import (
     execute_ddl,
     _execute_tdload_via_ssh,
     _execute_tdload_locally,
     execute_tdload,
-    TPTExecutor,
 )
+
+from dagster_teradata.ttu.utils.encryption_utils import (
+    SecureCredentialManager,
+    generate_random_password,
+    generate_encrypted_file_with_openssl,
+    decrypt_remote_file_to_string,
+    get_stored_credentials,
+)
+
 from paramiko.client import SSHClient
+
+
+
 
 
 class DdlOperator:
@@ -39,6 +52,63 @@ class DdlOperator:
         self.remote_remote_password = None
         self.ssh_key_path = None
         self.remote_port = None
+
+    def _setup_ssh_connection(
+        self,
+        host: str,
+        user: Optional[str],
+        password: Optional[str],
+        key_path: Optional[str],
+        port: int,
+    ) -> bool:
+        """
+        Establish SSH connection using either password or key authentication.
+
+        Args:
+            host: Remote hostname
+            user: Remote username
+            password: Remote password (optional if key_path provided)
+            key_path: Path to SSH private key (optional if password provided)
+            port: SSH port
+
+        Returns:
+            bool: True if connection succeeded, False otherwise
+
+        Raises:
+            DagsterError: If connection fails
+
+        Note:
+            - Tries stored credentials if no password provided
+            - Prompts for password if no credentials available
+            - Stores new credentials if successfully authenticated
+        """
+        try:
+            self.ssh_client = paramiko.SSHClient()
+            self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+            if key_path:
+                key = paramiko.RSAKey.from_private_key_file(key_path)
+                self.ssh_client.connect(host, port=port, username=user, pkey=key)
+            else:
+                if not password:
+                    if user is None:
+                        raise ValueError(
+                            "Username is required to fetch stored credentials"
+                        )
+                    # Attempt to retrieve stored credentials
+                    creds = get_stored_credentials(self, host, user)
+                    password = (
+                        self.cred_manager.decrypt(creds["password"]) if creds else None
+                    )
+
+                self.ssh_client.connect(
+                    host, port=port, username=user, password=password
+                )
+
+            self.log.info(f"SSH connected to {user}@{host}")
+            return True
+        except Exception as e:
+            raise DagsterError(f"SSH connection failed: {e}")
 
     def ddl_operator(
         self,
@@ -81,15 +151,16 @@ class DdlOperator:
             )
 
             if self.remote_host:
-                self.ssh_client = _setup_ssh_connection(
+                if not self._setup_ssh_connection(
                     host=self.remote_host,
                     user=cast(str, self.remote_user),
                     password=self.remote_remote_password,
                     key_path=self.ssh_key_path,
                     port=self.remote_port,
-                )
-                if not self.ssh_client:
-                    raise DagsterError("Failed to establish SSH connection.")
+                ):
+                    raise DagsterError(
+                        "Failed to establish SSH connection. Please check the provided credentials."
+                    )
 
             if self.ssh_client and not self.remote_working_dir:
                 self.remote_working_dir = get_remote_temp_directory(
@@ -99,7 +170,7 @@ class DdlOperator:
             if not self.remote_working_dir:
                 self.remote_working_dir = "/tmp"
 
-            return execute_ddl(tpt_ddl_script, self.remote_working_dir)
+            return execute_ddl(self, tpt_ddl_script, self.remote_working_dir)
         except Exception as e:
             self.log.error("DDL execution failed: %s", str(e))
             raise
@@ -167,6 +238,63 @@ class TdLoadOperator:
         self.ssh_key_path = None
         self.remote_port = None
 
+    def _setup_ssh_connection(
+        self,
+        host: str,
+        user: Optional[str],
+        password: Optional[str],
+        key_path: Optional[str],
+        port: int,
+    ) -> bool:
+        """
+        Establish SSH connection using either password or key authentication.
+
+        Args:
+            host: Remote hostname
+            user: Remote username
+            password: Remote password (optional if key_path provided)
+            key_path: Path to SSH private key (optional if password provided)
+            port: SSH port
+
+        Returns:
+            bool: True if connection succeeded, False otherwise
+
+        Raises:
+            DagsterError: If connection fails
+
+        Note:
+            - Tries stored credentials if no password provided
+            - Prompts for password if no credentials available
+            - Stores new credentials if successfully authenticated
+        """
+        try:
+            self.ssh_client = paramiko.SSHClient()
+            self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+            if key_path:
+                key = paramiko.RSAKey.from_private_key_file(key_path)
+                self.ssh_client.connect(host, port=port, username=user, pkey=key)
+            else:
+                if not password:
+                    if user is None:
+                        raise ValueError(
+                            "Username is required to fetch stored credentials"
+                        )
+                    # Attempt to retrieve stored credentials
+                    creds = get_stored_credentials(self, host, user)
+                    password = (
+                        self.cred_manager.decrypt(creds["password"]) if creds else None
+                    )
+
+                self.ssh_client.connect(
+                    host, port=port, username=user, password=password
+                )
+
+            self.log.info(f"SSH connected to {user}@{host}")
+            return True
+        except Exception as e:
+            raise DagsterError(f"SSH connection failed: {e}")
+
     def tdload_operator(
         self,
         source_table: Optional[str] = None,
@@ -221,16 +349,16 @@ class TdLoadOperator:
                 self.log.info("Prepared job vars for mode '%s'", mode)
 
             if self.remote_host:
-                self.ssh_client = _setup_ssh_connection(
-                    self,
+                if not self._setup_ssh_connection(
                     host=self.remote_host,
                     user=cast(str, self.remote_user),
                     password=self.remote_remote_password,
                     key_path=self.ssh_key_path,
                     port=self.remote_port,
-                )
-                if not self.ssh_client:
-                    raise DagsterError("SSH connection failed.")
+                ):
+                    raise DagsterError(
+                        "Failed to establish SSH connection. Please check the provided credentials."
+                    )
 
             if self.remote_host and not self.remote_working_dir:
                 self.remote_working_dir = get_remote_temp_directory(
@@ -308,6 +436,7 @@ class TdLoadOperator:
                         )
                     raise ValueError("Invalid remote job var file path")
 
+            else:
                 return execute_tdload(
                     self,
                     log=self.log,
@@ -324,15 +453,15 @@ class TdLoadOperator:
                         file_path=tdload_job_var_file
                     )
                 raise ValueError("Invalid local job var file path")
-
-            return execute_tdload(
-                self,
-                log=self.log,
-                remote_working_dir=self.remote_working_dir or "/tmp",
-                job_var_content=tdload_job_var_content,
-                tdload_options=self.tdload_options,
-                tdload_job_name=self.tdload_job_name,
-            )
+            else:
+                return execute_tdload(
+                    self,
+                    log=self.log,
+                    remote_working_dir=self.remote_working_dir or "/tmp",
+                    job_var_content=tdload_job_var_content,
+                    tdload_options=self.tdload_options,
+                    tdload_job_name=self.tdload_job_name,
+                )
 
     def _handle_remote_job_var_file(
         self, ssh_client: SSHClient, file_path: str | None
@@ -399,54 +528,3 @@ class TdLoadOperator:
                 process.kill()
             except Exception as e:
                 self.log.error("Process termination failed: %s", str(e))
-
-
-class TPTOperator:
-    """Enhanced TPT operator based on Airflow's TPTOperator."""
-
-    def __init__(
-        self,
-        teradata_connection_resource,
-        operator_type: str,
-        script: Optional[str] = None,
-        variables: Optional[Dict] = None,
-        source_table: Optional[str] = None,
-        select_stmt: Optional[str] = None,
-        target_table: Optional[str] = None,
-        source_file: Optional[str] = None,
-        target_file: Optional[str] = None,
-        format_options: Optional[Dict] = None,
-        ssh_conn_params: Optional[Dict] = None,
-        log=None,
-    ):
-        self.teradata_connection_resource = teradata_connection_resource
-        self.operator_type = operator_type
-        self.script = script
-        self.variables = variables or {}
-        self.source_table = source_table
-        self.select_stmt = select_stmt
-        self.target_table = target_table
-        self.source_file = source_file
-        self.target_file = target_file
-        self.format_options = format_options or {}
-        self.ssh_conn_params = ssh_conn_params
-        self.log = log
-
-    def execute(self) -> int:
-        """Execute the TPT operation."""
-        # Get connection parameters
-        conn_params = self.teradata_connection_resource._connection_args
-
-        # Create TPT executor
-        with TPTExecutor(conn_params, self.ssh_conn_params) as executor:
-            return executor.run_tpt_job(
-                operator_type=self.operator_type,
-                script=self.script,
-                variables=self.variables,
-                source_table=self.source_table,
-                select_stmt=self.select_stmt,
-                target_table=self.target_table,
-                source_file=self.source_file,
-                target_file=self.target_file,
-                format_options=self.format_options,
-            )

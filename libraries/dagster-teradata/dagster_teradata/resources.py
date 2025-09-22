@@ -29,7 +29,7 @@ from pydantic import Field
 
 from . import constants
 from dagster_teradata.ttu.bteq import Bteq
-from dagster_teradata.ttu.tpt import DdlOperator, TdLoadOperator, TPTOperator
+from dagster_teradata.ttu.tpt import DdlOperator, TdLoadOperator
 from dagster_teradata.teradata_compute_cluster_manager import (
     TeradataComputeClusterManager,
 )
@@ -675,53 +675,6 @@ class TeradataDagsterConnection:
             ssh_key_path=ssh_key_path,
             remote_port=remote_port,
         )
-
-    def run_tpt_job(
-        self,
-        operator_type: str,
-        script: Optional[str] = None,
-        variables: Optional[Dict] = None,
-        source_table: Optional[str] = None,
-        select_stmt: Optional[str] = None,
-        target_table: Optional[str] = None,
-        source_file: Optional[str] = None,
-        target_file: Optional[str] = None,
-        format_options: Optional[Dict] = None,
-        ssh_conn_params: Optional[Dict] = None,
-    ) -> int:
-        """
-        Run a TPT job with the given parameters.
-
-        Args:
-            operator_type (str): Type of TPT operator (tdload, tbuild, tpump, etc.)
-            script (Optional[str]): TPT script content
-            variables (Optional[Dict]): TPT variables
-            source_table (Optional[str]): Source table name
-            select_stmt (Optional[str]): SELECT statement for data extraction
-            target_table (Optional[str]): Target table name
-            source_file (Optional[str]): Source file path
-            target_file (Optional[str]): Target file path
-            format_options (Optional[Dict]): Format options for source/target
-            ssh_conn_params (Optional[Dict]): SSH connection parameters for remote execution
-
-        Returns:
-            int: Return code from the TPT operation
-        """
-        operator = TPTOperator(
-            teradata_connection_resource=self.teradata_connection_resource,
-            operator_type=operator_type,
-            script=script,
-            variables=variables,
-            source_table=source_table,
-            select_stmt=select_stmt,
-            target_table=target_table,
-            source_file=source_file,
-            target_file=target_file,
-            format_options=format_options,
-            ssh_conn_params=ssh_conn_params,
-            log=self.log,
-        )
-        return operator.execute()
 
     def drop_database(self, databases: Union[str, Sequence[str]]) -> None:
         """

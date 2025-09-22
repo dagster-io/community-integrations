@@ -416,6 +416,7 @@ class Bteq:
                 raise DagsterError(
                     "Failed to establish SSH connection. `ssh_client` is None."
                 )
+            self.log.info("Successfully established SSH connection with host: %s", remote_host)
             verify_bteq_installed_remote(self.ssh_client)
             password = generate_random_password()  # Encryption/Decryption password
             encrypted_file_path = os.path.join(tmp_dir, "bteq_script.enc")
@@ -542,7 +543,7 @@ class Bteq:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             shell=True,
-            # preexec_fn=os.setsid,
+            preexec_fn=os.setsid,
         )
         encode_bteq_script = bteq_script.encode(str(temp_file_read_encoding or "UTF-8"))
         self.log.debug("encode_bteq_script : %s", encode_bteq_script)
