@@ -51,7 +51,7 @@ def test_remote_expected_return_code():
             sql="select * from dbc.dbcinfo;",
             remote_host="host",
             remote_user="user",
-            remote_password="password",
+            remote_password="pass",
             bteq_quit_rc=0,
         )
         context.log.info(result)
@@ -71,7 +71,7 @@ def test_remote_file_path():
             file_path="/tmp/abcd",
             remote_host="host",
             remote_user="user",
-            remote_password="password",
+            remote_password="pass",
             bteq_quit_rc=0,
         )
         context.log.info(result)
@@ -90,12 +90,12 @@ def test_remote_expected_multiple_return_code():
         result = context.resources.teradata.bteq_operator(
             sql="delete from abcdefgh;",
             remote_host="host",
-            remote_user="username",
-            remote_password="password",
+            remote_user="user",
+            remote_password="pass",
             bteq_quit_rc=[0, 8],
         )
         context.log.info(result)
-        assert result is None
+        assert result == 8
 
     @job(resource_defs={"teradata": td_resource})
     def example_job():
