@@ -580,7 +580,7 @@ def prepare_tpt_ddl_script(
 
     # Generate job name if not provided
     if job_name is None:
-        job_name = f"airflow_tptddl_{uuid.uuid4().hex}"
+        job_name = f"dagster_tptddl_{uuid.uuid4().hex}"
 
     # Format error list for inclusion in the TPT script
     if not error_list:
@@ -798,10 +798,7 @@ def prepare_tpt_script(
 
     Returns:
         str: Prepared TPT script
-
-    Note: Implementation based on Airflow's prepare_tpt_script
     """
-    # Implementation based on Airflow's prepare_tpt_script
     pass
 
 
@@ -828,10 +825,7 @@ def prepare_tpt_variables(
 
     Returns:
         Dict[str, str]: Prepared TPT variables
-
-    Note: Implementation based on Airflow's prepare_tpt_variables
     """
-    # Implementation based on Airflow's prepare_tpt_variables
     pass
 
 

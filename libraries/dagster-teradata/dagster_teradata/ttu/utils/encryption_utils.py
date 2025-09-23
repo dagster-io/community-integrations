@@ -195,6 +195,16 @@ def decrypt_remote_file(
 
     stdin, stdout, stderr = ssh_client.exec_command(decrypt_cmd)
     exit_status = stdout.channel.recv_exit_status()
+
+    if exit_status != 0:
+        raise DagsterError(
+            f"Decryption failed with exit status {exit_status}. Error: {stderr if stdout else 'N/A'}"
+        )
+
+    logger.info(
+        "Successfully decrypted remote file %s to %s", remote_enc_file, remote_dec_file
+    )
+
     return exit_status
 
 
