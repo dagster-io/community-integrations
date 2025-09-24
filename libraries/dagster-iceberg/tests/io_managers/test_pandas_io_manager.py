@@ -242,7 +242,7 @@ def test_iceberg_io_manager_with_multipartitioned_assets(
 
     table = catalog.load_table(asset_multi_partitioned_table_identifier)
     assert len(table.spec().fields) == 2
-    assert [f.name for f in table.spec().fields] == ["category_this", "date_this"]
+    assert [f.name for f in table.spec().fields] == ["category_this", "date_this_day"]
 
     out_df = table.scan().to_arrow()
     assert out_df["date_this"].to_pylist() == [
