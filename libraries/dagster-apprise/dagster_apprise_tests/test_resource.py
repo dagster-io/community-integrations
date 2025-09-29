@@ -21,7 +21,9 @@ class TestAppriseResource:
     def test_init_with_config(self):
         """Test resource initialization with custom config."""
         config = AppriseConfig(
-            urls=["pover://user@token"], base_url="http://localhost:3000", title_prefix="Test"
+            urls=["pover://user@token"],
+            base_url="http://localhost:3000",
+            title_prefix="Test",
         )
         resource = AppriseResource(config=config)
         assert resource.config.urls == ["pover://user@token"]

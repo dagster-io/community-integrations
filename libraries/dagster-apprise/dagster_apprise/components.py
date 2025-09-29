@@ -14,14 +14,22 @@ logger = logging.getLogger(__name__)
 class AppriseNotificationsConfig(dg.Config):
     """Configuration for Apprise notifications component."""
 
-    urls: list[str] = Field(default_factory=list, description="List of Apprise notification URLs")
-    config_file: Optional[str] = Field(default=None, description="Path to Apprise config file")
-    base_url: Optional[str] = Field(default=None, description="Base URL for Dagster UI links")
+    urls: list[str] = Field(
+        default_factory=list, description="List of Apprise notification URLs"
+    )
+    config_file: Optional[str] = Field(
+        default=None, description="Path to Apprise config file"
+    )
+    base_url: Optional[str] = Field(
+        default=None, description="Base URL for Dagster UI links"
+    )
     webserver_base_url: Optional[str] = Field(
         default=None,
         description="Alias for base_url to align with Dagster patterns",
     )
-    title_prefix: str = Field(default="Dagster", description="Prefix for notification titles")
+    title_prefix: str = Field(
+        default="Dagster", description="Prefix for notification titles"
+    )
     events: list[str] = Field(
         default_factory=lambda: ["FAILURE"],
         description="List of events to send notifications for (SUCCESS, FAILURE, CANCELED, RUNNING)",
@@ -82,12 +90,16 @@ def _create_run_status_sensor(
 
         # Check if this job should be included
         if not _should_include_job(run.job_name, config.include_jobs):
-            logger.debug(f"Skipping notification for job {run.job_name} (not in include list)")
+            logger.debug(
+                f"Skipping notification for job {run.job_name} (not in include list)"
+            )
             return
 
         # Check if this job should be excluded
         if _should_exclude_job(run.job_name, config.exclude_jobs):
-            logger.debug(f"Skipping notification for job {run.job_name} (in exclude list)")
+            logger.debug(
+                f"Skipping notification for job {run.job_name} (in exclude list)"
+            )
             return
 
         # Send notification
@@ -98,7 +110,9 @@ def _create_run_status_sensor(
         if success:
             logger.info(f"Sent {event_lower} notification for run {run.run_id}")
         else:
-            logger.error(f"Failed to send {event_lower} notification for run {run.run_id}")
+            logger.error(
+                f"Failed to send {event_lower} notification for run {run.run_id}"
+            )
 
     # Map event names to Dagster run status
     status_mapping = {

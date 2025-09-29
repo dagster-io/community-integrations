@@ -81,7 +81,9 @@ class TestComprehensiveAppriseUrls:
         ]
 
         for url in pushover_urls:
-            assert validate_apprise_url(url) is True, f"Pushover URL {url} should be valid"
+            assert (
+                validate_apprise_url(url) is True
+            ), f"Pushover URL {url} should be valid"
 
     def test_discord_url_variations(self):
         """Test various Discord URL formats."""
@@ -93,7 +95,9 @@ class TestComprehensiveAppriseUrls:
         ]
 
         for url in discord_urls:
-            assert validate_apprise_url(url) is True, f"Discord URL {url} should be valid"
+            assert (
+                validate_apprise_url(url) is True
+            ), f"Discord URL {url} should be valid"
 
     def test_matrix_url_variations(self):
         """Test various Matrix URL formats."""
@@ -105,7 +109,9 @@ class TestComprehensiveAppriseUrls:
         ]
 
         for url in matrix_urls:
-            assert validate_apprise_url(url) is True, f"Matrix URL {url} should be valid"
+            assert (
+                validate_apprise_url(url) is True
+            ), f"Matrix URL {url} should be valid"
 
     def test_gotify_url_variations(self):
         """Test various Gotify URL formats."""
@@ -117,7 +123,9 @@ class TestComprehensiveAppriseUrls:
         ]
 
         for url in gotify_urls:
-            assert validate_apprise_url(url) is True, f"Gotify URL {url} should be valid"
+            assert (
+                validate_apprise_url(url) is True
+            ), f"Gotify URL {url} should be valid"
 
     def test_ifttt_url_variations(self):
         """Test various IFTTT URL formats."""
@@ -166,7 +174,9 @@ class TestComprehensiveAppriseUrls:
         ]
 
         for url in param_urls:
-            assert validate_apprise_url(url) is True, f"Parameterized URL {url} should be valid"
+            assert (
+                validate_apprise_url(url) is True
+            ), f"Parameterized URL {url} should be valid"
 
     def test_invalid_urls(self):
         """Test validation of invalid URLs."""
@@ -209,4 +219,6 @@ class TestComprehensiveAppriseUrls:
 
         for url in invalid_urls:
             if url is not None:
-                assert validate_apprise_url(url) is False, f"URL {url} should be invalid"
+                assert (
+                    validate_apprise_url(url) is False
+                ), f"URL {url} should be invalid"

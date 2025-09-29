@@ -13,12 +13,16 @@ class TestComponentEdgeCases:
 
     def test_unknown_event_type(self):
         """Test handling of unknown event types."""
-        config = AppriseNotificationsConfig(urls=["pover://user@token"], events=["UNKNOWN_EVENT"])
+        config = AppriseNotificationsConfig(
+            urls=["pover://user@token"], events=["UNKNOWN_EVENT"]
+        )
 
         defs = apprise_notifications(config)
 
         # unknown events do not create any sensors
-        assert len(defs.sensors) == 0
+        sensors = defs.sensors
+        sensors_list = list(sensors) if sensors is not None else []
+        assert len(sensors_list) == 0
 
     def test_empty_events_list(self):
         """Test handling of empty events list."""
@@ -27,7 +31,9 @@ class TestComponentEdgeCases:
         defs = apprise_notifications(config)
 
         # empty events list does not create any sensors
-        assert len(defs.sensors) == 0
+        sensors = defs.sensors
+        sensors_list = list(sensors) if sensors is not None else []
+        assert len(sensors_list) == 0
 
     def test_sensor_notification_failure(self):
         """Test sensor behavior when notification fails."""
@@ -36,7 +42,9 @@ class TestComponentEdgeCases:
         )
 
         defs = apprise_notifications(config)
-        failure_sensor = next(s for s in defs.sensors if "failure" in s.name.lower())
+        sensors = defs.sensors
+        assert sensors is not None
+        failure_sensor = next(s for s in sensors if "failure" in s.name.lower())
 
         # Create a test run and event
         run = dg.DagsterRun(job_name="test_job", run_id="test_run_123")
@@ -124,7 +132,8 @@ class TestResourceEdgeCases:
     def test_invalid_url_handling(self):
         """Test handling of invalid URLs."""
         config = AppriseConfig(
-            urls=["invalid://url", "pover://user@token"], base_url="http://localhost:3000"
+            urls=["invalid://url", "pover://user@token"],
+            base_url="http://localhost:3000",
         )
 
         resource = AppriseResource(config=config)
@@ -135,7 +144,9 @@ class TestResourceEdgeCases:
 
     def test_config_file_handling(self):
         """Test handling of config file."""
-        config = AppriseConfig(urls=["pover://user@token"], config_file="/nonexistent/file.yaml")
+        config = AppriseConfig(
+            urls=["pover://user@token"], config_file="/nonexistent/file.yaml"
+        )
 
         resource = AppriseResource(config=config)
 
@@ -153,7 +164,11 @@ class TestResourceEdgeCases:
             mock_apprise.notify.side_effect = Exception("Network error")
             mock_apprise_class.return_value = mock_apprise
 
-            result = resource.notify(body="Test message", title="Test Title", notify_type="info")
+            from apprise import NotifyType
+
+            result = resource.notify(
+                body="Test message", title="Test Title", notify_type=NotifyType.INFO
+            )
 
             assert result is False
 
@@ -254,7 +269,9 @@ class TestConfigurationEdgeCases:
 
     def test_config_with_empty_strings(self):
         """Test configuration with empty strings."""
-        config = AppriseNotificationsConfig(urls=[""], config_file="", base_url="", title_prefix="")
+        config = AppriseNotificationsConfig(
+            urls=[""], config_file="", base_url="", title_prefix=""
+        )
 
         # should handle empty strings
         assert config.urls == [""]

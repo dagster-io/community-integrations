@@ -7,6 +7,7 @@ from dagster_apprise.hooks import (
     apprise_success_hook,
 )
 
+
 class TestAppriseFailureHook:
     """Test failure notification hook."""
 
@@ -24,7 +25,9 @@ class TestAppriseFailureHook:
         apprise_failure_hook(mock_context)
 
         mock_resource.notify_run_status.assert_called_once_with(
-            run=mock_context.dagster_run, status="FAILURE", message="Asset test_asset failed"
+            run=mock_context.dagster_run,
+            status="FAILURE",
+            message="Asset test_asset failed",
         )
 
     def test_hook_without_apprise_resource(self):
@@ -85,11 +88,15 @@ class TestAppriseFailureHook:
         """Test hook exception handling."""
         mock_context = Mock()
         mock_context.resources = {"apprise": Mock()}
-        mock_context.resources["apprise"].notify_run_status.side_effect = Exception("Test error")
+        mock_context.resources["apprise"].notify_run_status.side_effect = Exception(
+            "Test error"
+        )
 
         with patch("dagster_apprise.hooks.logger") as mock_logger:
             apprise_failure_hook(mock_context)
-            mock_logger.error.assert_called_once_with("Error in apprise failure hook: Test error")
+            mock_logger.error.assert_called_once_with(
+                "Error in apprise failure hook: Test error"
+            )
 
 
 class TestAppriseSuccessHook:
@@ -161,11 +168,15 @@ class TestAppriseSuccessHook:
         """Test hook exception handling."""
         mock_context = Mock()
         mock_context.resources = {"apprise": Mock()}
-        mock_context.resources["apprise"].notify_run_status.side_effect = Exception("Test error")
+        mock_context.resources["apprise"].notify_run_status.side_effect = Exception(
+            "Test error"
+        )
 
         with patch("dagster_apprise.hooks.logger") as mock_logger:
             apprise_success_hook(mock_context)
-            mock_logger.error.assert_called_once_with("Error in apprise success hook: Test error")
+            mock_logger.error.assert_called_once_with(
+                "Error in apprise success hook: Test error"
+            )
 
 
 class TestCreateAppriseHooks:

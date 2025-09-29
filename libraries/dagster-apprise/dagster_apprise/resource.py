@@ -14,14 +14,22 @@ logger = logging.getLogger(__name__)
 class AppriseConfig(dg.Config):
     """Configuration for Apprise notifications."""
 
-    urls: list[str] = Field(default_factory=list, description="List of Apprise notification URLs")
-    config_file: Optional[str] = Field(default=None, description="Path to Apprise config file")
-    base_url: Optional[str] = Field(default=None, description="Base URL for Dagster UI links")
+    urls: list[str] = Field(
+        default_factory=list, description="List of Apprise notification URLs"
+    )
+    config_file: Optional[str] = Field(
+        default=None, description="Path to Apprise config file"
+    )
+    base_url: Optional[str] = Field(
+        default=None, description="Base URL for Dagster UI links"
+    )
     webserver_base_url: Optional[str] = Field(
         default=None,
         description="Alias for base_url to align with Dagster patterns (used if base_url not set)",
     )
-    title_prefix: str = Field(default="Dagster", description="Prefix for notification titles")
+    title_prefix: str = Field(
+        default="Dagster", description="Prefix for notification titles"
+    )
 
 
 class AppriseResource(dg.ConfigurableResource):
@@ -69,7 +77,9 @@ class AppriseResource(dg.ConfigurableResource):
         """
         try:
             full_title = (
-                f"{self.config.title_prefix}: {title}" if title else self.config.title_prefix
+                f"{self.config.title_prefix}: {title}"
+                if title
+                else self.config.title_prefix
             )
 
             result = self.apprise.notify(

@@ -51,7 +51,9 @@ def apprise_success_hook(context: dg.HookContext) -> None:
             return
         asset_key = getattr(context, "asset_key", "unknown")
         success = apprise_resource.notify_run_status(
-            run=run, status="SUCCESS", message=f"Asset {asset_key} completed successfully"
+            run=run,
+            status="SUCCESS",
+            message=f"Asset {asset_key} completed successfully",
         )
 
         if success:
@@ -101,7 +103,9 @@ def apprise_on_failure(
             if ok:
                 logger.info(f"Sent failure notification for asset {asset_key}")
             else:
-                logger.error(f"Failed to send failure notification for asset {asset_key}")
+                logger.error(
+                    f"Failed to send failure notification for asset {asset_key}"
+                )
         except Exception as e:  # pragma: no cover
             logger.error(f"Error in apprise_on_failure hook: {e}")
 
@@ -147,7 +151,9 @@ def apprise_on_success(
             if ok:
                 logger.info(f"Sent success notification for asset {asset_key}")
             else:
-                logger.error(f"Failed to send success notification for asset {asset_key}")
+                logger.error(
+                    f"Failed to send success notification for asset {asset_key}"
+                )
         except Exception as e:  # pragma: no cover
             logger.error(f"Error in apprise_on_success hook: {e}")
 
@@ -222,7 +228,9 @@ def make_apprise_on_run_failure_sensor(
             if ok:
                 logger.info(f"Sent failure notification for run {run.run_id}")
             else:
-                logger.error(f"Failed to send failure notification for run {run.run_id}")
+                logger.error(
+                    f"Failed to send failure notification for run {run.run_id}"
+                )
         except Exception as e:  # pragma: no cover
             logger.error(f"Error in make_apprise_on_run_failure_sensor: {e}")
 

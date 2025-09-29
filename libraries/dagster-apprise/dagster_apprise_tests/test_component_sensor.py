@@ -36,12 +36,19 @@ class TestAppriseNotifications:
 
     def test_build_defs(self):
         """Test building Dagster definitions."""
-        config = AppriseNotificationsConfig(urls=["pover://user@token"], events=["FAILURE"])
+        config = AppriseNotificationsConfig(
+            urls=["pover://user@token"], events=["FAILURE"]
+        )
         defs = apprise_notifications(config)
 
         assert isinstance(defs, dg.Definitions)
-        assert "apprise" in defs.resources
-        assert len(defs.sensors) == 1  # One sensor for FAILURE event
+        resources = defs.resources
+        sensors = defs.sensors
+        assert resources is not None
+        assert "apprise" in resources
+        assert sensors is not None
+        sensors_list = list(sensors)
+        assert len(sensors_list) == 1  # One sensor for FAILURE event
 
     def test_build_defs_multiple_events(self):
         """Test building definitions with multiple events."""
@@ -50,8 +57,10 @@ class TestAppriseNotifications:
         )
         defs = apprise_notifications(config)
 
-        assert len(defs.sensors) == 3
-        sensor_names = [s.name for s in defs.sensors]
+        sensors = defs.sensors
+        sensors_list = list(sensors) if sensors is not None else []
+        assert len(sensors_list) == 3
+        sensor_names = [s.name for s in sensors_list]
         assert "apprise_success_sensor" in sensor_names
         assert "apprise_failure_sensor" in sensor_names
         assert "apprise_canceled_sensor" in sensor_names
@@ -93,11 +102,15 @@ class TestAppriseSensor:
 
     def test_failure_sensor_filters_and_sends(self):
         """Test that failure sensor filters jobs and sends notifications."""
-        config = AppriseNotificationsConfig(urls=[], events=["FAILURE"], include_jobs=["good*"])
+        config = AppriseNotificationsConfig(
+            urls=[], events=["FAILURE"], include_jobs=["good*"]
+        )
         defs = apprise_notifications(config)
 
         # Find the failure sensor
-        failure_sensor = next(s for s in defs.sensors if s.name.endswith("_failure_sensor"))
+        sensors = defs.sensors
+        assert sensors is not None
+        failure_sensor = next(s for s in sensors if s.name.endswith("_failure_sensor"))
         assert failure_sensor is not None
 
         # Create a test run and event
@@ -144,7 +157,9 @@ class TestAppriseSensor:
         )
         defs = apprise_notifications(config)
 
-        failure_sensor = next(s for s in defs.sensors if s.name.endswith("_failure_sensor"))
+        sensors = defs.sensors
+        assert sensors is not None
+        failure_sensor = next(s for s in sensors if s.name.endswith("_failure_sensor"))
 
         # Create a test run with excluded job name
         run = dg.DagsterRun(job_name="bad_job", run_id="rid")
@@ -182,10 +197,14 @@ class TestAppriseSensor:
 
     def test_sensor_skips_not_included_jobs(self):
         """Test that sensor skips jobs not in the include list."""
-        config = AppriseNotificationsConfig(urls=[], events=["FAILURE"], include_jobs=["good*"])
+        config = AppriseNotificationsConfig(
+            urls=[], events=["FAILURE"], include_jobs=["good*"]
+        )
         defs = apprise_notifications(config)
 
-        failure_sensor = next(s for s in defs.sensors if s.name.endswith("_failure_sensor"))
+        sensors = defs.sensors
+        assert sensors is not None
+        failure_sensor = next(s for s in sensors if s.name.endswith("_failure_sensor"))
 
         # Create a test run with job name not matching include pattern
         run = dg.DagsterRun(job_name="other_job", run_id="rid")
