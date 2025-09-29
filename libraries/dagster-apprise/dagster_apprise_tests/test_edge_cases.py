@@ -89,7 +89,9 @@ class TestComponentEdgeCases:
         )
 
         defs = apprise_notifications(config)
-        failure_sensor = next(s for s in defs.sensors if "failure" in s.name.lower())
+        sensors = defs.sensors
+        assert sensors is not None
+        failure_sensor = next(s for s in sensors if "failure" in s.name.lower())
 
         # test run with job name that doesn't match include pattern
         run = dg.DagsterRun(job_name="invalid_job", run_id="test_run_123")
@@ -291,6 +293,7 @@ class TestConfigurationEdgeCases:
 
         # should handle long strings
         assert len(config.urls[0]) == 10000 + len("pover://user@")
+        assert config.base_url is not None
         assert len(config.base_url) == 10000 + len("http://localhost:3000/")
         assert len(config.title_prefix) == 10000
 
