@@ -1,0 +1,38 @@
+name: quality-check
+
+on:
+  pull_request:
+    paths:
+      - 'libraries/dagster-*/**'
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed packages
+        id: set-matrix
+        run: |
+          # Get changed files and extract unique package names
+          changed_packages=$(git diff --name-only origin/${{ github.base_ref }}...HEAD \
+            | grep '^libraries/dagster-' \
+            | cut -d'/' -f2 \
+            | sort -u \
+            | jq -R -s -c 'split("\n") | map(select(length > 0))')
+
+          echo "matrix=$changed_packages" >> $GITHUB_OUTPUT
+
+  check:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.matrix != '[]' }}
+    strategy:
+      matrix:
+        package: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
+    uses: ./.github/workflows/template-quality-check.yml
+    with:
+      working_directory: ./libraries/${{ matrix.package }}
