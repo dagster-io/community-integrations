@@ -6,6 +6,8 @@
 #
 
 name: release
+permissions:
+  contents: read
 
 on:
   push:
