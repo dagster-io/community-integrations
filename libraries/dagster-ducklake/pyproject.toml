@@ -1,0 +1,29 @@
+[project]
+name = "dagster-ducklake"
+description = "Dagster integration for Ducklake"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "dagster>=1.11.9",
+    "duckdb>=1.4.0",
+    "pydantic>=2.0.0",
+    "sqlalchemy~=2.0.43",
+]
+dynamic = ["version"]
+
+[dependency-groups]
+dev = [
+  "ruff",
+  "pytest",
+  "pyright>=1.1.405",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_ducklake"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_ducklake.__version__"}
