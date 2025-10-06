@@ -1,5 +1,6 @@
 import datetime as dt
 import pathlib as plb
+from uuid import uuid4
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -12,65 +13,179 @@ from pyiceberg.catalog import Catalog
 from dagster_iceberg._utils import io
 
 
-def test_table_writer(namespace: str, catalog: Catalog, data: pa.Table):
-    table_ = "handler_data_table_writer"
-    identifier_ = f"{namespace}.{table_}"
+def run_test_write(
+    dagster_run_id: str,
+    write_mode: io.WriteMode,
+    expected_length: int,
+    namespace: str,
+    catalog: Catalog,
+    data: pa.Table,
+    table_: str,
+    identifier_: str,
+    partition_dimensions: list[TablePartitionDimension] | None = None,
+):
+    if partition_dimensions is None:
+        partition_dimensions = []
     io.table_writer(
         table_slice=TableSlice(
-            table=table_,
-            schema=namespace,
-            # In assets that are not partitioned, this value is not None but an empty list.
-            #  bit confusing since the type is optional and default value is None
-            partition_dimensions=[],
+            table=table_, schema=namespace, partition_dimensions=partition_dimensions
         ),
         data=data,
         catalog=catalog,
         schema_update_mode="update",
         partition_spec_update_mode="update",
-        dagster_run_id="hfkghdgsh467374828",
+        dagster_run_id=dagster_run_id,
+        write_mode=write_mode,
     )
     assert catalog.table_exists(identifier_)
     table = catalog.load_table(identifier_)
     assert (
         table.current_snapshot().summary.additional_properties["dagster-run-id"]
-        == "hfkghdgsh467374828"
+        == dagster_run_id
     )
     assert (
         table.current_snapshot().summary.additional_properties["created-by"]
         == "dagster"
     )
+    assert len(table.scan().to_arrow().to_pydict()["value"]) == expected_length
+    return table
 
 
-def test_table_writer_partitioned(namespace: str, catalog: Catalog, data: pa.Table):
-    # Works similar to # https://docs.dagster.io/integrations/deltalake/reference#storing-multi-partitioned-assets
-    # Need to subset the data.
-    table_ = "handler_data_table_writer_partitioned"
-    identifier_ = f"{namespace}.{table_}"
-    data = data.filter(
-        (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
-        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1)),
-    )
-    io.table_writer(
-        table_slice=TableSlice(
-            table=table_,
-            schema=namespace,
-            partition_dimensions=[
-                TablePartitionDimension(
-                    "timestamp",
-                    TimeWindow(dt.datetime(2023, 1, 1, 0), dt.datetime(2023, 1, 1, 1)),
-                ),
-            ],
-        ),
-        data=data,
-        catalog=catalog,
-        schema_update_mode="update",
-        partition_spec_update_mode="update",
-        dagster_run_id="hfkghdgsh467374828",
-    )
-    table = catalog.load_table(identifier_)
-    partition_field_names = [f.name for f in table.spec().fields]
-    assert partition_field_names == ["timestamp"]
-    assert len(table.scan().to_arrow().to_pydict()["value"]) == 60
+class TestTableWriter:
+    def test_nominal_case(self, namespace: str, catalog: Catalog, data: pa.Table):
+        table_ = "handler_data_table_writer"
+        identifier_ = f"{namespace}.{table_}"
+        run_test_write(
+            dagster_run_id=str(uuid4()),
+            write_mode=io.WriteMode.overwrite,
+            expected_length=len(data),
+            namespace=namespace,
+            catalog=catalog,
+            data=data,
+            table_=table_,
+            identifier_=identifier_,
+        )
+
+    def test_append_mode(self, namespace: str, catalog: Catalog, data: pa.Table):
+        table_ = "handler_data_table_writer_append_mode"
+        identifier_ = f"{namespace}.{table_}"
+        run_test_write(
+            dagster_run_id=str(uuid4()),
+            write_mode=io.WriteMode.overwrite,
+            expected_length=len(data),
+            namespace=namespace,
+            catalog=catalog,
+            data=data,
+            table_=table_,
+            identifier_=identifier_,
+        )
+        run_test_write(
+            dagster_run_id=str(uuid4()),
+            write_mode=io.WriteMode.append,
+            expected_length=len(data) * 2,
+            namespace=namespace,
+            catalog=catalog,
+            data=data,
+            table_=table_,
+            identifier_=identifier_,
+        )
+
+    def test_overwrite_mode(self, namespace: str, catalog: Catalog, data: pa.Table):
+        table_ = "handler_data_table_writer_overwrite_mode"
+        identifier_ = f"{namespace}.{table_}"
+        run_test_write(
+            dagster_run_id=str(uuid4()),
+            write_mode=io.WriteMode.overwrite,
+            expected_length=len(data),
+            namespace=namespace,
+            catalog=catalog,
+            data=data,
+            table_=table_,
+            identifier_=identifier_,
+        )
+        run_test_write(
+            dagster_run_id=str(uuid4()),
+            write_mode=io.WriteMode.overwrite,
+            expected_length=len(data),
+            namespace=namespace,
+            catalog=catalog,
+            data=data,
+            table_=table_,
+            identifier_=identifier_,
+        )
+
+
+class TestTableWriterPartitioned:
+    def _partition_dimensions(self) -> list[TablePartitionDimension]:
+        return [
+            TablePartitionDimension(
+                "timestamp",
+                TimeWindow(dt.datetime(2023, 1, 1, 0), dt.datetime(2023, 1, 1, 1)),
+            )
+        ]
+
+    def test_nominal_case(self, namespace: str, catalog: Catalog, data: pa.Table):
+        table_ = "handler_data_table_writer_nominal_case"
+        identifier_ = f"{namespace}.{table_}"
+        data = data.filter(
+            (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
+            & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1)),
+        )
+        run_test_write(
+            dagster_run_id=str(uuid4()),
+            write_mode=io.WriteMode.append,
+            expected_length=60,
+            namespace=namespace,
+            catalog=catalog,
+            data=data,
+            table_=table_,
+            identifier_=identifier_,
+            partition_dimensions=self._partition_dimensions(),
+        )
+
+    def test_table_writer_partitioned_overwrite_mode(
+        self, namespace: str, catalog: Catalog, data: pa.Table
+    ):
+        table_ = "handler_data_table_writer_partitioned_overwrite_mode"
+        identifier_ = f"{namespace}.{table_}"
+        data = data.filter(
+            (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
+            & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1)),
+        )
+        for _ in range(2):
+            run_test_write(
+                dagster_run_id=str(uuid4()),
+                write_mode=io.WriteMode.overwrite,
+                expected_length=60,
+                namespace=namespace,
+                catalog=catalog,
+                data=data,
+                table_=table_,
+                identifier_=identifier_,
+                partition_dimensions=self._partition_dimensions(),
+            )
+
+    def test_table_writer_partitioned_append_mode(
+        self, namespace: str, catalog: Catalog, data: pa.Table
+    ):
+        table_ = "handler_data_table_writer_partitioned_append_mode"
+        identifier_ = f"{namespace}.{table_}"
+        data = data.filter(
+            (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
+            & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1)),
+        )
+        for i in range(2):
+            run_test_write(
+                dagster_run_id=str(uuid4()),
+                write_mode=io.WriteMode.append,
+                expected_length=60 * (i + 1),
+                namespace=namespace,
+                catalog=catalog,
+                data=data,
+                table_=table_,
+                identifier_=identifier_,
+                partition_dimensions=self._partition_dimensions(),
+            )
 
 
 def test_table_writer_multi_partitioned(

@@ -1,5 +1,7 @@
 import logging
 from collections.abc import Sequence
+from enum import Enum
+from typing import Final
 
 import pyarrow as pa
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
@@ -27,6 +29,14 @@ from dagster_iceberg.version import __version__ as dagster_iceberg_version
 logger = logging.getLogger("dagster_iceberg._utils.io")
 
 
+class WriteMode(Enum):
+    append = "append"
+    overwrite = "overwrite"
+
+
+DEFAULT_WRITE_MODE: Final[WriteMode] = WriteMode.overwrite
+
+
 def table_writer(
     table_slice: TableSlice,
     data: pa.Table,
@@ -36,6 +46,7 @@ def table_writer(
     dagster_run_id: str,
     dagster_partition_key: str | None = None,
     table_properties: dict[str, str] | None = None,
+    write_mode: WriteMode = DEFAULT_WRITE_MODE,
 ) -> None:
     """Writes data to an iceberg table
 
@@ -136,16 +147,22 @@ def table_writer(
     else:
         row_filter = iceberg_table.ALWAYS_TRUE
 
-    overwrite_table(
-        table=table,
-        data=data,
-        overwrite_filter=row_filter,
-        snapshot_properties=(
-            base_properties | {"dagster-partition-key": dagster_partition_key}
-            if dagster_partition_key is not None
-            else base_properties
-        ),
+    snapshot_properties = (
+        base_properties | {"dagster-partition-key": dagster_partition_key}
+        if dagster_partition_key is not None
+        else base_properties
     )
+    if write_mode == WriteMode.append:
+        append_to_table(table=table, data=data, snapshot_properties=snapshot_properties)
+    elif write_mode == WriteMode.overwrite:
+        overwrite_table(
+            table=table,
+            data=data,
+            overwrite_filter=row_filter,
+            snapshot_properties=snapshot_properties,
+        )
+    else:
+        raise ValueError(f"Unexpected write mode: {write_mode}")
 
 
 def get_expression_row_filter(
@@ -256,6 +273,34 @@ def overwrite_table(
         overwrite_filter=overwrite_filter,
         snapshot_properties=snapshot_properties,
     )
+
+
+def append_to_table(
+    table: iceberg_table.Table,
+    data: pa.Table,
+    snapshot_properties: dict[str, str] | None = None,
+):
+    IcebergTableAppenderWithRetry(table=table).execute(
+        retries=3,
+        exception_types=CommitFailedException,
+        data=data,
+        snapshot_properties=snapshot_properties,
+    )
+
+
+class IcebergTableAppenderWithRetry(IcebergOperationWithRetry):
+    def operation(
+        self,
+        data: pa.Table,
+        snapshot_properties: dict[str, str] | None = None,
+    ):
+        if snapshot_properties is None:
+            snapshot_properties = {}
+        self.logger.debug("Appending to table")
+        self.table.append(
+            df=data,
+            snapshot_properties=snapshot_properties,
+        )
 
 
 class IcebergTableOverwriterWithRetry(IcebergOperationWithRetry):

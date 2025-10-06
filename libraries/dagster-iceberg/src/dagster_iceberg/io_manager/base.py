@@ -177,6 +177,26 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
                 # my_table will just contain the data from column "a"
                 ...
 
+        To select a write mode, set the ``write_mode`` key in the asset definition metadata or at runtime via output metadata.
+        Write mode set at runtime takes precedence over the one set in the definition metadata.
+        Valid modes are ``append`` and ``overwrite``; default is ``overwrite``.
+
+        .. code-block:: python
+
+            # set at definition time via definition metadata
+            @asset(
+                metadata={"write_mode": "append"}
+            )
+            def my_table_a(my_table: pa.Table):
+                return my_table
+
+            # set at runtime via output metadata
+            @asset
+            def my_table_a(context: AssetExecutionContext, my_table: pa.Table):
+                # my_table will be written with append mode
+                context.add_output_metadata({"write_mode": "append"})
+                return my_table
+
     """
 
     name: str = Field(description="The name of the iceberg catalog.")

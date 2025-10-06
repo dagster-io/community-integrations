@@ -1,0 +1,41 @@
+# References
+#
+#     https://docs.astral.sh/uv/guides/integration/github/
+#     https://docs.astral.sh/uv/guides/publish/#preparing-your-project-for-packaging
+#     https://docs.pypi.org/trusted-publishers/adding-a-publisher/
+#
+
+name: release
+permissions:
+  contents: read
+
+on:
+  push:
+    tags:
+      - 'dagster_*-*.*.*'
+
+jobs:
+  extract-info:
+    runs-on: ubuntu-latest
+    outputs:
+      library_name: ${{ steps.package.outputs.name }}
+      working_directory: ${{ steps.package.outputs.dir }}
+    steps:
+      - name: Extract package info from tag
+        id: package
+        run: |
+          # Tag format: dagster_anthropic-0.1.2
+          tag="${{ github.ref_name }}"
+          package_name=$(echo "$tag" | sed 's/-[0-9].*//')
+          package_dir=$(echo "$package_name" | sed 's/_/-/')
+
+          echo "name=$package_name" >> $GITHUB_OUTPUT
+          echo "dir=./libraries/$package_dir" >> $GITHUB_OUTPUT
+
+  release:
+    needs: extract-info
+    uses: ./.github/workflows/template-release.yml
+    with:
+      library_name: ${{ needs.extract-info.outputs.library_name }}
+      working_directory: ${{ needs.extract-info.outputs.working_directory }}
+    secrets: inherit

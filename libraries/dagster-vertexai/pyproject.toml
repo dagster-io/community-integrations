@@ -1,0 +1,28 @@
+[project]
+name = "dagster-vertexai"
+description = "Dagster integration for Google Cloud Vertex AI"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "dagster>=1.11.9",
+    "google-cloud-aiplatform>=1.55.0",
+    "google-auth",
+]
+dynamic = ["version"]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest",
+    "pyright>=1.1.405",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_vertexai"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_vertexai.__version__"}

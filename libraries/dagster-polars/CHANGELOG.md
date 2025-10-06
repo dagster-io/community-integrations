@@ -1,8 +1,21 @@
 ## [Unreleased]
 
+## Unreleased
+
+## Added
+
+- Added new `schema_mode` (defaults to `None`, can be set to `overwrite` or `merge`) parameter to `PolarsDeltaIOManager`. Previously schema mode had to be configured for each asset individually.
+
+## 0.27.6
+
+- Use new deltalake (>=1.0.0) syntax and arguments for delta io manager while retaining compatibility via version parsing and legacy syntax.
+
 ## Fixes
 
+- Fixed use of deprecated streaming engine selector in polars collect.
+- Bump polars dev dependency to support latest deltalake syntax
 - Fixed `ImportError` when `patito` is not installed
+- Fixed groupings of iomanager config allowing inclusion of s3fs and polars options.
 
 ## 0.27.2
 

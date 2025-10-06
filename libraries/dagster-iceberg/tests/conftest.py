@@ -118,7 +118,7 @@ def namespace_name() -> str:
 
 @pytest.fixture(autouse=True)
 def namespace(catalog: Catalog, namespace_name: str) -> str:
-    catalog.create_namespace(namespace_name)
+    catalog.create_namespace_if_not_exists(namespace_name)
     return namespace_name
 
 

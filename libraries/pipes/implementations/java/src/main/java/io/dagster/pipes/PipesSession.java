@@ -85,12 +85,12 @@ public class PipesSession {
                 = messageWriter == null
                 ? new PipesDefaultMessageWriter() : messageWriter;
 
-            pipesContext = new PipesContext(
+            pipesContext = new PipesContextImpl(
                 actualParamsLoader, actualContextLoader, actualMessageWriter
             );
         } else {
             emitOrchestrationInactiveWarning();
-            pipesContext = org.mockito.Mockito.mock(PipesContext.class);
+            pipesContext = PipesContextInstance.NOOP;
         }
         PipesContext.set(pipesContext);
         return pipesContext;

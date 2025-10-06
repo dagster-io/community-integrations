@@ -4,17 +4,40 @@ from enum import Enum
 from pprint import pformat
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-import packaging.version
 import polars as pl
 from dagster import InputContext, MetadataValue, MultiPartitionKey, OutputContext
 from dagster._core.errors import DagsterInvariantViolationError
 from dagster._core.storage.upath_io_manager import is_dict_type
+from packaging.version import parse as parse_version
 
 from dagster_polars.io_managers.base import BasePolarsUPathIOManager
 
 try:
+    import deltalake as dl
     from deltalake import DeltaTable
     from deltalake.exceptions import TableNotFoundError
+
+    deltalake_ver = parse_version(dl.__version__)
+    polars_ver = parse_version(pl.__version__)
+    if (deltalake_ver >= parse_version("1.0.0")) and (
+        polars_ver < parse_version("1.31.0")
+    ):
+        raise ValueError(
+            "polars>=1.31.0 is required for deltalake>=1.0.0, please upgrade polars."
+        )
+    # even if polars defines a lower bound for deltalake in
+    # https://github.com/pola-rs/polars/blob/main/py-polars/pyproject.toml
+    # it is possible for uv to install new polars and old deltalake because
+    # deltalake is an extra in both polars and dagster-polars
+    if (deltalake_ver < parse_version("1.0.0")) and (
+        polars_ver >= parse_version("1.31.0")
+    ):
+        raise ValueError(
+            "deltalake>=1.0.0 is required for polars>=1.31.0, please upgrade deltalake."
+        )
+    use_legacy_deltalake = (polars_ver < parse_version("1.31.0")) and (
+        deltalake_ver < parse_version("1.0.0")
+    )
 except ImportError as e:
     if "deltalake" in str(e):
         raise ImportError(
@@ -35,6 +58,11 @@ class DeltaWriteMode(str, Enum):
     append = "append"
     overwrite = "overwrite"
     ignore = "ignore"
+
+
+class DeltaSchemaMode(str, Enum):
+    merge = "merge"
+    overwrite = "overwrite"
 
 
 class PolarsDeltaIOManager(BasePolarsUPathIOManager):
@@ -73,14 +101,30 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
             )
 
 
-        Appending to a DeltaLake table:
+        Appending to a DeltaLake table and merging schema:
 
         .. code-block:: python
 
             @asset(
                 io_manager_key="polars_delta_io_manager",
                 metadata={
-                    "mode": "append"
+                    "mode": "append",
+                    "delta_write_options": {"schema_mode":"merge"},
+                },
+            )
+            def my_table() -> pl.DataFrame:
+                ...
+
+        Overwriting the schema if it has changed:
+
+        .. code-block:: python
+
+            @asset(
+                io_manager_key="polars_delta_io_manager",
+                metadata={
+                    "mode": "overwrite",
+                    "delta_write_options": {
+                        "schema_mode": "overwrite"
                 },
             )
             def my_table() -> pl.DataFrame:
@@ -148,7 +192,7 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
 
     extension: str = ".delta"  # pyright: ignore[reportIncompatibleVariableOverride]
     mode: DeltaWriteMode = DeltaWriteMode.overwrite.value  # type: ignore
-    overwrite_schema: bool = False
+    schema_mode: Optional[DeltaSchemaMode] = None
     version: Optional[int] = None
 
     def sink_df_to_path(
@@ -160,9 +204,15 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
         context_metadata = context.definition_metadata or {}
         streaming = context_metadata.get("streaming", False)
 
-        # workaround for bug introduced in polars 1.25.2 where streaming=False stopped working
         if streaming:
-            return self.write_df_to_path(context, df.collect(streaming=True), path)  # type: ignore
+            # https://github.com/pola-rs/polars/issues/20947
+            if parse_version(pl.__version__) > parse_version("1.22.0"):
+                return self.write_df_to_path(
+                    context, df.collect(engine="streaming"), path
+                )  # type: ignore
+            else:
+                return self.write_df_to_path(context, df.collect(streaming=True), path)  # type: ignore
+
         else:
             return self.write_df_to_path(context, df.collect(), path)
 
@@ -174,8 +224,14 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
     ):
         context_metadata = context.definition_metadata or {}
         delta_write_options = context_metadata.get(
-            "delta_write_options"
+            "delta_write_options", {}
         )  # This needs to be gone and just only key value on the metadata
+
+        # rust is the default engine in newer versions of deltalake
+        engine = delta_write_options.get("engine", "rust")
+
+        if engine == "rust" and self.schema_mode is not None:
+            delta_write_options["schema_mode"] = self.schema_mode.value
 
         if context.has_asset_partitions:
             delta_write_options = delta_write_options or {}
@@ -204,22 +260,29 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
                         f"Found: `{partition_by}`"
                     )
 
-                # rust is the default engine in newer versions of deltalake
-                if (engine := delta_write_options.get("engine", "rust")) == "rust":
+                if use_legacy_deltalake:
+                    if engine == "rust":
+                        delta_write_options["predicate"] = self.get_predicate(context)
+
+                    elif engine == "pyarrow":
+                        delta_write_options["partition_filters"] = (
+                            self.get_partition_filters(context)
+                        )
+
+                    else:
+                        raise NotImplementedError(f"Invalid engine: {engine}")
+                else:
                     delta_write_options["predicate"] = self.get_predicate(context)
 
-                elif engine == "pyarrow":
-                    delta_write_options["partition_filters"] = (
-                        self.get_partition_filters(context)
-                    )
-
-                else:
-                    raise NotImplementedError(f"Invalid engine: {engine}")
-
-        if delta_write_options is not None:
+        if delta_write_options:
             context.log.debug(
                 f"Writing with delta_write_options: {pformat(delta_write_options)}"
             )
+            if delta_write_options.get("mode"):
+                raise ValueError(
+                    "Set `mode` as a key in the asset metadata, not in delta_write_options."
+                )
+                # prevents: TypeError: deltalake.writer.writer.write_deltalake() got multiple values for keyword argument 'mode'
 
         storage_options = self.storage_options
         try:
@@ -230,8 +293,6 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
         df.write_delta(
             dt,
             mode=context_metadata.get("mode") or self.mode.value,
-            overwrite_schema=context_metadata.get("overwrite_schema")
-            or self.overwrite_schema,
             storage_options=storage_options,
             delta_write_options=delta_write_options,
         )
@@ -533,6 +594,6 @@ def _get_pyarrow_options_kwargs(
     pyarrow_options: Mapping[str, object],
 ) -> Mapping[str, Any]:
     kwargs: dict[str, object] = {"pyarrow_options": pyarrow_options}
-    if packaging.version.parse(pl.__version__) >= packaging.version.parse("1.14.0"):
+    if parse_version(pl.__version__) >= parse_version("1.14.0"):
         kwargs["use_pyarrow"] = True
     return kwargs

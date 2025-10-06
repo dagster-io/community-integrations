@@ -15,6 +15,7 @@ from pyiceberg import table as ibt
 from pyiceberg.catalog import Catalog
 
 from dagster_iceberg._utils import preview, table_writer
+from dagster_iceberg._utils.io import DEFAULT_WRITE_MODE, WriteMode
 
 if TYPE_CHECKING:
     from pyiceberg.table.snapshots import Snapshot
@@ -56,6 +57,8 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
         partition_spec_update_mode = metadata.get("partition_spec_update_mode", "error")
         schema_update_mode = metadata.get("schema_update_mode", "error")
 
+        write_mode_with_output_override = self._get_write_mode(context)
+
         table_writer(
             table_slice=table_slice,
             data=self.to_arrow(obj),
@@ -67,6 +70,7 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
                 context.partition_key if context.has_asset_partitions else None
             ),
             table_properties=table_properties_usr,
+            write_mode=write_mode_with_output_override,
         )
 
         table_ = connection.load_table(f"{table_slice.schema}.{table_slice.table}")
@@ -86,6 +90,18 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
                 **current_snapshot.model_dump(),
             },
         )
+
+    def _get_write_mode(self, context: OutputContext) -> WriteMode:
+        try:
+            definition_write_mode = WriteMode(
+                context.definition_metadata.get("write_mode", DEFAULT_WRITE_MODE)
+            )
+            return WriteMode(
+                context.output_metadata.get("write_mode", definition_write_mode).value
+            )
+        except ValueError as ve:
+            error_msg = f"Invalid write mode: {context.output_metadata.get('write_mode')}. Valid modes are {[mode.value for mode in WriteMode]}"
+            raise ValueError(error_msg) from ve
 
     def load_input(
         self,

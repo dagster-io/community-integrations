@@ -1,0 +1,31 @@
+[project]
+name = "dagster-apprise"
+description = "Get notified when your Dagster runs succeed, fail, or change status across 70+ services including Slack, Discord, Pushover, Telegram, and more."
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "dagster>=1.8.0",
+    "apprise>=1.6.0",
+    "pydantic>=2.6",
+]
+dynamic = ["version"]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest",
+    "pyright>=1.1.386",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_apprise"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_apprise.__version__"}
+
+[project.entry-points."dagster_dg_cli.registry_modules"]
+dagster_apprise = "dagster_apprise.components"
