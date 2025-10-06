@@ -13,7 +13,7 @@ from dagster_teradata.teradata_compute_cluster_manager import (
 
 from dagster_teradata.ttu.bteq import Bteq as Bteq
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 DagsterLibraryRegistry.register(
     "dagster-teradata", __version__, is_dagster_package=False
