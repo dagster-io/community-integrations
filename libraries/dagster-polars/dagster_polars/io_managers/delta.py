@@ -96,7 +96,7 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
             defs = Definitions(
                 assets=[my_table],
                 resources={
-                    "polars_parquet_io_manager": PolarsDeltaIOManager(base_dir="s3://my-bucket/my-dir")
+                    "polars_delta_io_manager": PolarsDeltaIOManager(base_dir="s3://my-bucket/my-dir")
                 }
             )
 
