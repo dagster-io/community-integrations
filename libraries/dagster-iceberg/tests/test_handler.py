@@ -132,6 +132,7 @@ def test_handle_output_metadata_passing(
         table_properties=expected_table_properties,
         write_mode=expected_write_mode,
         partition_field_name_prefix="part",
+        upsert_options=None,
     )
 
 
@@ -251,3 +252,173 @@ def test_get_partition_field_name_prefix_invalid_config_type(
         match="Unable to retrieve partition_field_name_prefix from `config` attribute",
     ):
         mock_type_handler._get_partition_field_name_prefix(context)
+
+
+def test_handle_output_upsert_with_definition_metadata(
+    catalog: Catalog,
+    table_slice: TableSlice,
+    sample_data: pa.Table,
+    mock_table_writer: Mock,
+    table: IcebergTable,
+):
+    """Test that upsert_options from definition metadata are passed correctly to table_writer."""
+    upsert_options = {
+        "join_cols": ["col1"],
+        "when_matched_update_all": True,
+        "when_not_matched_insert_all": True,
+    }
+    definition_metadata = {
+        "write_mode": "upsert",
+        "upsert_options": upsert_options,
+    }
+
+    run_id = str(uuid4())
+    context = build_output_context(
+        definition_metadata=definition_metadata,
+        run_id=run_id,
+    )
+
+    handler = MockTypeHandler()
+    handler.handle_output(
+        context=context,
+        table_slice=table_slice,
+        obj=sample_data,
+        connection=catalog,
+    )
+
+    mock_table_writer.assert_called_once()
+    call_kwargs = mock_table_writer.call_args[1]
+    assert call_kwargs["write_mode"] == WriteMode.upsert
+    assert call_kwargs["upsert_options"] == upsert_options
+
+
+def test_handle_output_upsert_with_output_metadata_override(
+    mock_catalog: Mock,
+    table_slice: TableSlice,
+    sample_data: pa.Table,
+    mock_table_writer: Mock,
+):
+    """Test that upsert_options from output metadata override definition metadata."""
+    definition_upsert_options = {
+        "join_cols": ["col1"],
+        "when_matched_update_all": False,
+        "when_not_matched_insert_all": False,
+    }
+    output_upsert_options = {
+        "join_cols": ["col1", "col2"],
+        "when_matched_update_all": True,
+        "when_not_matched_insert_all": True,
+    }
+
+    # Create a fully mocked context with output_metadata
+    mock_context = Mock()
+    mock_context.definition_metadata = {
+        "write_mode": "upsert",
+        "upsert_options": definition_upsert_options,
+    }
+    mock_context.output_metadata = {"upsert_options": output_upsert_options}
+    mock_context.run_id = str(uuid4())
+    mock_context.has_asset_partitions = False
+    mock_context.resource_config = {"config": {}}
+
+    handler = MockTypeHandler()
+    handler.handle_output(
+        context=mock_context,
+        table_slice=table_slice,
+        obj=sample_data,
+        connection=mock_catalog,
+    )
+
+    mock_table_writer.assert_called_once()
+    call_kwargs = mock_table_writer.call_args[1]
+    assert call_kwargs["write_mode"] == WriteMode.upsert
+    assert call_kwargs["upsert_options"] == output_upsert_options
+
+
+def test_upsert_actual_operation(
+    catalog: Catalog,
+    table_slice: TableSlice,
+    sample_data: pa.Table,
+):
+    """Test that upsert actually updates and inserts rows in an Iceberg table."""
+    # Create initial table with sample data
+    catalog.create_namespace_if_not_exists(table_slice.schema)
+    catalog.create_table_if_not_exists(
+        f"{table_slice.schema}.{table_slice.table}", sample_data.schema
+    )
+    table = catalog.load_table(f"{table_slice.schema}.{table_slice.table}")
+    table.overwrite(sample_data)
+
+    # Verify initial data
+    initial_data = table.scan().to_arrow()
+    assert len(initial_data) == 2
+    assert initial_data["col1"].to_pylist() == ["a", "b"]
+    assert initial_data["col2"].to_pylist() == [1, 2]
+
+    # Create new data that updates one row and inserts one new row
+    upsert_data = pa.table({"col1": ["a", "c"], "col2": [10, 3]})
+
+    upsert_options = {
+        "join_cols": ["col1"],
+        "when_matched_update_all": True,
+        "when_not_matched_insert_all": True,
+    }
+    definition_metadata = {
+        "write_mode": "upsert",
+        "upsert_options": upsert_options,
+    }
+
+    run_id = str(uuid4())
+    context = build_output_context(
+        definition_metadata=definition_metadata,
+        run_id=run_id,
+    )
+
+    handler = MockTypeHandler()
+    handler.handle_output(
+        context=context,
+        table_slice=table_slice,
+        obj=upsert_data,
+        connection=catalog,
+    )
+
+    # Verify the upsert operation
+    # Refresh the table to see the latest snapshot
+    table = catalog.load_table(f"{table_slice.schema}.{table_slice.table}")
+    result_data = table.scan().to_arrow()
+    assert len(result_data) == 3
+
+    # Sort by col1 for consistent comparison
+    result_sorted = result_data.sort_by("col1")
+    assert result_sorted["col1"].to_pylist() == ["a", "b", "c"]
+    assert result_sorted["col2"].to_pylist() == [10, 2, 3]  # 'a' updated to 10
+
+
+def test_handle_output_upsert_missing_options(
+    catalog: Catalog,
+    table_slice: TableSlice,
+    sample_data: pa.Table,
+):
+    """Test that appropriate error is raised when upsert mode is used without upsert_options."""
+    # Create namespace first
+    catalog.create_namespace_if_not_exists(table_slice.schema)
+
+    definition_metadata = {
+        "write_mode": "upsert",
+        # Missing upsert_options
+    }
+
+    run_id = str(uuid4())
+    context = build_output_context(
+        definition_metadata=definition_metadata,
+        run_id=run_id,
+    )
+
+    handler = MockTypeHandler()
+    with pytest.raises(ValueError, match=".*upsert_options.*"):
+        handler.handle_output(
+            context=context,
+            table_slice=table_slice,
+            obj=sample_data,
+            connection=catalog,
+        )

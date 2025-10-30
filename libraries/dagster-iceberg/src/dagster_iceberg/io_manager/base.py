@@ -179,7 +179,7 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
 
         To select a write mode, set the ``write_mode`` key in the asset definition metadata or at runtime via output metadata.
         Write mode set at runtime takes precedence over the one set in the definition metadata.
-        Valid modes are ``append`` and ``overwrite``; default is ``overwrite``.
+        Valid modes are ``append``, ``overwrite``, and ``upsert``; default is ``overwrite``.
 
         .. code-block:: python
 
@@ -195,6 +195,49 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
             def my_table_a(context: AssetExecutionContext, my_table: pa.Table):
                 # my_table will be written with append mode
                 context.add_output_metadata({"write_mode": "append"})
+                return my_table
+
+        To use upsert mode, set ``write_mode`` to ``upsert`` and provide ``upsert_options`` in asset definition metadata
+        or output metadata. The ``upsert_options`` dictionary should contain ``join_cols`` (list of columns to join on),
+        ``when_matched_update_all`` (boolean), and ``when_not_matched_insert_all`` (boolean).
+        Upsert options set at runtime take precedence over those set in definition metadata.
+
+        .. code-block:: python
+
+            # set at definition time via definition metadata
+            @asset(
+                metadata={
+                    "write_mode": "upsert",
+                    "upsert_options": {
+                        "join_cols": ["id"],
+                        "when_matched_update_all": True,
+                        "when_not_matched_insert_all": True,
+                    }
+                }
+            )
+            def my_table_upsert(my_table: pa.Table):
+                return my_table
+
+            # set at runtime via output metadata (overrides definition metadata)
+            @asset(
+                metadata={
+                    "write_mode": "upsert",
+                    "upsert_options": {
+                        "join_cols": ["id"],
+                        "when_matched_update_all": True,
+                        "when_not_matched_insert_all": False,
+                    }
+                }
+            )
+            def my_table_upsert_dynamic(context: AssetExecutionContext, my_table: pa.Table):
+                # Override upsert options at runtime
+                context.add_output_metadata({
+                    "upsert_options": {
+                        "join_cols": ["id", "timestamp"],
+                        "when_matched_update_all": True,
+                        "when_not_matched_insert_all": True,
+                    }
+                })
                 return my_table
 
     """

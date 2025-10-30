@@ -5,6 +5,7 @@ from typing import Final
 
 import pyarrow as pa
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
+from pydantic import BaseModel
 from pyiceberg import __version__ as pyiceberg_version
 from pyiceberg import expressions as E
 from pyiceberg import table as iceberg_table
@@ -32,6 +33,13 @@ logger = logging.getLogger("dagster_iceberg._utils.io")
 class WriteMode(Enum):
     append = "append"
     overwrite = "overwrite"
+    upsert = "upsert"
+
+
+class UpsertOptions(BaseModel):
+    join_cols: list[str]
+    when_matched_update_all: bool = True
+    when_not_matched_insert_all: bool = True
 
 
 DEFAULT_WRITE_MODE: Final[WriteMode] = WriteMode.overwrite
@@ -49,6 +57,7 @@ def table_writer(
     dagster_partition_key: str | None = None,
     table_properties: dict[str, str] | None = None,
     write_mode: WriteMode = DEFAULT_WRITE_MODE,
+    upsert_options: UpsertOptions | None = None,
 ) -> None:
     """Writes data to an iceberg table
 
@@ -164,6 +173,12 @@ def table_writer(
             data=data,
             overwrite_filter=row_filter,
             snapshot_properties=snapshot_properties,
+        )
+    elif write_mode == WriteMode.upsert:
+        upsert_to_table(
+            table=table,
+            data=data,
+            upsert_options=upsert_options,
         )
     else:
         raise ValueError(f"Unexpected write mode: {write_mode}")
@@ -292,6 +307,29 @@ def append_to_table(
     )
 
 
+def upsert_to_table(
+    table: iceberg_table.Table,
+    data: pa.Table,
+    upsert_options: UpsertOptions,
+):
+    """Upserts data to an iceberg table and retries on failure
+
+    Args:
+        table (table.Table): Iceberg table
+        data (pa.Table): Data to upsert to the table
+        upsert_options (UpsertOptions): Upsert options with join columns and any overrides for upsert action conditions
+
+    Raises:
+        RetryError: Raised when the commit fails after the maximum number of retries
+    """
+    IcebergTableUpserterWithRetry(table=table).execute(
+        retries=3,
+        exception_types=CommitFailedException,
+        data=data,
+        upsert_options=upsert_options,
+    )
+
+
 class IcebergTableAppenderWithRetry(IcebergOperationWithRetry):
     def operation(
         self,
@@ -321,4 +359,25 @@ class IcebergTableOverwriterWithRetry(IcebergOperationWithRetry):
             snapshot_properties=(
                 snapshot_properties if snapshot_properties is not None else {}
             ),
+        )
+
+
+class IcebergTableUpserterWithRetry(IcebergOperationWithRetry):
+    def operation(
+        self,
+        data: pa.Table,
+        upsert_options: UpsertOptions,
+    ):
+        self.logger.debug(
+            "Upserting to table with join_cols=%s, when_matched_update_all=%s, when_not_matched_insert_all=%s",
+            upsert_options.join_cols,
+            upsert_options.when_matched_update_all,
+            upsert_options.when_not_matched_insert_all,
+        )
+
+        self.table.upsert(
+            df=data,
+            join_cols=upsert_options.join_cols,
+            when_matched_update_all=upsert_options.when_matched_update_all,
+            when_not_matched_insert_all=upsert_options.when_not_matched_insert_all,
         )

@@ -200,6 +200,72 @@ Use asset metadata to set table properties:
 
 ---
 
+## Using upsert mode to update and insert data
+
+The Iceberg I/O manager supports upsert operations, which allow you to update existing rows and insert new rows in a single operation. This is useful for maintaining slowly changing dimensions or incrementally updating tables.
+
+To use upsert mode, set the `write_mode` to `"upsert"` and provide `upsert_options` in the asset metadata:
+
+```python
+import pyarrow as pa
+from dagster import asset, AssetExecutionContext
+
+@asset(
+    metadata={
+        "write_mode": "upsert",
+        "upsert_options": {
+            "join_cols": ["id"],  # Columns to join on for matching
+            "when_matched_update_all": True,  # Update all columns when matched
+            "when_not_matched_insert_all": True,  # Insert all columns when not matched
+        }
+    }
+)
+def user_profiles(context: AssetExecutionContext) -> pa.Table:
+    # Returns a table with user profiles
+    # Rows with matching 'id' will be updated
+    # Rows with new 'id' values will be inserted
+    return pa.table({
+        "id": [1, 2, 3],
+        "name": ["Alice", "Bob", "Charlie"],
+        "updated_at": ["2024-01-01", "2024-01-02", "2024-01-03"]
+    })
+```
+
+You can also override upsert options at runtime using output metadata:
+
+```python
+@asset(
+    metadata={
+        "write_mode": "upsert",
+        "upsert_options": {
+            "join_cols": ["id"],
+            "when_matched_update_all": True,
+            "when_not_matched_insert_all": True,
+        }
+    }
+)
+def user_profiles_dynamic(context: AssetExecutionContext) -> pa.Table:
+    # Override upsert options at runtime based on business logic
+    if context.run.tags.get("update_mode") == "id_and_timestamp":
+        context.add_output_metadata({
+            "upsert_options": {
+                "join_cols": ["id", "timestamp"],  # Join on multiple columns
+                "when_matched_update_all": True,
+                "when_not_matched_insert_all": True,
+            }
+        })
+
+    return pa.table({
+        "id": [1, 2, 3],
+        "timestamp": ["2024-01-01", "2024-01-01", "2024-01-01"],
+        "name": ["Alice", "Bob", "Charlie"],
+    })
+```
+
+The upsert operation uses PyIceberg's native upsert functionality to efficiently merge data. Upsert options set at runtime via `context.add_output_metadata()` take precedence over those set in definition metadata.
+
+---
+
 ## Allowing updates to schema and partitions
 
 By default, assets will error when you change the partition spec (e.g. if you change a partition from hourly to daily) or the schema (e.g. when you add a column). You can allow updates to an asset's partition spec and/or schema by adding the following configuration options to the asset metadata:
