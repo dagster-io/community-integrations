@@ -2,7 +2,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from functools import wraps
 from packaging import version
-from typing import Optional, Generator, Union
+from collections.abc import Generator
 from weakref import WeakKeyDictionary
 
 from pydantic import Field, PrivateAttr
@@ -30,10 +30,10 @@ context_to_counters = WeakKeyDictionary()
 
 
 def _add_to_asset_metadata(
-    context: AssetExecutionContext, usage_metadata: dict, output_name: Optional[str]
+    context: AssetExecutionContext, usage_metadata: dict, output_name: str | None
 ):
     if context not in context_to_counters:
-        context_to_counters[context] = defaultdict(lambda: 0)
+        context_to_counters[context] = defaultdict(int)
     counters = context_to_counters[context]
 
     for metadata_key, delta in usage_metadata.items():
@@ -48,8 +48,8 @@ def _add_to_asset_metadata(
 #  method https://ai.google.dev/gemini-api/docs/text-generation?lang=python#chat
 # likewise, the embedding-endpoint also doens't provide any usage stats.
 def with_usage_metadata(
-    context: Union[AssetExecutionContext, OpExecutionContext],
-    output_name: Optional[str],
+    context: AssetExecutionContext | OpExecutionContext,
+    output_name: str | None,
     func,
 ):
     if not isinstance(context, AssetExecutionContext):
@@ -160,7 +160,7 @@ class GeminiResource(ConfigurableResource):
     @public
     @contextmanager
     def get_model(
-        self, context: Union[AssetExecutionContext, OpExecutionContext]
+        self, context: AssetExecutionContext | OpExecutionContext
     ) -> Generator[GenerativeModel, None, None]:
         """Yields a ``gemini.GenerativeModel`` model for interacting with the Gemini API.
 
@@ -224,7 +224,7 @@ class GeminiResource(ConfigurableResource):
         yield from self._get_model(context=context, asset_key=None)
 
     def _wrap_with_usage_metadata(
-        self, context: AssetExecutionContext, output_name: Optional[str]
+        self, context: AssetExecutionContext, output_name: str | None
     ):
         self._generative_model.generate_content = with_usage_metadata(
             context, output_name, func=self._generative_model.generate_content
@@ -301,8 +301,8 @@ class GeminiResource(ConfigurableResource):
 
     def _get_model(
         self,
-        context: Union[AssetExecutionContext, OpExecutionContext],
-        asset_key: Optional[AssetKey] = None,
+        context: AssetExecutionContext | OpExecutionContext,
+        asset_key: AssetKey | None = None,
     ) -> Generator[GenerativeModel, None, None]:
         if isinstance(context, AssetExecutionContext):
             if asset_key is None:

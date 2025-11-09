@@ -103,22 +103,22 @@ class ADLSComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass
         self,
         storage_account: str,
         container: str,
-        client_id: Optional[str] = None,
-        client_secret: Optional[str] = None,
-        tenant_id: Optional[str] = None,
-        sas_token: Optional[str] = None,
-        access_key: Optional[str] = None,
-        use_azure_cli: Optional[bool] = None,
-        local_dir: Optional[str] = None,
-        inst_data: Optional[ConfigurableClassData] = None,
-        prefix: Optional[str] = "dagster",
-        allow_http: Optional[bool] = False,
-        allow_invalid_certificates: Optional[bool] = False,
-        timeout: Optional[str] = "60s",
-        skip_empty_files: Optional[bool] = False,
-        upload_interval: Optional[int] = None,
+        client_id: str | None = None,
+        client_secret: str | None = None,
+        tenant_id: str | None = None,
+        sas_token: str | None = None,
+        access_key: str | None = None,
+        use_azure_cli: bool | None = None,
+        local_dir: str | None = None,
+        inst_data: ConfigurableClassData | None = None,
+        prefix: str | None = "dagster",
+        allow_http: bool | None = False,
+        allow_invalid_certificates: bool | None = False,
+        timeout: str | None = "60s",
+        skip_empty_files: bool | None = False,
+        upload_interval: int | None = None,
         extra_azure_args: Optional["AzureConfig"] = None,
-        show_url_only: Optional[bool] = False,
+        show_url_only: bool | None = False,
     ):
         self._storage_account = check.str_param(storage_account, "storage_account")
         self._container = check.str_param(container, "container")
@@ -215,7 +215,7 @@ class ADLSComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass
 
     def display_path_for_type(
         self, log_key: Sequence[str], io_type: ComputeIOType
-    ) -> Optional[str]:
+    ) -> str | None:
         if not self.is_capture_complete(log_key):
             return None
         blob_key = self._blob_key(log_key, io_type)

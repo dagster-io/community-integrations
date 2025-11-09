@@ -8,7 +8,6 @@ from dagster import (
     MetadataValue,
     Output,
 )
-from typing import Optional
 from .resources import HexResource
 
 if version.parse(__version__) >= version.parse("1.10.0"):
@@ -21,11 +20,11 @@ else:
 def build_hex_asset(
     project_id: str,
     resource: HexResource,
-    inputs: Optional[dict] = None,
+    inputs: dict | None = None,
     update_cache: bool = False,
-    notifications: Optional[list] = None,
-    deps: Optional[list] = None,
-    tags: Optional[dict] = None,
+    notifications: list | None = None,
+    deps: list | None = None,
+    tags: dict | None = None,
 ) -> AssetsDefinition:
     """
     Returns the AssetDefinition for a Hex Project

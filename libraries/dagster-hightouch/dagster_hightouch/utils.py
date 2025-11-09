@@ -1,11 +1,9 @@
-from typing import Type
-
 from dateutil import parser
 
 from .types import SyncRunParsedOutput
 
 
-def parse_sync_run_details(sync_run_details) -> Type[SyncRunParsedOutput]:
+def parse_sync_run_details(sync_run_details) -> type[SyncRunParsedOutput]:
     x = SyncRunParsedOutput
 
     x.created_at = None

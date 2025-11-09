@@ -79,20 +79,20 @@ class S3ComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass):
     def __init__(
         self,
         bucket: str,
-        access_key_id: Optional[str] = None,
-        secret_access_key: Optional[str] = None,
-        local_dir: Optional[str] = None,
-        inst_data: Optional[ConfigurableClassData] = None,
-        prefix: Optional[str] = "dagster",
-        allow_http: Optional[bool] = False,
-        allow_invalid_certificates: Optional[bool] = False,
-        timeout: Optional[str] = "60s",
-        endpoint: Optional[str] = None,
-        skip_empty_files: Optional[bool] = False,
-        upload_interval: Optional[int] = None,
+        access_key_id: str | None = None,
+        secret_access_key: str | None = None,
+        local_dir: str | None = None,
+        inst_data: ConfigurableClassData | None = None,
+        prefix: str | None = "dagster",
+        allow_http: bool | None = False,
+        allow_invalid_certificates: bool | None = False,
+        timeout: str | None = "60s",
+        endpoint: str | None = None,
+        skip_empty_files: bool | None = False,
+        upload_interval: int | None = None,
         extra_s3_args: Optional["S3Config"] = None,
-        show_url_only: Optional[bool] = False,
-        region: Optional[str] = None,
+        show_url_only: bool | None = False,
+        region: str | None = None,
     ):
         self._bucket = check.str_param(bucket, "bucket")
         check.opt_str_param(timeout, "timeout")
@@ -172,7 +172,7 @@ class S3ComputeLogManager(BaseCloudStorageComputeLogManager, ConfigurableClass):
 
     def display_path_for_type(
         self, log_key: Sequence[str], io_type: ComputeIOType
-    ) -> Optional[str]:
+    ) -> str | None:
         if not self.is_capture_complete(log_key):
             return None
         s3_key = self._blob_key(log_key, io_type)

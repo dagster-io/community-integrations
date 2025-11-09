@@ -2,7 +2,7 @@
 name = "dagster-hightouch"
 description = "Dagster library for Hightouch"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "dagster>=0.14",
     "requests>=2.0",

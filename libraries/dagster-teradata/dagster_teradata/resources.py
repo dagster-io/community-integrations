@@ -3,14 +3,10 @@ from datetime import datetime
 from textwrap import dedent
 from typing import (
     Any,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Union,
     TYPE_CHECKING,
     Literal,
 )
+from collections.abc import Mapping, Sequence
 
 import re
 import dagster._check as check
@@ -73,48 +69,48 @@ def _handle_user_query_band_text(self, query_band_text) -> str:
 
 
 class TeradataResource(ConfigurableResource, IAttachDifferentObjectToOpContext):
-    host: Optional[str] = Field(description="Teradata Database Hostname")
-    user: Optional[str] = Field(description="User login name.")
-    password: Optional[str] = Field(description="User password.")
-    database: Optional[str] = Field(
+    host: str | None = Field(description="Teradata Database Hostname")
+    user: str | None = Field(description="User login name.")
+    password: str | None = Field(description="User password.")
+    database: str | None = Field(
         default=None,
         description=("Name of the default database to use."),
     )
-    query_band: Optional[str] = None
-    port: Optional[str] = None
-    tmode: Optional[str] = "ANSI"
-    logmech: Optional[str] = None
-    browser: Optional[str] = None
-    browser_tab_timeout: Optional[int] = None
-    browser_timeout: Optional[int] = None
-    console_output_encoding: Optional[str] = Field(
+    query_band: str | None = None
+    port: str | None = None
+    tmode: str | None = "ANSI"
+    logmech: str | None = None
+    browser: str | None = None
+    browser_tab_timeout: int | None = None
+    browser_timeout: int | None = None
+    console_output_encoding: str | None = Field(
         default="utf-8", description="Console output encoding."
     )
-    bteq_session_encoding: Optional[str] = Field(
+    bteq_session_encoding: str | None = Field(
         default="ASCII", description="BTEQ session encoding."
     )
-    bteq_output_width: Optional[int] = Field(
+    bteq_output_width: int | None = Field(
         default=65531, description="BTEQ output width."
     )
-    bteq_quit_zero: Optional[bool] = Field(
+    bteq_quit_zero: bool | None = Field(
         default=False, description="BTEQ quit zero flag."
     )
-    http_proxy: Optional[str] = None
-    http_proxy_user: Optional[str] = None
-    http_proxy_password: Optional[str] = None
-    https_proxy: Optional[str] = None
-    https_proxy_user: Optional[str] = None
-    https_proxy_password: Optional[str] = None
-    proxy_bypass_hosts: Optional[str] = None
-    sslmode: Optional[str] = None
-    sslca: Optional[str] = None
-    sslcapath: Optional[str] = None
-    sslcrc: Optional[str] = None
-    sslcipher: Optional[str] = None
-    sslprotocol: Optional[str] = None
-    slcrl: Optional[bool] = None
-    sslocsp: Optional[bool] = None
-    oidc_sslmode: Optional[str] = None
+    http_proxy: str | None = None
+    http_proxy_user: str | None = None
+    http_proxy_password: str | None = None
+    https_proxy: str | None = None
+    https_proxy_user: str | None = None
+    https_proxy_password: str | None = None
+    proxy_bypass_hosts: str | None = None
+    sslmode: str | None = None
+    sslca: str | None = None
+    sslcapath: str | None = None
+    sslcrc: str | None = None
+    sslcipher: str | None = None
+    sslprotocol: str | None = None
+    slcrl: bool | None = None
+    sslocsp: bool | None = None
+    oidc_sslmode: str | None = None
 
     @property
     @cached_method
@@ -330,7 +326,7 @@ class TeradataDagsterConnection:
         self,
         sql_queries: Sequence[str],
         fetch_results: bool = False,
-    ) -> Optional[Sequence[Any]]:
+    ) -> Sequence[Any] | None:
         """Execute multiple queries in Teradata.
 
         Args:
@@ -352,7 +348,7 @@ class TeradataDagsterConnection:
         """
         check.sequence_param(sql_queries, "sql_queries", of_type=str)
 
-        results: List[Any] = []
+        results: list[Any] = []
         with self.get_connection() as conn:
             with closing(conn.cursor()) as cursor:
                 for sql in sql_queries:
@@ -364,20 +360,20 @@ class TeradataDagsterConnection:
 
     def bteq_operator(
         self,
-        sql: Optional[str] = None,
-        file_path: Optional[str] = None,
-        remote_host: Optional[str] = None,
-        remote_user: Optional[str] = None,
-        remote_password: Optional[str] = None,
-        ssh_key_path: Optional[str] = None,
+        sql: str | None = None,
+        file_path: str | None = None,
+        remote_host: str | None = None,
+        remote_user: str | None = None,
+        remote_password: str | None = None,
+        ssh_key_path: str | None = None,
         remote_port: int = 22,
         remote_working_dir: str = "/tmp",
-        bteq_script_encoding: Optional[str] = "utf-8",
-        bteq_session_encoding: Optional[str] = "ASCII",
-        bteq_quit_rc: Union[int, List[int]] = 0,
+        bteq_script_encoding: str | None = "utf-8",
+        bteq_session_encoding: str | None = "ASCII",
+        bteq_quit_rc: int | list[int] = 0,
         timeout: int | Literal[600] = 600,  # Default to 10 minutes
         timeout_rc: int | None = None,
-    ) -> Optional[int]:
+    ) -> int | None:
         """
         Execute BTEQ commands either locally or on a remote machine via SSH.
 
@@ -508,15 +504,15 @@ class TeradataDagsterConnection:
     def ddl_operator(
         self,
         ddl: list[str] = None,
-        error_list: Optional[Union[int, List[int]]] = None,
+        error_list: int | list[int] | None = None,
         remote_working_dir: str = "/tmp",
-        ddl_job_name: Optional[str] = None,
-        remote_host: Optional[str] = None,
-        remote_user: Optional[str] = None,
-        remote_password: Optional[str] = None,
-        ssh_key_path: Optional[str] = None,
+        ddl_job_name: str | None = None,
+        remote_host: str | None = None,
+        remote_user: str | None = None,
+        remote_password: str | None = None,
+        ssh_key_path: str | None = None,
         remote_port: int = 22,
-    ) -> Optional[int]:
+    ) -> int | None:
         """
         Execute one or more DDL (Data Definition Language) statements on Teradata.
 
@@ -586,24 +582,24 @@ class TeradataDagsterConnection:
 
     def tdload_operator(
         self,
-        source_table: Optional[str] = None,
-        select_stmt: Optional[str] = None,
-        insert_stmt: Optional[str] = None,
-        target_table: Optional[str] = None,
-        source_file_name: Optional[str] = None,
-        target_file_name: Optional[str] = None,
-        source_format: Optional[str] = None,
-        source_text_delimiter: Optional[str] = None,
-        target_format: Optional[str] = None,
-        target_text_delimiter: Optional[str] = None,
-        tdload_options: Optional[str] = None,
-        tdload_job_name: Optional[str] = None,
-        tdload_job_var_file: Optional[str] = None,
-        remote_working_dir: Optional[str] = None,
-        remote_host: Optional[str] = None,
-        remote_user: Optional[str] = None,
-        remote_password: Optional[str] = None,
-        ssh_key_path: Optional[str] = None,
+        source_table: str | None = None,
+        select_stmt: str | None = None,
+        insert_stmt: str | None = None,
+        target_table: str | None = None,
+        source_file_name: str | None = None,
+        target_file_name: str | None = None,
+        source_format: str | None = None,
+        source_text_delimiter: str | None = None,
+        target_format: str | None = None,
+        target_text_delimiter: str | None = None,
+        tdload_options: str | None = None,
+        tdload_job_name: str | None = None,
+        tdload_job_var_file: str | None = None,
+        remote_working_dir: str | None = None,
+        remote_host: str | None = None,
+        remote_user: str | None = None,
+        remote_password: str | None = None,
+        ssh_key_path: str | None = None,
         remote_port: int = 22,
     ) -> int | None:
         """
@@ -675,7 +671,7 @@ class TeradataDagsterConnection:
             remote_port=remote_port,
         )
 
-    def drop_database(self, databases: Union[str, Sequence[str]]) -> None:
+    def drop_database(self, databases: str | Sequence[str]) -> None:
         """
         Drop one or more databases in Teradata.
 
@@ -702,7 +698,7 @@ class TeradataDagsterConnection:
                         else:
                             raise
 
-    def drop_table(self, tables: Union[str, Sequence[str]]) -> None:
+    def drop_table(self, tables: str | Sequence[str]) -> None:
         """
         Drop one or more tables in Teradata.
 
@@ -891,8 +887,8 @@ class TeradataDagsterConnection:
         compute_profile_name: str,
         compute_group_name: str,
         query_strategy: str = "STANDARD",
-        compute_map: Optional[str] = None,
-        compute_attribute: Optional[str] = None,
+        compute_map: str | None = None,
+        compute_attribute: str | None = None,
         timeout: int = constants.CC_OPR_TIME_OUT,
     ):
         return self.compute_cluster_manager.create_teradata_compute_cluster(
@@ -987,7 +983,7 @@ def fetch_last_updated_timestamps(
     *,
     teradata_connection: teradatasql.TeradataConnection,
     tables: Sequence[str],
-    database: Optional[str] = None,
+    database: str | None = None,
 ) -> Mapping[str, datetime]:
     """Fetch the last updated times of a list of tables in Teradata.
 

@@ -1,4 +1,4 @@
-from typing import Literal, Optional, Dict
+from typing import Literal
 
 
 from dagster import Config
@@ -13,7 +13,7 @@ class LocalConfig(Config):
 
     provider: Literal["local"] = "local"
 
-    persistence_path: Optional[str] = "./chroma"
+    persistence_path: str | None = "./chroma"
     """The directory to save Chroma's data to. Defaults to './chroma'.
      for an in-memory database, set to None"
     """
@@ -33,5 +33,5 @@ class HttpConfig(Config):
     ssl: bool = False
     """Whether to use SSL to connect to the Chroma server. Defaults to False"""
 
-    headers: Dict[str, str] = {}
+    headers: dict[str, str] = {}
     """A dictionary of headers to send to the Chroma server. Defaults to {}"""

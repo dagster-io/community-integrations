@@ -1,5 +1,6 @@
 from contextlib import contextmanager
-from typing import Any, Dict, Optional, Generator, Union
+from typing import Any
+from collections.abc import Generator
 from pydantic import Field
 
 import weaviate
@@ -64,7 +65,7 @@ class WeaviateResource(ConfigurableResource):
             )
     """
 
-    connection_config: Union[LocalConfig, CloudConfig] = Field(
+    connection_config: LocalConfig | CloudConfig = Field(
         discriminator="provider",
         description=(
             "Specifies whether to connect to a local (self-hosted) instance,"
@@ -72,7 +73,7 @@ class WeaviateResource(ConfigurableResource):
         ),
     )
 
-    headers: Optional[Dict[str, str]] = Field(
+    headers: dict[str, str] | None = Field(
         description=(
             "Additional headers to include in the requests,"
             " e.g. API keys for Cloud vectorization"
@@ -87,7 +88,7 @@ class WeaviateResource(ConfigurableResource):
         default=False,
     )
 
-    auth_credentials: Dict[str, Any] = Field(
+    auth_credentials: dict[str, Any] = Field(
         description=(
             "A dictionary containing the credentials to use for authentication with your"
             " Weaviate instance. You may provide any of the following options:"
@@ -97,7 +98,7 @@ class WeaviateResource(ConfigurableResource):
         default={},
     )
 
-    def _weaviate_auth_credentials(self) -> Optional[weaviate.auth.AuthCredentials]:
+    def _weaviate_auth_credentials(self) -> weaviate.auth.AuthCredentials | None:
         """Converts the auth_credentials config dict from the user, to the Weaviate AuthCredentials
         class that can be passed to the WeaviateClient constructor."""
 

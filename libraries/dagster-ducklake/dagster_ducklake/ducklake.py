@@ -1,6 +1,7 @@
 import os
 from contextlib import contextmanager
-from typing import Dict, Generator, List, Literal, Tuple, Union
+from typing import Literal
+from collections.abc import Generator
 
 import dagster as dg
 import duckdb
@@ -24,7 +25,7 @@ class PostgresConfig(dg.Config):
     user: str
     password: str
 
-    def get_ducklake_sql_parts(self, alias: str) -> Tuple[str, str]:
+    def get_ducklake_sql_parts(self, alias: str) -> tuple[str, str]:
         """Returns the SQL for the credential secret and the main METADATA parameter."""
         secret_name = f"secret_catalog_{alias}"
         secret_sql = f"""
@@ -47,7 +48,7 @@ class SqliteConfig(dg.Config):
     type: Literal["sqlite"] = "sqlite"
     path: str = Field(description="Path to the SQLite database file.")
 
-    def get_ducklake_sql_parts(self, alias: str) -> Tuple[str, str]:
+    def get_ducklake_sql_parts(self, alias: str) -> tuple[str, str]:
         """For file-based backends, no credential secret is needed."""
         return "", f"METADATA_PATH '{self.path}'"
 
@@ -58,7 +59,7 @@ class DuckDBConfig(dg.Config):
     type: Literal["duckdb"] = "duckdb"
     path: str = Field(description="Path to the DuckDB database file.")
 
-    def get_ducklake_sql_parts(self, alias: str) -> Tuple[str, str]:
+    def get_ducklake_sql_parts(self, alias: str) -> tuple[str, str]:
         """For file-based backends, no credential secret is needed."""
         return "", f"METADATA_PATH '{self.path}'"
 
@@ -94,7 +95,7 @@ class S3Config(dg.Config):
             return f"{path}/{clean_prefix}/"
         return f"{path}/"
 
-    def get_ducklake_sql_parts(self, alias: str) -> Tuple[str, str]:
+    def get_ducklake_sql_parts(self, alias: str) -> tuple[str, str]:
         """Returns the SQL for the credential secret and the main DATA_PATH parameter."""
         secret_name = f"secret_storage_{alias}"
         secret_sql = f"""
@@ -116,7 +117,7 @@ class DuckLakeLocalDirectory(dg.Config):
     type: Literal["local"] = "local"
     path: str = Field(description="Path to the local storage directory.")
 
-    def get_ducklake_sql_parts(self, alias: str) -> Tuple[str, str]:
+    def get_ducklake_sql_parts(self, alias: str) -> tuple[str, str]:
         """For local storage, no credential secret is needed."""
         return "", f"DATA_PATH '{self.path}'"
 
@@ -127,22 +128,22 @@ class DuckLakeResource(DuckDBConnectionProvider):
     Supports multiple metadata and storage backends.
     """
 
-    metadata_backend: Union[PostgresConfig, SqliteConfig, DuckDBConfig] = Field(
+    metadata_backend: PostgresConfig | SqliteConfig | DuckDBConfig = Field(
         discriminator="type",
         description="Configuration for the metadata catalog backend.",
     )
-    storage_backend: Union[S3Config, DuckLakeLocalDirectory] = Field(
+    storage_backend: S3Config | DuckLakeLocalDirectory = Field(
         discriminator="type", description="Configuration for the data storage backend."
     )
     alias: str = Field(
         default="ducklake", description="Alias for the attached DuckLake instance."
     )
-    plugins: List[str] = Field(
+    plugins: list[str] = Field(
         default_factory=lambda: ["ducklake"],
         description="List of DuckDB plugins to install and load.",
     )
 
-    attach_options: Dict[str, bool] = Field(
+    attach_options: dict[str, bool] = Field(
         default_factory=dict,
         description=(
             "Query parameters to append to the ducklake ATTACH URI. "

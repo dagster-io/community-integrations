@@ -1,14 +1,14 @@
 from collections import namedtuple
-from typing import Any, Dict, NamedTuple
+from typing import Any, NamedTuple
 
 
 class HightouchOutput(
     NamedTuple(
         "_HightouchOutput",
         [
-            ("sync_details", Dict[str, Any]),
-            ("sync_run_details", Dict[str, Any]),
-            ("destination_details", Dict[str, Any]),
+            ("sync_details", dict[str, Any]),
+            ("sync_run_details", dict[str, Any]),
+            ("destination_details", dict[str, Any]),
         ],
     )
 ):

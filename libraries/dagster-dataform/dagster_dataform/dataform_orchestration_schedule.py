@@ -1,22 +1,22 @@
 import dagster as dg
 from dagster_dataform.resources import DataformRepositoryResource
 import time
-from typing import Optional, Dict, Any
+from typing import Any
 
 
 def create_dataform_orchestration_schedule(
     resource: DataformRepositoryResource,
     cron_schedule: str,
     git_commitish: str,
-    default_database: Optional[str] = None,
-    default_schema: Optional[str] = None,
-    default_location: Optional[str] = None,
-    assertion_schema: Optional[str] = None,
-    database_suffix: Optional[str] = None,
-    schema_suffix: Optional[str] = None,
-    table_prefix: Optional[str] = None,
-    builtin_assertion_name_prefix: Optional[str] = None,
-    vars: Optional[Dict[str, Any]] = None,
+    default_database: str | None = None,
+    default_schema: str | None = None,
+    default_location: str | None = None,
+    assertion_schema: str | None = None,
+    database_suffix: str | None = None,
+    schema_suffix: str | None = None,
+    table_prefix: str | None = None,
+    builtin_assertion_name_prefix: str | None = None,
+    vars: dict[str, Any] | None = None,
 ):
     """
     This function creates a schedule that, on the passed cron schedule, will create a dataform workflow invocation.

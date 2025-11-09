@@ -1,7 +1,7 @@
 """Apprise resource for Dagster notifications."""
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import apprise
 import dagster as dg
@@ -17,13 +17,13 @@ class AppriseConfig(dg.Config):
     urls: list[str] = Field(
         default_factory=list, description="List of Apprise notification URLs"
     )
-    config_file: Optional[str] = Field(
+    config_file: str | None = Field(
         default=None, description="Path to Apprise config file"
     )
-    base_url: Optional[str] = Field(
+    base_url: str | None = Field(
         default=None, description="Base URL for Dagster UI links"
     )
-    webserver_base_url: Optional[str] = Field(
+    webserver_base_url: str | None = Field(
         default=None,
         description="Alias for base_url to align with Dagster patterns (used if base_url not set)",
     )
@@ -60,7 +60,7 @@ class AppriseResource(dg.ConfigurableResource):
     def notify(
         self,
         body: str,
-        title: Optional[str] = None,
+        title: str | None = None,
         notify_type: NotifyType = NotifyType.INFO,
         **kwargs: Any,
     ) -> bool:
@@ -98,7 +98,7 @@ class AppriseResource(dg.ConfigurableResource):
             return False
 
     def notify_run_status(
-        self, run: dg.DagsterRun, status: str, message: Optional[str] = None
+        self, run: dg.DagsterRun, status: str, message: str | None = None
     ) -> bool:
         """Send a notification for a Dagster run status change.
 

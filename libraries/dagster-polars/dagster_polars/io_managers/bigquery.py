@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from typing import Optional
 
 import polars as pl
 from dagster import InputContext, MetadataValue, OutputContext
@@ -50,7 +49,7 @@ class PolarsBigQueryTypeHandler(DbTypeHandler[pl.DataFrame]):
         self,
         context: OutputContext,
         table_slice: TableSlice,
-        obj: Optional[pl.DataFrame],
+        obj: pl.DataFrame | None,
         connection,
     ):
         """Stores the polars DataFrame in BigQuery."""
@@ -200,5 +199,5 @@ class PolarsBigQueryIOManager(BigQueryIOManager):
         return [PolarsBigQueryTypeHandler()]
 
     @staticmethod
-    def default_load_type() -> Optional[type]:
+    def default_load_type() -> type | None:
         return pl.DataFrame

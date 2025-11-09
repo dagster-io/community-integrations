@@ -13,7 +13,7 @@ import shutil
 import stat
 import subprocess
 import uuid
-from typing import TYPE_CHECKING, Optional, Dict, List
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from paramiko import SSHClient
@@ -775,13 +775,13 @@ def is_valid_remote_job_var_file(
 
 def prepare_tpt_script(
     operator_type: str,
-    source_table: Optional[str] = None,
-    select_stmt: Optional[str] = None,
-    target_table: Optional[str] = None,
-    source_file: Optional[str] = None,
-    target_file: Optional[str] = None,
-    format_options: Optional[Dict] = None,
-    connection_params: Optional[Dict] = None,
+    source_table: str | None = None,
+    select_stmt: str | None = None,
+    target_table: str | None = None,
+    source_file: str | None = None,
+    target_file: str | None = None,
+    format_options: dict | None = None,
+    connection_params: dict | None = None,
 ) -> str:
     """
     Prepare TPT script based on operator type and parameters.
@@ -804,13 +804,13 @@ def prepare_tpt_script(
 
 def prepare_tpt_variables(
     operator_type: str,
-    source_table: Optional[str] = None,
-    target_table: Optional[str] = None,
-    source_file: Optional[str] = None,
-    target_file: Optional[str] = None,
-    format_options: Optional[Dict] = None,
-    connection_params: Optional[Dict] = None,
-) -> Dict[str, str]:
+    source_table: str | None = None,
+    target_table: str | None = None,
+    source_file: str | None = None,
+    target_file: str | None = None,
+    format_options: dict | None = None,
+    connection_params: dict | None = None,
+) -> dict[str, str]:
     """
     Prepare TPT variables based on operator type and parameters.
 
@@ -829,7 +829,7 @@ def prepare_tpt_variables(
     pass
 
 
-def validate_tpt_options(options: Dict) -> bool:
+def validate_tpt_options(options: dict) -> bool:
     """
     Validate TPT options.
 
@@ -844,8 +844,8 @@ def validate_tpt_options(options: Dict) -> bool:
 
 
 def get_tpt_command(
-    operator_type: str, script_file: str, var_file: Optional[str] = None
-) -> List[str]:
+    operator_type: str, script_file: str, var_file: str | None = None
+) -> list[str]:
     """
     Get the TPT command based on operator type.
 
@@ -862,11 +862,11 @@ def get_tpt_command(
 
 
 def get_operator_type(
-    source_table: Optional[str] = None,
-    select_stmt: Optional[str] = None,
-    target_table: Optional[str] = None,
-    source_file: Optional[str] = None,
-    target_file: Optional[str] = None,
+    source_table: str | None = None,
+    select_stmt: str | None = None,
+    target_table: str | None = None,
+    source_file: str | None = None,
+    target_file: str | None = None,
 ) -> str:
     """
     Determine the TPT operator type based on parameters.

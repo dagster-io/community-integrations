@@ -1,7 +1,7 @@
 import os
 import sys
 import subprocess
-from typing import Optional, Sequence
+from collections.abc import Sequence
 import dagster as dg
 from pydantic import Field
 
@@ -33,7 +33,7 @@ class EvidenceResource(dg.ConfigurableResource):
     """
 
     project_path: str = Field(..., description="The path to the Evidence.dev project")
-    deploy_command: Optional[str] = Field(
+    deploy_command: str | None = Field(
         None, description="Command to deploy the built assets"
     )
     executable: str = Field(

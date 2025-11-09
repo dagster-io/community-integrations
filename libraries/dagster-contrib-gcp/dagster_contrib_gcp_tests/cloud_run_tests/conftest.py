@@ -1,5 +1,6 @@
 from contextlib import contextmanager
-from typing import Callable, ContextManager, Iterator
+from typing import ContextManager
+from collections.abc import Callable, Iterator
 from unittest.mock import Mock, patch
 
 import pytest

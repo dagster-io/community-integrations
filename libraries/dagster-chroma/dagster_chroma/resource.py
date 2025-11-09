@@ -1,5 +1,6 @@
 from contextlib import contextmanager
-from typing import Any, Dict, Union, Generator
+from typing import Any
+from collections.abc import Generator
 from pydantic import Field
 
 import chromadb
@@ -44,7 +45,7 @@ class ChromaResource(ConfigurableResource):
         )
     """
 
-    connection_config: Union[LocalConfig, HttpConfig] = Field(
+    connection_config: LocalConfig | HttpConfig = Field(
         discriminator="provider",
         description=(
             """Specified whether to connect to Chroma via HTTP, or to use a Local database
@@ -65,7 +66,7 @@ class ChromaResource(ConfigurableResource):
         default=chromadb.config.DEFAULT_DATABASE,
     )
 
-    additional_settings: Dict[str, Any] = Field(
+    additional_settings: dict[str, Any] = Field(
         description=(
             "A dictionary of additional settings for the client. See the chromadb Settings"
             " class for a full list of allowed options:"

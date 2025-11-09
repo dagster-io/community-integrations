@@ -1,5 +1,5 @@
 import json
-from typing import List, Any
+from typing import Any
 from pathlib import Path
 from unittest import mock
 import os
@@ -17,12 +17,12 @@ WEAVIATE_GRPC_PORT = 50050
 DATA_DIR = Path(os.path.dirname(__file__))
 
 
-def read_data_vector_from_file() -> List[Any]:
+def read_data_vector_from_file() -> list[Any]:
     with open(Path(DATA_DIR, "data_vector.json")) as f:
         return json.load(f)
 
 
-def read_query_vector_from_file() -> List[float]:
+def read_query_vector_from_file() -> list[float]:
     with open(Path(DATA_DIR, "query_vector.json")) as f:
         return json.load(f)
 

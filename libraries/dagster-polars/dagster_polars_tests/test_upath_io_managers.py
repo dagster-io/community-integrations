@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from typing import Optional
 
 import polars as pl
 import polars.testing as pl_testing
@@ -133,7 +132,7 @@ def test_polars_upath_io_manager_input_optional_eager(
         return df
 
     @asset(io_manager_def=manager)
-    def downstream(upstream: Optional[pl.DataFrame]) -> pl.DataFrame:
+    def downstream(upstream: pl.DataFrame | None) -> pl.DataFrame:
         assert upstream is not None
         return upstream
 
@@ -152,7 +151,7 @@ def test_polars_upath_io_manager_input_optional_lazy(
         return df
 
     @asset(io_manager_def=manager)
-    def downstream(upstream: Optional[pl.LazyFrame]) -> pl.DataFrame:
+    def downstream(upstream: pl.LazyFrame | None) -> pl.DataFrame:
         assert upstream is not None
         return upstream.collect()
 
@@ -200,7 +199,7 @@ def test_polars_upath_io_manager_input_dict_eager_missing(
         io_manager_def=manager,
         partitions_def=StaticPartitionsDefinition(["a", "missing"]),
     )
-    def upstream(context: AssetExecutionContext) -> Optional[pl.DataFrame]:
+    def upstream(context: AssetExecutionContext) -> pl.DataFrame | None:
         return (
             df.with_columns(pl.lit(context.partition_key).alias("partition"))
             if context.partition_key != "missing"
@@ -208,7 +207,7 @@ def test_polars_upath_io_manager_input_dict_eager_missing(
         )
 
     @asset(io_manager_def=manager)
-    def downstream(upstream: dict[str, Optional[pl.DataFrame]]) -> None:
+    def downstream(upstream: dict[str, pl.DataFrame | None]) -> None:
         assert len(upstream) == 1
         assert "a" in upstream
 
@@ -323,7 +322,7 @@ def test_polars_upath_io_manager_input_optional_eager_return_none(
         return df
 
     @asset
-    def downstream(upstream: Optional[pl.DataFrame]):
+    def downstream(upstream: pl.DataFrame | None):
         assert upstream is None
 
     materialize(
@@ -337,11 +336,11 @@ def test_polars_upath_io_manager_output_optional_eager(
     manager, df = io_manager_and_df
 
     @asset(io_manager_def=manager)
-    def upstream() -> Optional[pl.DataFrame]:
+    def upstream() -> pl.DataFrame | None:
         return None
 
     @asset(io_manager_def=manager)
-    def downstream(upstream: Optional[pl.DataFrame]) -> Optional[pl.DataFrame]:
+    def downstream(upstream: pl.DataFrame | None) -> pl.DataFrame | None:
         assert upstream is None
         return upstream
 
@@ -356,11 +355,11 @@ def test_polars_upath_io_manager_output_optional_lazy(
     manager, df = io_manager_and_df
 
     @asset(io_manager_def=manager)
-    def upstream() -> Optional[pl.DataFrame]:
+    def upstream() -> pl.DataFrame | None:
         return None
 
     @asset(io_manager_def=manager)
-    def downstream(upstream: Optional[pl.LazyFrame]) -> Optional[pl.DataFrame]:
+    def downstream(upstream: pl.LazyFrame | None) -> pl.DataFrame | None:
         assert upstream is None
         return upstream
 

@@ -2,7 +2,7 @@
 name = "dagster-dataform"
 description = "A Dagster integration for Dataform"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "dagster-webserver>=1.8.12",
     "dagster==1.11.4",

@@ -15,7 +15,7 @@ class GCSObjectStore(ConfigurableResource):
     service_account_key: str = Field(
         description="GCS service account key to use when creating the GCS Store."
     )
-    service_account_path: Optional[str] = Field(
+    service_account_path: str | None = Field(
         default=None,
         description="Path of service account key to authenticate, for the GCS Store.",
     )

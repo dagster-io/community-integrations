@@ -1,5 +1,6 @@
 import traceback
-from typing import TYPE_CHECKING, Any, Mapping, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
+from collections.abc import Mapping, Sequence
 import os
 
 import tenacity
@@ -49,7 +50,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         job_name_by_code_location: "dict[str, Union[str, dict[str, str]]]",
         run_job_retry: "dict[str, int]",
         run_timeout: int,
-        inst_data: Optional[ConfigurableClassData] = None,
+        inst_data: ConfigurableClassData | None = None,
     ):
         self._inst_data = inst_data
         self.project = project
@@ -139,7 +140,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
 
     def env_override_for_code_location(
         self, code_location_name: str
-    ) -> Optional[dict[str, str]]:
+    ) -> dict[str, str] | None:
         """
         Build EnvVar override context to pass to CloudRun job if configured
         """
@@ -189,7 +190,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
     def execute_job(
         self,
         fully_qualified_job_name: str,
-        args: Optional[Sequence[str]] = None,
+        args: Sequence[str] | None = None,
         env: Optional["dict[str, str]"] = None,
     ) -> Operation:
         request = RunJobRequest(name=fully_qualified_job_name)
@@ -255,7 +256,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         return True
 
     @property
-    def inst_data(self) -> Optional[ConfigurableClassData]:
+    def inst_data(self) -> ConfigurableClassData | None:
         return self._inst_data
 
     @classmethod

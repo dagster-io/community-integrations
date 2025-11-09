@@ -1,7 +1,6 @@
 """Apprise component for Dagster notifications."""
 
 import logging
-from typing import Optional
 
 import dagster as dg
 from pydantic import Field
@@ -17,13 +16,13 @@ class AppriseNotificationsConfig(dg.Config):
     urls: list[str] = Field(
         default_factory=list, description="List of Apprise notification URLs"
     )
-    config_file: Optional[str] = Field(
+    config_file: str | None = Field(
         default=None, description="Path to Apprise config file"
     )
-    base_url: Optional[str] = Field(
+    base_url: str | None = Field(
         default=None, description="Base URL for Dagster UI links"
     )
-    webserver_base_url: Optional[str] = Field(
+    webserver_base_url: str | None = Field(
         default=None,
         description="Alias for base_url to align with Dagster patterns",
     )
@@ -76,7 +75,7 @@ def apprise_notifications(config: AppriseNotificationsConfig) -> dg.Definitions:
 
 def _create_run_status_sensor(
     event: str, config: AppriseNotificationsConfig
-) -> Optional[dg.SensorDefinition]:
+) -> dg.SensorDefinition | None:
     """Create a run status sensor for the given event."""
     event_lower = event.lower()
 

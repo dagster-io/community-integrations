@@ -3,7 +3,6 @@ from dagster import MetadataValue, RunConfig
 from dagster_dataform.resources import DataformRepositoryResource
 import json
 import re
-from typing import Optional, List
 from dagster_dataform.utils import handle_asset_check_evaluation
 
 
@@ -45,13 +44,11 @@ def dataform_asset_check_failure_notification_job():
 def create_dataform_workflow_invocation_sensor(
     resource: DataformRepositoryResource,
     minutes_ago: int,
-    workflow_invocation_failure_notification_job: Optional[
-        dg.JobDefinition
-    ] = dataform_workflow_invocation_failure_notification_job,
-    asset_check_failure_notification_job: Optional[
-        dg.JobDefinition
-    ] = dataform_asset_check_failure_notification_job,
-    inclusion_patterns: Optional[List[str]] = None,
+    workflow_invocation_failure_notification_job: None
+    | (dg.JobDefinition) = dataform_workflow_invocation_failure_notification_job,
+    asset_check_failure_notification_job: None
+    | (dg.JobDefinition) = dataform_asset_check_failure_notification_job,
+    inclusion_patterns: list[str] | None = None,
 ):
     """
     This function creates a sensor that polls the Dataform API for workflow invocations. It has the following capabilities:
@@ -107,14 +104,14 @@ def create_dataform_workflow_invocation_sensor(
             )
 
             context.log.info(
-                f"Processing workflow invocation {index+1} of {len(list(workflow_invocations))}: {workflow_invocation.name}"  # pyright: ignore[reportArgumentType]
+                f"Processing workflow invocation {index + 1} of {len(list(workflow_invocations))}: {workflow_invocation.name}"  # pyright: ignore[reportArgumentType]
             )
 
             for index, action in enumerate(
                 workflow_invocation_details.workflow_invocation_actions
             ):
                 context.log.info(
-                    f"  Target Asset for action {index+1} of {len(list(workflow_invocation_details.workflow_invocation_actions))}: {action.target.name}, State: {action.state.name}"
+                    f"  Target Asset for action {index + 1} of {len(list(workflow_invocation_details.workflow_invocation_actions))}: {action.target.name}, State: {action.state.name}"
                 )
 
                 asset_name = action.target.name

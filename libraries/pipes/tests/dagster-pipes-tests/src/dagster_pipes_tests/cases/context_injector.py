@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 import pytest_cases
 from dagster._core.pipes.client import PipesContextInjector
 from dagster._core.pipes.utils import (
@@ -5,7 +7,6 @@ from dagster._core.pipes.utils import (
     PipesTempFileContextInjector,
 )
 from dagster_aws.pipes import PipesS3ContextInjector
-from typing_extensions import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client

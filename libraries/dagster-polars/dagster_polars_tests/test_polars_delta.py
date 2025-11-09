@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional, Union
 
 import polars as pl
 import polars.testing as pl_testing
@@ -522,11 +521,11 @@ def test_polars_delta_io_manager_schema_mode_set(dagster_instance: DagsterInstan
 @pytest.mark.parametrize("context", [InputContext, OutputContext])
 def test_partition_filters_predicate(
     mocker: pytest_mock.MockerFixture,
-    partition_by: Optional[Union[str, dict[str, str]]],
-    partition_keys: Union[list[str], list[dict[str, str]]],
+    partition_by: str | dict[str, str] | None,
+    partition_keys: list[str] | list[dict[str, str]],
     expected_filters: list[tuple[str, str, list[str]]],
     expected_predicate: str,
-    context: type[Union[InputContext, OutputContext]],
+    context: type[InputContext | OutputContext],
 ):
     """Test that the partition filters and predicate are generated correctly."""
     if context == InputContext:

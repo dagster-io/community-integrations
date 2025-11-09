@@ -1,7 +1,7 @@
 # pyright: reportIncompatibleMethodOverride=false
 
 from pathlib import Path
-from typing import Mapping, Optional, Union
+from collections.abc import Mapping
 
 from dagster import AssetExecutionContext, OpExecutionContext, PipesSubprocessClient
 from dagster._annotations import public
@@ -34,8 +34,8 @@ class ModalClient(PipesSubprocessClient):
 
     def __init__(
         self,
-        project_directory: Optional[Union[str, Path]] = None,
-        env: Optional[Mapping[str, str]] = None,
+        project_directory: str | Path | None = None,
+        env: Mapping[str, str] | None = None,
     ):
         if isinstance(project_directory, Path):
             project_directory = str(project_directory)
@@ -46,9 +46,9 @@ class ModalClient(PipesSubprocessClient):
         self,
         *,
         func_ref: str,
-        context: Union[AssetExecutionContext, OpExecutionContext],
-        extras: Optional[PipesExtras] = None,
-        env: Optional[Mapping[str, str]] = None,
+        context: AssetExecutionContext | OpExecutionContext,
+        extras: PipesExtras | None = None,
+        env: Mapping[str, str] | None = None,
     ) -> PipesClientCompletedInvocation:
         """Runs Modal function via the `modal run` command.
 

@@ -1,7 +1,7 @@
 import datetime
 import logging
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from urllib.parse import urljoin
 
 import requests
@@ -48,7 +48,7 @@ class HightouchResource:
         return HIGHTOUCH_API_BASE
 
     def make_request(
-        self, method: str, endpoint: str, params: Optional[Dict[str, Any]] = None
+        self, method: str, endpoint: str, params: dict[str, Any] | None = None
     ):
         """Creates and sends a request to the desired Hightouch API endpoint
 
@@ -87,7 +87,7 @@ class HightouchResource:
 
     def get_sync_run_details(
         self, sync_id: str, sync_request_id: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get details about a given sync run from the Hightouch API.
 
         Args:
@@ -102,7 +102,7 @@ class HightouchResource:
             method="GET", endpoint=f"syncs/{sync_id}/runs", params=params
         )
 
-    def get_destination_details(self, destination_id: str) -> Dict[str, Any]:
+    def get_destination_details(self, destination_id: str) -> dict[str, Any]:
         """Get details about a destination from the Hightouch API.
 
         Args:
@@ -115,7 +115,7 @@ class HightouchResource:
             method="GET", endpoint=f"destinations/{destination_id}"
         )
 
-    def get_sync_details(self, sync_id: str) -> Dict[str, Any]:
+    def get_sync_details(self, sync_id: str) -> dict[str, Any]:
         """Get details about a given sync from the Hightouch API.
 
         Args:
@@ -145,8 +145,8 @@ class HightouchResource:
         sync_request_id: str,
         fail_on_warning: bool = False,
         poll_interval: float = DEFAULT_POLL_INTERVAL,
-        poll_timeout: Optional[float] = None,
-    ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+        poll_timeout: float | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
         """Poll for the completion of a sync
 
         Args:
@@ -215,7 +215,7 @@ class HightouchResource:
         sync_id: str,
         fail_on_warning: bool = False,
         poll_interval: float = DEFAULT_POLL_INTERVAL,
-        poll_timeout: Optional[float] = None,
+        poll_timeout: float | None = None,
     ) -> HightouchOutput:
         """
         Initialize a sync run for the given sync id, and polls until it completes

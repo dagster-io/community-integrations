@@ -1,5 +1,5 @@
 import dagster as dg
-from typing import Optional, List, Dict, Any
+from typing import Any
 
 from dagster_dataform.utils import get_epoch_time_ago, empty_fn
 
@@ -16,7 +16,7 @@ class DataformRepositoryResource:
         location: str,
         environment: str,
         sensor_minimum_interval_seconds: int = 120,
-        client: Optional[dataform_v1.DataformClient] = None,
+        client: dataform_v1.DataformClient | None = None,
         asset_fresh_policy_lag_minutes: float = 1440,
     ):
         self.project_id = project_id
@@ -36,15 +36,15 @@ class DataformRepositoryResource:
     def create_compilation_result(
         self,
         git_commitish: str,
-        default_database: Optional[str] = None,
-        default_schema: Optional[str] = None,
-        default_location: Optional[str] = None,
-        assertion_schema: Optional[str] = None,
-        database_suffix: Optional[str] = None,
-        schema_suffix: Optional[str] = None,
-        table_prefix: Optional[str] = None,
-        builtin_assertion_name_prefix: Optional[str] = None,
-        vars: Optional[Dict[str, Any]] = None,
+        default_database: str | None = None,
+        default_schema: str | None = None,
+        default_location: str | None = None,
+        assertion_schema: str | None = None,
+        database_suffix: str | None = None,
+        schema_suffix: str | None = None,
+        table_prefix: str | None = None,
+        builtin_assertion_name_prefix: str | None = None,
+        vars: dict[str, Any] | None = None,
     ) -> dataform_v1.CompilationResult:
         """Create a compilation result and return the name."""
         compilation_result = dataform_v1.CompilationResult()
@@ -72,7 +72,7 @@ class DataformRepositoryResource:
 
         return response
 
-    def get_latest_compilation_result_name(self) -> Optional[str]:
+    def get_latest_compilation_result_name(self) -> str | None:
         """Get the latest compilation result for the repository.
         https://cloud.google.com/python/docs/reference/dataform/latest/google.cloud.dataform_v1.types.ListCompilationResultsRequest
         """
@@ -105,7 +105,7 @@ class DataformRepositoryResource:
         )
         return None
 
-    def query_compilation_result(self) -> List[Any]:
+    def query_compilation_result(self) -> list[Any]:
         """Query a compilation result by ID. Returns the compilation result actions."""
 
         compilation_result_name = self.get_latest_compilation_result_name()
@@ -208,7 +208,7 @@ class DataformRepositoryResource:
     def load_dataform_assets(
         self,
         fresh_policy_lag_minutes: float = 1440,
-    ) -> List[dg.AssetSpec]:
+    ) -> list[dg.AssetSpec]:
         logger = dg.get_dagster_logger()
         logger.info("Starting to load Dataform assets")
 
@@ -254,7 +254,7 @@ class DataformRepositoryResource:
 
     def load_dataform_asset_check_specs(
         self,
-    ) -> List[dg.AssetChecksDefinition]:
+    ) -> list[dg.AssetChecksDefinition]:
         logger = dg.get_dagster_logger()
         logger.info("Starting to load Dataform asset check specs")
 

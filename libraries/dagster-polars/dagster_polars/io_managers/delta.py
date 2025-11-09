@@ -2,7 +2,7 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from enum import Enum
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 from dagster import InputContext, MetadataValue, MultiPartitionKey, OutputContext
@@ -192,8 +192,8 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
 
     extension: str = ".delta"  # pyright: ignore[reportIncompatibleVariableOverride]
     mode: DeltaWriteMode = DeltaWriteMode.overwrite.value  # type: ignore
-    schema_mode: Optional[DeltaSchemaMode] = None
-    version: Optional[int] = None
+    schema_mode: DeltaSchemaMode | None = None
+    version: int | None = None
 
     def sink_df_to_path(
         self,
@@ -385,7 +385,7 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
             return super().load_partitions(context)
 
     def get_path_for_partition(
-        self, context: Union[InputContext, OutputContext], path: "UPath", partition: str
+        self, context: InputContext | OutputContext, path: "UPath", partition: str
     ) -> "UPath":
         if isinstance(context, InputContext):
             if (
@@ -411,7 +411,7 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
 
     @staticmethod
     def get_partition_filters(
-        context: Union[InputContext, OutputContext],
+        context: InputContext | OutputContext,
     ) -> Sequence[tuple[str, str, Any]]:
         """Create filters for `deltalake` to know which partitions are overwritten.
 
@@ -460,8 +460,8 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
 
     @staticmethod
     def get_predicate(
-        context: Union[InputContext, OutputContext],
-    ) -> Optional[str]:
+        context: InputContext | OutputContext,
+    ) -> str | None:
         """Create a predicate for `deltalake` to select which partitions are overwritten.
 
         Returns `None` if the entire table is overwritten.
@@ -522,7 +522,7 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
         return predicate
 
     def get_metadata(
-        self, context: OutputContext, obj: Union[pl.DataFrame, pl.LazyFrame, None]
+        self, context: OutputContext, obj: pl.DataFrame | pl.LazyFrame | None
     ) -> dict[str, MetadataValue]:
         context_metadata = context.definition_metadata or {}
 
@@ -568,7 +568,7 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
 
         version_from_config = self.version
 
-        version: Optional[int] = None
+        version: int | None = None
 
         if version_from_metadata is not None and version_from_config is not None:
             context.log.warning(

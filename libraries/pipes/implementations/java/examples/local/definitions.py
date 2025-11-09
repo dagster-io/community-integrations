@@ -16,7 +16,7 @@ def count_adult_users(
             pipes_subprocess_client.context_injector, *args, **kwargs
         ) as params:
             print(params)
-            with open(params["path"], "r") as f:
+            with open(params["path"]) as f:
                 print(f.read())
             yield params
 

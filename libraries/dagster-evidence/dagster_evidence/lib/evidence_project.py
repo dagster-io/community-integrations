@@ -12,7 +12,8 @@ from dagster.components.resolved.core_models import (
     ResolvedAssetSpec,
 )
 from dataclasses import dataclass
-from typing import Optional, Sequence
+from typing import Optional
+from collections.abc import Sequence
 import subprocess
 
 
@@ -33,8 +34,8 @@ class EvidenceProject(Component, Resolvable):
 
     project_path: str
     asset: ResolvedAssetSpec
-    asset_post_processors: Optional[Sequence[AssetPostProcessor]] = None
-    deploy_command: Optional[str] = None
+    asset_post_processors: Sequence[AssetPostProcessor] | None = None
+    deploy_command: str | None = None
     npm_executable: str = "npm"
 
     def build_defs(self, context: ComponentLoadContext) -> Definitions:

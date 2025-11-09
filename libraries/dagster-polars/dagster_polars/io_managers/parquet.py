@@ -211,6 +211,6 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
         self,
         path: "UPath",
         context: InputContext,
-        partition_key: Optional[str] = None,
+        partition_key: str | None = None,
     ) -> pl.LazyFrame:
         return scan_parquet(path, context)

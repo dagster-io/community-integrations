@@ -3,7 +3,7 @@ from collections.abc import Mapping
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from pprint import pformat
-from typing import Any, Optional, Union
+from typing import Any
 
 import polars as pl
 from dagster import (
@@ -48,8 +48,8 @@ def cast_polars_single_value_to_dagster_table_types(val: Any):
 
 
 def get_metadata_schema(
-    df: Union[pl.DataFrame, pl.LazyFrame],
-    descriptions: Optional[dict[str, str]] = None,
+    df: pl.DataFrame | pl.LazyFrame,
+    descriptions: dict[str, str] | None = None,
 ) -> TableSchema:
     """Takes the schema from a dataframe or lazyframe and converts it a Dagster TableSchema.
 
@@ -72,10 +72,10 @@ def get_metadata_schema(
 def get_table_metadata(
     context: OutputContext,
     df: pl.DataFrame,
-    schema: Optional[TableSchema] = None,
-    n_rows: Optional[int] = 5,
-    fraction: Optional[float] = None,
-) -> Optional[TableMetadataValue]:
+    schema: TableSchema | None = None,
+    n_rows: int | None = 5,
+    fraction: float | None = None,
+) -> TableMetadataValue | None:
     """Takes the polars DataFrame and takes a sample of the data and returns it as TableMetaDataValue.
     With LazyFrame this is not possible without doing possible a very costly operation.
 
@@ -130,7 +130,7 @@ def get_table_metadata(
 
 
 def get_polars_metadata(
-    context: OutputContext, df: Union[pl.DataFrame, pl.LazyFrame]
+    context: OutputContext, df: pl.DataFrame | pl.LazyFrame
 ) -> dict[str, MetadataValue]:
     """Retrieves some metadata on polars frames
     - DataFrame: stats, row_count, table or schema

@@ -2,7 +2,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from functools import wraps
 from packaging import version
-from typing import Optional, Generator, Union
+from collections.abc import Generator
 from weakref import WeakKeyDictionary
 
 from pydantic import Field, PrivateAttr
@@ -29,10 +29,10 @@ context_to_counters = WeakKeyDictionary()
 
 
 def _add_to_asset_metadata(
-    context: AssetExecutionContext, usage_metadata: dict, output_name: Optional[str]
+    context: AssetExecutionContext, usage_metadata: dict, output_name: str | None
 ):
     if context not in context_to_counters:
-        context_to_counters[context] = defaultdict(lambda: 0)
+        context_to_counters[context] = defaultdict(int)
     counters = context_to_counters[context]
 
     for metadata_key, delta in usage_metadata.items():
@@ -44,8 +44,8 @@ def _add_to_asset_metadata(
 # While OpenAI has a lot of endpoints that can be wrapped to log usage,
 # Anthropic is a much smaller library, and only has one interface (Anthropic.messages.create).
 def with_usage_metadata(
-    context: Union[AssetExecutionContext, OpExecutionContext],
-    output_name: Optional[str],
+    context: AssetExecutionContext | OpExecutionContext,
+    output_name: str | None,
     func,
 ):
     if not isinstance(context, AssetExecutionContext):
@@ -134,7 +134,7 @@ class AnthropicResource(ConfigurableResource):
     @public
     @contextmanager
     def get_client(
-        self, context: Union[AssetExecutionContext, OpExecutionContext]
+        self, context: AssetExecutionContext | OpExecutionContext
     ) -> Generator[Anthropic, None, None]:
         """Yields an ``anthropic.Anthropic`` client for interacting with the Anthropic API.
 
@@ -199,7 +199,7 @@ class AnthropicResource(ConfigurableResource):
         yield from self._get_client(context=context, asset_key=None)
 
     def _wrap_with_usage_metadata(
-        self, context: AssetExecutionContext, output_name: Optional[str]
+        self, context: AssetExecutionContext, output_name: str | None
     ):
         self._client.messages.create = with_usage_metadata(
             context, output_name, func=self._client.messages.create
@@ -280,8 +280,8 @@ class AnthropicResource(ConfigurableResource):
 
     def _get_client(
         self,
-        context: Union[AssetExecutionContext, OpExecutionContext],
-        asset_key: Optional[AssetKey] = None,
+        context: AssetExecutionContext | OpExecutionContext,
+        asset_key: AssetKey | None = None,
     ) -> Generator[Anthropic, None, None]:
         if isinstance(context, AssetExecutionContext):
             if asset_key is None:

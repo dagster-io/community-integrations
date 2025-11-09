@@ -18,14 +18,14 @@ class AzureObjectStore(ConfigurableResource):
     storage_account: str = Field(
         description="Storage account to use when creating the Azure Store."
     )
-    access_key: Optional[str] = Field(
+    access_key: str | None = Field(
         description="Storage access key to use when creating the Azure Store."
     )
-    service_principal: Optional[AzureServicePrincipal] = Field(
+    service_principal: AzureServicePrincipal | None = Field(
         default=None,
         description="Service principal credentials to use when creating the Azure store.",
     )
-    sas_token: Optional[str] = Field(
+    sas_token: str | None = Field(
         default=None,
         description="Path of service account key to authenticate, for the Azure Store.",
     )
