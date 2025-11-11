@@ -2,7 +2,7 @@
 name = "dagster-notdiamond"
 description = "Dagster integration with Not Diamond"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
 dependencies = [
     "dagster>=1.8.0",
     "notdiamond",

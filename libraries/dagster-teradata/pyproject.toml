@@ -37,3 +37,11 @@ packages = [
 
 [tool.setuptools.dynamic]
 version = {attr = "dagster_teradata.__version__"}
+
+[tool.pyright]
+reportMissingImports = "none"
+reportArgumentType = "none"
+reportReturnType = "none"
+reportCallIssue = "none"
+reportOptionalMemberAccess = "none"
+reportAttributeAccessIssue = "none"

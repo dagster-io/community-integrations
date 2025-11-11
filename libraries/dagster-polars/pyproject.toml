@@ -62,6 +62,8 @@ version = {attr = "dagster_polars.version.__version__"}
 [tool.pyright]
 include = ["dagster_polars"]
 reportPrivateImportUsage = false
+reportMissingImports = "none"
+reportAttributeAccessIssue = "none"
 
 
 [tool.ruff.lint]

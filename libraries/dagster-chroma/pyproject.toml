@@ -4,7 +4,7 @@ description = "Dagster integration with chroma"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "onnxruntime==1.19.2", # onnxruntime stopped supporting python3.9 after 1.19.2
+    "onnxruntime>=1.19.2", # onnxruntime 1.23.2+ supports python 3.13
     "dagster>=1.8.0",
     "chromadb>=0.6.1",
 ]
