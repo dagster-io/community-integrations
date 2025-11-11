@@ -192,14 +192,29 @@ class SFTPResource(dg.ConfigurableResource):
                 }
             )
 
-        Using key-based authentication:
+        Using key-based authentication with file path:
 
         .. code-block:: python
 
             sftp_resource = SFTPResource(
                 host="sftp.example.com",
                 username="myuser",
-                private_key="/path/to/private/key",
+                private_key_path="/path/to/private/key",
+                passphrase="key_passphrase",  # Optional
+                known_hosts="/path/to/known_hosts"
+            )
+
+        Using key-based authentication with key content:
+
+        .. code-block:: python
+
+            with open("/path/to/private/key", "r") as f:
+                key_content = f.read()
+
+            sftp_resource = SFTPResource(
+                host="sftp.example.com",
+                username="myuser",
+                private_key_content=key_content,
                 passphrase="key_passphrase",  # Optional
                 known_hosts="/path/to/known_hosts"
             )
@@ -212,8 +227,10 @@ class SFTPResource(dg.ConfigurableResource):
     :type username: str
     :param password: The password for authentication (if not using key-based auth)
     :type password: str or None
-    :param private_key: Path to private key file for authentication
-    :type private_key: str or None
+    :param private_key_path: Path to private key file for authentication
+    :type private_key_path: str or None
+    :param private_key_content: Private key content as a string for authentication
+    :type private_key_content: str or None
     :param passphrase: Passphrase for the private key (if encrypted)
     :type passphrase: str or None
     :param known_hosts: Path to known hosts file or None to disable host key checking
@@ -234,8 +251,11 @@ class SFTPResource(dg.ConfigurableResource):
     password: str | None = Field(
         default=None, description="The password for authentication"
     )
-    private_key: str | None = Field(
-        default=None, description="The private key for authentication"
+    private_key_path: str | None = Field(
+        default=None, description="Path to private key file for authentication"
+    )
+    private_key_content: str | None = Field(
+        default=None, description="Private key content as a string for authentication"
     )
     passphrase: str | None = Field(
         default=None, description="Passphrase for the private key"
@@ -1208,13 +1228,106 @@ class SFTPResource(dg.ConfigurableResource):
         # Add authentication method
         if self.password:
             connect_args["password"] = self.password
-        elif self.private_key:
-            if self.passphrase:
-                connect_args["client_keys"] = [(self.private_key, self.passphrase)]
-            else:
-                connect_args["client_keys"] = [self.private_key]
+        elif self.private_key_path:
+            key = asyncssh.import_private_key(
+                Path(self.private_key_path).read_bytes(), passphrase=self.passphrase
+            )
+            connect_args["client_keys"] = [key]
+        elif self.private_key_content:
+            key = asyncssh.import_private_key(
+                self.private_key_content.encode(), passphrase=self.passphrase
+            )
+            connect_args["client_keys"] = [key]
 
         return connect_args
+
+    def test_connection(self) -> dict:
+        """Test the SFTP connection and authentication.
+
+        This method attempts to establish a connection to the SFTP server
+        and retrieve information about the authenticated session. It can be
+        used to verify that credentials are correct and the server is accessible.
+
+        :return: Dictionary containing connection information including:
+                 - authenticated_user: The username that was authenticated
+                 - server_version: SSH server version string
+                 - client_version: SSH client version string
+                 - host: Connected host
+                 - port: Connected port
+        :rtype: dict
+        :raises asyncssh.PermissionDenied: If authentication fails
+        :raises asyncssh.Error: For SSH-related errors
+        :raises Exception: For other connection errors
+
+        Example:
+            Test connection before performing operations:
+
+            .. code-block:: python
+
+                sftp = SFTPResource(
+                    host="sftp.example.com",
+                    username="testuser",
+                    private_key_path="/path/to/key"
+                )
+
+                # Test the connection
+                try:
+                    info = sftp.test_connection()
+                    print(f"Connected as: {info['authenticated_user']}")
+                    print(f"Server: {info['server_version']}")
+                except asyncssh.PermissionDenied:
+                    print("Authentication failed")
+                except Exception as e:
+                    print(f"Connection failed: {e}")
+        """
+
+        async def _inner() -> dict:
+            async with (
+                asyncssh.connect(**self._connect_args) as conn,
+                conn.start_sftp_client(),
+            ):
+                # Connection successful, gather information
+                return {
+                    "authenticated_user": conn.get_extra_info("username"),
+                    "server_version": conn.get_extra_info("server_version"),
+                    "client_version": conn.get_extra_info("client_version"),
+                    "host": conn.get_extra_info("host"),
+                    "port": conn.get_extra_info("port"),
+                }
+
+        return anyio.run(_inner)
+
+    def is_authenticated(self) -> bool:
+        """Check if authentication to the SFTP server is successful.
+
+        This is a simplified version of test_connection() that returns
+        a boolean indicating whether authentication succeeds.
+
+        :return: True if authentication is successful, False otherwise
+        :rtype: bool
+
+        Example:
+            Quick authentication check:
+
+            .. code-block:: python
+
+                sftp = SFTPResource(
+                    host="sftp.example.com",
+                    username="testuser",
+                    password="testpass"
+                )
+
+                if sftp.is_authenticated():
+                    # Proceed with operations
+                    files = sftp.list_files("/data")
+                else:
+                    print("Authentication failed")
+        """
+        try:
+            self.test_connection()
+            return True
+        except Exception:
+            return False
 
     def get_file_info(
         self, remote_path: _SFTPPath, follow_symlinks: bool = True
@@ -1260,7 +1373,7 @@ class SFTPResource(dg.ConfigurableResource):
                 asyncssh.connect(**self._connect_args) as conn,
                 conn.start_sftp_client() as sftp,
             ):
-                attrs = await sftp.stat(remote_path, follow_symlinks=True)
+                attrs = await sftp.stat(remote_path, follow_symlinks=follow_symlinks)
 
                 # Convert path to string if it's bytes
                 path_str = (
