@@ -18,6 +18,7 @@ dev-dependencies = [
     "pytest-mock>=3.15.1",
     "testcontainers>=4.4.0",
     "pytest-cov>=7.0.0",
+    "asyncssh[bcrypt,pyopenssl]>=2.21.1",
 ]
 
 [build-system]
