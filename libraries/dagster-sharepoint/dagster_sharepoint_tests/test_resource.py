@@ -6,7 +6,7 @@ All test methods include proper type hints and use the newest syntax.
 """
 
 from datetime import datetime
-from typing import Generator
+from collections.abc import Generator
 from unittest.mock import patch
 
 import pytest

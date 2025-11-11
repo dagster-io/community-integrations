@@ -78,9 +78,10 @@ def test_polars_upath_io_manager_type_annotations(
     ) -> None:
         for _df in upstream_partitioned.values():
             assert isinstance(_df, pl.LazyFrame), type(_df)
-        assert set(upstream_partitioned.keys()) == {"a", "b"}, (
-            upstream_partitioned.keys()
-        )
+        assert set(upstream_partitioned.keys()) == {
+            "a",
+            "b",
+        }, upstream_partitioned.keys()
 
     for partition_key in ["a", "b"]:
         materialize(

@@ -62,9 +62,10 @@ def test_polars_upath_io_manager_type_annotations(
     ) -> None:
         for _df in upstream_partitioned.values():
             assert isinstance(_df, pl.DataFrame), type(_df)
-        assert set(upstream_partitioned.keys()) == {"a", "b"}, (
-            upstream_partitioned.keys()
-        )
+        assert set(upstream_partitioned.keys()) == {
+            "a",
+            "b",
+        }, upstream_partitioned.keys()
 
     @asset(io_manager_def=manager)
     def downstream_multi_partitioned_lazy(
@@ -72,9 +73,10 @@ def test_polars_upath_io_manager_type_annotations(
     ) -> None:
         for _df in upstream_partitioned.values():
             assert isinstance(_df, pl.LazyFrame), type(_df)
-        assert set(upstream_partitioned.keys()) == {"a", "b"}, (
-            upstream_partitioned.keys()
-        )
+        assert set(upstream_partitioned.keys()) == {
+            "a",
+            "b",
+        }, upstream_partitioned.keys()
 
     for partition_key in ["a", "b"]:
         materialize(

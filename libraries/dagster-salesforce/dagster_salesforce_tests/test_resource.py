@@ -741,7 +741,7 @@ class TestSalesforceResourceConnectionInfo(TestSalesforceResource):
         assert failed_file in result.files
 
         # Check successful records file content
-        with open(successful_file, "r") as f:
+        with open(successful_file) as f:
             lines = f.readlines()
             assert len(lines) == 2
             first_record = json.loads(lines[0])
@@ -752,7 +752,7 @@ class TestSalesforceResourceConnectionInfo(TestSalesforceResource):
             assert first_record["Name"] == "Account 1"
 
         # Check failed records file content
-        with open(failed_file, "r") as f:
+        with open(failed_file) as f:
             lines = f.readlines()
             assert len(lines) == 1
             failed_record = json.loads(lines[0])
