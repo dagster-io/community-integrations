@@ -7,6 +7,10 @@ check:
 
 
 test:
-	@find . -not -path "*/.venv/*" -name "pyproject.toml" -exec dirname {} \; | while read -r dir; do \
-		echo "$$dir" && (cd "$$dir" && make test) || exit 1; \
-	done
+	@failed=0; \
+	find . -not -path "*/.venv/*" -name "pyproject.toml" -exec dirname {} \; | \
+	while read -r dir; do \
+		echo "$$dir" && \
+		(cd "$$dir" && make test) || failed=1; \
+	done; \
+	exit $$failed
