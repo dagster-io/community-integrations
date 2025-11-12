@@ -1,7 +1,6 @@
 import abc
-from typing import Literal
 
-from dagster import Config, ConfigurableResource
+from dagster import ConfigurableResource
 
 # These are the default ports for a local Weaviate instance. see:
 # https://weaviate.io/developers/weaviate/quickstart/local#11-create-a-weaviate-database

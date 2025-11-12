@@ -5,10 +5,10 @@ from pydantic import Field
 
 import weaviate
 
-from dagster import ConfigurableResource, Config
+from dagster import ConfigurableResource
 from dagster._utils.backoff import backoff
 
-from .config import LocalConfig, CloudConfig, BaseWeaviateConfig
+from dagster_weaviate.config import LocalConfig, CloudConfig, BaseWeaviateConfig
 
 
 class WeaviateResource(ConfigurableResource):
