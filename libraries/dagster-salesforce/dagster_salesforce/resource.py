@@ -2,8 +2,8 @@ import json
 import dagster as dg
 
 from datetime import datetime, timedelta, timezone
-from dagster._model import DagsterModel
 from dagster._record import record
+from dagster_shared.dagster_model import DagsterModel
 from pydantic import Field, PrivateAttr
 from dataclasses import field
 from pathlib import Path
