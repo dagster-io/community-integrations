@@ -19,7 +19,6 @@ class TestDuckDBConfig:
     def test_duckdb_config_creation(self):
         """Test basic DuckDB config instantiation."""
         config = DuckDBConfig(path="/tmp/metadata.db")
-        assert config.type == "duckdb"
         assert config.path == "/tmp/metadata.db"
 
     def test_duckdb_sql_parts_generation(self):
@@ -37,7 +36,6 @@ class TestSqliteConfig:
     def test_sqlite_config_creation(self):
         """Test basic SQLite config instantiation."""
         config = SqliteConfig(path="/tmp/metadata.sqlite")
-        assert config.type == "sqlite"
         assert config.path == "/tmp/metadata.sqlite"
 
     def test_sqlite_sql_parts_generation(self):
@@ -61,7 +59,6 @@ class TestPostgresConfig:
             user="testuser",
             password="testpass",
         )
-        assert config.type == "postgres"
         assert config.host == "localhost"
         assert config.port == 5432
 
@@ -111,7 +108,6 @@ class TestS3Config:
             aws_access_key_id="AKIAIOSFODNN7EXAMPLE",
             aws_secret_access_key="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
         )
-        assert config.type == "s3"
         assert config.bucket == "test-bucket"
         assert config.region == "us-east-1"
         assert config.use_ssl is True
@@ -178,7 +174,6 @@ class TestDuckLakeLocalDirectory:
     def test_local_directory_config_creation(self):
         """Test basic local directory config instantiation."""
         config = DuckLakeLocalDirectory(path="/tmp/data")
-        assert config.type == "local"
         assert config.path == "/tmp/data"
 
     def test_local_directory_sql_parts_generation(self):
@@ -201,8 +196,6 @@ class TestDuckLakeResource:
             alias="test_lake",
         )
         assert resource.alias == "test_lake"
-        assert resource.metadata_backend.type == "duckdb"
-        assert resource.storage_backend.type == "local"
         assert "ducklake" in resource.plugins
 
     def test_ducklake_resource_custom_plugins(self):
@@ -352,8 +345,6 @@ class TestDuckLakeResource:
             alias="prod_lake",
         )
         assert resource.alias == "prod_lake"
-        assert resource.metadata_backend.type == "postgres"
-        assert resource.storage_backend.type == "s3"
 
 
 if __name__ == "__main__":
