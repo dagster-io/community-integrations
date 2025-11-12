@@ -1,17 +1,19 @@
-from typing import Literal
+import abc
 
 
-from dagster import Config
+from dagster import ConfigurableResource
 
 # By default, the chroma CLI runs on port 8000: https://docs.trychroma.com/cli/install-and-run
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8000
 
 
-class LocalConfig(Config):
-    """Connection parameters for a local (filesystem) database."""
+class BaseConnectionConfig(ConfigurableResource, abc.ABC):
+    pass
 
-    provider: Literal["local"] = "local"
+
+class LocalConfig(BaseConnectionConfig):
+    """Connection parameters for a local (filesystem) database."""
 
     persistence_path: str | None = "./chroma"
     """The directory to save Chroma's data to. Defaults to './chroma'.
@@ -19,10 +21,8 @@ class LocalConfig(Config):
     """
 
 
-class HttpConfig(Config):
+class HttpConfig(BaseConnectionConfig):
     """Connection parameters for a Chroma HTTP server."""
-
-    provider: Literal["http"] = "http"
 
     host: str = DEFAULT_HOST
     """The host of the Chroma HTTP server. Defaults to 'localhost'"""

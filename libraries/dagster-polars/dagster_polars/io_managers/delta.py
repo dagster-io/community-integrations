@@ -240,9 +240,9 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
             partition_by = context_metadata.get("partition_by")
 
             if partition_by is not None:
-                assert context.partition_key is not None, (
-                    "Cannot set `partition_by` for an asset without partitions."
-                )
+                assert (
+                    context.partition_key is not None
+                ), "Cannot set `partition_by` for an asset without partitions."
 
                 if isinstance(partition_by, dict) and isinstance(
                     context.partition_key, MultiPartitionKey

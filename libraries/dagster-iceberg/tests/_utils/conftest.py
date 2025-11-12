@@ -121,7 +121,7 @@ def table_partitioned_update_identifier(
 
 
 @pytest.fixture(autouse=True)
-def create_table_in_catalog(
+def _create_table_in_catalog(
     catalog: Catalog,
     table_identifier: str,
     data_schema: pa.Schema,
@@ -130,7 +130,7 @@ def create_table_in_catalog(
 
 
 @pytest.fixture(autouse=True)
-def create_partitioned_table_in_catalog(
+def _create_partitioned_table_in_catalog(
     catalog: Catalog,
     table_partitioned_identifier: str,
     data_schema: pa.Schema,
@@ -157,7 +157,7 @@ def create_partitioned_table_in_catalog(
 
 
 @pytest.fixture(autouse=True)
-def create_partitioned_update_table_in_catalog(
+def _create_partitioned_update_table_in_catalog(
     catalog: Catalog,
     table_partitioned_update_identifier: str,
     data_schema: pa.Schema,
@@ -184,8 +184,8 @@ def create_partitioned_update_table_in_catalog(
 
 
 @pytest.fixture(autouse=True)
-def append_data_to_table(
-    create_table_in_catalog,
+def _append_data_to_table(
+    _create_table_in_catalog,
     catalog: Catalog,
     table_identifier: str,
     data: pa.Table,
@@ -194,8 +194,8 @@ def append_data_to_table(
 
 
 @pytest.fixture(autouse=True)
-def append_data_to_partitioned_table(
-    create_partitioned_table_in_catalog,
+def _append_data_to_partitioned_table(
+    _create_partitioned_table_in_catalog,
     catalog: Catalog,
     table_partitioned_identifier: str,
     data: pa.Table,
@@ -204,8 +204,8 @@ def append_data_to_partitioned_table(
 
 
 @pytest.fixture
-def append_data_to_partitioned_update_table(
-    create_partitioned_update_table_in_catalog,
+def _append_data_to_partitioned_update_table(
+    _create_partitioned_update_table_in_catalog,
     catalog: Catalog,
     table_partitioned_update_identifier: str,
     data: pa.Table,

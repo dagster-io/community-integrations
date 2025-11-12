@@ -19,7 +19,7 @@ def table_identifier(namespace: str, table_name: str) -> str:
 
 
 @pytest.fixture(autouse=True)
-def create_table_in_catalog(
+def _create_table_in_catalog(
     catalog: Catalog,
     table_identifier: str,
     data_schema: pa.Schema,
@@ -29,7 +29,7 @@ def create_table_in_catalog(
 
 @pytest.fixture(autouse=True)
 def iceberg_table(
-    create_table_in_catalog,
+    _create_table_in_catalog,
     catalog: Catalog,
     table_identifier: str,
 ) -> Table:
@@ -37,7 +37,7 @@ def iceberg_table(
 
 
 @pytest.fixture(autouse=True)
-def append_data_to_table(iceberg_table: Table, data: pa.Table):
+def _append_data_to_table(iceberg_table: Table, data: pa.Table):
     iceberg_table.append(df=data)
 
 

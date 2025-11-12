@@ -1,7 +1,6 @@
 import abc
 import os
 from contextlib import contextmanager
-from typing import Literal
 from collections.abc import Generator
 
 import dagster as dg
@@ -13,11 +12,14 @@ from sqlalchemy.engine import Connection, Engine
 
 from .duckdb_protocol import DuckDBConnectionProvider
 
+
 class BaseMetadataBackend(dg.ConfigurableResource, abc.ABC):
     pass
 
+
 class BaseStorageBackend(dg.ConfigurableResource, abc.ABC):
     pass
+
 
 class PostgresConfig(BaseMetadataBackend):
     """Configuration for a Postgres metadata backend."""

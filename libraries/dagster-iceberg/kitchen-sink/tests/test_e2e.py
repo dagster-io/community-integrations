@@ -11,7 +11,7 @@ MAKEFILE_DIR = file_relative_path(__file__, "../")
 
 
 @pytest.fixture(autouse=True)
-def catalog():
+def _catalog():
     subprocess.run(["make", "catalog"], cwd=MAKEFILE_DIR, check=True)
     subprocess.run(["sleep", "10"])
     yield

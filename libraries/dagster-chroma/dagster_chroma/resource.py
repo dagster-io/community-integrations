@@ -10,7 +10,7 @@ import chromadb.config
 from dagster import ConfigurableResource
 from dagster._utils.backoff import backoff
 
-from .config import LocalConfig, HttpConfig
+from .config import LocalConfig, HttpConfig, BaseConnectionConfig
 
 
 class ChromaResource(ConfigurableResource):
@@ -45,8 +45,7 @@ class ChromaResource(ConfigurableResource):
         )
     """
 
-    connection_config: LocalConfig | HttpConfig = Field(
-        discriminator="provider",
+    connection_config: BaseConnectionConfig = Field(
         description=(
             """Specified whether to connect to Chroma via HTTP, or to use a Local database
             (i.e. the library will directly access a persistence-directory on this machine)
@@ -83,7 +82,7 @@ class ChromaResource(ConfigurableResource):
     def get_client(self) -> Generator[chromadb.api.ClientAPI, None, None]:
         chromadb_settings = chromadb.config.Settings(**self.additional_settings)
 
-        if self.connection_config.provider == "local":  # LocalConfig
+        if isinstance(self.connection_config, LocalConfig):  # LocalConfig
             if self.connection_config.persistence_path is None:
                 conn = chromadb.EphemeralClient(
                     settings=chromadb_settings,
@@ -97,7 +96,7 @@ class ChromaResource(ConfigurableResource):
                     tenant=self.tenant,
                     database=self.database,
                 )
-        elif self.connection_config.provider == "http":  # HttpConfig
+        elif isinstance(self.connection_config, HttpConfig):  # HttpConfig
             conn = backoff(
                 fn=chromadb.HttpClient,
                 retry_on=(ValueError,),

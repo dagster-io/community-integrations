@@ -27,7 +27,7 @@ WAREHOUSE_DIR = "warehouse"
 
 
 @pytest.fixture(scope="session", autouse=True)
-def compose(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+def _compose(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
     # Determine the warehouse path temporary directory pytest will make:
     # https://github.com/pytest-dev/pytest/blob/b48e23d/src/_pytest/tmpdir.py#L67
     warehouse_path = str(
@@ -72,7 +72,7 @@ def postgres_uri() -> str:
 # NB: we truncate all iceberg tables before each test
 #  that way, we don't have to worry about side effects
 @pytest.fixture(autouse=True)
-def clean_iceberg_tables(postgres_connection: psycopg2.extensions.connection):
+def _clean_iceberg_tables(postgres_connection: psycopg2.extensions.connection):
     with postgres_connection.cursor() as cur:
         cur.execute(
             "SELECT tablename FROM pg_catalog.pg_tables WHERE tablename LIKE 'iceberg%';",
