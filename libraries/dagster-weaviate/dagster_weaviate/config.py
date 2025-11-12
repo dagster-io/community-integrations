@@ -1,6 +1,7 @@
+import abc
 from typing import Literal
 
-from dagster import Config
+from dagster import Config, ConfigurableResource
 
 # These are the default ports for a local Weaviate instance. see:
 # https://weaviate.io/developers/weaviate/quickstart/local#11-create-a-weaviate-database
@@ -10,10 +11,12 @@ DEFAULT_PORT = 8080
 DEFAULT_GRPC_PORT = 50051
 
 
-class LocalConfig(Config):
-    """Connection parameters for a local (self-hosted) database."""
+class BaseWeaviateConfig(ConfigurableResource, abc.ABC):
+    """Base config for Weaviate resources."""
 
-    provider: Literal["local"] = "local"
+
+class LocalConfig(BaseWeaviateConfig):
+    """Connection parameters for a local (self-hosted) database."""
 
     host: str = DEFAULT_HOST
     """The host to use for the underlying REST and GraphQL API calls. Default to localhost."""
@@ -27,10 +30,8 @@ class LocalConfig(Config):
      Defaults to 50051 (the default grpc-port a weaviate instance runs on)"""
 
 
-class CloudConfig(Config):
+class CloudConfig(BaseWeaviateConfig):
     """Connection parameters for a cloud Weaviate database."""
-
-    provider: Literal["cloud"] = "cloud"
 
     cluster_url: str
     """The WCD cluster URL or hostname to connect to.

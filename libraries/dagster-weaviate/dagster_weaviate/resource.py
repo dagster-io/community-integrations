@@ -5,10 +5,10 @@ from pydantic import Field
 
 import weaviate
 
-from dagster import ConfigurableResource
+from dagster import ConfigurableResource, Config
 from dagster._utils.backoff import backoff
 
-from .config import LocalConfig, CloudConfig
+from .config import LocalConfig, CloudConfig, BaseWeaviateConfig
 
 
 class WeaviateResource(ConfigurableResource):
@@ -65,8 +65,7 @@ class WeaviateResource(ConfigurableResource):
             )
     """
 
-    connection_config: LocalConfig | CloudConfig = Field(
-        discriminator="provider",
+    connection_config: BaseWeaviateConfig = Field(
         description=(
             "Specifies whether to connect to a local (self-hosted) instance,"
             " or a Weaviate cloud instance. Use LocalConfig or CloudConfig, respectively"
@@ -126,7 +125,7 @@ class WeaviateResource(ConfigurableResource):
 
     @contextmanager
     def get_client(self) -> Generator[weaviate.WeaviateClient, None, None]:
-        if self.connection_config.provider == "local":  # LocalConfig
+        if isinstance(self.connection_config, LocalConfig):  # LocalConfig
             conn = backoff(
                 fn=weaviate.connect_to_local,
                 retry_on=(weaviate.exceptions.WeaviateConnectionError,),
@@ -140,7 +139,7 @@ class WeaviateResource(ConfigurableResource):
                 },
                 max_retries=10,
             )
-        elif self.connection_config.provider == "cloud":  # CloudConfig
+        elif isinstance(self.connection_config, CloudConfig):  # CloudConfig
             conn = backoff(
                 fn=weaviate.connect_to_weaviate_cloud,
                 retry_on=(weaviate.exceptions.WeaviateConnectionError,),
