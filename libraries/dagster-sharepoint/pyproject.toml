@@ -4,26 +4,19 @@ description = "Dagster integration for SharePoint document management using Micr
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "dagster>=1.8.0",
+    "dagster",
     "requests>=2.31.0",
 ]
 dynamic = ["version"]
 
-[tool.uv]
-dev-dependencies = [
-    "ruff",
-    "pytest",
-    "pyright>=1.1.386",
-    "responses>=0.25.0",
-    "pytest-cov>=7.0.0",
-]
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "semver"
+fallback-version = "0.0.0"
 
 [build-system]
-requires = ["setuptools>=42"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools]
-packages = ["dagster_sharepoint"]
-
-[tool.setuptools.dynamic]
-version = {attr = "dagster_sharepoint.__version__"}
+requires = ["hatchling", "uv-dynamic-versioning"]
+build-backend = "hatchling.build"
