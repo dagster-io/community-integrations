@@ -1,4 +1,5 @@
 import datetime as dt
+import logging
 import os
 import random
 import shutil
@@ -14,6 +15,8 @@ from dotenv import load_dotenv
 from pyiceberg.catalog import Catalog, load_catalog
 
 load_dotenv()
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 COMPOSE_DIR = file_relative_path(__file__, "docker")
 
@@ -34,12 +37,20 @@ def _compose(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
         tmp_path_factory.getbasetemp().joinpath(WAREHOUSE_DIR).resolve()
     )
 
-    subprocess.run(
-        ["docker", "compose", "up", "--build", "--wait", "--no-recreate"],
-        cwd=COMPOSE_DIR,
-        check=True,
-        env={"WAREHOUSE_PATH": warehouse_path, **os.environ},
-    )
+    try:
+        subprocess.run(
+            ["docker", "compose", "up", "--build", "--wait", "--no-recreate"],
+            cwd=COMPOSE_DIR,
+            check=True,
+            capture_output=True,
+            text=True,
+            env={"WAREHOUSE_PATH": warehouse_path, **os.environ},
+        )
+    except subprocess.CalledProcessError as e:
+        logger.error("Docker compose up failed with return code %s", e.returncode)
+        logger.error("STDOUT:\n%s", e.stdout)
+        logger.error("STDERR:\n%s", e.stderr)
+        raise
     sleep(5)
     yield
     if os.getenv("TEST_NO_TEARDOWN") is None:

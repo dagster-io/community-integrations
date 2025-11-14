@@ -9,6 +9,7 @@ readme = "README.md"
 dependencies = [
   "dagster>=1.8.2",
   "pendulum>=3.0.0",
+  "pydantic>=2.0.0",
   "pyiceberg[pyarrow]>=0.8",
   "tenacity>=8.5.0",
 ]
