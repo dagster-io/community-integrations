@@ -11,6 +11,7 @@ from pyiceberg import expressions as E
 from pyiceberg.catalog import Catalog
 
 from dagster_iceberg._utils import io
+from dagster_iceberg.config import IcebergBranchConfig
 
 
 def run_test_write(
@@ -35,6 +36,7 @@ def run_test_write(
         schema_update_mode="update",
         partition_spec_update_mode="update",
         dagster_run_id=dagster_run_id,
+        branch_config=IcebergBranchConfig(),
         write_mode=write_mode,
     )
     assert catalog.table_exists(identifier_)
@@ -222,6 +224,7 @@ def test_table_writer_multi_partitioned(
         schema_update_mode="update",
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
+        branch_config=IcebergBranchConfig(),
     )
     table = catalog.load_table(identifier_)
     partition_field_names = [f.name for f in table.spec().fields]
@@ -265,6 +268,7 @@ def test_table_writer_multi_partitioned_update(
         schema_update_mode="update",
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
+        branch_config=IcebergBranchConfig(),
     )
     table = catalog.load_table(identifier_)
     data_out = (
@@ -307,6 +311,7 @@ def test_table_writer_multi_partitioned_update_partition_spec_change(
         schema_update_mode="update",
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
+        branch_config=IcebergBranchConfig(),
     )
     data_ = data.filter(
         (pc.field("category") == "A")
@@ -333,10 +338,11 @@ def test_table_writer_multi_partitioned_update_partition_spec_change(
         schema_update_mode="update",
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
+        branch_config=IcebergBranchConfig(),
     )
     path_to_dwh = (
         plb.Path(warehouse_path)
-        / f"{namespace}.db"
+        / f"{namespace}"
         / table_
         / "data"
         / "part_timestamp=2023-01-01-00"
@@ -375,6 +381,7 @@ def test_table_writer_multi_partitioned_update_partition_spec_error(
         schema_update_mode="update",
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
+        branch_config=IcebergBranchConfig(),
     )
     data_ = data.filter(
         (pc.field("category") == "A")
@@ -408,6 +415,7 @@ def test_table_writer_multi_partitioned_update_partition_spec_error(
             schema_update_mode="update",
             partition_spec_update_mode="error",
             dagster_run_id="hfkghdgsh467374828",
+            branch_config=IcebergBranchConfig(),
         )
 
 
@@ -428,11 +436,12 @@ def test_iceberg_table_writer_with_table_properties(
         catalog=catalog,
         schema_update_mode="update",
         partition_spec_update_mode="update",
+        dagster_run_id="hfkghdgsh467374828",
+        branch_config=IcebergBranchConfig(),
         table_properties={
             "write.parquet.page-size-bytes": "2048",  # 2MB
             "write.parquet.page-row-limit": "10000",
         },
-        dagster_run_id="hfkghdgsh467374828",
     )
     table = catalog.load_table(identifier_)
     assert table.properties["write.parquet.page-size-bytes"] == "2048"
@@ -462,6 +471,7 @@ def test_iceberg_table_writer_drop_partition_spec_column(
         schema_update_mode="update",
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
+        branch_config=IcebergBranchConfig(),
     )
     # Second write: user drops partition column but keeps the partition spec
     data = data.drop("timestamp")
@@ -485,6 +495,7 @@ def test_iceberg_table_writer_drop_partition_spec_column(
             schema_update_mode="update",
             partition_spec_update_mode="update",
             dagster_run_id="gfgd744445dfhgfgfg",
+            branch_config=IcebergBranchConfig(),
         )
 
 
@@ -511,6 +522,7 @@ def test_write_from_any_to_zero_partition_spec_fields(
         schema_update_mode="error",
         partition_spec_update_mode="error",
         dagster_run_id="hfkghdgsh467374828",
+        branch_config=IcebergBranchConfig(),
     )
     # Second write: user drops the partition spec
     io.table_writer(
@@ -524,6 +536,7 @@ def test_write_from_any_to_zero_partition_spec_fields(
         schema_update_mode="error",
         partition_spec_update_mode="update",
         dagster_run_id="gfgd744445dfhgfgfg",
+        branch_config=IcebergBranchConfig(),
     )
     table = catalog.load_table(f"{namespace}.{table_}")
     assert len(table.specs()) == 2
@@ -531,3 +544,206 @@ def test_write_from_any_to_zero_partition_spec_fields(
     assert table.specs()[1].fields[0].name == "part_timestamp"
     # Spec from the second write (no partition spec)
     assert len(table.spec().fields) == 0
+
+
+class TestTableWriterBranching:
+    """Tests for table branching functionality in table_writer"""
+
+    def test_write_to_branch_with_no_snapshots_creates_branch_after_main_write(
+        self, namespace: str, catalog: Catalog, data: pa.Table
+    ):
+        """Test that writing to a branch on a table with no snapshots writes to main first,
+        then creates the requested branch"""
+        table_name = "test_branch_no_snapshots"
+        identifier = f"{namespace}.{table_name}"
+        branch_name = "test_branch"
+        dagster_run_id = str(uuid4())
+
+        io.table_writer(
+            table_slice=TableSlice(
+                table=table_name,
+                schema=namespace,
+                partition_dimensions=[],
+            ),
+            data=data,
+            catalog=catalog,
+            schema_update_mode="update",
+            partition_spec_update_mode="update",
+            dagster_run_id=dagster_run_id,
+            branch_config=IcebergBranchConfig(branch_name=branch_name),
+            write_mode=io.WriteMode.overwrite,
+        )
+
+        table = catalog.load_table(identifier)
+
+        # Verify the main branch has the data
+        main_data = table.scan().to_arrow()
+        assert len(main_data) == len(data)
+
+        # Verify the branch was created
+        refs = table.refs()
+        assert branch_name in refs
+
+        # Verify the branch also has the data (it was created from the main branch snapshot)
+        branch_data = table.scan(snapshot_id=refs[branch_name].snapshot_id).to_arrow()
+        assert len(branch_data) == len(data)
+
+    def test_write_to_new_branch_with_existing_snapshots_creates_branch(
+        self, namespace: str, catalog: Catalog, data: pa.Table
+    ):
+        """Test that writing to a new branch on a table with existing snapshots
+        creates the branch and writes go to it, keeping main branch separate"""
+        table_name = "test_new_branch_with_snapshots"
+        identifier = f"{namespace}.{table_name}"
+        branch_name = "test_branch"
+
+        # First write to main branch
+        initial_data = data.slice(0, len(data) // 2)
+        io.table_writer(
+            table_slice=TableSlice(
+                table=table_name,
+                schema=namespace,
+                partition_dimensions=[],
+            ),
+            data=initial_data,
+            catalog=catalog,
+            schema_update_mode="update",
+            partition_spec_update_mode="update",
+            dagster_run_id=str(uuid4()),
+            branch_config=IcebergBranchConfig(),
+            write_mode=io.WriteMode.overwrite,
+        )
+
+        # Now write to a new branch
+        branch_data = data.slice(len(data) // 2, len(data) // 2)
+        io.table_writer(
+            table_slice=TableSlice(
+                table=table_name,
+                schema=namespace,
+                partition_dimensions=[],
+            ),
+            data=branch_data,
+            catalog=catalog,
+            schema_update_mode="update",
+            partition_spec_update_mode="update",
+            dagster_run_id=str(uuid4()),
+            branch_config=IcebergBranchConfig(branch_name=branch_name),
+            write_mode=io.WriteMode.overwrite,
+        )
+
+        table = catalog.load_table(identifier)
+
+        # Verify the branch was created
+        refs = table.refs()
+        assert branch_name in refs
+
+        # Verify main branch still has only initial data
+        main_data = table.scan().to_arrow()
+        assert len(main_data) == len(initial_data)
+
+        # Verify the branch has the new data
+        branch_data_read = table.scan(
+            snapshot_id=refs[branch_name].snapshot_id
+        ).to_arrow()
+        assert len(branch_data_read) == len(branch_data)
+
+    def test_write_to_existing_branch_with_snapshots(
+        self, namespace: str, catalog: Catalog, data: pa.Table
+    ):
+        """Test that writing to an existing branch writes to that branch
+        and keeps main branch separate"""
+        table_name = "test_existing_branch_write"
+        identifier = f"{namespace}.{table_name}"
+        branch_name = "test_branch"
+
+        # First write to main branch
+        initial_data = data.slice(0, len(data) // 3)
+        io.table_writer(
+            table_slice=TableSlice(
+                table=table_name,
+                schema=namespace,
+                partition_dimensions=[],
+            ),
+            data=initial_data,
+            catalog=catalog,
+            schema_update_mode="update",
+            partition_spec_update_mode="update",
+            dagster_run_id=str(uuid4()),
+            branch_config=IcebergBranchConfig(),
+            write_mode=io.WriteMode.overwrite,
+        )
+
+        # Write to create the branch
+        branch_data_1 = data.slice(len(data) // 3, len(data) // 3)
+        io.table_writer(
+            table_slice=TableSlice(
+                table=table_name,
+                schema=namespace,
+                partition_dimensions=[],
+            ),
+            data=branch_data_1,
+            catalog=catalog,
+            schema_update_mode="update",
+            partition_spec_update_mode="update",
+            dagster_run_id=str(uuid4()),
+            branch_config=IcebergBranchConfig(branch_name=branch_name),
+            write_mode=io.WriteMode.overwrite,
+        )
+
+        # Write again to the existing branch (append this time)
+        branch_data_2 = data.slice((2 * len(data)) // 3, len(data) // 3)
+        io.table_writer(
+            table_slice=TableSlice(
+                table=table_name,
+                schema=namespace,
+                partition_dimensions=[],
+            ),
+            data=branch_data_2,
+            catalog=catalog,
+            schema_update_mode="update",
+            partition_spec_update_mode="update",
+            dagster_run_id=str(uuid4()),
+            branch_config=IcebergBranchConfig(branch_name=branch_name),
+            write_mode=io.WriteMode.append,
+        )
+
+        table = catalog.load_table(identifier)
+        refs = table.refs()
+
+        # Verify main branch still has only initial data
+        main_data = table.scan().to_arrow()
+        assert len(main_data) == len(initial_data)
+
+        # Verify the branch has both writes (overwrite + append)
+        branch_data_read = table.scan(
+            snapshot_id=refs[branch_name].snapshot_id
+        ).to_arrow()
+        assert len(branch_data_read) == len(branch_data_1) + len(branch_data_2)
+
+    def test_write_to_branch_with_no_snapshots_and_error_flag_raises(
+        self, namespace: str, catalog: Catalog, data: pa.Table
+    ):
+        """Test that writing to a branch on a table with no snapshots raises ValueError
+        when error_if_branch_and_no_snapshots=True"""
+        table_name = "test_branch_no_snapshots_error"
+        branch_name = "test_branch"
+
+        with pytest.raises(
+            ValueError,
+            match=f"Table has no snapshots, cannot write to branch {branch_name}",
+        ):
+            io.table_writer(
+                table_slice=TableSlice(
+                    table=table_name,
+                    schema=namespace,
+                    partition_dimensions=[],
+                ),
+                data=data,
+                catalog=catalog,
+                schema_update_mode="update",
+                partition_spec_update_mode="update",
+                dagster_run_id=str(uuid4()),
+                branch_config=IcebergBranchConfig(branch_name=branch_name),
+                error_if_branch_and_no_snapshots=True,
+                write_mode=io.WriteMode.overwrite,
+            )

@@ -200,6 +200,50 @@ Use asset metadata to set table properties:
 
 ---
 
+## Using table branching
+
+Iceberg tables support branching, which allows you to write to and read from a branch of a table without affecting the main branch. This is particularly useful for development workflows where you want to test changes without overwriting production data.
+
+The Iceberg I/O manager supports table branching through the `branch_config` parameter in `IcebergCatalogConfig`. When you configure a branch name, all assets using that I/O manager will read from and write to the specified branch. If the branch doesn't exist, it will be created automatically.
+
+=== "Basic branching"
+
+    To use table branching, configure the `branch_config` parameter with a `branch_name`:
+
+    ```python title="docs/snippets/table_branching.py" linenums="1"
+    --8<-- "docs/snippets/table_branching.py"
+    ```
+
+    In this example, all assets using the `io_manager` will read from and write to the `dev` branch. When you materialize assets, they will be stored in the `dev` branch, and downstream assets will read from the `dev` branch as well.
+
+=== "Branching from a specific snapshot"
+
+    You can also create a branch from a specific snapshot by providing the `ref_snapshot_id`:
+
+    ```python title="docs/snippets/table_branching_from_snapshot.py" linenums="1"
+    --8<-- "docs/snippets/table_branching_from_snapshot.py"
+    ```
+
+    This creates a branch named `experimental` based on snapshot ID `123456789`. If the specified snapshot ID doesn't exist, an error will be raised.
+
+!!! info "Branch configuration options"
+
+    The `IcebergBranchConfig` supports several configuration options:
+
+    - `branch_name`: Name of the branch to use (defaults to `main`)
+    - `ref_snapshot_id`: Snapshot ID to use as the base for the branch (optional)
+    - `max_snapshot_age_ms`: Maximum age of a snapshot in milliseconds (optional)
+    - `min_snapshots_to_keep`: Minimum number of snapshots to keep (optional)
+    - `max_ref_age_ms`: Maximum age of a reference in milliseconds (optional)
+
+    For more information, see the [Iceberg branching documentation](https://iceberg.apache.org/docs/latest/branching/).
+
+!!! info "Branch creation"
+
+    When writing to a branch, if the branch doesn't exist, it will be created automatically from the current snapshot. When reading from a branch, the branch must exist. If you try to read from a branch that doesn't exist, an error will be raised. You can control the behavior when a branch doesn't exist and the table has no snapshots using the `error_if_branch_and_no_snapshots` parameter in `IcebergCatalogConfig`.
+
+---
+
 ## Allowing updates to schema and partitions
 
 By default, assets will error when you change the partition spec (e.g. if you change a partition from hourly to daily) or the schema (e.g. when you add a column). You can allow updates to an asset's partition spec and/or schema by adding the following configuration options to the asset metadata:

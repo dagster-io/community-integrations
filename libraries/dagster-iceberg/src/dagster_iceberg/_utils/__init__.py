@@ -1,4 +1,4 @@
-from dagster_iceberg._utils.io import (
+from dagster_iceberg._utils.config import (
     DEFAULT_PARTITION_FIELD_NAME_PREFIX as DEFAULT_PARTITION_FIELD_NAME_PREFIX,
 )
 from dagster_iceberg._utils.io import (

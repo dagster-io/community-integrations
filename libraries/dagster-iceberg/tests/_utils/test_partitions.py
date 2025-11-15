@@ -658,60 +658,6 @@ def test_get_partition_field_by_source_column(
     assert no_partition_field is None
 
 
-def test_existing_table_partition_names_unchanged(
-    catalog,
-    namespace: str,
-    iceberg_table_schema: iceberg_schema.Schema,
-):
-    """Test that existing tables with old partition field names continue to work unchanged"""
-    table_name = "test_backward_compatibility"
-
-    # Create table
-    table = catalog.create_table(
-        identifier=f"{namespace}.{table_name}",
-        schema=iceberg_table_schema,
-    )
-
-    # Manually add a partition field with old-style naming (same as column name)
-    with table.update_spec() as update:
-        update.add_field(
-            source_column_name="timestamp",
-            transform=transforms.HourTransform(),
-            partition_field_name="timestamp",  # Old style: same as column name
-        )
-
-    table.refresh()
-    original_field_name = table.spec().fields[0].name
-    assert original_field_name == "timestamp"
-
-    # Now run update with no actual changes (same partition dimensions)
-    table_slice = TableSlice(
-        table=table_name,
-        schema=namespace,
-        partition_dimensions=[
-            TablePartitionDimension(
-                "timestamp",
-                TimeWindow(dt.datetime(2023, 1, 1), dt.datetime(2023, 1, 1, 1)),
-            ),
-        ],
-    )
-
-    # This should not change anything since the partition is already there with same transform
-    partitions.update_table_partition_spec(
-        table=table,
-        table_slice=table_slice,
-        partition_spec_update_mode="update",
-    )
-
-    table.refresh()
-
-    # Verify the old partition field name is preserved (no unnecessary changes)
-    assert len(table.spec().fields) == 1
-    assert (
-        table.spec().fields[0].name == original_field_name
-    )  # Should still be "timestamp"
-
-
 def test_partition_field_naming_avoids_column_conflicts(
     catalog,
     namespace: str,

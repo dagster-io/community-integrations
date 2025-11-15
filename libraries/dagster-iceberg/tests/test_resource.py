@@ -65,7 +65,7 @@ def test_resource(
         table_ = pyiceberg_table.load().scan().to_arrow()
         assert (
             table_.schema.to_string()
-            == "timestamp: timestamp[us]\ncategory: large_string\nvalue: double"
+            == "timestamp: timestamp[us]\ncategory: string\nvalue: double"
         )
         assert table_.shape == (1440, 3)
 

@@ -1,4 +1,5 @@
 import datetime
+from collections.abc import Callable
 
 import polars as pl
 import pytest
@@ -12,8 +13,9 @@ from dagster import (
     materialize,
 )
 from pyiceberg.catalog import Catalog
+from pyiceberg.table.refs import SnapshotRefType
 
-from dagster_iceberg.config import IcebergCatalogConfig
+from dagster_iceberg.config import IcebergBranchConfig, IcebergCatalogConfig
 from dagster_iceberg.io_manager.polars import PolarsIcebergIOManager
 
 
@@ -28,6 +30,31 @@ def io_manager(
         config=IcebergCatalogConfig(properties=catalog_config_properties),
         namespace=namespace,
     )
+
+
+@pytest.fixture
+def io_manager_factory(
+    catalog_name: str, namespace: str, catalog_config_properties: dict[str, str]
+) -> Callable[[IcebergCatalogConfig], PolarsIcebergIOManager]:
+    def _factory(
+        iceberg_catalog_config: IcebergCatalogConfig,
+    ) -> PolarsIcebergIOManager:
+        # Merge the base catalog properties with any provided config
+        merged_properties = {
+            **catalog_config_properties,
+            **iceberg_catalog_config.properties,
+        }
+        merged_config = IcebergCatalogConfig(
+            properties=merged_properties,
+            branch_config=iceberg_catalog_config.branch_config,
+        )
+        return PolarsIcebergIOManager(
+            name=catalog_name,
+            config=merged_config,
+            namespace=namespace,
+        )
+
+    return _factory
 
 
 # NB: iceberg table identifiers are namespace + asset names (see below)
@@ -263,6 +290,7 @@ class TestIcebergIOManager:
             assert res.success
 
             table = catalog.load_table(asset_b_df_table_identifier)
+            table.refresh()
             out_df = table.scan().to_arrow()
             assert out_df["a"].to_pylist() == [1, 2, 3]
 
@@ -552,3 +580,31 @@ class TestIcebergIOManager:
         assert len(category_this_values) == 3
         expected_category_this_values = {k.split("|")[0] for k in keys}
         assert category_this_values == expected_category_this_values
+
+
+class TestIcebergIOManagerBranching:
+    def test_given_no_existing_branch_when_materializing_then_create_branch(
+        self,
+        io_manager_factory: Callable[[IcebergCatalogConfig], PolarsIcebergIOManager],
+        catalog: Catalog,
+        catalog_config_properties,
+        asset_b_df_table_identifier: str,
+    ):
+        iceberg_catalog_config = IcebergCatalogConfig(
+            properties=catalog_config_properties,
+            branch_config=IcebergBranchConfig(branch_name="test"),
+        )
+        io_manager = io_manager_factory(iceberg_catalog_config=iceberg_catalog_config)
+
+        resource_defs = {"io_manager": io_manager}
+
+        res = materialize([b_df], resources=resource_defs)
+        assert res.success
+
+        table = catalog.load_table(asset_b_df_table_identifier)
+        refs = table.refs()
+        # refs() returns a dict with ref names as keys
+        assert "test" in refs, (
+            f"Expected 'test' branch in refs, but got: {list(refs.keys())}"
+        )
+        assert refs["test"].snapshot_ref_type == SnapshotRefType.BRANCH

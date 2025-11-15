@@ -22,6 +22,7 @@ class _PyArrowIcebergTypeHandler(_handler.IcebergBaseTypeHandler[ArrowTypes]):
         table: ibt.Table,
         table_slice: TableSlice,
         target_type: type[ArrowTypes],
+        snapshot_id: int | None = None,
     ) -> ArrowTypes:
         selected_fields: tuple[str, ...] = (
             tuple(table_slice.columns) if table_slice.columns is not None else ("*",)
@@ -37,7 +38,11 @@ class _PyArrowIcebergTypeHandler(_handler.IcebergBaseTypeHandler[ArrowTypes]):
         else:
             row_filter = ibt.ALWAYS_TRUE
 
-        table_scan = table.scan(row_filter=row_filter, selected_fields=selected_fields)
+        table_scan = table.scan(
+            row_filter=row_filter,
+            selected_fields=selected_fields,
+            snapshot_id=snapshot_id,
+        )
 
         return (
             table_scan.to_arrow()

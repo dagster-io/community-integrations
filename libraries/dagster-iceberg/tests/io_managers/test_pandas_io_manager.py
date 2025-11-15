@@ -14,7 +14,7 @@ from dagster import (
 )
 from pyiceberg.catalog import Catalog
 
-from dagster_iceberg.config import IcebergCatalogConfig
+from dagster_iceberg.config import IcebergBranchConfig, IcebergCatalogConfig
 from dagster_iceberg.io_manager.pandas import PandasIcebergIOManager
 
 
@@ -257,3 +257,40 @@ def test_iceberg_io_manager_with_multipartitioned_assets(
         datetime.date(2022, 1, 1),
     ]
     assert out_df["category_this"].to_pylist() == ["c", "b", "a", "c", "b", "a"]
+
+
+def test_iceberg_io_manager_with_branch(
+    asset_b_df_table_identifier: str,
+    catalog: Catalog,
+    catalog_name: str,
+    namespace: str,
+    catalog_config_properties: dict[str, str],
+):
+    """Test that branching works correctly by creating a branch and verifying it exists."""
+    # Create config with branch settings
+    iceberg_catalog_config = IcebergCatalogConfig(
+        properties=catalog_config_properties,
+        branch_config=IcebergBranchConfig(branch_name="test_branch"),
+    )
+
+    # Create IO manager with branch config
+    io_manager = PandasIcebergIOManager(
+        name=catalog_name,
+        config=iceberg_catalog_config,
+        namespace=namespace,
+    )
+
+    resource_defs = {"io_manager": io_manager}
+
+    # Materialize the asset
+    res = materialize([b_df], resources=resource_defs)
+    assert res.success
+
+    # Load the table and check that the branch exists
+    table = catalog.load_table(asset_b_df_table_identifier)
+    refs = table.refs()
+
+    # Verify the branch was created
+    assert "test_branch" in refs, (
+        f"Expected 'test_branch' in refs, but got: {list(refs.keys())}"
+    )

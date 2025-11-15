@@ -16,7 +16,12 @@ from pyiceberg.exceptions import (
 )
 from pyiceberg.partitioning import PartitionSpec
 from pyiceberg.schema import Schema
+from pyiceberg.table.refs import MAIN_BRANCH
 
+from dagster_iceberg._utils.config import (
+    DEFAULT_PARTITION_FIELD_NAME_PREFIX,
+    IcebergBranchConfig,
+)
 from dagster_iceberg._utils.partitions import (
     DagsterPartitionToIcebergExpressionMapper,
     update_table_partition_spec,
@@ -35,7 +40,6 @@ class WriteMode(Enum):
 
 
 DEFAULT_WRITE_MODE: Final[WriteMode] = WriteMode.overwrite
-DEFAULT_PARTITION_FIELD_NAME_PREFIX: Final[str] = "part"
 
 
 def table_writer(
@@ -45,6 +49,8 @@ def table_writer(
     schema_update_mode: str,
     partition_spec_update_mode: str,
     dagster_run_id: str,
+    branch_config: IcebergBranchConfig,
+    error_if_branch_and_no_snapshots: bool = False,
     partition_field_name_prefix: str = DEFAULT_PARTITION_FIELD_NAME_PREFIX,
     dagster_partition_key: str | None = None,
     table_properties: dict[str, str] | None = None,
@@ -59,6 +65,12 @@ def table_writer(
         catalog (Catalog): PyIceberg catalogs supported by this library. See <https://py.iceberg.apache.org/configuration/#catalogs>.
         schema_update_mode (str): Whether to process schema updates on existing
             tables or error, value is either 'error' or 'update'
+        partition_spec_update_mode (str): Whether to update partition spec when there are changes to the partitioning, or to throw an error. Value is either 'error' or 'update'
+        dagster_run_id (str): Dagster run ID
+        dagster_partition_key (str): Dagster partition key provided by asset execution context
+        table_properties (dict[str, str]): Properties to set on the table. Will delete any existing properties that are not in table_properties, and update any existing properties.
+        write_mode (WriteMode): Whether to append to the table or overwrite it. Value is either 'append' or 'overwrite'
+        branch_config (IcebergBranchConfig): Configuration for Iceberg table branch. If the specified branch does not yet exist it will be created.
 
     Raises:
         ValueError: Raised when partition dimension metadata is not set on an
@@ -92,6 +104,7 @@ def table_writer(
                 " 'partition_expr' in the asset metadata?",
             )
         partition_dimensions = table_slice.partition_dimensions
+
     logger.debug("Partition dimensions: %s", partition_dimensions)
     if table_exists(catalog, table_path):
         logger.debug("Updating existing table")
@@ -151,22 +164,109 @@ def table_writer(
     else:
         row_filter = iceberg_table.ALWAYS_TRUE
 
+    # For newly created tables, PyIceberg requires the first write to go to main branch
+    # We'll create the branch after the first write
+    first_table_write_and_branch_requested = False
+    if branch_config.branch_name != MAIN_BRANCH:
+        table_has_snapshots = table.current_snapshot() is not None
+        if table_has_snapshots:
+            create_branch_if_not_exists(table=table, branch_config=branch_config)
+            branch_name = branch_config.branch_name
+        else:
+            if error_if_branch_and_no_snapshots:
+                raise ValueError(
+                    f"Table has no snapshots, cannot write to branch {branch_config.branch_name} until a snapshot is created on the {MAIN_BRANCH} branch. Please create a snapshot on the {MAIN_BRANCH} branch first."
+                )
+
+            logger.warning(
+                "Table has no snapshots, cannot write to branch %s until a snapshot is created on the %s branch. Writing to main branch instead. Subsequent writes will be on the %s branch.",
+                branch_config.branch_name,
+                MAIN_BRANCH,
+                branch_config.branch_name,
+            )
+            branch_name = MAIN_BRANCH
+            first_table_write_and_branch_requested = True
+    else:
+        branch_name = MAIN_BRANCH
+
     snapshot_properties = (
         base_properties | {"dagster-partition-key": dagster_partition_key}
         if dagster_partition_key is not None
         else base_properties
     )
+
+    logger.debug(
+        "Writing %d rows with mode=%s to branch=%s", len(data), write_mode, branch_name
+    )
     if write_mode == WriteMode.append:
-        append_to_table(table=table, data=data, snapshot_properties=snapshot_properties)
+        append_to_table(
+            table=table,
+            data=data,
+            snapshot_properties=snapshot_properties,
+            branch_name=branch_name,
+        )
     elif write_mode == WriteMode.overwrite:
         overwrite_table(
             table=table,
             data=data,
             overwrite_filter=row_filter,
             snapshot_properties=snapshot_properties,
+            branch_name=branch_name,
         )
     else:
         raise ValueError(f"Unexpected write mode: {write_mode}")
+
+    logger.debug("Write completed successfully")
+    # Handle case where user had branch config but no snapshots on table
+    # This allows subsequent table reads to use the requested branch even though the first write was to main branch
+    if first_table_write_and_branch_requested:
+        logger.debug(
+            "Creating branch %s after initial write", branch_config.branch_name
+        )
+        create_branch_if_not_exists(table=table, branch_config=branch_config)
+
+
+def create_branch_if_not_exists(
+    table: iceberg_table.Table, branch_config: IcebergBranchConfig
+):
+    """Creates a branch if it does not exist"""
+    # Check if branch already exists - refs() returns a dict with ref names as keys
+    refs_dict = table.refs()
+    logger.debug("Current table refs: %s", list(refs_dict.keys()))
+
+    if branch_config.branch_name not in refs_dict:
+        # If table has no snapshot yet (newly created), we can't create a branch from it
+        current_snapshot = table.current_snapshot()
+        if current_snapshot is None:
+            logger.debug(
+                "Skipping branch creation for %s because table has no snapshots yet",
+                branch_config.branch_name,
+            )
+            return
+
+        logger.debug(
+            "Creating branch %s from snapshot %s",
+            branch_config.branch_name,
+            current_snapshot.snapshot_id,
+        )
+        ref_snapshot_id = (
+            branch_config.ref_snapshot_id
+            if branch_config.ref_snapshot_id is not None
+            else current_snapshot.snapshot_id
+        )
+        with table.manage_snapshots() as ms:
+            ms.create_branch(
+                snapshot_id=ref_snapshot_id,
+                branch_name=branch_config.branch_name,
+                max_snapshot_age_ms=branch_config.max_snapshot_age_ms,
+                min_snapshots_to_keep=branch_config.min_snapshots_to_keep,
+                max_ref_age_ms=branch_config.max_ref_age_ms,
+            )
+        logger.debug("Branch %s created successfully", branch_config.branch_name)
+    else:
+        logger.debug(
+            "Branch %s already exists, skipping creation", branch_config.branch_name
+        )
 
 
 def get_expression_row_filter(
@@ -256,6 +356,7 @@ def overwrite_table(
     data: pa.Table,
     overwrite_filter: E.BooleanExpression | str,
     snapshot_properties: dict[str, str] | None = None,
+    branch_name: str | None = None,
 ):
     """Overwrites an iceberg table and retries on failure
 
@@ -266,6 +367,8 @@ def overwrite_table(
         table (table.Table): Iceberg table
         df (pa.Table): Data to write to the table
         overwrite_filter (Union[E.BooleanExpression, str]): Filter to apply to the overwrite operation
+        snapshot_properties (dict[str, str]): Properties to set on the snapshot
+        branch (str): Table branch to use. If the branch does not yet exist it will be created.
 
     Raises:
         RetryError: Raised when the commit fails after the maximum number of retries
@@ -276,6 +379,7 @@ def overwrite_table(
         data=data,
         overwrite_filter=overwrite_filter,
         snapshot_properties=snapshot_properties,
+        branch_name=branch_name,
     )
 
 
@@ -283,12 +387,22 @@ def append_to_table(
     table: iceberg_table.Table,
     data: pa.Table,
     snapshot_properties: dict[str, str] | None = None,
+    branch_name: str | None = None,
 ):
+    """Appends data to an iceberg table and retries on failure
+
+    Args:
+        table (table.Table): Iceberg table
+        data (pa.Table): Data to append to the table
+        snapshot_properties (dict[str, str]): Properties to set on the snapshot
+        branch (str): Table branch to use. If the branch does not yet exist it will be created.
+    """
     IcebergTableAppenderWithRetry(table=table).execute(
         retries=3,
         exception_types=CommitFailedException,
         data=data,
         snapshot_properties=snapshot_properties,
+        branch_name=branch_name,
     )
 
 
@@ -297,13 +411,26 @@ class IcebergTableAppenderWithRetry(IcebergOperationWithRetry):
         self,
         data: pa.Table,
         snapshot_properties: dict[str, str] | None = None,
+        branch_name: str | None = None,
     ):
         if snapshot_properties is None:
             snapshot_properties = {}
-        self.logger.debug("Appending to table")
+        self.logger.debug(
+            "Appending %d rows to table %s (branch=%s)",
+            len(data),
+            self.table.name(),
+            branch_name,
+        )
         self.table.append(
             df=data,
             snapshot_properties=snapshot_properties,
+            branch=branch_name,
+        )
+        # Refresh table metadata to see the new snapshot
+        self.table = self.table.refresh()
+        self.logger.debug(
+            "Append completed, current snapshot after refresh: %s",
+            self.table.current_snapshot(),
         )
 
 
@@ -313,12 +440,25 @@ class IcebergTableOverwriterWithRetry(IcebergOperationWithRetry):
         data: pa.Table,
         overwrite_filter: E.BooleanExpression | str,
         snapshot_properties: dict[str, str] | None = None,
+        branch_name: str | None = None,
     ):
-        self.logger.debug("Overwriting table with filter: %s", overwrite_filter)
+        self.logger.debug(
+            "Overwriting %d rows to table %s (branch=%s)",
+            len(data),
+            self.table.name(),
+            branch_name,
+        )
         self.table.overwrite(
             df=data,
             overwrite_filter=overwrite_filter,
             snapshot_properties=(
                 snapshot_properties if snapshot_properties is not None else {}
             ),
+            branch=branch_name,
+        )
+        # Refresh table metadata to see the new snapshot
+        self.table = self.table.refresh()
+        self.logger.debug(
+            "Overwrite completed, current snapshot after refresh: %s",
+            self.table.current_snapshot(),
         )

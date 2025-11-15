@@ -96,9 +96,15 @@ class IcebergDbClient(DbClient):
         if resource_config["config"] is None:
             yield load_catalog(name=resource_config["name"])
         else:
+            config = resource_config["config"]
+            # Handle case where config might be a Pydantic model or a dict
+            if hasattr(config, "properties"):
+                properties = config.properties
+            else:
+                properties = config["properties"]
             yield load_catalog(
                 name=resource_config["name"],
-                **resource_config["config"]["properties"],
+                **properties,
             )
 
 

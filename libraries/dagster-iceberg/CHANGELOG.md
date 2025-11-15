@@ -6,6 +6,7 @@
 
 - Spark I/O manager.
 - Support for append mode in Iceberg I/O manager. Write mode options can be set via asset definition metadata using the `write_mode` key, or at runtime via output metadata with the same key. Runtime output metadata setting overrides asset definition metadata setting.
+- Support for Iceberg table branching ([#251](https://github.com/dagster-io/community-integrations/pull/251))
 
 ### Changed
 
