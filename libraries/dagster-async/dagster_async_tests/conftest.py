@@ -5,7 +5,10 @@ from typing import TYPE_CHECKING, cast
 import dagster as dg
 import pytest
 from dagster._core.definitions.job_base import InMemoryJob
-from dagster._core.execution.context.compute import ExecutionContextTypes, enter_execution_context
+from dagster._core.execution.context.compute import (
+    ExecutionContextTypes,
+    enter_execution_context,
+)
 from dagster._core.execution.context.system import StepExecutionContext
 from dagster._core.execution.context_creation_job import scoped_job_context
 from dagster._core.execution.plan.plan import ExecutionPlan

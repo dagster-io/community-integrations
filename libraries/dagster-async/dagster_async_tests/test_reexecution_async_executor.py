@@ -3,6 +3,8 @@ import tempfile
 import dagster as dg
 from dagster._core.storage.fs_io_manager import fs_io_manager
 
+from dagster_async import async_executor
+
 
 def branching_job_def_async_executor() -> dg.JobDefinition:
     @dg.op(out={"a": dg.Out(is_required=False), "b": dg.Out(is_required=False)})
@@ -21,7 +23,7 @@ def branching_job_def_async_executor() -> dg.JobDefinition:
         context.instance.run_storage.set_cursor_values({key: "true"})
         raise Exception("failed (just this once)")
 
-    @dg.job(executor_def=dg.async_executor)
+    @dg.job(executor_def=async_executor)
     def branching_job():
         a, b = a_or_b()
         echo(
@@ -49,7 +51,7 @@ def can_fail_job_def_async_executor() -> dg.JobDefinition:
     async def plus_three(i: int) -> int:
         return i + 3
 
-    @dg.job(executor_def=dg.async_executor)
+    @dg.job(executor_def=async_executor)
     def my_job():
         plus_three(plus_two(one()))
 
@@ -65,7 +67,7 @@ def fs_io_job_def_async_executor() -> dg.JobDefinition:
     async def op_b(_context, _df):
         return 1
 
-    @dg.job(resource_defs={"io_manager": fs_io_manager}, executor_def=dg.async_executor)
+    @dg.job(resource_defs={"io_manager": fs_io_manager}, executor_def=async_executor)
     def my_job():
         op_b(op_a())
 
@@ -83,7 +85,9 @@ def test_branching_reexecution_async_executor() -> None:
         with dg.execute_job(
             dg.reconstructable(branching_job_def_async_executor),
             instance=instance,
-            reexecution_options=dg.ReexecutionOptions.from_failure(result.run_id, instance),
+            reexecution_options=dg.ReexecutionOptions.from_failure(
+                result.run_id, instance
+            ),
         ) as result_2:
             assert result_2.success
             success_steps = {ev.step_key for ev in result_2.get_step_success_events()}
@@ -105,7 +109,9 @@ def test_reexecute_subset_of_subset_async_executor() -> None:
             ) as result:
                 assert not result.success
 
-            reexecution_options = dg.ReexecutionOptions.from_failure(result.run_id, instance)
+            reexecution_options = dg.ReexecutionOptions.from_failure(
+                result.run_id, instance
+            )
             with dg.execute_job(
                 dg.reconstructable(can_fail_job_def_async_executor),
                 instance=instance,
@@ -140,14 +146,18 @@ def test_fs_io_manager_reexecution_async_executor() -> None:
             with dg.execute_job(
                 dg.reconstructable(fs_io_job_def_async_executor),
                 instance=instance,
-                run_config={"resources": {"io_manager": {"config": {"base_dir": tmpdir_path}}}},
+                run_config={
+                    "resources": {"io_manager": {"config": {"base_dir": tmpdir_path}}}
+                },
             ) as result:
                 assert result.success
 
             with dg.execute_job(
                 dg.reconstructable(fs_io_job_def_async_executor),
                 instance=instance,
-                run_config={"resources": {"io_manager": {"config": {"base_dir": tmpdir_path}}}},
+                run_config={
+                    "resources": {"io_manager": {"config": {"base_dir": tmpdir_path}}}
+                },
                 reexecution_options=dg.ReexecutionOptions(
                     parent_run_id=result.run_id,
                     step_selection=["op_b"],
@@ -156,4 +166,6 @@ def test_fs_io_manager_reexecution_async_executor() -> None:
                 assert re_result.success
                 # In the core tests this is further asserted via loaded_input events;
                 # here we at least assert the reexecuted subset step succeeded.
-                assert {ev.step_key for ev in re_result.get_step_success_events()} == {"op_b"}
+                assert {ev.step_key for ev in re_result.get_step_success_events()} == {
+                    "op_b"
+                }

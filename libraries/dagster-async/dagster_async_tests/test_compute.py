@@ -6,7 +6,10 @@ from dagster._core.errors import DagsterInvariantViolationError
 from dagster._core.events import DagsterEvent, DagsterEventType
 from dagster._core.execution.context.compute import ExecutionContextTypes
 from dagster._core.execution.context.system import StepExecutionContext
-from dagster_async.execution.plan.compute import _yield_compute_results, execute_core_compute
+from dagster_async.execution.plan.compute import (
+    _yield_compute_results,
+    execute_core_compute,
+)
 from dagster_async.execution.plan.compute_generator import create_op_compute_wrapper
 
 from dagster_async_tests.helpers import StepContextFactory
@@ -20,7 +23,9 @@ async def test_yield_compute_results_rejects_returned_output(
     def compute_fn(_context, _inputs):
         return dg.Output(1)
 
-    with pytest.raises(DagsterInvariantViolationError, match="returned an Output rather than"):
+    with pytest.raises(
+        DagsterInvariantViolationError, match="returned an Output rather than"
+    ):
         async for result in _yield_compute_results(
             simple_step_context, {}, compute_fn, simple_compute_context
         ):
@@ -36,7 +41,9 @@ async def test_yield_compute_results_emits_logged_events_then_outputs(
         context.log_event(dg.AssetMaterialization("logged"))
         yield dg.Output(1)
 
-    events = _yield_compute_results(simple_step_context, {}, compute_fn, simple_compute_context)
+    events = _yield_compute_results(
+        simple_step_context, {}, compute_fn, simple_compute_context
+    )
 
     event = await anext(events)
     assert isinstance(event, DagsterEvent)
@@ -55,7 +62,9 @@ async def test_yield_compute_results_handles_async_compute_fn(
         context.log_event(dg.AssetMaterialization("logged"))
         yield dg.Output(2)
 
-    events = _yield_compute_results(simple_step_context, {}, compute_fn, simple_compute_context)
+    events = _yield_compute_results(
+        simple_step_context, {}, compute_fn, simple_compute_context
+    )
 
     event = await anext(events)
     assert isinstance(event, DagsterEvent)
@@ -109,7 +118,9 @@ async def test_execute_core_compute_counts_asset_and_check_outputs(
     def compute_fn(_context, _inputs):
         yield materialize_result
 
-    results = execute_core_compute(asset_step_context, {}, compute_fn, asset_compute_context)
+    results = execute_core_compute(
+        asset_step_context, {}, compute_fn, asset_compute_context
+    )
 
     assert await anext(results) == materialize_result
 
@@ -142,7 +153,9 @@ async def test_execute_core_compute_async_op_with_input(
         core_gen = await create_op_compute_wrapper(step_context.op_def)
         events = [
             event
-            async for event in execute_core_compute(step_context, {}, core_gen, compute_context)
+            async for event in execute_core_compute(
+                step_context, {}, core_gen, compute_context
+            )
         ]
 
     values = [e.value for e in events if isinstance(e, dg.Output)]

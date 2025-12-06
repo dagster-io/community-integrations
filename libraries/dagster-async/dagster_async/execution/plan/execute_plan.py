@@ -15,7 +15,9 @@ from dagster._core.errors import (
 )
 from dagster._core.events import DagsterEvent
 from dagster._core.execution.context.system import StepExecutionContext
-from dagster_async.execution.plan.execute_step import core_dagster_event_sequence_for_step
+from dagster_async.execution.plan.execute_step import (
+    core_dagster_event_sequence_for_step,
+)
 from dagster._core.execution.plan.execute_plan import _user_failure_data_for_exc
 from dagster._core.execution.plan.objects import (
     ErrorSource,
@@ -104,7 +106,9 @@ async def dagster_event_sequence_for_step(
                 step_context=step_context,
                 step_failure_data=StepFailureData(
                     error=fail_err,
-                    user_failure_data=_user_failure_data_for_exc(retry_request.__cause__),
+                    user_failure_data=_user_failure_data_for_exc(
+                        retry_request.__cause__
+                    ),
                 ),
             )
         else:  # retries.enabled or retries.deferred
@@ -121,9 +125,13 @@ async def dagster_event_sequence_for_step(
                     step_context=step_context,
                     step_failure_data=StepFailureData(
                         error=fail_err,
-                        user_failure_data=_user_failure_data_for_exc(retry_request.__cause__),
+                        user_failure_data=_user_failure_data_for_exc(
+                            retry_request.__cause__
+                        ),
                         # set the flag to omit the outer stack if we have a cause to show
-                        error_source=ErrorSource.USER_CODE_ERROR if fail_err.cause else None,
+                        error_source=ErrorSource.USER_CODE_ERROR
+                        if fail_err.cause
+                        else None,
                     ),
                 )
                 if step_context.raise_on_error:
@@ -210,9 +218,13 @@ async def _trigger_hook(
                 log_manager=hook_context.log,
             ):
                 if inspect.iscoroutinefunction(hook_def.hook_fn):
-                    hook_execution_result = await hook_def.hook_fn(hook_context, step_event_list)
+                    hook_execution_result = await hook_def.hook_fn(
+                        hook_context, step_event_list
+                    )
                 else:
-                    hook_execution_result = hook_def.hook_fn(hook_context, step_event_list)
+                    hook_execution_result = hook_def.hook_fn(
+                        hook_context, step_event_list
+                    )
 
         except HookExecutionError as hook_execution_error:
             # catch hook execution error and field a failure event instead of failing the pipeline run

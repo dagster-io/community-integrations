@@ -2,6 +2,8 @@ import time
 
 import dagster as dg
 
+from dagster_async import async_executor
+
 
 def diamond_job_def_async_executor() -> dg.JobDefinition:
     @dg.op
@@ -20,7 +22,7 @@ def diamond_job_def_async_executor() -> dg.JobDefinition:
     async def combine(a: int, b: int) -> int:
         return a + b
 
-    @dg.job(executor_def=dg.async_executor)
+    @dg.job(executor_def=async_executor)
     def diamond_job():
         base = emit()
         combine(add_one(base), double(base))
@@ -38,7 +40,7 @@ def highly_nested_job_def_async_executor() -> dg.JobDefinition:
         time.sleep(0.01)
         return x + 1
 
-    @dg.job(executor_def=dg.async_executor)
+    @dg.job(executor_def=async_executor)
     def nested_job():
         add_one.alias("add_one_outer")(
             add_one.alias("add_one_middle")(add_one.alias("add_one_inner")(emit_one()))

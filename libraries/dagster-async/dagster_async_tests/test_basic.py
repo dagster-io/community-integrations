@@ -3,6 +3,8 @@ import time
 import anyio
 import dagster as dg
 
+from dagster_async import async_executor
+
 
 def sync_job_def_async_executor() -> dg.JobDefinition:
     @dg.op
@@ -19,7 +21,7 @@ def sync_job_def_async_executor() -> dg.JobDefinition:
         time.sleep(0.01)
         return x * 2
 
-    @dg.job(executor_def=dg.async_executor)
+    @dg.job(executor_def=async_executor)
     def sync_job():
         slow_double(slow_add_one(emit_one()))
 
@@ -42,7 +44,7 @@ def async_job_def_async_executor() -> dg.JobDefinition:
         return x * 2
 
     @dg.job(
-        executor_def=dg.async_executor,
+        executor_def=async_executor,
     )
     def async_job():
         slow_double(slow_add_one(emit_one()))

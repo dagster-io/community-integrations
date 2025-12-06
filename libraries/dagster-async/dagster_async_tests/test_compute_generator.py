@@ -5,7 +5,10 @@ from contextlib import contextmanager
 import dagster as dg
 import pytest
 from dagster._core.errors import DagsterInvariantViolationError
-from dagster._core.execution.context.compute import ExecutionContextTypes, enter_execution_context
+from dagster._core.execution.context.compute import (
+    ExecutionContextTypes,
+    enter_execution_context,
+)
 from dagster._core.execution.context.system import StepExecutionContext
 from dagster_async.execution.plan.compute_generator import (
     _coerce_async_op_to_async_gen,
@@ -84,7 +87,10 @@ async def test_create_op_compute_wrapper_async_op_returns_async_gen(
     def async_job():
         async_op()
 
-    with _job_context(async_job, step_context_factory) as (step_context, compute_context):
+    with _job_context(async_job, step_context_factory) as (
+        step_context,
+        compute_context,
+    ):
         core_gen = await create_op_compute_wrapper(step_context.op_def)
         user_gen = await core_gen(compute_context, {})
         assert inspect.isasyncgen(user_gen)
@@ -106,21 +112,28 @@ async def test_coerce_async_op_to_async_gen_wraps_return_value(
     def base_job():
         base_op()
 
-    with _job_context(base_job, step_context_factory) as (step_context, compute_context):
+    with _job_context(base_job, step_context_factory) as (
+        step_context,
+        compute_context,
+    ):
         output_defs = step_context.op_def.output_defs
 
     async def coro():
         return 7
 
     outputs = []
-    async for event in _coerce_async_op_to_async_gen(coro(), compute_context, output_defs):
+    async for event in _coerce_async_op_to_async_gen(
+        coro(), compute_context, output_defs
+    ):
         outputs.append(event)
     assert len(outputs) == 1
     assert outputs[0].value == 7
 
 
 @pytest.mark.anyio
-async def test_invoke_compute_fn_with_config_class_uses_construct_config_from_context() -> None:
+async def test_invoke_compute_fn_with_config_class_uses_construct_config_from_context() -> (
+    None
+):
     ctx = dg.build_op_context(op_config={"foo": "x", "bar": 1, "extra": "ignore"})
 
     def fn(context, config: MyConfig):
@@ -196,7 +209,9 @@ async def test_coerce_op_compute_fn_to_iterator_wraps_value_into_output(
 
 
 @pytest.mark.anyio
-async def test_zip_and_iterate_single_output(step_context_factory: StepContextFactory) -> None:
+async def test_zip_and_iterate_single_output(
+    step_context_factory: StepContextFactory,
+) -> None:
     @dg.op
     def only_output() -> int:
         return 1
@@ -205,7 +220,10 @@ async def test_zip_and_iterate_single_output(step_context_factory: StepContextFa
     def single_output_job():
         only_output()
 
-    with _job_context(single_output_job, step_context_factory) as (step_context, compute_context):
+    with _job_context(single_output_job, step_context_factory) as (
+        step_context,
+        compute_context,
+    ):
         output_defs = step_context.op_def.output_defs
         zipped = []
         async for z in _zip_and_iterate_op_result(42, compute_context, output_defs):
@@ -228,7 +246,10 @@ async def test_zip_and_iterate_multi_output_valid_tuple(
     def multi_job():
         multi()
 
-    with _job_context(multi_job, step_context_factory) as (step_context, compute_context):
+    with _job_context(multi_job, step_context_factory) as (
+        step_context,
+        compute_context,
+    ):
         output_defs = step_context.op_def.output_defs
         zipped = []
         async for z in _zip_and_iterate_op_result((1, 2), compute_context, output_defs):
@@ -250,7 +271,10 @@ async def test_filter_expected_output_defs_no_asset_results_returns_all(
     def single_job():
         single_output()
 
-    with _job_context(single_job, step_context_factory) as (step_context, compute_context):
+    with _job_context(single_job, step_context_factory) as (
+        step_context,
+        compute_context,
+    ):
         output_defs = step_context.op_def.output_defs
         filtered = await _filter_expected_output_defs(5, compute_context, output_defs)
 
@@ -266,13 +290,17 @@ async def test_filter_expected_output_defs_omits_check_outputs_embedded_in_asset
     asset_key = asset_step_context.job_def.asset_layer.get_asset_key_for_node(
         asset_step_context.node_handle
     )
-    selected_check_keys = list(asset_compute_context.op_execution_context.selected_asset_check_keys)
+    selected_check_keys = list(
+        asset_compute_context.op_execution_context.selected_asset_check_keys
+    )
     assert selected_check_keys
     check_key = selected_check_keys[0]
     materialize_result = dg.MaterializeResult(
         asset_key=asset_key,
         check_results=[
-            dg.AssetCheckResult(asset_key=asset_key, check_name=check_key.name, passed=True)
+            dg.AssetCheckResult(
+                asset_key=asset_key, check_name=check_key.name, passed=True
+            )
         ],
     )
 
@@ -282,10 +310,8 @@ async def test_filter_expected_output_defs_omits_check_outputs_embedded_in_asset
         output_defs,
     )
 
-    check_output_name = (
-        asset_compute_context.op_execution_context.assets_def.get_output_name_for_asset_check_key(
-            check_key
-        )
+    check_output_name = asset_compute_context.op_execution_context.assets_def.get_output_name_for_asset_check_key(
+        check_key
     )
     assert check_output_name not in [output_def.name for output_def in filtered]
 
@@ -307,7 +333,10 @@ async def test_validate_multi_return_all_nothing_outputs_and_none_returns_list_o
     def nothing_job():
         nothing_op()
 
-    with _job_context(nothing_job, step_context_factory) as (step_context, compute_context):
+    with _job_context(nothing_job, step_context_factory) as (
+        step_context,
+        compute_context,
+    ):
         output_defs = step_context.op_def.output_defs
         result = await _validate_multi_return(compute_context, None, output_defs)
 
@@ -326,7 +355,10 @@ async def test_validate_multi_return_non_tuple_with_multiple_outputs_raises(
     def multi_job():
         multi_op()
 
-    with _job_context(multi_job, step_context_factory) as (step_context, compute_context):
+    with _job_context(multi_job, step_context_factory) as (
+        step_context,
+        compute_context,
+    ):
         output_defs = step_context.op_def.output_defs
         with pytest.raises(DagsterInvariantViolationError):
             _ = await _validate_multi_return(compute_context, 5, output_defs)
@@ -344,7 +376,10 @@ async def test_validate_multi_return_length_mismatch_raises(
     def multi_job():
         multi_op()
 
-    with _job_context(multi_job, step_context_factory) as (step_context, compute_context):
+    with _job_context(multi_job, step_context_factory) as (
+        step_context,
+        compute_context,
+    ):
         output_defs = step_context.op_def.output_defs
         with pytest.raises(DagsterInvariantViolationError):
             _ = await _validate_multi_return(compute_context, (1,), output_defs)

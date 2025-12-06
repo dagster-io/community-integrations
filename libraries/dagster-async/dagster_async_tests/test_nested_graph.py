@@ -1,6 +1,8 @@
 import anyio
 import dagster as dg
 
+from dagster_async import async_executor
+
 
 @dg.op
 def provide_input() -> int:
@@ -30,7 +32,7 @@ def downstream(context: dg.OpExecutionContext, y: int) -> int:
     return y + 10
 
 
-@dg.job(executor_def=dg.async_executor)
+@dg.job(executor_def=async_executor)
 def nested_graph_async_job():
     result = inner_graph(provide_input())
     downstream(result)

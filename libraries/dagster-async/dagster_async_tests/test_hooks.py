@@ -1,6 +1,8 @@
 import anyio
 import dagster as dg
 
+from dagster_async import async_executor
+
 
 @dg.success_hook
 async def log_asset_event(context: dg.HookContext):
@@ -20,7 +22,7 @@ def get_test_job():
             dg.define_asset_job(
                 name="asset_job",
                 selection=[my_asset],
-                executor_def=dg.async_executor,
+                executor_def=async_executor,
             )
         ],
         assets=[my_asset],

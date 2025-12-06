@@ -1,6 +1,8 @@
 import anyio
 import dagster as dg
 
+from dagster_async import async_executor
+
 
 @dg.asset
 async def upstream_asset():
@@ -19,7 +21,7 @@ async def further_downstream_asset(downstream_asset):
     return downstream_asset + 1
 
 
-@dg.asset_check(asset=further_downstream_asset)
+@dg.asset_check(asset=further_downstream_asset)  # pyright: ignore[reportArgumentType]
 async def further_downstream_asset_check():
     await anyio.sleep(0.01)
     return dg.AssetCheckResult(passed=True)
@@ -36,7 +38,7 @@ def get_test_job():
                     further_downstream_asset,
                     further_downstream_asset_check,
                 ],
-                executor_def=dg.async_executor,
+                executor_def=async_executor,
             )
         ],
         assets=[upstream_asset, downstream_asset, further_downstream_asset],

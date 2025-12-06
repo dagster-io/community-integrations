@@ -5,6 +5,8 @@ import anyio
 import dagster as dg
 import pytest
 
+from dagster_async import async_executor
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,7 +44,7 @@ def simple_fanout_job_def(num_fanouts: int, sleep_seconds: int):
         context.log.info(f"[{context.op_handle}] collected {len(results)} results")
         return results
 
-    @dg.job(executor_def=dg.async_executor)
+    @dg.job(executor_def=async_executor)
     def simple_fanout_job():
         dynamic_items = create_dynamic_outputs()
         processed = dynamic_items.map(process_item)
@@ -54,7 +56,11 @@ def simple_fanout_job_def(num_fanouts: int, sleep_seconds: int):
 @pytest.mark.parametrize(
     "num_fanouts,sleep_seconds,expected_max_seconds_duration",
     [
-        (20, 3, 30),  # takes a lot less time in reality, but putting it high to avoid a flakey test
+        (
+            20,
+            3,
+            30,
+        ),  # takes a lot less time in reality, but putting it high to avoid a flakey test
         (
             100,
             3,
@@ -71,7 +77,7 @@ def test_async_performance_basic(
             dg.build_reconstructable_job(
                 reconstructor_module_name=__name__,
                 reconstructor_function_name="simple_fanout_job_def",
-                reconstructable_args=(num_fanouts, sleep_seconds),
+                reconstructable_args=(num_fanouts, sleep_seconds),  # pyright: ignore[reportArgumentType]
                 reconstructable_kwargs={},
             ),
             instance=instance,

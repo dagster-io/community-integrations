@@ -11,10 +11,17 @@ from dagster._core.definitions import (
     ExpectationResult,
     Output,
 )
-from dagster._core.definitions.asset_checks.asset_check_spec import AssetCheckKey
+from dagster._core.definitions.asset_key import AssetCheckKey
 from dagster._core.definitions.op_definition import OpComputeFunction
-from dagster._core.definitions.result import AssetResult, MaterializeResult, ObserveResult
-from dagster._core.errors import DagsterExecutionStepExecutionError, DagsterInvariantViolationError
+from dagster._core.definitions.result import (
+    AssetResult,
+    MaterializeResult,
+    ObserveResult,
+)
+from dagster._core.errors import (
+    DagsterExecutionStepExecutionError,
+    DagsterInvariantViolationError,
+)
 from dagster._core.events import DagsterEvent
 from dagster._core.execution.context.compute import ExecutionContextTypes
 from dagster._core.execution.context.system import StepExecutionContext
@@ -38,7 +45,9 @@ OpOutputUnion: TypeAlias = Union[
 ]
 
 
-def _wrap_sync_iterator(iterator: Iterator[OpOutputUnion]) -> AsyncIterator[OpOutputUnion]:
+def _wrap_sync_iterator(
+    iterator: Iterator[OpOutputUnion],
+) -> AsyncIterator[OpOutputUnion]:
     async def _iterate() -> AsyncGenerator[OpOutputUnion, None]:
         for item in iterator:
             yield item
@@ -62,7 +71,9 @@ def _wrap_sync_generator_with_boundary(
     step_context: StepExecutionContext,
     iterator: Iterator[OpOutputUnion],
 ) -> AsyncIterator[OpOutputUnion]:
-    wrapped = iterate_with_context(lambda: _error_boundary_factory(step_context), iterator)
+    wrapped = iterate_with_context(
+        lambda: _error_boundary_factory(step_context), iterator
+    )
     return _wrap_sync_iterator(wrapped)
 
 
@@ -94,10 +105,14 @@ async def _to_async_iterator(
         awaited = await user_event_generator
         return await _to_async_iterator(step_context, awaited)
 
-    if inspect.isasyncgen(user_event_generator) or isinstance(user_event_generator, AsyncIterator):
+    if inspect.isasyncgen(user_event_generator) or isinstance(
+        user_event_generator, AsyncIterator
+    ):
         return _wrap_async_iterator_with_boundary(step_context, user_event_generator)
 
-    if inspect.isgenerator(user_event_generator) or isinstance(user_event_generator, Iterator):
+    if inspect.isgenerator(user_event_generator) or isinstance(
+        user_event_generator, Iterator
+    ):
         return _wrap_sync_generator_with_boundary(step_context, user_event_generator)
 
     return None
@@ -147,7 +162,9 @@ async def execute_core_compute(
         elif isinstance(step_output, AssetResult):
             asset_key = (
                 step_output.asset_key
-                or step_context.job_def.asset_layer.get_asset_key_for_node(step_context.node_handle)
+                or step_context.job_def.asset_layer.get_asset_key_for_node(
+                    step_context.node_handle
+                )
             )
             emitted_result_names.add(
                 step_context.job_def.asset_layer.asset_graph.get(
@@ -156,14 +173,18 @@ async def execute_core_compute(
             )
             # Check results embedded in MaterializeResult are counted
             for check_result in step_output.check_results or []:
-                key = check_result.to_asset_check_evaluation(step_context).asset_check_key
+                key = check_result.to_asset_check_evaluation(
+                    step_context
+                ).asset_check_key
                 output_name = step_context.job_def.asset_layer.get_op_output_name(key)
                 emitted_result_names.add(output_name)
         elif isinstance(step_output, AssetCheckResult):
             if step_output.asset_key and step_output.check_name:
                 key = AssetCheckKey(step_output.asset_key, step_output.check_name)
             else:
-                key = step_output.to_asset_check_evaluation(step_context).asset_check_key
+                key = step_output.to_asset_check_evaluation(
+                    step_context
+                ).asset_check_key
             output_name = step_context.job_def.asset_layer.get_op_output_name(key)
             if output_name:
                 emitted_result_names.add(output_name)

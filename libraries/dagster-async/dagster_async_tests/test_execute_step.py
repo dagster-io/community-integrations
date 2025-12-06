@@ -3,11 +3,17 @@ from contextlib import contextmanager
 
 import dagster as dg
 import pytest
-from dagster._core.definitions import AssetCheckEvaluation, MetadataValue, OutputDefinition
-from dagster._core.definitions.asset_checks.asset_check_spec import AssetCheckKey
+from dagster._core.definitions import (
+    AssetCheckEvaluation,
+    MetadataValue,
+    OutputDefinition,
+)
+from dagster._core.definitions.asset_key import AssetCheckKey
 from dagster._core.definitions.assets.definition.asset_spec import AssetExecutionType
 from dagster._core.definitions.data_version import CODE_VERSION_TAG, DATA_VERSION_TAG
-from dagster._core.definitions.source_asset import SYSTEM_METADATA_KEY_SOURCE_ASSET_OBSERVATION
+from dagster._core.definitions.source_asset import (
+    SYSTEM_METADATA_KEY_SOURCE_ASSET_OBSERVATION,
+)
 from dagster._core.definitions.utils import NoValueSentinel
 from dagster._core.errors import (
     DagsterAssetCheckFailedError,
@@ -15,7 +21,10 @@ from dagster._core.errors import (
     DagsterTypeCheckDidNotPass,
 )
 from dagster._core.events import DagsterEventType
-from dagster._core.execution.context.compute import ExecutionContextTypes, enter_execution_context
+from dagster._core.execution.context.compute import (
+    ExecutionContextTypes,
+    enter_execution_context,
+)
 from dagster._core.execution.context.system import StepExecutionContext
 from dagster_async.execution.plan.execute_step import (
     AssetResultOutput,
@@ -74,7 +83,9 @@ async def test_process_materialize_result_to_asset_result_output(
         )
 
     events = []
-    async for event in _process_asset_results_to_events(asset_step_context, fake_user_events()):
+    async for event in _process_asset_results_to_events(
+        asset_step_context, fake_user_events()
+    ):
         events.append(event)
     assert len(events) == 1
     output_event = events[0]
@@ -83,7 +94,9 @@ async def test_process_materialize_result_to_asset_result_output(
         asset_step_context.node_handle
     )
     assert assets_def is not None
-    assert output_event.output_name == assets_def.get_output_name_for_asset_key(asset_key)
+    assert output_event.output_name == assets_def.get_output_name_for_asset_key(
+        asset_key
+    )
     assert output_event.metadata == metadata
     assert output_event.tags == tags
 
@@ -106,7 +119,9 @@ async def test_process_asset_check_result_yields_output_and_evaluation(
     async for event in _process_user_event(asset_step_context, check_result):
         events.append(event)
     assert isinstance(events[0], dg.Output)
-    expected_output_name = asset_step_context.job_def.asset_layer.get_op_output_name(check_key)
+    expected_output_name = asset_step_context.job_def.asset_layer.get_op_output_name(
+        check_key
+    )
     assert events[0].output_name == expected_output_name
     assert isinstance(events[1], AssetCheckEvaluation)
     assert events[1].asset_check_key == check_key
@@ -134,7 +149,10 @@ async def test_resolve_asset_result_asset_key_uses_asset_result_key_if_present(
     assert assets_def is not None
     asset_key = assets_def.key
     materialize_result = dg.MaterializeResult(asset_key=asset_key)
-    assert await _resolve_asset_result_asset_key(materialize_result, assets_def) == asset_key
+    assert (
+        await _resolve_asset_result_asset_key(materialize_result, assets_def)
+        == asset_key
+    )
 
 
 @pytest.mark.anyio
@@ -145,7 +163,9 @@ async def test_resolve_asset_result_asset_key_multiple_keys_without_key_raises(
         multi_asset_step_context.node_handle
     )
     assert assets_def is not None
-    with pytest.raises(DagsterInvariantViolationError, match="did not include asset_key"):
+    with pytest.raises(
+        DagsterInvariantViolationError, match="did not include asset_key"
+    ):
         await _resolve_asset_result_asset_key(dg.MaterializeResult(), assets_def)
 
 
@@ -231,7 +251,10 @@ async def test_type_check_output_success_and_failure(
     handle = StepOutputHandle(simple_step_context.step.key, "result")
     success_output = dg.Output(1, output_name="result")
     events = [
-        event async for event in _type_check_output(simple_step_context, handle, success_output)
+        event
+        async for event in _type_check_output(
+            simple_step_context, handle, success_output
+        )
     ]
     assert events[0].event_type == DagsterEventType.STEP_OUTPUT
     assert events[0].event_specific_data.type_check_data.success  # type: ignore  # event_specific_data is StepOutputData for STEP_OUTPUT events
@@ -295,7 +318,9 @@ async def test_get_output_asset_events_materialization_adds_data_version_tags(
     output_def = asset_step_context.op_def.output_def_named(
         asset_step_context.step.step_outputs[0].name
     )
-    output = dg.Output(output_name=output_def.name, value=1, metadata={"a": MetadataValue.int(1)})
+    output = dg.Output(
+        output_name=output_def.name, value=1, metadata={"a": MetadataValue.int(1)}
+    )
     manager_metadata = {"extra": MetadataValue.text("x")}
     events = [
         event
@@ -316,7 +341,10 @@ async def test_get_output_asset_events_materialization_adds_data_version_tags(
     assert DATA_VERSION_TAG in event.tags
     assert CODE_VERSION_TAG in event.tags
     assert asset_step_context.has_data_version(asset_key)
-    assert asset_step_context.get_data_version(asset_key).value == event.tags[DATA_VERSION_TAG]
+    assert (
+        asset_step_context.get_data_version(asset_key).value
+        == event.tags[DATA_VERSION_TAG]
+    )
 
 
 @pytest.mark.anyio
@@ -333,7 +361,10 @@ async def test_get_input_provenance_data_no_dependencies_returns_empty(
 async def test_core_dagster_event_sequence_for_step_happy_path(
     simple_step_context: StepExecutionContext,
 ) -> None:
-    events = [event async for event in core_dagster_event_sequence_for_step(simple_step_context)]
+    events = [
+        event
+        async for event in core_dagster_event_sequence_for_step(simple_step_context)
+    ]
     event_types = [event.event_type for event in events]
     assert DagsterEventType.STEP_START in event_types
     assert DagsterEventType.STEP_SUCCESS in event_types
@@ -368,12 +399,17 @@ async def test_core_dagster_event_sequence_for_step_raises_on_blocking_failed_as
             ],
         )
 
-    defs = dg.Definitions(assets=[failing_asset], jobs=[dg.define_asset_job("failing_job")])
+    defs = dg.Definitions(
+        assets=[failing_asset], jobs=[dg.define_asset_job("failing_job")]
+    )
     job_def = defs.get_job_def("failing_job")
 
     with _job_context(job_def, step_context_factory) as step_context:
         with pytest.raises(DagsterAssetCheckFailedError) as excinfo:
-            _ = [event async for event in core_dagster_event_sequence_for_step(step_context)]
+            _ = [
+                event
+                async for event in core_dagster_event_sequence_for_step(step_context)
+            ]
 
     message = str(excinfo.value)
     assert "fail_check" in message

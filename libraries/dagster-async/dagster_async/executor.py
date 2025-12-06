@@ -16,7 +16,10 @@ import dagster._check as check
 from dagster._core.events import DagsterEvent, EngineEventData
 from dagster._core.execution.api import ExecuteRunWithPlanIterable
 from dagster._core.execution.compute_logs import create_compute_log_file_key
-from dagster._core.execution.context.system import PlanExecutionContext, PlanOrchestrationContext
+from dagster._core.execution.context.system import (
+    PlanExecutionContext,
+    PlanOrchestrationContext,
+)
 from dagster._core.execution.context_creation_job import PlanExecutionContextManager
 from dagster._core.execution.plan.active import ActiveExecution
 from dagster_async.execution.plan.execute_plan import (
@@ -25,7 +28,9 @@ from dagster_async.execution.plan.execute_plan import (
 )
 from dagster_async.execution.plan.execute_step import _verify_if_complete
 from dagster._core.execution.plan.execute_plan import _handle_compute_log_setup_error
-from dagster._core.execution.plan.instance_concurrency_context import InstanceConcurrencyContext
+from dagster._core.execution.plan.instance_concurrency_context import (
+    InstanceConcurrencyContext,
+)
 from dagster._core.execution.plan.objects import step_failure_event_from_exc_info
 from dagster._core.execution.plan.plan import ExecutionPlan
 from dagster._core.execution.plan.state import KnownExecutionState
@@ -91,7 +96,9 @@ class AsyncExecutor(Executor):
         yield DagsterEvent.engine_event(
             plan_context,
             "Executing steps with AsyncExecutor",
-            event_specific_data=EngineEventData.in_process(os.getpid(), step_keys_to_execute),
+            event_specific_data=EngineEventData.in_process(
+                os.getpid(), step_keys_to_execute
+            ),
         )
 
         with time_execution_scope() as timer_result:
@@ -114,7 +121,9 @@ class AsyncExecutor(Executor):
         yield DagsterEvent.engine_event(
             plan_context,
             f"Finished AsyncExecutor in {format_duration(timer_result.millis)}",
-            event_specific_data=EngineEventData.in_process(os.getpid(), step_keys_to_execute),
+            event_specific_data=EngineEventData.in_process(
+                os.getpid(), step_keys_to_execute
+            ),
         )
 
     def _execution_iterator_wrapper(
@@ -135,7 +144,9 @@ class AsyncExecutor(Executor):
         compute_log_manager = job_context.instance.compute_log_manager
         step_keys = [s.key for s in execution_plan.get_steps_to_execute_in_topo_order()]
         file_key = create_compute_log_file_key()
-        log_key = compute_log_manager.build_log_key_for_run(job_context.run_id, file_key)
+        log_key = compute_log_manager.build_log_key_for_run(
+            job_context.run_id, file_key
+        )
 
         with (
             InstanceConcurrencyContext(
@@ -152,8 +163,12 @@ class AsyncExecutor(Executor):
         ):
             # 1) Compute logs (still sync)
             try:
-                log_context = capture_stack.enter_context(compute_log_manager.capture_logs(log_key))
-                yield DagsterEvent.capture_logs(job_context, step_keys, log_key, log_context)
+                log_context = capture_stack.enter_context(
+                    compute_log_manager.capture_logs(log_key)
+                )
+                yield DagsterEvent.capture_logs(
+                    job_context, step_keys, log_key, log_context
+                )
             except Exception:
                 yield from _handle_compute_log_setup_error(job_context, sys.exc_info())
 

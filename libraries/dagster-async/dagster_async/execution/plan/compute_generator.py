@@ -21,7 +21,10 @@ from dagster._core.execution.plan.compute_generator import (
     _get_annotation_for_output_position,
     construct_config_from_context,
 )
-from dagster._core.types.dagster_type import DagsterTypeKind, is_generic_output_annotation
+from dagster._core.types.dagster_type import (
+    DagsterTypeKind,
+    is_generic_output_annotation,
+)
 from dagster._utils import is_named_tuple_instance
 from dagster._utils.warnings import disable_dagster_warnings
 
@@ -37,8 +40,12 @@ async def create_op_compute_wrapper(
     input_defs = op_def.input_defs
     output_defs = op_def.output_defs
     context_arg_provided = compute_fn.has_context_arg()
-    config_arg_cls = compute_fn.get_config_arg().annotation if compute_fn.has_config_arg() else None
-    resource_arg_mapping = {arg.name: arg.name for arg in compute_fn.get_resource_args()}
+    config_arg_cls = (
+        compute_fn.get_config_arg().annotation if compute_fn.has_config_arg() else None
+    )
+    resource_arg_mapping = {
+        arg.name: arg.name for arg in compute_fn.get_resource_args()
+    }
 
     input_names = [
         input_def.name
@@ -62,19 +69,28 @@ async def create_op_compute_wrapper(
         ):
             # safe to execute the function, as doing so will not immediately execute user code
             result = await invoke_compute_fn(
-                fn, context, kwargs, context_arg_provided, config_arg_cls, resource_arg_mapping
+                fn,
+                context,
+                kwargs,
+                context_arg_provided,
+                config_arg_cls,
+                resource_arg_mapping,
             )
 
             # If the user function returned a coroutine, wrap it so its result is normalized
             if inspect.iscoroutine(result):
-                return _coerce_async_op_to_async_gen(result, context, output_defs)  # don't await
+                return _coerce_async_op_to_async_gen(
+                    result, context, output_defs
+                )  # don't await
 
             # If the user function returned an async generator, that's already an async iterator
             if inspect.isasyncgen(result):
                 return result
 
             # Otherwise, treat the result as a "return value" and normalize it
-            return validate_and_coerce_op_result_to_iterator(result, context, output_defs)
+            return validate_and_coerce_op_result_to_iterator(
+                result, context, output_defs
+            )
         else:
             # we have a regular function, do not execute it before we are in an iterator
             # (as we want all potential failures to happen inside iterators)
@@ -98,7 +114,9 @@ async def _coerce_async_op_to_async_gen(
     output_defs: Sequence[OutputDefinition],
 ) -> AsyncIterator[Any]:
     result = await awaitable
-    async for event in validate_and_coerce_op_result_to_iterator(result, context, output_defs):
+    async for event in validate_and_coerce_op_result_to_iterator(
+        result, context, output_defs
+    ):
         yield event
 
 
@@ -121,7 +139,9 @@ async def invoke_compute_fn(
             args_to_pass["config"] = context.op_execution_context.op_config
     if resource_args:
         for resource_name, arg_name in resource_args.items():
-            args_to_pass[arg_name] = context.resources.original_resource_dict[resource_name]
+            args_to_pass[arg_name] = context.resources.original_resource_dict[
+                resource_name
+            ]
 
     return fn(context, **args_to_pass) if context_arg_provided else fn(**args_to_pass)
 
@@ -136,9 +156,16 @@ async def _coerce_op_compute_fn_to_iterator(
     resource_arg_mapping,
 ):
     result = await invoke_compute_fn(
-        fn, context, kwargs, context_arg_provided, config_arg_class, resource_arg_mapping
+        fn,
+        context,
+        kwargs,
+        context_arg_provided,
+        config_arg_class,
+        resource_arg_mapping,
     )
-    async for event in validate_and_coerce_op_result_to_iterator(result, context, output_defs):
+    async for event in validate_and_coerce_op_result_to_iterator(
+        result, context, output_defs
+    ):
         yield event
 
 
@@ -158,10 +185,14 @@ async def _zip_and_iterate_op_result(
     # to here because we can't rely on the presence of asset layer here, since the present code path
     # is used by direct invocation. Probably the solution is to expose an asset layer on the
     # invocation context.
-    expected_return_outputs = await _filter_expected_output_defs(result, context, output_defs)
+    expected_return_outputs = await _filter_expected_output_defs(
+        result, context, output_defs
+    )
     if len(expected_return_outputs) > 1:
         result = await _validate_multi_return(context, result, expected_return_outputs)
-        for position, (output_def, element) in enumerate(zip(expected_return_outputs, result)):
+        for position, (output_def, element) in enumerate(
+            zip(expected_return_outputs, result)
+        ):
             yield position, element, output_def
     else:
         # NOTE: we keep the original behavior (index 0, output_defs[0]) for the single-output case
@@ -174,7 +205,9 @@ async def _filter_expected_output_defs(
     result: Any, context: ExecutionContextTypes, output_defs: Sequence[OutputDefinition]
 ) -> Sequence[OutputDefinition]:
     result_tuple = (
-        (result,) if not isinstance(result, tuple) or is_named_tuple_instance(result) else result
+        (result,)
+        if not isinstance(result, tuple) or is_named_tuple_instance(result)
+        else result
     )
     asset_results = [x for x in result_tuple if isinstance(x, AssetResult)]
 
@@ -290,7 +323,9 @@ async def validate_and_coerce_op_result_to_iterator(
         async for position, element, output_def in _zip_and_iterate_op_result(
             result, context, output_defs
         ):
-            annotation = _get_annotation_for_output_position(position, context.op_def, output_defs)
+            annotation = _get_annotation_for_output_position(
+                position, context.op_def, output_defs
+            )
             if output_def.is_dynamic:
                 if not isinstance(element, list):
                     raise DagsterInvariantViolationError(
@@ -320,8 +355,9 @@ async def validate_and_coerce_op_result_to_iterator(
             elif isinstance(element, AssetResult):
                 yield element  # coerced in to Output in outer iterator
             elif isinstance(element, Output):
-                if annotation != inspect.Parameter.empty and not is_generic_output_annotation(
-                    annotation
+                if (
+                    annotation != inspect.Parameter.empty
+                    and not is_generic_output_annotation(annotation)
                 ):
                     raise DagsterInvariantViolationError(
                         f"Error with output for {context.describe_op()}: received Output object for"
