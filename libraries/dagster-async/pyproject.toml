@@ -1,0 +1,28 @@
+[project]
+name = "dagster-async"
+description = "Async Support for Dagster"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "anyio>=4.12.0",
+    "dagster>=1.12.2",
+]
+dynamic = ["version"]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest",
+    "pyright>=1.1.386",
+    "pytest",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_async"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_async.__version__"}
