@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.5
+
+### Updated
+
+- (pull/259) Added the `container_name` field option to support multi-container job launching
+
 ## 0.0.4
 
 ### Updated
