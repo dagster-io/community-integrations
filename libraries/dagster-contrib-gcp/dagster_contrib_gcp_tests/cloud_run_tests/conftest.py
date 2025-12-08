@@ -74,6 +74,29 @@ def instance_with_job_configs(
 
 
 @pytest.fixture
+def instance_with_multicontainer_job_configs(
+    instance_cm: Callable[..., ContextManager[DagsterInstance]],
+) -> Iterator[DagsterInstance]:
+    with instance_cm(
+        {
+            "project": "test_project",
+            "region": "test_region",
+            "job_name_by_code_location": {
+                IN_PROCESS_NAME: {
+                    "name": "test_job_with_config",
+                    "project_id": "test_gcp-123",
+                    "region": "other_test_region",
+                    "container_name": "specific_container",
+                }
+            },
+            "run_job_retry": {"wait": 1, "timeout": 60},
+            "run_timeout": 7200,
+        }
+    ) as dagster_instance:
+        yield dagster_instance
+
+
+@pytest.fixture
 def workspace(instance: DagsterInstance) -> Iterator[WorkspaceRequestContext]:
     with in_process_test_workspace(
         instance,
@@ -92,6 +115,21 @@ def workspace_with_job_configs(
 ) -> Iterator[WorkspaceRequestContext]:
     with in_process_test_workspace(
         instance_with_job_configs,
+        loadable_target_origin=LoadableTargetOrigin(
+            python_file=repo.__file__,
+            attribute=repo.repository.name,
+        ),
+        container_image="dagster:latest",
+    ) as workspace:
+        yield workspace
+
+
+@pytest.fixture
+def workspace_with_multicontainer_job_configs(
+    instance_with_multicontainer_job_configs: DagsterInstance,
+) -> Iterator[WorkspaceRequestContext]:
+    with in_process_test_workspace(
+        instance_with_multicontainer_job_configs,
         loadable_target_origin=LoadableTargetOrigin(
             python_file=repo.__file__,
             attribute=repo.repository.name,
@@ -129,6 +167,19 @@ def run_with_job_configs(
     external_job: RemoteJob,
 ) -> DagsterRun:
     return instance_with_job_configs.create_run_for_job(
+        job,
+        remote_job_origin=external_job.get_remote_origin(),
+        job_code_origin=external_job.get_python_origin(),
+    )
+
+
+@pytest.fixture
+def run_with_multicontainer_job_configs(
+    instance_with_multicontainer_job_configs: DagsterInstance,
+    job: JobDefinition,
+    external_job: RemoteJob,
+) -> DagsterRun:
+    return instance_with_multicontainer_job_configs.create_run_for_job(
         job,
         remote_job_origin=external_job.get_remote_origin(),
         job_code_origin=external_job.get_python_origin(),

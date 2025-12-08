@@ -98,6 +98,13 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
             context.dagster_run.run_id, {"cloud_run_job_execution_id": execution_id}
         )
 
+    def get_container_name_for_code_location_or_default(
+        self, job_config: dict[str, Any]
+    ) -> str | None:
+        """Returns the specific container_name for multi-container cloud run jobs to override"""
+        job_config = check.dict_param(job_config, "job_config")
+        return job_config.get("container_name", None)
+
     def get_project_for_code_location_or_default(
         self, job_config: dict[str, Any]
     ) -> str:
@@ -131,6 +138,19 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         return (
             f"projects/{project_id_for_job}/locations/{region_for_job}/jobs/{job_name}"
         )
+
+    def specific_container_name(self, code_location_name: str) -> str | None:
+        try:
+            job = self.job_name_by_code_location[code_location_name]
+        except KeyError:
+            raise Exception(
+                f"No run launcher defined for code location: {code_location_name}"
+            )
+        # if not specific, then we default to legacy 1 container behavior (no name)
+        if isinstance(job, str):
+            return None
+
+        return self.get_container_name_for_code_location_or_default(job)
 
     def resolve_secret(self, secret_name: str) -> Any:
         client = SecretManagerServiceClient()
@@ -185,13 +205,17 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
     def create_execution(self, code_location_name: str, args: Sequence[str]):
         job_name = self.fully_qualified_job_name(code_location_name)
         job_env = self.env_override_for_code_location(code_location_name)
-        return self.execute_job(job_name, args=args, env=job_env)
+        container_name = self.specific_container_name(code_location_name)
+        return self.execute_job(
+            job_name, args=args, env=job_env, container_name=container_name
+        )
 
     def execute_job(
         self,
         fully_qualified_job_name: str,
         args: Sequence[str] | None = None,
         env: Optional["dict[str, str]"] = None,
+        container_name: str | None = None,
     ) -> Operation:
         request = RunJobRequest(name=fully_qualified_job_name)
 
@@ -202,6 +226,8 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
             overrides["env"] = [
                 k8s_min.EnvVar(name=name, value=value) for name, value in env.items()
             ]
+        if container_name:
+            overrides["name"] = container_name
 
         container_overrides = [RunJobRequest.Overrides.ContainerOverride(**overrides)]
 
@@ -280,6 +306,8 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
                     " pair where the key is the code location name and the value is the job name. "
                     "Optionally, each code location key may specifiy the `job_name` and `project_id` "
                     "override value in order to the code location to a different GCP project ID."
+                    "If using multi-container jobs, you may also specify `container_name` which"
+                    "will be used to override the specific container"
                 ),
             ),
             "run_job_retry": Field(
