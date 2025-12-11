@@ -21,8 +21,10 @@ dev-dependencies = [
 requires = ["setuptools>=42"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["dagster_async_executor"]
+[tool.setuptools.packages.find]
+include = ["dagster_async_executor*"]
+exclude = ["dagster_async_executor_tests*"]
+namespaces = false
 
 [tool.setuptools.dynamic]
 version = {attr = "dagster_async_executor.__version__"}
