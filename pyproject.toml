@@ -1,0 +1,147 @@
+[project]
+name = "dagster-community-integrations"
+version = "0.0.0"  # Root version not used
+requires-python = ">=3.10,<3.13"
+
+# ########################
+# ##### UV WORKSPACE
+# ########################
+
+[tool.uv.workspace]
+members = [
+    "libraries/*",
+]
+
+exclude = [
+    "libraries/dagster-anthropic",
+    "libraries/dagster-apprise",
+    "libraries/dagster-chroma",
+    "libraries/dagster-contrib-gcp",
+    "libraries/dagster-dataform",
+    "libraries/dagster-ducklake",
+    "libraries/dagster-evidence",
+    "libraries/dagster-gemini",
+    "libraries/dagster-hex",
+    "libraries/dagster-hightouch",
+    "libraries/dagster-iceberg",
+    "libraries/dagster-modal",
+    "libraries/dagster-notdiamond",
+    "libraries/dagster-obstore",
+    "libraries/dagster-polars",
+    "libraries/dagster-qdrant",
+    "libraries/dagster-teradata",
+    "libraries/dagster-vertexai",
+    "libraries/dagster-weaviate",
+    "libraries/pipes"
+]
+
+[tool.uv]
+# Shared development dependencies for all workspace members
+dev-dependencies = [
+    "responses>=0.25.0",
+    "testcontainers>=4.4.0",
+    "pytest>=9.0.1",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.4",
+    "pyright>=1.1.407",
+    "freezegun>=1.5.5",
+]
+
+# Constraint dependencies to ensure consistency
+constraint-dependencies = [
+    "dagster>=1.10.0,<2.0.0"
+]
+
+# ########################
+# ##### PYTEST
+# ########################
+
+[tool.pytest.ini_options]
+
+filterwarnings = [
+  "ignore::DeprecationWarning",
+  "ignore::UserWarning",
+  "ignore::pytest.PytestCollectionWarning",
+]
+
+markers = [
+  "unit: Fast unit tests with no external dependencies",
+  "integration: Tests requiring real git operations or other I/O",
+  "e2e: End-to-end tests requiring GitHub authentication",
+  "slow: Tests that take more than 1 second",
+]
+
+timeout = 240
+addopts = "-ra"
+
+
+# ########################
+# ##### PYRIGHT
+# ########################
+
+[tool.pyright]
+
+pythonVersion = "3.10"
+
+typeCheckingMode = "standard"
+
+include = [
+    "libraries/*",
+]
+
+# Unfortunately pyright does not offer a way to extend the default exclusions, so we have to
+# reiterate them here if we want to add anything else.
+exclude = [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/__generated__",
+    "**/vendor",
+    "**/_vendored",
+    "**/.tox",
+    ".git",
+    "**/.venv*",
+    "**/build",
+    "libraries/dagster-anthropic",
+    "libraries/dagster-apprise",
+    "libraries/dagster-chroma",
+    "libraries/dagster-contrib-gcp",
+    "libraries/dagster-dataform",
+    "libraries/dagster-ducklake",
+    "libraries/dagster-evidence",
+    "libraries/dagster-gemini",
+    "libraries/dagster-hex",
+    "libraries/dagster-hightouch",
+    "libraries/dagster-iceberg",
+    "libraries/dagster-modal",
+    "libraries/dagster-notdiamond",
+    "libraries/dagster-obstore",
+    "libraries/dagster-polars",
+    "libraries/dagster-qdrant",
+    "libraries/dagster-teradata",
+    "libraries/dagster-vertexai",
+    "libraries/dagster-weaviate",
+    "libraries/pipes"
+]
+
+# These two settings point pyright to a python environment to resolve imports against. This virtual
+# environment is defined in the `pyright` tox environment in the tox section below-- that
+# environment must be built before pyright can run correctly.
+venv = ".venv"
+
+
+# Disable reading type annotations from libraries that are not explicitly marked as typed (i.e. that
+# include a py.typed file). All imports from these libraries are given the `Unknown` type (i.e.
+# `Any`). This setting does not affect `py.typed` libraries.
+useLibraryCodeForTypes = false
+
+# We use ruff for this.
+reportInvalidStringEscapeSequence = false
+
+# As of 2023-02-02, there are still many `py.typed` libs that are not compliant with the standards
+# for defining a public API.
+reportPrivateImportUsage = false
+
+# Since we only use pyright, there is no need to suppress type errors that pyright does not
+# recognize.
+reportUnnecessaryTypeIgnoreComment = "warning"
+
