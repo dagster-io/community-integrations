@@ -1,0 +1,31 @@
+[project]  
+name = "dagster-openlineage"  
+description = "Dagster integration for OpenLineage"  
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [  
+    "dagster>=1.8.0",  
+    "openlineage-python",  
+]  
+dynamic = ["version"]
+  
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest",
+    "pyright>=1.1.386",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_openlineage"]
+
+[tool.setuptools.dynamic]
+version = { attr = "dagster_openlineage.__version__" }
+
+[project.entry-points]
+"dagster_dg.library" = { dagster_openlineage = "dagster_openlineage" }
+"dagster_dg.plugin" = { dagster_openlineage = "dagster_openlineage" }
