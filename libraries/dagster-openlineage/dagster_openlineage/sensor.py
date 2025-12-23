@@ -21,7 +21,6 @@ from dagster_openlineage.compat import (
 )
 
 
-
 import dagster
 
 _has_sensor_context = hasattr(dagster, "SensorEvaluationContext")
