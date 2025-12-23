@@ -1,10 +1,10 @@
 # Copyright 2018-2025 contributors to the OpenLineage project
 # SPDX-License-Identifier: Apache-2.0
 
+import importlib.util
 import dagster
 from typing import TYPE_CHECKING, Any
 
-# Version parsing
 from packaging import version as version_parser
 
 DAGSTER_VERSION = version_parser.parse(dagster.__version__)
@@ -12,45 +12,41 @@ IS_LE_1_11_5 = DAGSTER_VERSION <= version_parser.parse("1.11.5")
 IS_GE_1_11_6 = DAGSTER_VERSION >= version_parser.parse("1.11.6")
 IS_GE_1_8_0 = DAGSTER_VERSION >= version_parser.parse("1.8.0")
 
-# Conditional imports
 if IS_LE_1_11_5:
-    # Old API imports (Dagster <= 1.11.5)
-    # Note: For versions < 1.7.0, these may need to come from dagster.core.*
-    # For versions 1.7.0-1.11.5, they're in dagster.core.*
+    # Dagster <= 1.11.5: imports from dagster.core.*
+    from dagster.core.definitions import sensor_definition
     from dagster.core.definitions.sensor_definition import SensorDefinition  # noqa: F401
+    from dagster.core import events
     from dagster.core.events import DagsterEventType  # noqa: F401
 
-    try:
-        from dagster.core.definitions.sensor_definition import (
-            DEFAULT_SENSOR_DAEMON_INTERVAL,
-        )  # noqa: F401
-    except ImportError:
-        DEFAULT_SENSOR_DAEMON_INTERVAL = 300  # Fallback value
-    try:
-        from dagster.core.events import PIPELINE_EVENTS, STEP_EVENTS  # noqa: F401
-    except ImportError:
-        PIPELINE_EVENTS = set()
-        STEP_EVENTS = set()
+    DEFAULT_SENSOR_DAEMON_INTERVAL = getattr(
+        sensor_definition, "DEFAULT_SENSOR_DAEMON_INTERVAL", 300
+    )
+
+    PIPELINE_EVENTS = getattr(events, "PIPELINE_EVENTS", set())
+    STEP_EVENTS = getattr(events, "STEP_EVENTS", set())
 else:
-    # New API imports (Dagster >= 1.11.6)
+    # Dagster >= 1.11.6: imports from main dagster module
     from dagster import SensorDefinition, DagsterEventType  # noqa: F401
 
-    try:
-        from dagster import DEFAULT_SENSOR_DAEMON_INTERVAL  # noqa: F401
-    except ImportError:
-        DEFAULT_SENSOR_DAEMON_INTERVAL = 300  # Fallback value
-    try:
-        from dagster import PIPELINE_EVENTS, STEP_EVENTS  # noqa: F401
-    except ImportError:
-        # Fallback to core.events for versions where they're not in main dagster module
-        try:
-            from dagster.core.events import PIPELINE_EVENTS, STEP_EVENTS  # noqa: F401
-        except ImportError:
+    DEFAULT_SENSOR_DAEMON_INTERVAL = getattr(
+        dagster, "DEFAULT_SENSOR_DAEMON_INTERVAL", 300
+    )
+
+    PIPELINE_EVENTS = getattr(dagster, "PIPELINE_EVENTS", None)
+    STEP_EVENTS = getattr(dagster, "STEP_EVENTS", None)
+
+    if PIPELINE_EVENTS is None or STEP_EVENTS is None:
+        _core_events_spec = importlib.util.find_spec("dagster.core.events")
+        if _core_events_spec is not None:
+            _core_events_module = importlib.import_module("dagster.core.events")
+            PIPELINE_EVENTS = getattr(_core_events_module, "PIPELINE_EVENTS", set())
+            STEP_EVENTS = getattr(_core_events_module, "STEP_EVENTS", set())
+        else:
             PIPELINE_EVENTS = set()
             STEP_EVENTS = set()
 
 
-# Attribute helpers
 def get_pipeline_origin(run: Any) -> Any:
     """
     Return pipeline origin across Dagster versions
@@ -61,30 +57,32 @@ def get_pipeline_origin(run: Any) -> Any:
 
 
 def get_job_origin(run: Any) -> Any:
-    # Versions 1.8.0+ use remote_job_origin, but DagsterRun constructor
-    # may still use external_job_origin in some versions. Try both.
+    """Return job origin across Dagster versions.
+
+    Dagster 1.8.0+ uses remote_job_origin, but DagsterRun constructor
+    may still use external_job_origin in some versions.
+    """
     if IS_GE_1_8_0:
-        # Try remote_job_origin first (for newer versions)
         origin = getattr(run, "remote_job_origin", None)
         if origin is not None:
             return origin
-        # Fallback to external_job_origin (for 1.8.0 which may still use it)
         return getattr(run, "external_job_origin", None)  # type: ignore[attr-defined]
     return getattr(run, "external_job_origin", None)  # type: ignore[attr-defined]
 
 
 def get_repository_origin(origin: Any) -> Any:
-    # For RemoteJobOrigin (1.7.0+), the attribute is just "repository_origin"
-    # For older ExternalJobOrigin, it's "external_repository_origin"
+    """Return repository origin across Dagster versions.
+
+    RemoteJobOrigin (1.7.0+) uses "repository_origin",
+    ExternalJobOrigin uses "external_repository_origin".
+    """
     if origin is None:
         return None
-    # Try repository_origin first (for RemoteJobOrigin)
     if hasattr(origin, "repository_origin"):
         return getattr(origin, "repository_origin", None)
     return getattr(origin, "external_repository_origin", None)  # type: ignore[attr-defined]
 
 
-# Export version flags for use in other modules
 __all__ = [
     "SensorDefinition",
     "DagsterEventType",

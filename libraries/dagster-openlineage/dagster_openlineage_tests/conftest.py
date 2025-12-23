@@ -271,8 +271,6 @@ def make_pipeline_run_with_external_pipeline_origin(
     if not dagster_run_provider and parsed_dagster_version <= Version("1.6.9"):
         dagster_run_provider = DagsterRunLE1_6_9Provider()
     if not dagster_run_provider and parsed_dagster_version <= Version("1.8.0"):
-        # 1.8.0 still uses external_job_origin in DagsterRun constructor
-        # but the origin object is RemoteJobOrigin
         dagster_run_provider = DagsterRunLE1_7_xProvider()
     if not dagster_run_provider and parsed_dagster_version <= Version("1.11.5"):
         dagster_run_provider = (

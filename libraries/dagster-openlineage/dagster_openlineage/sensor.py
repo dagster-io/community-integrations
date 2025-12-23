@@ -20,14 +20,17 @@ from dagster_openlineage.compat import (
     STEP_EVENTS,
 )
 
-# SensorEvaluationContext, SkipReason, and sensor decorator imports
-# For 1.6.9-1.11.5: these are in dagster.core.definitions.sensor_definition
-# For >= 1.11.6: these are in main dagster module
-# We try both to be safe
-try:
+
+
+import dagster
+
+_has_sensor_context = hasattr(dagster, "SensorEvaluationContext")
+_has_skip_reason = hasattr(dagster, "SkipReason")
+_has_sensor = hasattr(dagster, "sensor")
+
+if _has_sensor_context and _has_skip_reason and _has_sensor:
     from dagster import SensorEvaluationContext, SkipReason, sensor
-except ImportError:
-    # Fallback for versions 1.6.9-1.11.5
+else:
     from dagster.core.definitions.sensor_definition import (
         SensorEvaluationContext,
         SkipReason,
@@ -67,8 +70,6 @@ def openlineage_sensor(
         description=description,
     )
     def _openlineage_sensor(context: SensorEvaluationContext):
-        # cursor keeps track of the last_storage_id checkpoint and running_pipelines, a map of
-        # pipeline run ids to dynamically generated/extracted metadata for running pipelines
         ol_cursor = (
             OpenLineageCursor.from_json(context.cursor)
             if context.cursor
@@ -123,7 +124,6 @@ def openlineage_sensor(
                             repository_name,
                         )
                 except Exception as e:
-                    # On failure, break and terminate evaluation
                     raised_exception = e
                     break
             last_storage_id = record.storage_id
