@@ -198,14 +198,16 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
                     row_group_size=row_group_size,
                 )
         else:
-            df.write_parquet(
-                str(path),
-                compression=compression,  # type: ignore
+            # storage_options for write_parquet was added in Polars 1.17.0
+            kwargs: dict[str, Any] = dict(
+                compression=compression,
                 compression_level=compression_level,
                 statistics=statistics,
                 row_group_size=row_group_size,
-                storage_options=self.storage_options,
             )
+            if Version(pl.__version__) >= Version("1.17.0"):
+                kwargs["storage_options"] = self.storage_options
+            df.write_parquet(str(path), **kwargs)  # type: ignore
 
     def scan_df_from_path(
         self,
