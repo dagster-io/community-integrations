@@ -39,27 +39,19 @@ def get_pyarrow_dataset(path: "UPath", context: InputContext) -> ds.Dataset:
     return dataset
 
 
-def scan_parquet(
-    path: "UPath",
-    context: InputContext,
-    storage_options: Optional[dict[str, Any]] = None,
-) -> pl.LazyFrame:
+def scan_parquet(path: "UPath", context: InputContext) -> pl.LazyFrame:
     """Scan a parquet file and return a lazy frame (uses polars native reader).
 
-    :param path: The path to the parquet file
-    :param context: The input context
-    :param storage_options: Optional storage options for cloud backends (e.g., S3).
-        If not provided, falls back to path.storage_options if available.
-    :return: A lazy frame
+    :param path:
+    :param context:
+    :return:
     """
     context_metadata = context.definition_metadata or {}
 
-    # Use provided storage_options, or fall back to path.storage_options
-    if storage_options is None:
-        storage_options = cast(
-            Optional[dict[str, Any]],
-            (path.storage_options if hasattr(path, "storage_options") else None),
-        )
+    storage_options = cast(
+        Optional[dict[str, Any]],
+        (path.storage_options if hasattr(path, "storage_options") else None),
+    )
 
     kwargs = dict(
         n_rows=context_metadata.get("n_rows", None),
@@ -153,17 +145,22 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
         statistics = context_metadata.get("statistics", False)
         row_group_size = context_metadata.get("row_group_size")
 
-        storage_options = self.get_polars_storage_options()
-
-        # Use Polars native sink_parquet with storage_options for cloud storage
-        df.sink_parquet(
-            str(path),
-            compression=compression,
-            compression_level=compression_level,
-            statistics=statistics,
-            row_group_size=row_group_size,
-            storage_options=storage_options,
-        )
+        # sink_parquet with storage_options is supported in Polars >= 1.0.0
+        if Version(pl.__version__) >= Version("1.0.0"):
+            df.sink_parquet(
+                str(path),
+                compression=compression,
+                compression_level=compression_level,
+                statistics=statistics,
+                row_group_size=row_group_size,
+                storage_options=self.storage_options,
+            )
+        else:
+            context.log.warning(
+                "Cloud sink with storage_options requires Polars >= 1.0.0, "
+                "falling back to collecting the LazyFrame first.",
+            )
+            return self.write_df_to_path(context, df.collect(), path)
 
     def write_df_to_path(
         self,
@@ -178,11 +175,9 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
         row_group_size = context_metadata.get("row_group_size")
         pyarrow_options = context_metadata.get("pyarrow_options", None)
 
-        storage_options = self.get_polars_storage_options()
         fs = path.fs if hasattr(path, "fs") else None
 
         if pyarrow_options is not None:
-            # Use pyarrow backend when explicitly requested
             pyarrow_options["filesystem"] = fs
             df.write_parquet(
                 str(path),
@@ -193,18 +188,7 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
                 use_pyarrow=True,
                 pyarrow_options=pyarrow_options,
             )
-        elif storage_options is not None:
-            # Use Polars native write with storage_options for cloud storage
-            df.write_parquet(
-                str(path),
-                compression=compression,  # type: ignore
-                compression_level=compression_level,
-                statistics=statistics,
-                row_group_size=row_group_size,
-                storage_options=storage_options,
-            )
         elif fs is not None:
-            # Fallback to fsspec for other remote filesystems
             with fs.open(str(path), mode="wb") as f:
                 df.write_parquet(
                     f,  # type: ignore
@@ -214,13 +198,13 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
                     row_group_size=row_group_size,
                 )
         else:
-            # Local filesystem
             df.write_parquet(
                 str(path),
                 compression=compression,  # type: ignore
                 compression_level=compression_level,
                 statistics=statistics,
                 row_group_size=row_group_size,
+                storage_options=self.storage_options,
             )
 
     def scan_df_from_path(
@@ -229,4 +213,4 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
         context: InputContext,
         partition_key: str | None = None,
     ) -> pl.LazyFrame:
-        return scan_parquet(path, context, self.get_polars_storage_options())
+        return scan_parquet(path, context)

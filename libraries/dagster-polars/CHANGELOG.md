@@ -5,9 +5,11 @@
 ## Added
 
 - Added new `schema_mode` (defaults to `None`, can be set to `overwrite` or `merge`) parameter to `PolarsDeltaIOManager`. Previously schema mode had to be configured for each asset individually.
-- Added `get_polars_storage_options()` method to `BasePolarsUPathIOManager` to expose cloud storage options to Polars native readers/writers.
-- `PolarsParquetIOManager` now passes `cloud_storage_options` directly to Polars `scan_parquet`, `write_parquet`, and `sink_parquet` methods, enabling support for S3 Express One Zone and other cloud storage backends that require explicit storage options.
-- `sink_df_to_path` now uses Polars native `sink_parquet` with `storage_options` for cloud storage instead of falling back to PyArrow (Polars has supported cloud sinks natively since v0.20).
+
+## Fixed
+
+- `PolarsParquetIOManager.write_df_to_path` now passes `storage_options` to Polars `write_parquet` for cloud storage writes.
+- `PolarsParquetIOManager.sink_df_to_path` now uses Polars native `sink_parquet` with `storage_options` (requires Polars >= 1.0.0, falls back to collecting for older versions).
 
 ## 0.27.6
 

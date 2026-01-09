@@ -70,7 +70,6 @@ class BasePolarsUPathIOManager(ConfigurableIOManager, UPathIOManager):
         alias="storage_options",
     )
     _base_path = PrivateAttr()
-    _polars_storage_options = PrivateAttr(default=None)
 
     def setup_for_execution(self, context: InitResourceContext) -> None:
         from upath import UPath
@@ -80,24 +79,11 @@ class BasePolarsUPathIOManager(ConfigurableIOManager, UPathIOManager):
             if self.cloud_storage_options is not None
             else {}
         )
-        # Store processed storage options for use by Polars native methods
-        self._polars_storage_options = sp if sp else None
         self._base_path = (
             UPath(self.base_dir, **sp)
             if self.base_dir is not None
             else UPath(check.not_none(context.instance).storage_directory())
         )
-
-    def get_polars_storage_options(self) -> dict[str, Any] | None:
-        """Get storage options formatted for Polars native readers/writers.
-
-        This returns the cloud_storage_options in a format compatible with
-        Polars' storage_options parameter, which is used by scan_parquet,
-        write_parquet, and sink_parquet for cloud storage backends like S3.
-
-        Returns None if no cloud storage options are configured.
-        """
-        return self._polars_storage_options
 
     @abstractmethod
     def write_df_to_path(
