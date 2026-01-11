@@ -5,13 +5,22 @@ readme = "README.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
     "dagster>=1.10.9",
+    "gitpython>=3.1.0",
+    "pyyaml>=6.0",
 ]
 dynamic = ["version"]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-mock",
+]
 
 [tool.uv]
 dev-dependencies = [
     "ruff",
     "pytest",
+    "pytest-mock",
     "pyright>=1.1.386",
 ]
 
