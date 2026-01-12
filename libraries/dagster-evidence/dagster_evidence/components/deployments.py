@@ -11,7 +11,6 @@ from abc import abstractmethod
 
 
 class BaseEvidenceProjectDeployment(dg.ConfigurableResource):
-
     @abstractmethod
     def deploy_evidence_project(
         self,
@@ -73,7 +72,9 @@ class GithubPagesEvidenceProjectDeployment(BaseEvidenceProjectDeployment):
         from git import Repo
 
         if not os.path.isdir(evidence_project_build_path):
-            raise FileNotFoundError(f"Build directory not found: {evidence_project_build_path}")
+            raise FileNotFoundError(
+                f"Build directory not found: {evidence_project_build_path}"
+            )
 
         context.log.info("Deploying to GitHub Pages...")
         context.log.info(f"  Repo: {self.github_repo}")
@@ -91,10 +92,10 @@ class GithubPagesEvidenceProjectDeployment(BaseEvidenceProjectDeployment):
         Path(evidence_project_build_path, ".nojekyll").touch()
 
         # Configure git user
-        repo.config_writer().set_value("user", "name", "Dagster Evidence Deploy").release()
+        repo.config_writer().set_value(
+            "user", "name", "Dagster Evidence Deploy"
+        ).release()
         repo.config_writer().set_value("user", "email", "dagster@localhost").release()
-
-
 
         # Add all files
         repo.index.add("*")
@@ -168,12 +169,16 @@ def resolve_evidence_project_deployment(
     """Resolve deployment configuration to a deployment instance."""
     # First, check which type we're dealing with
     deployment_type = (
-        model.get("type", "custom") if isinstance(model, dict) else getattr(model, "type", "custom")
+        model.get("type", "custom")
+        if isinstance(model, dict)
+        else getattr(model, "type", "custom")
     )
 
     if deployment_type == "github_pages":
         resolved = resolve_fields(
-            model=model, resolved_cls=GithubPagesEvidenceProjectDeploymentArgs, context=context
+            model=model,
+            resolved_cls=GithubPagesEvidenceProjectDeploymentArgs,
+            context=context,
         )
         # Resolve token: use provided value or fall back to env var
         github_token = resolved.get("github_token") or os.environ.get("GITHUB_TOKEN")
@@ -184,19 +189,26 @@ def resolve_evidence_project_deployment(
             )
         return GithubPagesEvidenceProjectDeployment(
             github_repo=resolved["github_repo"],
-            branch=resolved.get("branch", GithubPagesEvidenceProjectDeploymentArgs.model_fields["branch"].default),
+            branch=resolved.get(
+                "branch",
+                GithubPagesEvidenceProjectDeploymentArgs.model_fields["branch"].default,
+            ),
             github_token=github_token,
         )
     elif deployment_type == "netlify":
         resolved = resolve_fields(
-            model=model, resolved_cls=EvidenceProjectNetlifyDeploymentArgs, context=context
+            model=model,
+            resolved_cls=EvidenceProjectNetlifyDeploymentArgs,
+            context=context,
         )
         return EvidenceProjectNetlifyDeployment(
             netlify_project_url=resolved["netlify_project_url"],
         )
     elif deployment_type == "custom":
         resolved = resolve_fields(
-            model=model, resolved_cls=CustomEvidenceProjectDeploymentArgs, context=context
+            model=model,
+            resolved_cls=CustomEvidenceProjectDeploymentArgs,
+            context=context,
         )
         return CustomEvidenceProjectDeployment(
             deploy_command=resolved["deploy_command"],

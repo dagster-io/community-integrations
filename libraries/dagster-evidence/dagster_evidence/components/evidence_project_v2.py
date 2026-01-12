@@ -65,9 +65,13 @@ class EvidenceProjectComponentV2(StateBackedComponent, Resolvable):
             return dg.Definitions()
 
         # Deserialize evidence project data
-        evidence_project_data = dg.deserialize_value(state_path.read_text(), EvidenceProjectData)
+        evidence_project_data = dg.deserialize_value(
+            state_path.read_text(), EvidenceProjectData
+        )
 
-        assets = self.evidence_project.load_evidence_project_assets(evidence_project_data)
+        assets = self.evidence_project.load_evidence_project_assets(
+            evidence_project_data
+        )
 
         return dg.Definitions(
             assets=assets,

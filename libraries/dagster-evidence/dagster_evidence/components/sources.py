@@ -39,7 +39,7 @@ class BaseEvidenceProjectSource:
 class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
     @staticmethod
     def get_source_type():
-        return 'duckdb'
+        return "duckdb"
 
     def get_source_asset_specs(self, source_group: str):
         source_asset_specs = []
@@ -48,7 +48,7 @@ class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
                 dg.AssetSpec(
                     each_query.get("name"),
                     group_name=source_group,
-                    kinds={"evidence", "source", self.get_source_type()}
+                    kinds={"evidence", "source", self.get_source_type()},
                 )
             )
         return source_asset_specs
@@ -57,7 +57,7 @@ class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
 class MotherDuckEvidenceProjectSource(BaseEvidenceProjectSource):
     @staticmethod
     def get_source_type():
-        return 'motherduck'
+        return "motherduck"
 
     def get_source_asset_specs(self, source_group: str):
         source_asset_specs = []
@@ -66,7 +66,7 @@ class MotherDuckEvidenceProjectSource(BaseEvidenceProjectSource):
                 dg.AssetSpec(
                     each_query.get("name"),
                     group_name=source_group,
-                    kinds={"evidence", "source", self.get_source_type()}
+                    kinds={"evidence", "source", self.get_source_type()},
                 )
             )
         return source_asset_specs
@@ -75,7 +75,7 @@ class MotherDuckEvidenceProjectSource(BaseEvidenceProjectSource):
 class BigQueryEvidenceProjectSource(BaseEvidenceProjectSource):
     @staticmethod
     def get_source_type():
-        return 'bigquery'
+        return "bigquery"
 
     def get_source_asset_specs(self, source_group: str):
         source_asset_specs = []
@@ -84,7 +84,7 @@ class BigQueryEvidenceProjectSource(BaseEvidenceProjectSource):
                 dg.AssetSpec(
                     each_query.get("name"),
                     group_name=source_group,
-                    kinds={"evidence", "source", self.get_source_type()}
+                    kinds={"evidence", "source", self.get_source_type()},
                 )
             )
         return source_asset_specs

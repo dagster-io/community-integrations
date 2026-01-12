@@ -164,7 +164,9 @@ class TestGitHubPagesDeployment:
         )
 
         # Verify git init was called
-        mock_git_repo.init.assert_called_once_with(str(build_path), initial_branch="main")
+        mock_git_repo.init.assert_called_once_with(
+            str(build_path), initial_branch="main"
+        )
 
     def test_deploy_creates_remote_with_token(
         self, mock_git_repo, mock_asset_context, mock_pipes_subprocess_client, tmp_path
@@ -217,7 +219,9 @@ class TestGitHubPagesDeployment:
         )
 
         # Verify force push was called
-        mock_remote.push.assert_called_once_with(refspec="gh-pages:gh-pages", force=True)
+        mock_remote.push.assert_called_once_with(
+            refspec="gh-pages:gh-pages", force=True
+        )
 
     def test_deploy_raises_if_build_path_missing(
         self, mock_asset_context, mock_pipes_subprocess_client

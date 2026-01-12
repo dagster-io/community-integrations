@@ -77,7 +77,9 @@ class TestResolveSourceType:
         """Verify resolve_source_type returns BigQueryEvidenceProjectSource."""
         source_content = {
             "connection": SAMPLE_BIGQUERY_CONNECTION,
-            "queries": [{"name": "transactions", "content": "SELECT * FROM transactions"}],
+            "queries": [
+                {"name": "transactions", "content": "SELECT * FROM transactions"}
+            ],
         }
         source = BaseEvidenceProjectSource.resolve_source_type(source_content)
         assert isinstance(source, BigQueryEvidenceProjectSource)
@@ -135,7 +137,9 @@ class TestSourceAssetSpecs:
         """Verify BigQueryEvidenceProjectSource generates correct asset specs."""
         source_content = {
             "connection": SAMPLE_BIGQUERY_CONNECTION,
-            "queries": [{"name": "transactions", "content": "SELECT * FROM transactions"}],
+            "queries": [
+                {"name": "transactions", "content": "SELECT * FROM transactions"}
+            ],
         }
         source = BigQueryEvidenceProjectSource(source_content)
         specs = source.get_source_asset_specs("warehouse")

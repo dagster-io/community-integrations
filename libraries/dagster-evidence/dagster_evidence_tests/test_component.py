@@ -6,7 +6,10 @@ from unittest.mock import MagicMock
 import dagster as dg
 
 from dagster_evidence.components.evidence_project_v2 import EvidenceProjectComponentV2
-from dagster_evidence.components.projects import EvidenceProjectData, LocalEvidenceProject
+from dagster_evidence.components.projects import (
+    EvidenceProjectData,
+    LocalEvidenceProject,
+)
 from dagster_evidence.components.deployments import CustomEvidenceProjectDeployment
 
 # Sample data constants
@@ -87,7 +90,9 @@ class TestEvidenceProjectComponentV2:
         assets = list(defs.resolve_asset_graph().get_all_asset_keys())
         assert len(assets) == 0
 
-    def test_component_build_defs_from_state_with_data(self, mock_evidence_project, tmp_path):
+    def test_component_build_defs_from_state_with_data(
+        self, mock_evidence_project, tmp_path
+    ):
         """Verify build_defs_from_state loads assets from state file."""
         deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
         project = LocalEvidenceProject(
@@ -114,7 +119,9 @@ class TestEvidenceProjectComponentV2:
         assets = list(defs.resolve_asset_graph().get_all_asset_keys())
         assert len(assets) == 3
 
-    def test_component_includes_pipes_client_resource(self, mock_evidence_project, tmp_path):
+    def test_component_includes_pipes_client_resource(
+        self, mock_evidence_project, tmp_path
+    ):
         """Verify component includes PipesSubprocessClient resource."""
         deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
         project = LocalEvidenceProject(
@@ -137,7 +144,9 @@ class TestEvidenceProjectComponentV2:
 
         # Verify pipes_subprocess_client is in resources
         assert "pipes_subprocess_client" in defs.resources
-        assert isinstance(defs.resources["pipes_subprocess_client"], dg.PipesSubprocessClient)
+        assert isinstance(
+            defs.resources["pipes_subprocess_client"], dg.PipesSubprocessClient
+        )
 
 
 class TestComponentAssetGeneration:

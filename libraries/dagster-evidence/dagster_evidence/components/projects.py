@@ -1,4 +1,5 @@
 """Project classes for Evidence projects."""
+
 import shutil
 
 import os
@@ -34,16 +35,19 @@ class EvidenceProjectData:
 
 
 class BaseEvidenceProject(dg.ConfigurableResource):
-
     @abstractmethod
     def get_evidence_project_name(self) -> str:
         raise NotImplementedError()
 
     @abstractmethod
-    def load_evidence_project_assets(self, evidence_project_data: EvidenceProjectData) -> Sequence[dg.AssetSpec]:
+    def load_evidence_project_assets(
+        self, evidence_project_data: EvidenceProjectData
+    ) -> Sequence[dg.AssetSpec]:
         raise NotImplementedError()
 
-    def load_source_assets(self, evidence_project_data: EvidenceProjectData) -> Sequence[dg.AssetSpec]:
+    def load_source_assets(
+        self, evidence_project_data: EvidenceProjectData
+    ) -> Sequence[dg.AssetSpec]:
         source_assets: list[dg.AssetSpec] = []
         for source_group, source_content in evidence_project_data.sources_by_id.items():
             source = BaseEvidenceProjectSource.resolve_source_type(source_content)
@@ -59,8 +63,7 @@ class BaseEvidenceProject(dg.ConfigurableResource):
         sources = self.parse_evidence_project_sources()
 
         return EvidenceProjectData(
-            project_name=self.get_evidence_project_name(),
-            sources_by_id=sources
+            project_name=self.get_evidence_project_name(), sources_by_id=sources
         )
 
 
@@ -92,7 +95,7 @@ class LocalEvidenceProject(BaseEvidenceProject):
             if not connection_file.exists():
                 raise FileNotFoundError(f"connection.yaml not found in {folder}")
 
-            with open(connection_file, 'r') as f:
+            with open(connection_file, "r") as f:
                 connection = yaml.safe_load(f)
 
             # Read all .sql files
@@ -100,15 +103,9 @@ class LocalEvidenceProject(BaseEvidenceProject):
             for sql_file in folder.glob("*.sql"):
                 query_name = sql_file.stem  # filename without extension
                 query_content = sql_file.read_text()
-                queries.append({
-                    'name': query_name,
-                    'content': query_content
-                })
+                queries.append({"name": query_name, "content": query_content})
 
-            result[folder.name] = {
-                'connection': connection,
-                'queries': queries
-            }
+            result[folder.name] = {"connection": connection, "queries": queries}
 
         return result
 
@@ -126,7 +123,7 @@ class LocalEvidenceProject(BaseEvidenceProject):
         if not config_path.exists():
             return "build"
 
-        with open(config_path, 'r') as f:
+        with open(config_path, "r") as f:
             config = yaml.safe_load(f)
 
         base_path = config.get("deployment", {}).get("basePath")
@@ -136,13 +133,15 @@ class LocalEvidenceProject(BaseEvidenceProject):
         # Remove leading slash and prepend with build/
         return f"build/{base_path.lstrip('/')}"
 
-    def load_evidence_project_assets(self, evidence_project_data: EvidenceProjectData) -> Sequence[dg.AssetSpec]:
+    def load_evidence_project_assets(
+        self, evidence_project_data: EvidenceProjectData
+    ) -> Sequence[dg.AssetSpec]:
         source_assets = self.load_source_assets(evidence_project_data)
 
         @dg.asset(
             key=[self.get_evidence_project_name()],
             kinds={"evidence"},
-            deps=[each_source_asset.key for each_source_asset in source_assets]
+            deps=[each_source_asset.key for each_source_asset in source_assets],
         )
         def build_and_deploy_evidence_project(
             context: dg.AssetExecutionContext,
@@ -150,17 +149,23 @@ class LocalEvidenceProject(BaseEvidenceProject):
         ):
             with TemporaryDirectory() as temp_dir:
                 temp_dir = temp_dir + "/project"
-                shutil.copytree(self.project_path,temp_dir, ignore=shutil.ignore_patterns('logs', '.git', '*.tmp', "node_modules"))
+                shutil.copytree(
+                    self.project_path,
+                    temp_dir,
+                    ignore=shutil.ignore_patterns(
+                        "logs", ".git", "*.tmp", "node_modules"
+                    ),
+                )
                 # Get base path for GitHub Pages (repo name)
                 base_path = self._get_base_path()
-                
+
                 build_output_dir = base_path
                 os.makedirs(build_output_dir, exist_ok=True)
 
                 build_env = os.environ.copy()
                 build_env["EVIDENCE_BUILD_DIR"] = build_output_dir
                 build_env["EVIDENCE_PROJECT_TMP_DIR"] = temp_dir
-                build_env["EVIDENCE_PROJECT_PATH"] = self.project_path 
+                build_env["EVIDENCE_PROJECT_PATH"] = self.project_path
 
                 context.log.info(f"Building Evidence project to: {build_output_dir}")
                 context.log.info(f"Evidence project path: {self.project_path}")
@@ -192,14 +197,14 @@ class LocalEvidenceProject(BaseEvidenceProject):
 
                 # Deploy from the build output folder and yield results
                 self.project_deployment.deploy_evidence_project(
-                    evidence_project_build_path=os.path.join(temp_dir,build_output_dir),
+                    evidence_project_build_path=os.path.join(
+                        temp_dir, build_output_dir
+                    ),
                     context=context,
                     pipes_subprocess_client=pipes_subprocess_client,
                     env=build_env,
                 )
                 return dg.MaterializeResult(metadata={"status": "success"})
-
-                 
 
         return source_assets + [build_and_deploy_evidence_project]
 
@@ -218,6 +223,7 @@ class LocalEvidenceProject(BaseEvidenceProject):
             context=context,
             env=env or os.environ,
         )
+
 
 class LocalEvidenceProjectArgs(dg.Model, dg.Resolvable):
     """Arguments for configuring a local Evidence project."""
@@ -238,7 +244,7 @@ class LocalEvidenceProjectArgs(dg.Model, dg.Resolvable):
             model_field_type=Union[
                 GithubPagesEvidenceProjectDeploymentArgs.model(),
                 EvidenceProjectNetlifyDeploymentArgs.model(),
-                CustomEvidenceProjectDeploymentArgs.model()
+                CustomEvidenceProjectDeploymentArgs.model(),
             ],
             description="Deployment configuration for the Evidence project.",
             examples=[],
@@ -255,7 +261,9 @@ class EvidenceStudioProject(BaseEvidenceProject):
     def get_evidence_project_name(self) -> str:
         raise NotImplementedError()
 
-    def load_evidence_project_assets(self, evidence_project_data: EvidenceProjectData) -> Sequence[dg.AssetSpec]:
+    def load_evidence_project_assets(
+        self, evidence_project_data: EvidenceProjectData
+    ) -> Sequence[dg.AssetSpec]:
         raise NotImplementedError()
 
 
@@ -282,7 +290,9 @@ def resolve_evidence_project(
     """Resolve project configuration to a project instance."""
     # First, check which type we're dealing with
     project_type = (
-        model.get("project_type", "local") if isinstance(model, dict) else getattr(model, "project_type", "local")
+        model.get("project_type", "local")
+        if isinstance(model, dict)
+        else getattr(model, "project_type", "local")
     )
 
     if project_type == "local":
@@ -290,8 +300,10 @@ def resolve_evidence_project(
             model=model, resolved_cls=LocalEvidenceProjectArgs, context=context
         )
         return LocalEvidenceProject(
-            project_path=str(context.resolve_source_relative_path(resolved["project_path"])),
-            project_deployment=resolved["project_deployment"]
+            project_path=str(
+                context.resolve_source_relative_path(resolved["project_path"])
+            ),
+            project_deployment=resolved["project_deployment"],
         )
     elif project_type == "evidence_studio":
         resolved = resolve_fields(

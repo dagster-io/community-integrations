@@ -122,13 +122,17 @@ class TestEvidenceStudioProjectArgs:
 
     def test_studio_project_args_type(self):
         """Verify EvidenceStudioProjectArgs has correct default type."""
-        args = EvidenceStudioProjectArgs(evidence_studio_url="https://studio.evidence.dev/project")
+        args = EvidenceStudioProjectArgs(
+            evidence_studio_url="https://studio.evidence.dev/project"
+        )
         assert args.project_type == "evidence_studio"
         assert args.evidence_studio_url == "https://studio.evidence.dev/project"
 
     def test_studio_project_args_default_git_url(self):
         """Verify EvidenceStudioProjectArgs has default git URL."""
-        args = EvidenceStudioProjectArgs(evidence_studio_url="https://studio.evidence.dev/project")
+        args = EvidenceStudioProjectArgs(
+            evidence_studio_url="https://studio.evidence.dev/project"
+        )
         assert args.evidence_project_git_url == "no_url"
 
 
@@ -212,7 +216,9 @@ class TestLocalEvidenceProject:
         base_path = project._get_base_path()
         assert base_path == "build/test-dashboard"
 
-    def test_local_project_get_base_path_no_config(self, mock_evidence_project_no_config):
+    def test_local_project_get_base_path_no_config(
+        self, mock_evidence_project_no_config
+    ):
         """Verify _get_base_path returns 'build' when no config exists."""
         deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
         project = LocalEvidenceProject(
@@ -316,7 +322,9 @@ class TestCreateEvidenceProjectHelper:
         assert project_path.exists()
         assert (project_path / "package.json").exists()
         assert (project_path / "evidence.config.yaml").exists()
-        assert (project_path / "sources" / "needful_things" / "connection.yaml").exists()
+        assert (
+            project_path / "sources" / "needful_things" / "connection.yaml"
+        ).exists()
         assert (project_path / "sources" / "needful_things" / "orders.sql").exists()
 
     def test_create_project_without_config(self, tmp_path):
