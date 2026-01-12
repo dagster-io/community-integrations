@@ -41,7 +41,6 @@ class CustomEvidenceProjectDeployment(BaseEvidenceProjectDeployment):
                 context=context,
                 env=env or os.environ.copy(),
             )
-            yield from invocation.get_results()
 
 
 class CustomEvidenceProjectDeploymentArgs(dg.Model, dg.Resolvable):
@@ -95,9 +94,7 @@ class GithubPagesEvidenceProjectDeployment(BaseEvidenceProjectDeployment):
         repo.config_writer().set_value("user", "name", "Dagster Evidence Deploy").release()
         repo.config_writer().set_value("user", "email", "dagster@localhost").release()
 
-        # Create and checkout branch
-        new_branch = repo.create_head(self.branch)
-        new_branch.checkout()
+
 
         # Add all files
         repo.index.add("*")
@@ -107,11 +104,14 @@ class GithubPagesEvidenceProjectDeployment(BaseEvidenceProjectDeployment):
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H:%M:%S")
         repo.index.commit(f"Deploy Evidence dashboard {timestamp}")
 
+        # Create and checkout branch
+        new_branch = repo.create_head(self.branch)
+        new_branch.checkout()
+
         # Force push
         origin.push(refspec=f"{self.branch}:{self.branch}", force=True)
 
         context.log.info("Deployment complete!")
-        yield from ()
 
 
 class GithubPagesEvidenceProjectDeploymentArgs(dg.Model, dg.Resolvable):

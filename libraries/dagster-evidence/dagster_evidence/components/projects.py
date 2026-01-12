@@ -1,4 +1,5 @@
 """Project classes for Evidence projects."""
+import shutil
 
 import os
 from abc import abstractmethod
@@ -148,44 +149,57 @@ class LocalEvidenceProject(BaseEvidenceProject):
             pipes_subprocess_client: dg.PipesSubprocessClient,
         ):
             with TemporaryDirectory() as temp_dir:
+                temp_dir = temp_dir + "/project"
+                shutil.copytree(self.project_path,temp_dir, ignore=shutil.ignore_patterns('logs', '.git', '*.tmp', "node_modules"))
                 # Get base path for GitHub Pages (repo name)
                 base_path = self._get_base_path()
-
-                build_output_dir = os.path.join(temp_dir, base_path)
+                
+                build_output_dir = base_path
                 os.makedirs(build_output_dir, exist_ok=True)
 
                 build_env = os.environ.copy()
                 build_env["EVIDENCE_BUILD_DIR"] = build_output_dir
-                build_env["EVIDENCE_PROJECT_PATH"] = self.project_path
+                build_env["EVIDENCE_PROJECT_TMP_DIR"] = temp_dir
+                build_env["EVIDENCE_PROJECT_PATH"] = self.project_path 
 
                 context.log.info(f"Building Evidence project to: {build_output_dir}")
                 context.log.info(f"Evidence project path: {self.project_path}")
 
-                # Run sources command and yield results
-                yield from self._run_cmd(
+                self._run_cmd(
                     context=context,
                     pipes_subprocess_client=pipes_subprocess_client,
-                    project_path=self.project_path,
+                    project_path=temp_dir,
+                    cmd=[self.npm_executable, "install"],
+                    env=build_env,
+                )
+                # Run sources command and yield results
+                self._run_cmd(
+                    context=context,
+                    pipes_subprocess_client=pipes_subprocess_client,
+                    project_path=temp_dir,
                     cmd=[self.npm_executable, "run", "sources"],
                     env=build_env,
                 )
 
                 # Run build command and yield results
-                yield from self._run_cmd(
+                self._run_cmd(
                     context=context,
                     pipes_subprocess_client=pipes_subprocess_client,
-                    project_path=self.project_path,
+                    project_path=temp_dir,
                     cmd=[self.npm_executable, "run", "build"],
                     env=build_env,
                 )
 
                 # Deploy from the build output folder and yield results
-                yield from self.project_deployment.deploy_evidence_project(
-                    evidence_project_build_path=build_output_dir,
+                self.project_deployment.deploy_evidence_project(
+                    evidence_project_build_path=os.path.join(temp_dir,build_output_dir),
                     context=context,
                     pipes_subprocess_client=pipes_subprocess_client,
                     env=build_env,
                 )
+                return dg.MaterializeResult(metadata={"status": "success"})
+
+                 
 
         return source_assets + [build_and_deploy_evidence_project]
 
@@ -204,8 +218,6 @@ class LocalEvidenceProject(BaseEvidenceProject):
             context=context,
             env=env or os.environ,
         )
-        yield from invocation.get_results()
-
 
 class LocalEvidenceProjectArgs(dg.Model, dg.Resolvable):
     """Arguments for configuring a local Evidence project."""
