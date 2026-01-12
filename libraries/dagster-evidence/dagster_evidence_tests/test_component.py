@@ -228,7 +228,7 @@ class TestComponentAssetGeneration:
         graph = defs.resolve_asset_graph()
         orders_key = dg.AssetKey(["orders"])
 
-        if orders_key in graph.all_asset_keys:
+        if orders_key in graph.get_all_asset_keys():
             asset_node = graph.get(orders_key)
             # Check kinds contain expected values
             assert "evidence" in asset_node.kinds
