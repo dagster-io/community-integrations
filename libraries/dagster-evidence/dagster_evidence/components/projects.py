@@ -212,7 +212,7 @@ class LocalEvidenceProject(BaseEvidenceProject):
         env: Optional[dict] = None,
     ):
         context.log.info(f"{project_path}$ {' '.join(cmd)}")
-        invocation = pipes_subprocess_client.run(
+        pipes_subprocess_client.run(
             command=cmd,
             cwd=project_path,
             context=context,

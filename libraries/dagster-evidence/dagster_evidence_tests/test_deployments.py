@@ -1,8 +1,7 @@
 """Tests for Evidence project deployment classes."""
 
 import os
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -116,7 +115,6 @@ class TestResolveDeployment:
 
     def test_github_token_env_fallback(self, env_with_github_token, github_token):
         """Verify GITHUB_TOKEN env var can be used as fallback."""
-        import os
         assert os.environ.get("GITHUB_TOKEN") == github_token
 
 

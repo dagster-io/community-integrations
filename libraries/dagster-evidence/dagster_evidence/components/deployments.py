@@ -35,7 +35,7 @@ class CustomEvidenceProjectDeployment(BaseEvidenceProjectDeployment):
     ):
         if self.deploy_command is not None:
             context.log.info(f"Running deploy command: {self.deploy_command}")
-            invocation = pipes_subprocess_client.run(
+            pipes_subprocess_client.run(
                 command=self.deploy_command,
                 cwd=evidence_project_build_path,
                 context=context,
