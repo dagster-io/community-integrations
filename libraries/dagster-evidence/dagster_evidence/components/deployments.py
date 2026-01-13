@@ -1,17 +1,67 @@
-"""Deployment classes for Evidence projects."""
+"""Deployment classes for Evidence projects.
+
+This module provides deployment targets for Evidence projects, including
+GitHub Pages, Netlify, and custom deployment commands.
+"""
 
 import os
+from abc import abstractmethod
 from pathlib import Path
 from typing import Literal, Optional
 
-import yaml
 import dagster as dg
-from pydantic import BaseModel, Field
+import yaml
+from dagster._annotations import beta, public
 from dagster.components.resolved.base import resolve_fields
-from abc import abstractmethod
+from pydantic import BaseModel, Field
 
 
+@beta
+@public
 class BaseEvidenceProjectDeployment(dg.ConfigurableResource):
+    """Base class for Evidence project deployment configurations.
+
+    Subclass this to implement custom deployment targets.
+
+    Example:
+
+        Implementing a custom S3 deployment:
+
+        .. code-block:: python
+
+            from dagster_evidence.components.deployments import (
+                BaseEvidenceProjectDeployment,
+            )
+            import dagster as dg
+
+            class S3EvidenceProjectDeployment(BaseEvidenceProjectDeployment):
+                s3_bucket: str
+                s3_prefix: str = ""
+
+                def deploy_evidence_project(
+                    self,
+                    evidence_project_build_path: str,
+                    context: dg.AssetExecutionContext,
+                    pipes_subprocess_client: dg.PipesSubprocessClient,
+                    env: dict[str, str] | None = None,
+                ) -> None:
+                    context.log.info(
+                        f"Deploying to s3://{self.s3_bucket}/{self.s3_prefix}"
+                    )
+                    import os
+                    pipes_subprocess_client.run(
+                        command=[
+                            "aws", "s3", "sync",
+                            evidence_project_build_path,
+                            f"s3://{self.s3_bucket}/{self.s3_prefix}",
+                        ],
+                        cwd=evidence_project_build_path,
+                        context=context,
+                        env=env or os.environ.copy(),
+                    )
+    """
+
+    @public
     @abstractmethod
     def deploy_evidence_project(
         self,
@@ -20,8 +70,17 @@ class BaseEvidenceProjectDeployment(dg.ConfigurableResource):
         pipes_subprocess_client: dg.PipesSubprocessClient,
         env: Optional[dict[str, str]] = None,
     ) -> None:
+        """Deploy the built Evidence project to the target destination.
+
+        Args:
+            evidence_project_build_path: Path to the built Evidence project output.
+            context: The Dagster asset execution context.
+            pipes_subprocess_client: Client for running subprocess commands.
+            env: Optional environment variables for the deployment process.
+        """
         raise NotImplementedError()
 
+    @public
     def get_base_path(self, project_path: str) -> str:
         """Get the build output path for this deployment.
 
@@ -34,7 +93,34 @@ class BaseEvidenceProjectDeployment(dg.ConfigurableResource):
         return "build"
 
 
+@beta
+@public
 class CustomEvidenceProjectDeployment(BaseEvidenceProjectDeployment):
+    """Custom deployment using a shell command.
+
+    Use this deployment type when you need to run a custom deployment script
+    or command that is not covered by the built-in deployment types.
+
+    Attributes:
+        deploy_command: The shell command to run for deployment.
+
+    Example:
+
+        .. code-block:: yaml
+
+            project_deployment:
+              type: custom
+              deploy_command: "rsync -avz ./ user@server:/var/www/dashboard/"
+
+        Or using a deployment script:
+
+        .. code-block:: yaml
+
+            project_deployment:
+              type: custom
+              deploy_command: "./deploy.sh production"
+    """
+
     deploy_command: str
 
     def deploy_evidence_project(
@@ -54,8 +140,23 @@ class CustomEvidenceProjectDeployment(BaseEvidenceProjectDeployment):
             )
 
 
+@beta
+@public
 class CustomEvidenceProjectDeploymentArgs(dg.Model, dg.Resolvable):
-    """Arguments for configuring a custom deployment command."""
+    """Arguments for configuring a custom deployment command.
+
+    Example:
+
+        .. code-block:: yaml
+
+            project_deployment:
+              type: custom
+              deploy_command: "aws s3 sync build/ s3://my-bucket/dashboard/"
+
+    Attributes:
+        type: Must be "custom" to use this deployment type.
+        deploy_command: Shell command to execute for deployment.
+    """
 
     type: Literal["custom"] = Field(
         default="custom",
@@ -67,7 +168,41 @@ class CustomEvidenceProjectDeploymentArgs(dg.Model, dg.Resolvable):
     )
 
 
+@beta
+@public
 class GithubPagesEvidenceProjectDeployment(BaseEvidenceProjectDeployment):
+    """Deploy Evidence project to GitHub Pages.
+
+    This deployment type pushes the built Evidence project to a GitHub Pages
+    branch, enabling automatic hosting via GitHub.
+
+    Requirements:
+        - evidence.config.yaml must have deployment.basePath configured
+        - A GitHub token with repo write access
+
+    Attributes:
+        github_repo: Repository in "owner/repo" format.
+        branch: Target branch for deployment (default: "gh-pages").
+        github_token: GitHub token for authentication.
+
+    Example:
+
+        .. code-block:: yaml
+
+            project_deployment:
+              type: github_pages
+              github_repo: my-org/analytics-dashboard
+              branch: gh-pages
+              github_token: ${GITHUB_TOKEN}
+
+        Your evidence.config.yaml should include:
+
+        .. code-block:: yaml
+
+            deployment:
+              basePath: /analytics-dashboard
+    """
+
     github_repo: str  # e.g., "milicevica23/food-tracking-serving"
     branch: str = "gh-pages"
     github_token: str  # Token resolved at component load time (from config or GITHUB_TOKEN env var)
@@ -169,8 +304,35 @@ class GithubPagesEvidenceProjectDeployment(BaseEvidenceProjectDeployment):
         context.log.info("Deployment complete!")
 
 
+@beta
+@public
 class GithubPagesEvidenceProjectDeploymentArgs(dg.Model, dg.Resolvable):
-    """Arguments for deploying Evidence project to GitHub Pages."""
+    """Arguments for deploying Evidence project to GitHub Pages.
+
+    Example:
+
+        .. code-block:: yaml
+
+            project_deployment:
+              type: github_pages
+              github_repo: owner/repo-name
+              branch: gh-pages
+
+        With explicit token (not recommended - prefer env var):
+
+        .. code-block:: yaml
+
+            project_deployment:
+              type: github_pages
+              github_repo: owner/repo-name
+              github_token: ghp_xxxxxxxxxxxx
+
+    Attributes:
+        type: Must be "github_pages" to use this deployment type.
+        github_repo: Repository in "owner/repo" format.
+        branch: Target branch (default: "gh-pages").
+        github_token: GitHub token. Falls back to GITHUB_TOKEN env var if not provided.
+    """
 
     type: Literal["github_pages"] = Field(
         default="github_pages",
@@ -190,7 +352,26 @@ class GithubPagesEvidenceProjectDeploymentArgs(dg.Model, dg.Resolvable):
     )
 
 
+@beta
+@public
 class EvidenceProjectNetlifyDeployment(BaseEvidenceProjectDeployment):
+    """Deploy Evidence project to Netlify.
+
+    Note:
+        This deployment type is not yet fully implemented.
+
+    Attributes:
+        netlify_project_url: URL of the Netlify project.
+
+    Example:
+
+        .. code-block:: yaml
+
+            project_deployment:
+              type: netlify
+              netlify_project_url: https://app.netlify.com/sites/my-dashboard
+    """
+
     netlify_project_url: str
 
     def deploy_evidence_project(
@@ -203,8 +384,26 @@ class EvidenceProjectNetlifyDeployment(BaseEvidenceProjectDeployment):
         raise NotImplementedError()
 
 
+@beta
+@public
 class EvidenceProjectNetlifyDeploymentArgs(dg.Model, dg.Resolvable):
-    """Arguments for deploying Evidence project to Netlify."""
+    """Arguments for deploying Evidence project to Netlify.
+
+    Note:
+        This deployment type is not yet fully implemented.
+
+    Example:
+
+        .. code-block:: yaml
+
+            project_deployment:
+              type: netlify
+              netlify_project_url: https://app.netlify.com/sites/my-dashboard
+
+    Attributes:
+        type: Must be "netlify" to use this deployment type.
+        netlify_project_url: URL of the Netlify project.
+    """
 
     type: Literal["netlify"] = Field(
         default="netlify",
@@ -216,10 +415,26 @@ class EvidenceProjectNetlifyDeploymentArgs(dg.Model, dg.Resolvable):
     )
 
 
+@public
 def resolve_evidence_project_deployment(
     context: dg.ResolutionContext, model: BaseModel
 ) -> BaseEvidenceProjectDeployment:
-    """Resolve deployment configuration to a deployment instance."""
+    """Resolve deployment configuration to a concrete deployment instance.
+
+    This function is used internally by the component resolution system
+    to convert YAML configuration into deployment instances.
+
+    Args:
+        context: The resolution context.
+        model: The parsed configuration model.
+
+    Returns:
+        A BaseEvidenceProjectDeployment instance.
+
+    Raises:
+        NotImplementedError: If an unknown deployment type is specified.
+        ValueError: If required configuration is missing (e.g., github_token).
+    """
     # First, check which type we're dealing with
     deployment_type = (
         model.get("type", "custom")

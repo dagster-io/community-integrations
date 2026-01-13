@@ -1,14 +1,12 @@
 """Tests for Evidence project source classes."""
 
-import pytest
-import dagster as dg
-
 from dagster_evidence.components.sources import (
-    BaseEvidenceProjectSource,
     BigQueryEvidenceProjectSource,
     DuckdbEvidenceProjectSource,
     MotherDuckEvidenceProjectSource,
+    SourceConnection,
     SourceContent,
+    SourceQuery,
 )
 
 # Sample data constants (duplicated from conftest for direct import)
@@ -52,62 +50,51 @@ class TestSourceTypes:
         assert BigQueryEvidenceProjectSource.get_source_type() == "bigquery"
 
 
-class TestResolveSourceType:
-    """Tests for resolve_source_type static method."""
+class TestSourceContent:
+    """Tests for SourceContent data class."""
 
-    def test_resolve_duckdb_source(self):
-        """Verify resolve_source_type returns DuckdbEvidenceProjectSource."""
+    def test_source_content_from_dict(self):
+        """Verify SourceContent.from_dict parses correctly."""
         source_content = SourceContent.from_dict(
             {
                 "connection": SAMPLE_DUCKDB_CONNECTION,
                 "queries": SAMPLE_QUERIES,
             }
         )
-        source = BaseEvidenceProjectSource.resolve_source_type(source_content)
-        assert isinstance(source, DuckdbEvidenceProjectSource)
-        assert source.source_content.connection.type == "duckdb"
+        assert source_content.connection.type == "duckdb"
+        assert len(source_content.queries) == 2
+        assert source_content.queries[0].name == "orders"
+        assert source_content.queries[1].name == "customers"
 
-    def test_resolve_motherduck_source(self):
-        """Verify resolve_source_type returns MotherDuckEvidenceProjectSource."""
+    def test_source_content_connection_extra(self):
+        """Verify connection extra fields are captured."""
         source_content = SourceContent.from_dict(
             {
-                "connection": SAMPLE_MOTHERDUCK_CONNECTION,
-                "queries": [{"name": "events", "content": "SELECT * FROM events"}],
-            }
-        )
-        source = BaseEvidenceProjectSource.resolve_source_type(source_content)
-        assert isinstance(source, MotherDuckEvidenceProjectSource)
-
-    def test_resolve_bigquery_source(self):
-        """Verify resolve_source_type returns BigQueryEvidenceProjectSource."""
-        source_content = SourceContent.from_dict(
-            {
-                "connection": SAMPLE_BIGQUERY_CONNECTION,
-                "queries": [
-                    {"name": "transactions", "content": "SELECT * FROM transactions"}
-                ],
-            }
-        )
-        source = BaseEvidenceProjectSource.resolve_source_type(source_content)
-        assert isinstance(source, BigQueryEvidenceProjectSource)
-
-    def test_resolve_unknown_source_raises(self):
-        """Verify resolve_source_type raises NotImplementedError for unknown types."""
-        source_content = SourceContent.from_dict(
-            {
-                "connection": {"type": "unknown_db"},
+                "connection": SAMPLE_DUCKDB_CONNECTION,
                 "queries": [],
             }
         )
-        with pytest.raises(NotImplementedError, match="Unknown source type"):
-            BaseEvidenceProjectSource.resolve_source_type(source_content)
+        assert source_content.connection.extra.get("options") == {
+            "filename": "data.duckdb"
+        }
+        assert source_content.connection.extra.get("name") == "needful_things"
+
+    def test_source_content_empty_queries(self):
+        """Verify SourceContent handles empty queries."""
+        source_content = SourceContent.from_dict(
+            {
+                "connection": SAMPLE_DUCKDB_CONNECTION,
+                "queries": [],
+            }
+        )
+        assert len(source_content.queries) == 0
 
 
-class TestSourceAssetSpecs:
-    """Tests for asset spec generation from sources."""
+class TestSourceClasses:
+    """Tests for source class instantiation."""
 
-    def test_duckdb_source_asset_specs(self):
-        """Verify DuckdbEvidenceProjectSource generates correct asset specs."""
+    def test_duckdb_source_instantiation(self):
+        """Verify DuckdbEvidenceProjectSource can be instantiated."""
         source_content = SourceContent.from_dict(
             {
                 "connection": SAMPLE_DUCKDB_CONNECTION,
@@ -115,23 +102,10 @@ class TestSourceAssetSpecs:
             }
         )
         source = DuckdbEvidenceProjectSource(source_content)
-        specs = source.get_source_asset_specs("needful_things")
+        assert source.source_content.connection.type == "duckdb"
 
-        assert len(specs) == 2
-
-        # Check first spec (orders)
-        orders_spec = next(s for s in specs if s.key.path[-1] == "orders")
-        assert orders_spec.group_name == "needful_things"
-        assert "evidence" in orders_spec.kinds
-        assert "source" in orders_spec.kinds
-        assert "duckdb" in orders_spec.kinds
-
-        # Check second spec (customers)
-        customers_spec = next(s for s in specs if s.key.path[-1] == "customers")
-        assert customers_spec.group_name == "needful_things"
-
-    def test_motherduck_source_asset_specs(self):
-        """Verify MotherDuckEvidenceProjectSource generates correct asset specs."""
+    def test_motherduck_source_instantiation(self):
+        """Verify MotherDuckEvidenceProjectSource can be instantiated."""
         source_content = SourceContent.from_dict(
             {
                 "connection": SAMPLE_MOTHERDUCK_CONNECTION,
@@ -139,15 +113,10 @@ class TestSourceAssetSpecs:
             }
         )
         source = MotherDuckEvidenceProjectSource(source_content)
-        specs = source.get_source_asset_specs("analytics")
+        assert source.source_content.connection.type == "motherduck"
 
-        assert len(specs) == 1
-        assert specs[0].key.path[-1] == "events"
-        assert specs[0].group_name == "analytics"
-        assert "motherduck" in specs[0].kinds
-
-    def test_bigquery_source_asset_specs(self):
-        """Verify BigQueryEvidenceProjectSource generates correct asset specs."""
+    def test_bigquery_source_instantiation(self):
+        """Verify BigQueryEvidenceProjectSource can be instantiated."""
         source_content = SourceContent.from_dict(
             {
                 "connection": SAMPLE_BIGQUERY_CONNECTION,
@@ -157,37 +126,24 @@ class TestSourceAssetSpecs:
             }
         )
         source = BigQueryEvidenceProjectSource(source_content)
-        specs = source.get_source_asset_specs("warehouse")
+        assert source.source_content.connection.type == "bigquery"
 
-        assert len(specs) == 1
-        assert specs[0].key.path[-1] == "transactions"
-        assert specs[0].group_name == "warehouse"
-        assert "bigquery" in specs[0].kinds
 
-    def test_source_with_no_queries(self):
-        """Verify source with no queries returns empty list."""
-        source_content = SourceContent.from_dict(
-            {
-                "connection": SAMPLE_DUCKDB_CONNECTION,
-                "queries": [],
-            }
-        )
-        source = DuckdbEvidenceProjectSource(source_content)
-        specs = source.get_source_asset_specs("empty_source")
+class TestSourceQuery:
+    """Tests for SourceQuery data class."""
 
-        assert len(specs) == 0
+    def test_source_query_creation(self):
+        """Verify SourceQuery can be created."""
+        query = SourceQuery(name="test_query", content="SELECT 1")
+        assert query.name == "test_query"
+        assert query.content == "SELECT 1"
 
-    def test_source_asset_spec_is_dagster_asset_spec(self):
-        """Verify generated specs are proper Dagster AssetSpec objects."""
-        source_content = SourceContent.from_dict(
-            {
-                "connection": SAMPLE_DUCKDB_CONNECTION,
-                "queries": [{"name": "test_query", "content": "SELECT 1"}],
-            }
-        )
-        source = DuckdbEvidenceProjectSource(source_content)
-        specs = source.get_source_asset_specs("test_group")
 
-        assert len(specs) == 1
-        assert isinstance(specs[0], dg.AssetSpec)
-        assert isinstance(specs[0].key, dg.AssetKey)
+class TestSourceConnection:
+    """Tests for SourceConnection data class."""
+
+    def test_source_connection_creation(self):
+        """Verify SourceConnection can be created."""
+        connection = SourceConnection(type="duckdb", extra={"filename": "data.duckdb"})
+        assert connection.type == "duckdb"
+        assert connection.extra["filename"] == "data.duckdb"

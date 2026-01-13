@@ -1,21 +1,25 @@
-"""Project classes for Evidence projects."""
+"""Project classes for Evidence projects.
 
-import shutil
+This module defines the project types for Evidence projects, including
+local file-based projects and Evidence Studio cloud projects.
+"""
 
 import os
+import shutil
 from abc import abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Annotated, Literal, Optional, Union
+from typing import TYPE_CHECKING, Annotated, Literal, Optional, Union
 
-import yaml
 import dagster as dg
-from pydantic import BaseModel, Field
+import yaml
+from dagster._annotations import beta, public
 from dagster._serdes import whitelist_for_serdes
 from dagster.components import Resolver
 from dagster.components.resolved.base import resolve_fields
+from pydantic import BaseModel, Field
 
 from .deployments import (
     BaseEvidenceProjectDeployment,
@@ -24,42 +28,123 @@ from .deployments import (
     GithubPagesEvidenceProjectDeploymentArgs,
     resolve_evidence_project_deployment,
 )
-from .sources import BaseEvidenceProjectSource, SourceContent
+from .sources import (
+    EvidenceProjectTranslatorData,
+    EvidenceSourceTranslatorData,
+    SourceContent,
+)
+
+if TYPE_CHECKING:
+    from .translator import DagsterEvidenceTranslator
 
 
+@beta
+@public
 @whitelist_for_serdes
 @dataclass
 class EvidenceProjectData:
+    """Parsed data from an Evidence project.
+
+    Attributes:
+        project_name: The name of the Evidence project.
+        sources_by_id: Dictionary mapping source folder names to their content.
+    """
+
     project_name: str
     sources_by_id: dict[str, SourceContent]
 
 
+@beta
+@public
 class BaseEvidenceProject(dg.ConfigurableResource):
+    """Base class for Evidence project configurations.
+
+    This abstract class defines the interface for Evidence projects.
+    Implementations include LocalEvidenceProject for local file-based
+    projects and EvidenceStudioProject for cloud-hosted projects.
+
+    Subclass this class to implement custom project types.
+    """
+
+    @public
     @abstractmethod
     def get_evidence_project_name(self) -> str:
+        """Get the name of the Evidence project.
+
+        Returns:
+            The project name string.
+        """
         raise NotImplementedError()
 
+    @public
     @abstractmethod
     def load_evidence_project_assets(
-        self, evidence_project_data: EvidenceProjectData
+        self,
+        evidence_project_data: EvidenceProjectData,
+        translator: "DagsterEvidenceTranslator",
     ) -> Sequence[dg.AssetsDefinition | dg.AssetSpec]:
+        """Load and build Dagster assets for this Evidence project.
+
+        Args:
+            evidence_project_data: Parsed project data containing sources.
+            translator: Translator instance for converting Evidence objects to AssetSpecs.
+
+        Returns:
+            A sequence of AssetSpecs and AssetsDefinitions.
+        """
         raise NotImplementedError()
 
+    @public
     def load_source_assets(
-        self, evidence_project_data: EvidenceProjectData
+        self,
+        evidence_project_data: EvidenceProjectData,
+        translator: "DagsterEvidenceTranslator",
     ) -> list[dg.AssetSpec]:
+        """Load source assets using the translator.
+
+        Args:
+            evidence_project_data: Parsed project data containing sources.
+            translator: Translator instance for converting Evidence objects to AssetSpecs.
+
+        Returns:
+            List of AssetSpecs for all source queries.
+        """
         source_assets: list[dg.AssetSpec] = []
         for source_group, source_content in evidence_project_data.sources_by_id.items():
-            source = BaseEvidenceProjectSource.resolve_source_type(source_content)
-            source_assets = source_assets + source.get_source_asset_specs(source_group)
+            # Use translator to get source class (validates source type is known)
+            source_type = source_content.connection.type
+            source_class = translator.get_source_class(source_type)
+            # Instantiate source (useful for potential future source-specific logic)
+            _source = source_class(source_content)
+
+            # Generate asset specs via translator
+            for query in source_content.queries:
+                data = EvidenceSourceTranslatorData(
+                    source_content=source_content,
+                    source_group=source_group,
+                    query=query,
+                )
+                source_assets.append(translator.get_asset_spec(data))
 
         return source_assets
 
+    @public
     @abstractmethod
     def parse_evidence_project_sources(self) -> dict[str, SourceContent]:
+        """Parse the sources from the Evidence project.
+
+        Returns:
+            Dictionary mapping source folder names to their SourceContent.
+        """
         raise NotImplementedError()
 
+    @public
     def parse_evidence_project(self) -> EvidenceProjectData:
+        """Parse the full Evidence project into structured data.
+
+        Returns:
+            EvidenceProjectData containing project name and sources.
+        """
         sources = self.parse_evidence_project_sources()
 
         return EvidenceProjectData(
@@ -67,7 +152,54 @@ class BaseEvidenceProject(dg.ConfigurableResource):
         )
 
 
+@beta
+@public
 class LocalEvidenceProject(BaseEvidenceProject):
+    """Local Evidence project backed by a file system directory.
+
+    This project type reads sources from a local Evidence project directory,
+    builds the project using npm, and deploys using the configured deployment.
+
+    Attributes:
+        project_path: Path to the Evidence project directory containing
+            sources/ folder and package.json.
+        project_deployment: Deployment configuration (GitHub Pages, Netlify, or custom).
+        npm_executable: Path to npm executable (default: "npm").
+
+    Example:
+
+        Using in a Dagster component configuration:
+
+        .. code-block:: yaml
+
+            # defs.yaml
+            type: dagster_evidence.EvidenceProjectComponentV2
+            attributes:
+              evidence_project:
+                project_type: local
+                project_path: ./evidence-dashboards/sales-dashboard
+                project_deployment:
+                  type: github_pages
+                  github_repo: my-org/sales-dashboard
+                  branch: gh-pages
+
+        Project structure expected:
+
+        .. code-block:: text
+
+            my-evidence-project/
+            ├── package.json
+            ├── evidence.config.yaml
+            └── sources/
+                ├── orders_db/
+                │   ├── connection.yaml
+                │   ├── orders.sql
+                │   └── customers.sql
+                └── metrics_db/
+                    ├── connection.yaml
+                    └── daily_metrics.sql
+    """
+
     project_path: str
     project_deployment: BaseEvidenceProjectDeployment
     npm_executable: str = "npm"
@@ -77,6 +209,9 @@ class LocalEvidenceProject(BaseEvidenceProject):
 
         Returns:
             Dictionary mapping folder names to their SourceContent.
+
+        Raises:
+            FileNotFoundError: If sources folder or connection.yaml files are missing.
         """
         sources_path = Path(self.project_path) / "sources"
 
@@ -94,7 +229,7 @@ class LocalEvidenceProject(BaseEvidenceProject):
             if not connection_file.exists():
                 raise FileNotFoundError(f"connection.yaml not found in {folder}")
 
-            with open(connection_file, "r") as f:
+            with open(connection_file) as f:
                 connection = yaml.safe_load(f)
 
             # Read all .sql files
@@ -114,13 +249,25 @@ class LocalEvidenceProject(BaseEvidenceProject):
         return Path(self.project_path).name
 
     def load_evidence_project_assets(
-        self, evidence_project_data: EvidenceProjectData
+        self,
+        evidence_project_data: EvidenceProjectData,
+        translator: "DagsterEvidenceTranslator",
     ) -> Sequence[dg.AssetsDefinition | dg.AssetSpec]:
-        source_assets = self.load_source_assets(evidence_project_data)
+        # Get source assets via translator
+        source_assets = self.load_source_assets(evidence_project_data, translator)
 
+        # Get project asset spec via translator
+        project_data = EvidenceProjectTranslatorData(
+            project_name=self.get_evidence_project_name(),
+            sources_by_id=evidence_project_data.sources_by_id,
+            source_deps=[spec.key for spec in source_assets],
+        )
+        project_spec = translator.get_asset_spec(project_data)
+
+        # Create the executable asset using the translated spec
         @dg.asset(
-            key=[self.get_evidence_project_name()],
-            kinds={"evidence"},
+            key=project_spec.key,
+            kinds=project_spec.kinds or {"evidence"},
             deps=[each_source_asset.key for each_source_asset in source_assets],
         )
         def build_and_deploy_evidence_project(
@@ -205,8 +352,27 @@ class LocalEvidenceProject(BaseEvidenceProject):
         )
 
 
+@beta
+@public
 class LocalEvidenceProjectArgs(dg.Model, dg.Resolvable):
-    """Arguments for configuring a local Evidence project."""
+    """Arguments for configuring a local Evidence project.
+
+    Example:
+
+        .. code-block:: yaml
+
+            evidence_project:
+              project_type: local
+              project_path: ./my-evidence-project
+              project_deployment:
+                type: github_pages
+                github_repo: owner/repo
+
+    Attributes:
+        project_type: Must be "local" to use this project type.
+        project_path: Path to the Evidence project directory.
+        project_deployment: Deployment configuration for the built project.
+    """
 
     project_type: Literal["local"] = Field(
         default="local",
@@ -232,7 +398,29 @@ class LocalEvidenceProjectArgs(dg.Model, dg.Resolvable):
     ]
 
 
+@beta
+@public
 class EvidenceStudioProject(BaseEvidenceProject):
+    """Evidence Studio cloud-hosted project.
+
+    This project type connects to Evidence Studio to fetch project
+    configuration and sources from the cloud.
+
+    Note:
+        This project type is not yet fully implemented.
+
+    Attributes:
+        evidence_studio_url: URL of the Evidence Studio workspace.
+
+    Example:
+
+        .. code-block:: yaml
+
+            evidence_project:
+              project_type: evidence_studio
+              evidence_studio_url: https://evidence.studio/my-workspace
+    """
+
     evidence_studio_url: str
 
     def parse_evidence_project_sources(self) -> dict[str, SourceContent]:
@@ -242,13 +430,32 @@ class EvidenceStudioProject(BaseEvidenceProject):
         raise NotImplementedError()
 
     def load_evidence_project_assets(
-        self, evidence_project_data: EvidenceProjectData
+        self,
+        evidence_project_data: EvidenceProjectData,
+        translator: "DagsterEvidenceTranslator",
     ) -> Sequence[dg.AssetsDefinition | dg.AssetSpec]:
         raise NotImplementedError()
 
 
+@beta
+@public
 class EvidenceStudioProjectArgs(dg.Model, dg.Resolvable):
-    """Arguments for configuring an Evidence Studio project."""
+    """Arguments for configuring an Evidence Studio project.
+
+    Example:
+
+        .. code-block:: yaml
+
+            evidence_project:
+              project_type: evidence_studio
+              evidence_studio_url: https://evidence.studio/my-workspace
+              evidence_project_git_url: https://github.com/org/evidence-project.git
+
+    Attributes:
+        project_type: Must be "evidence_studio" to use this project type.
+        evidence_studio_url: URL of the Evidence Studio workspace.
+        evidence_project_git_url: Git URL for the underlying project repository.
+    """
 
     project_type: Literal["evidence_studio"] = Field(
         default="evidence_studio",
@@ -264,10 +471,25 @@ class EvidenceStudioProjectArgs(dg.Model, dg.Resolvable):
     )
 
 
+@public
 def resolve_evidence_project(
     context: dg.ResolutionContext, model: BaseModel
 ) -> BaseEvidenceProject:
-    """Resolve project configuration to a project instance."""
+    """Resolve project configuration to a concrete project instance.
+
+    This function is used internally by the component resolution system
+    to convert YAML configuration into project instances.
+
+    Args:
+        context: The resolution context providing access to paths and config.
+        model: The parsed configuration model.
+
+    Returns:
+        A BaseEvidenceProject instance (LocalEvidenceProject or EvidenceStudioProject).
+
+    Raises:
+        NotImplementedError: If an unknown project_type is specified.
+    """
     # First, check which type we're dealing with
     project_type = (
         model.get("project_type", "local")

@@ -1,10 +1,15 @@
-"""Evidence.dev project component for Dagster."""
+"""Evidence.dev project component for Dagster.
+
+This module provides the main component class for integrating Evidence.dev
+projects with Dagster, automatically discovering sources and generating assets.
+"""
 
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Annotated, Optional, Union
 
 import dagster as dg
+from dagster._annotations import beta, public
 from dagster.components import Resolvable, Resolver, StateBackedComponent
 from dagster.components.utils.defs_state import (
     DefsStateConfig,
@@ -19,13 +24,92 @@ from .projects import (
     LocalEvidenceProjectArgs,
     resolve_evidence_project,
 )
+from .sources import EvidenceProjectTranslatorData, EvidenceSourceTranslatorData
+from .translator import DagsterEvidenceTranslator
 
 
+@beta
+@public
 @dataclass
 class EvidenceProjectComponentV2(StateBackedComponent, Resolvable):
     """Evidence.dev project component with state-backed definitions.
 
-    This component manages Evidence.dev dashboard projects and their deployments.
+    This component manages Evidence.dev dashboard projects and their deployments,
+    automatically discovering sources and generating Dagster assets for each
+    source query and the main project.
+
+    Attributes:
+        evidence_project: Evidence project configuration (local or studio).
+        defs_state: Configuration for state management.
+        translator: Optional custom translator class for customizing asset specs.
+
+    Example:
+
+        Basic local project with GitHub Pages deployment:
+
+        .. code-block:: yaml
+
+            # defs.yaml
+            type: dagster_evidence.EvidenceProjectComponentV2
+            attributes:
+              evidence_project:
+                project_type: local
+                project_path: ./my-evidence-project
+                project_deployment:
+                  type: github_pages
+                  github_repo: my-org/my-dashboard
+                  branch: gh-pages
+
+        Local project with custom deployment command:
+
+        .. code-block:: yaml
+
+            # defs.yaml
+            type: dagster_evidence.EvidenceProjectComponentV2
+            attributes:
+              evidence_project:
+                project_type: local
+                project_path: ./my-evidence-project
+                project_deployment:
+                  type: custom
+                  deploy_command: "rsync -avz build/ user@server:/var/www/dashboard/"
+
+        Using a custom translator to customize asset specs:
+
+        .. code-block:: python
+
+            from dagster_evidence import (
+                DagsterEvidenceTranslator,
+                EvidenceSourceTranslatorData,
+                EvidenceProjectComponentV2,
+            )
+            import dagster as dg
+
+            class CustomTranslator(DagsterEvidenceTranslator):
+                def get_asset_spec(self, data):
+                    spec = super().get_asset_spec(data)
+                    if isinstance(data, EvidenceSourceTranslatorData):
+                        return spec.replace_attributes(
+                            key=spec.key.with_prefix("evidence"),
+                        )
+                    return spec
+
+            # In your code-based definitions
+            from dagster_evidence.components.projects import LocalEvidenceProject
+            from dagster_evidence.components.deployments import (
+                GithubPagesEvidenceProjectDeployment,
+            )
+
+            component = EvidenceProjectComponentV2(
+                evidence_project=LocalEvidenceProject(
+                    project_path="./my-evidence-project",
+                    project_deployment=GithubPagesEvidenceProjectDeployment(
+                        github_repo="my-org/my-dashboard",
+                        github_token=dg.EnvVar("GITHUB_TOKEN"),
+                    ),
+                ),
+                translator=CustomTranslator,
+            )
     """
 
     evidence_project: Annotated[
@@ -44,6 +128,48 @@ class EvidenceProjectComponentV2(StateBackedComponent, Resolvable):
     defs_state: ResolvedDefsStateConfig = field(
         default_factory=DefsStateConfigArgs.legacy_code_server_snapshots
     )
+
+    translator: Optional[type[DagsterEvidenceTranslator]] = None
+
+    @property
+    def _base_translator(self) -> DagsterEvidenceTranslator:
+        """Return the translator instance for this component."""
+        if self.translator is None:
+            return DagsterEvidenceTranslator()
+        return self.translator()
+
+    @public
+    def get_asset_spec(
+        self, data: Union[EvidenceSourceTranslatorData, EvidenceProjectTranslatorData]
+    ) -> dg.AssetSpec:
+        """Get asset spec for an Evidence object using the configured translator.
+
+        Override this method in a subclass to customize how Evidence sources
+        and projects are translated to Dagster AssetSpecs.
+
+        Args:
+            data: Either EvidenceSourceTranslatorData for source queries
+                  or EvidenceProjectTranslatorData for the main project asset.
+
+        Returns:
+            An AssetSpec that represents the Evidence object in Dagster.
+
+        Example:
+
+            Override this method to add custom metadata:
+
+            .. code-block:: python
+
+                from dagster_evidence import EvidenceProjectComponentV2
+
+                class CustomEvidenceComponent(EvidenceProjectComponentV2):
+                    def get_asset_spec(self, data):
+                        spec = super().get_asset_spec(data)
+                        return spec.replace_attributes(
+                            metadata={"custom_key": "custom_value"},
+                        )
+        """
+        return self._base_translator.get_asset_spec(data)
 
     async def write_state_to_path(self, state_path: Path) -> None:
         # Fetch the workspace data
@@ -70,7 +196,8 @@ class EvidenceProjectComponentV2(StateBackedComponent, Resolvable):
         )
 
         assets = self.evidence_project.load_evidence_project_assets(
-            evidence_project_data
+            evidence_project_data,
+            translator=self._base_translator,
         )
 
         return dg.Definitions(
