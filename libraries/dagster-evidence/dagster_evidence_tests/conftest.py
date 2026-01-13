@@ -11,6 +11,7 @@ import pytest
 import yaml
 
 from dagster_evidence.components.projects import EvidenceProjectData
+from dagster_evidence.components.sources import SourceContent
 
 # =============================================================================
 # Test Paths
@@ -48,25 +49,33 @@ SAMPLE_QUERIES = [
     {"name": "customers", "content": "SELECT * FROM customers"},
 ]
 
-SAMPLE_SOURCES_DUCKDB = {
-    "needful_things": {
-        "connection": SAMPLE_DUCKDB_CONNECTION,
-        "queries": SAMPLE_QUERIES,
-    }
+SAMPLE_SOURCES_DUCKDB: dict[str, SourceContent] = {
+    "needful_things": SourceContent.from_dict(
+        {
+            "connection": SAMPLE_DUCKDB_CONNECTION,
+            "queries": SAMPLE_QUERIES,
+        }
+    )
 }
 
-SAMPLE_SOURCES_MOTHERDUCK = {
-    "analytics": {
-        "connection": SAMPLE_MOTHERDUCK_CONNECTION,
-        "queries": [{"name": "events", "content": "SELECT * FROM events"}],
-    }
+SAMPLE_SOURCES_MOTHERDUCK: dict[str, SourceContent] = {
+    "analytics": SourceContent.from_dict(
+        {
+            "connection": SAMPLE_MOTHERDUCK_CONNECTION,
+            "queries": [{"name": "events", "content": "SELECT * FROM events"}],
+        }
+    )
 }
 
-SAMPLE_SOURCES_BIGQUERY = {
-    "warehouse": {
-        "connection": SAMPLE_BIGQUERY_CONNECTION,
-        "queries": [{"name": "transactions", "content": "SELECT * FROM transactions"}],
-    }
+SAMPLE_SOURCES_BIGQUERY: dict[str, SourceContent] = {
+    "warehouse": SourceContent.from_dict(
+        {
+            "connection": SAMPLE_BIGQUERY_CONNECTION,
+            "queries": [
+                {"name": "transactions", "content": "SELECT * FROM transactions"}
+            ],
+        }
+    )
 }
 
 

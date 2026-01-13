@@ -11,6 +11,7 @@ from dagster_evidence.components.projects import (
     LocalEvidenceProject,
 )
 from dagster_evidence.components.deployments import CustomEvidenceProjectDeployment
+from dagster_evidence.components.sources import SourceContent
 
 # Sample data constants
 SAMPLE_DUCKDB_CONNECTION = {
@@ -24,11 +25,13 @@ SAMPLE_QUERIES = [
     {"name": "customers", "content": "SELECT * FROM customers"},
 ]
 
-SAMPLE_SOURCES_DUCKDB = {
-    "needful_things": {
-        "connection": SAMPLE_DUCKDB_CONNECTION,
-        "queries": SAMPLE_QUERIES,
-    }
+SAMPLE_SOURCES_DUCKDB: dict[str, SourceContent] = {
+    "needful_things": SourceContent.from_dict(
+        {
+            "connection": SAMPLE_DUCKDB_CONNECTION,
+            "queries": SAMPLE_QUERIES,
+        }
+    )
 }
 
 
@@ -143,6 +146,7 @@ class TestEvidenceProjectComponentV2:
         defs = component.build_defs_from_state(mock_context, state_path=state_path)
 
         # Verify pipes_subprocess_client is in resources
+        assert defs.resources is not None
         assert "pipes_subprocess_client" in defs.resources
         assert isinstance(
             defs.resources["pipes_subprocess_client"], dg.PipesSubprocessClient
@@ -317,5 +321,5 @@ class TestComponentStateLifecycle:
 
         assert data.project_name == "test_project"
         assert "needful_things" in data.sources_by_id
-        assert "connection" in data.sources_by_id["needful_things"]
-        assert "queries" in data.sources_by_id["needful_things"]
+        assert data.sources_by_id["needful_things"].connection is not None
+        assert data.sources_by_id["needful_things"].queries is not None

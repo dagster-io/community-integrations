@@ -24,14 +24,14 @@ from .deployments import (
     GithubPagesEvidenceProjectDeploymentArgs,
     resolve_evidence_project_deployment,
 )
-from .sources import BaseEvidenceProjectSource
+from .sources import BaseEvidenceProjectSource, SourceContent
 
 
 @whitelist_for_serdes
 @dataclass
 class EvidenceProjectData:
     project_name: str
-    sources_by_id: dict
+    sources_by_id: dict[str, SourceContent]
 
 
 class BaseEvidenceProject(dg.ConfigurableResource):
@@ -42,12 +42,12 @@ class BaseEvidenceProject(dg.ConfigurableResource):
     @abstractmethod
     def load_evidence_project_assets(
         self, evidence_project_data: EvidenceProjectData
-    ) -> Sequence[dg.AssetSpec]:
+    ) -> Sequence[dg.AssetsDefinition | dg.AssetSpec]:
         raise NotImplementedError()
 
     def load_source_assets(
         self, evidence_project_data: EvidenceProjectData
-    ) -> Sequence[dg.AssetSpec]:
+    ) -> list[dg.AssetSpec]:
         source_assets: list[dg.AssetSpec] = []
         for source_group, source_content in evidence_project_data.sources_by_id.items():
             source = BaseEvidenceProjectSource.resolve_source_type(source_content)
@@ -56,7 +56,7 @@ class BaseEvidenceProject(dg.ConfigurableResource):
         return source_assets
 
     @abstractmethod
-    def parse_evidence_project_sources(self) -> dict:
+    def parse_evidence_project_sources(self) -> dict[str, SourceContent]:
         raise NotImplementedError()
 
     def parse_evidence_project(self) -> EvidenceProjectData:
@@ -72,19 +72,18 @@ class LocalEvidenceProject(BaseEvidenceProject):
     project_deployment: BaseEvidenceProjectDeployment
     npm_executable: str = "npm"
 
-    def parse_evidence_project_sources(self) -> dict:
+    def parse_evidence_project_sources(self) -> dict[str, SourceContent]:
         """Read sources folder from Evidence project and build source dictionary.
 
         Returns:
-            dict: Dictionary mapping folder names to their connection config and queries.
-                  Format: {folder_name: {connection: dict, queries: list[dict]}}
+            Dictionary mapping folder names to their SourceContent.
         """
         sources_path = Path(self.project_path) / "sources"
 
         if not sources_path.exists():
             raise FileNotFoundError(f"Sources folder not found: {sources_path}")
 
-        result = {}
+        result: dict[str, SourceContent] = {}
 
         for folder in sources_path.iterdir():
             if not folder.is_dir():
@@ -105,37 +104,18 @@ class LocalEvidenceProject(BaseEvidenceProject):
                 query_content = sql_file.read_text()
                 queries.append({"name": query_name, "content": query_content})
 
-            result[folder.name] = {"connection": connection, "queries": queries}
+            result[folder.name] = SourceContent.from_dict(
+                {"connection": connection, "queries": queries}
+            )
 
         return result
 
     def get_evidence_project_name(self) -> str:
         return Path(self.project_path).name
 
-    def _get_base_path(self) -> str:
-        """Get the build output path from evidence.config.yaml.
-
-        Returns:
-            The build path. If basePath is configured, returns 'build/{basePath}'.
-            Otherwise returns 'build'.
-        """
-        config_path = Path(self.project_path) / "evidence.config.yaml"
-        if not config_path.exists():
-            return "build"
-
-        with open(config_path, "r") as f:
-            config = yaml.safe_load(f)
-
-        base_path = config.get("deployment", {}).get("basePath")
-        if not base_path:
-            return "build"
-
-        # Remove leading slash and prepend with build/
-        return f"build/{base_path.lstrip('/')}"
-
     def load_evidence_project_assets(
         self, evidence_project_data: EvidenceProjectData
-    ) -> Sequence[dg.AssetSpec]:
+    ) -> Sequence[dg.AssetsDefinition | dg.AssetSpec]:
         source_assets = self.load_source_assets(evidence_project_data)
 
         @dg.asset(
@@ -156,8 +136,8 @@ class LocalEvidenceProject(BaseEvidenceProject):
                         "logs", ".git", "*.tmp", "node_modules"
                     ),
                 )
-                # Get base path for GitHub Pages (repo name)
-                base_path = self._get_base_path()
+                # Get base path from deployment (e.g., GitHub Pages needs basePath config)
+                base_path = self.project_deployment.get_base_path(self.project_path)
 
                 build_output_dir = base_path
                 os.makedirs(build_output_dir, exist_ok=True)
@@ -206,7 +186,7 @@ class LocalEvidenceProject(BaseEvidenceProject):
                 )
                 return dg.MaterializeResult(metadata={"status": "success"})
 
-        return source_assets + [build_and_deploy_evidence_project]
+        return list(source_assets) + [build_and_deploy_evidence_project]
 
     def _run_cmd(
         self,
@@ -214,14 +194,14 @@ class LocalEvidenceProject(BaseEvidenceProject):
         pipes_subprocess_client: dg.PipesSubprocessClient,
         project_path: str,
         cmd: Sequence[str],
-        env: Optional[dict] = None,
-    ):
+        env: Optional[dict[str, str]] = None,
+    ) -> None:
         context.log.info(f"{project_path}$ {' '.join(cmd)}")
         pipes_subprocess_client.run(
             command=cmd,
             cwd=project_path,
             context=context,
-            env=env or os.environ,
+            env=env or dict(os.environ),
         )
 
 
@@ -255,7 +235,7 @@ class LocalEvidenceProjectArgs(dg.Model, dg.Resolvable):
 class EvidenceStudioProject(BaseEvidenceProject):
     evidence_studio_url: str
 
-    def parse_evidence_project_sources(self) -> dict:
+    def parse_evidence_project_sources(self) -> dict[str, SourceContent]:
         raise NotImplementedError()
 
     def get_evidence_project_name(self) -> str:
@@ -263,7 +243,7 @@ class EvidenceStudioProject(BaseEvidenceProject):
 
     def load_evidence_project_assets(
         self, evidence_project_data: EvidenceProjectData
-    ) -> Sequence[dg.AssetSpec]:
+    ) -> Sequence[dg.AssetsDefinition | dg.AssetSpec]:
         raise NotImplementedError()
 
 

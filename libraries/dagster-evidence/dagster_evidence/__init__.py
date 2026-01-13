@@ -6,7 +6,7 @@ from dagster_evidence.resource import EvidenceResource
 
 __version__ = "0.1.7"
 
-__all__ = [EvidenceProjectComponentV2, EvidenceProject, EvidenceResource]
+__all__ = ["EvidenceProjectComponentV2", "EvidenceProject", "EvidenceResource"]
 
 DagsterLibraryRegistry.register(
     "dagster-evidence", __version__, is_dagster_package=False

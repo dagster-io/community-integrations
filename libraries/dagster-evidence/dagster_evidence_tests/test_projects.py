@@ -8,7 +8,10 @@ import pytest
 import yaml
 import dagster as dg
 
-from dagster_evidence.components.deployments import CustomEvidenceProjectDeployment
+from dagster_evidence.components.deployments import (
+    CustomEvidenceProjectDeployment,
+    GithubPagesEvidenceProjectDeployment,
+)
 from dagster_evidence.components.projects import (
     BaseEvidenceProject,
     EvidenceProjectData,
@@ -179,16 +182,15 @@ class TestLocalEvidenceProject:
         sources = project.parse_evidence_project_sources()
 
         assert "needful_things" in sources
-        assert "connection" in sources["needful_things"]
-        assert "queries" in sources["needful_things"]
+        source_content = sources["needful_things"]
+        assert source_content.connection is not None
+        assert source_content.queries is not None
 
         # Check connection was parsed from YAML
-        connection = sources["needful_things"]["connection"]
-        assert connection["type"] == "duckdb"
+        assert source_content.connection.type == "duckdb"
 
         # Check queries were parsed from SQL files
-        queries = sources["needful_things"]["queries"]
-        query_names = [q["name"] for q in queries]
+        query_names = [q.name for q in source_content.queries]
         assert "orders" in query_names
         assert "customers" in query_names
 
@@ -206,27 +208,33 @@ class TestLocalEvidenceProject:
         with pytest.raises(FileNotFoundError, match="Sources folder not found"):
             project.parse_evidence_project_sources()
 
-    def test_local_project_get_base_path_with_config(self, mock_evidence_project):
-        """Verify _get_base_path reads from evidence.config.yaml."""
+    def test_deployment_get_base_path_default(self, mock_evidence_project):
+        """Verify default deployment returns 'build' for base path."""
         deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
-        project = LocalEvidenceProject(
-            project_path=str(mock_evidence_project),
-            project_deployment=deployment,
+        base_path = deployment.get_base_path(str(mock_evidence_project))
+        assert base_path == "build"
+
+    def test_github_pages_deployment_get_base_path_with_config(
+        self, mock_evidence_project
+    ):
+        """Verify GitHub Pages deployment reads basePath from evidence.config.yaml."""
+        deployment = GithubPagesEvidenceProjectDeployment(
+            github_repo="test/repo",
+            github_token="test_token",
         )
-        base_path = project._get_base_path()
+        base_path = deployment.get_base_path(str(mock_evidence_project))
         assert base_path == "build/test-dashboard"
 
-    def test_local_project_get_base_path_no_config(
+    def test_github_pages_deployment_get_base_path_no_config(
         self, mock_evidence_project_no_config
     ):
-        """Verify _get_base_path returns 'build' when no config exists."""
-        deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
-        project = LocalEvidenceProject(
-            project_path=str(mock_evidence_project_no_config),
-            project_deployment=deployment,
+        """Verify GitHub Pages deployment raises error when config is missing."""
+        deployment = GithubPagesEvidenceProjectDeployment(
+            github_repo="test/repo",
+            github_token="test_token",
         )
-        base_path = project._get_base_path()
-        assert base_path == "build"
+        with pytest.raises(FileNotFoundError, match="evidence.config.yaml not found"):
+            deployment.get_base_path(str(mock_evidence_project_no_config))
 
     def test_local_project_parse_project(self, mock_evidence_project):
         """Verify parse_evidence_project returns EvidenceProjectData."""

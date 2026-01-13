@@ -41,7 +41,7 @@ class EvidenceResource(dg.ConfigurableResource):
         description="The executable to use for commands (npm, yarn, etc.)",
     )
 
-    def _run_cmd(self, cmd: Sequence[str]):
+    def _run_cmd(self, cmd: Sequence[str]) -> None:
         """Run a command in the project directory.
 
         Args:
@@ -56,7 +56,7 @@ class EvidenceResource(dg.ConfigurableResource):
             cwd=self.project_path,
             check=True,
             capture_output=False,
-            env=os.environ,
+            env=dict(os.environ),
         )
 
     def build(self) -> None:

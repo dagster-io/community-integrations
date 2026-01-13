@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from typing import Literal, Optional
 
+import yaml
 import dagster as dg
 from pydantic import BaseModel, Field
 from dagster.components.resolved.base import resolve_fields
@@ -17,9 +18,20 @@ class BaseEvidenceProjectDeployment(dg.ConfigurableResource):
         evidence_project_build_path: str,
         context: dg.AssetExecutionContext,
         pipes_subprocess_client: dg.PipesSubprocessClient,
-        env: Optional[dict] = None,
-    ):
+        env: Optional[dict[str, str]] = None,
+    ) -> None:
         raise NotImplementedError()
+
+    def get_base_path(self, project_path: str) -> str:
+        """Get the build output path for this deployment.
+
+        Args:
+            project_path: Path to the Evidence project directory.
+
+        Returns:
+            The build output path. Default is 'build'.
+        """
+        return "build"
 
 
 class CustomEvidenceProjectDeployment(BaseEvidenceProjectDeployment):
@@ -30,8 +42,8 @@ class CustomEvidenceProjectDeployment(BaseEvidenceProjectDeployment):
         evidence_project_build_path: str,
         context: dg.AssetExecutionContext,
         pipes_subprocess_client: dg.PipesSubprocessClient,
-        env: Optional[dict] = None,
-    ):
+        env: Optional[dict[str, str]] = None,
+    ) -> None:
         if self.deploy_command is not None:
             context.log.info(f"Running deploy command: {self.deploy_command}")
             pipes_subprocess_client.run(
@@ -60,13 +72,55 @@ class GithubPagesEvidenceProjectDeployment(BaseEvidenceProjectDeployment):
     branch: str = "gh-pages"
     github_token: str  # Token resolved at component load time (from config or GITHUB_TOKEN env var)
 
+    def get_base_path(self, project_path: str) -> str:
+        """Get the build output path from evidence.config.yaml for GitHub Pages.
+
+        Args:
+            project_path: Path to the Evidence project directory.
+
+        Returns:
+            The build path in format 'build/{basePath}'.
+
+        Raises:
+            FileNotFoundError: If evidence.config.yaml is not found.
+            ValueError: If basePath is not configured in deployment section.
+        """
+        config_path = Path(project_path) / "evidence.config.yaml"
+        if not config_path.exists():
+            raise FileNotFoundError(
+                f"evidence.config.yaml not found at {config_path}. "
+                "See: https://docs.evidence.dev/deployment/self-host/github-pages/"
+            )
+
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+
+        deployment_config = config.get("deployment", {})
+        if not deployment_config:
+            raise ValueError(
+                "Missing 'deployment' section in evidence.config.yaml. "
+                "GitHub Pages deployment requires 'deployment.basePath' to be configured. "
+                "See: https://docs.evidence.dev/deployment/self-host/github-pages/"
+            )
+
+        base_path = deployment_config.get("basePath")
+        if not base_path:
+            raise ValueError(
+                "Missing 'basePath' in deployment section of evidence.config.yaml. "
+                "GitHub Pages deployment requires 'deployment.basePath' to be configured. "
+                "See: https://docs.evidence.dev/deployment/self-host/github-pages/"
+            )
+
+        # Remove leading slash and prepend with build/
+        return f"build/{base_path.lstrip('/')}"
+
     def deploy_evidence_project(
         self,
         evidence_project_build_path: str,
         context: dg.AssetExecutionContext,
         pipes_subprocess_client: dg.PipesSubprocessClient,
-        env: Optional[dict] = None,
-    ):
+        env: Optional[dict[str, str]] = None,
+    ) -> None:
         """Deploy Evidence project build to GitHub Pages using GitPython."""
         from datetime import datetime, timezone
         from git import Repo
@@ -144,10 +198,9 @@ class EvidenceProjectNetlifyDeployment(BaseEvidenceProjectDeployment):
         evidence_project_build_path: str,
         context: dg.AssetExecutionContext,
         pipes_subprocess_client: dg.PipesSubprocessClient,
-        env: Optional[dict] = None,
-    ):
+        env: Optional[dict[str, str]] = None,
+    ) -> None:
         raise NotImplementedError()
-        yield from ()  # Make it a generator for consistency
 
 
 class EvidenceProjectNetlifyDeploymentArgs(dg.Model, dg.Resolvable):

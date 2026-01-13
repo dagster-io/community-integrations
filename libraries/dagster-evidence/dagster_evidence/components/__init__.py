@@ -1,0 +1,3 @@
+from dagster_evidence.components.evidence_project_v2 import (
+    EvidenceProjectComponentV2 as EvidenceProjectComponentV2,
+)

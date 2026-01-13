@@ -4,7 +4,7 @@ description = "Dagster integration with evidence.dev"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "dagster>=1.10.9",
+    "dagster>=1.12.10",
     "gitpython>=3.1.0",
     "pyyaml>=6.0",
 ]
