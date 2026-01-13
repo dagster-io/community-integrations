@@ -7,12 +7,16 @@ including queries, connections, and the translator data classes.
 from abc import abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+import dagster as dg
 from dagster import AssetKey
 from dagster._annotations import beta, public
 from dagster._record import record
 from dagster._serdes import whitelist_for_serdes
+
+if TYPE_CHECKING:
+    from .sources import EvidenceSourceTranslatorData
 
 
 @beta
@@ -166,6 +170,7 @@ class EvidenceSourceTranslatorData:
         source_content: The full source content including connection and queries.
         source_group: The source folder name (e.g., "orders_db").
         query: The specific query being translated.
+        extracted_data: Additional data extracted from the source (e.g., table dependencies).
 
     Example:
 
@@ -186,6 +191,8 @@ class EvidenceSourceTranslatorData:
                         source_type = data.source_content.connection.type
                         query_name = data.query.name
                         group = data.source_group
+                        # Access extracted table dependencies
+                        table_deps = data.extracted_data.get("table_deps", [])
                         # Generate custom AssetSpec
                         return dg.AssetSpec(
                             key=dg.AssetKey([group, query_name]),
@@ -197,6 +204,7 @@ class EvidenceSourceTranslatorData:
     source_content: SourceContent
     source_group: str  # The source folder name (e.g., "orders_db")
     query: SourceQuery  # The specific query being translated
+    extracted_data: dict[str, Any] = {}  # Additional extracted data (e.g., table_deps)
 
 
 @beta
@@ -290,6 +298,85 @@ class BaseEvidenceProjectSource:
         """
         raise NotImplementedError()
 
+    @public
+    @classmethod
+    @abstractmethod
+    def extract_data_from_source(
+        cls, data: "EvidenceSourceTranslatorData"
+    ) -> dict[str, Any]:
+        """Extract additional data from the source query.
+
+        This method is called before get_asset_spec to extract information
+        from the SQL query and connection configuration. The extracted data
+        is stored in data.extracted_data and can be used in get_asset_spec.
+
+        Common extracted data includes table dependencies parsed from the SQL query.
+
+        Args:
+            data: The translator data containing source and query information.
+
+        Returns:
+            Dictionary of extracted data. Common keys include:
+            - table_deps: List of table references extracted from the SQL query.
+
+        Example:
+
+            .. code-block:: python
+
+                class PostgresEvidenceProjectSource(BaseEvidenceProjectSource):
+                    @classmethod
+                    def extract_data_from_source(cls, data):
+                        from dagster_evidence.utils import extract_table_references
+                        table_refs = extract_table_references(
+                            data.query.content,
+                            default_schema="public",
+                        )
+                        return {"table_deps": table_refs}
+        """
+        raise NotImplementedError()
+
+    @public
+    @classmethod
+    @abstractmethod
+    def get_asset_spec(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetSpec:
+        """Get the AssetSpec for a source query.
+
+        Each source type must implement this method to define how its
+        assets are represented in Dagster.
+
+        Args:
+            data: The translator data containing source and query information.
+                  The extracted_data field contains data from extract_data_from_source.
+
+        Returns:
+            The AssetSpec for the source query.
+
+        Example:
+
+            .. code-block:: python
+
+                class PostgresEvidenceProjectSource(BaseEvidenceProjectSource):
+                    @staticmethod
+                    def get_source_type() -> str:
+                        return "postgres"
+
+                    @classmethod
+                    def get_asset_spec(cls, data):
+                        # Use extracted table dependencies
+                        deps = []
+                        for ref in data.extracted_data.get("table_deps", []):
+                            if ref.get("table"):
+                                deps.append(dg.AssetKey([ref["table"]]))
+
+                        return dg.AssetSpec(
+                            key=dg.AssetKey(["postgres", data.query.name]),
+                            group_name=data.source_group,
+                            kinds={"evidence", "postgres"},
+                            deps=deps,
+                        )
+        """
+        raise NotImplementedError()
+
 
 @beta
 @public
@@ -311,6 +398,41 @@ class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
     @staticmethod
     def get_source_type() -> str:
         return "duckdb"
+
+    @classmethod
+    def extract_data_from_source(
+        cls, data: "EvidenceSourceTranslatorData"
+    ) -> dict[str, Any]:
+        """Extract table references from DuckDB source query."""
+        from dagster_evidence.utils import extract_table_references
+
+        options = data.source_content.connection.extra.get("options", {})
+        # For DuckDB, database can be inferred from filename (without .duckdb extension)
+        filename = options.get("filename", "")
+        default_database = filename.replace(".duckdb", "") if filename else None
+        default_schema = "main"  # DuckDB default schema
+
+        table_refs = extract_table_references(
+            data.query.content,
+            default_database=default_database,
+            default_schema=default_schema,
+        )
+        return {"table_deps": table_refs}
+
+    @classmethod
+    def get_asset_spec(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetSpec:
+        """Get the AssetSpec for a DuckDB source query."""
+        deps = []
+        for ref in data.extracted_data.get("table_deps", []):
+            if ref.get("table"):
+                deps.append(dg.AssetKey([ref["table"]]))
+
+        return dg.AssetSpec(
+            key=dg.AssetKey([data.source_group, data.query.name]),
+            group_name=data.source_group,
+            kinds={"evidence", "source", "duckdb"},
+            deps=deps,
+        )
 
 
 @beta
@@ -335,6 +457,40 @@ class MotherDuckEvidenceProjectSource(BaseEvidenceProjectSource):
     def get_source_type() -> str:
         return "motherduck"
 
+    @classmethod
+    def extract_data_from_source(
+        cls, data: "EvidenceSourceTranslatorData"
+    ) -> dict[str, Any]:
+        """Extract table references from MotherDuck source query."""
+        from dagster_evidence.utils import extract_table_references
+
+        # Get database from connection config options
+        options = data.source_content.connection.extra.get("options", {})
+        default_database = options.get("database")
+        default_schema = "main"  # MotherDuck default schema
+
+        table_refs = extract_table_references(
+            data.query.content,
+            default_database=default_database,
+            default_schema=default_schema,
+        )
+        return {"table_deps": table_refs}
+
+    @classmethod
+    def get_asset_spec(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetSpec:
+        """Get the AssetSpec for a MotherDuck source query."""
+        deps = []
+        for ref in data.extracted_data.get("table_deps", []):
+            if ref.get("table"):
+                deps.append(dg.AssetKey([ref["table"]]))
+
+        return dg.AssetSpec(
+            key=dg.AssetKey([data.source_group, data.query.name]),
+            group_name=data.source_group,
+            kinds={"evidence", "source", "motherduck"},
+            deps=deps,
+        )
+
 
 @beta
 @public
@@ -357,3 +513,37 @@ class BigQueryEvidenceProjectSource(BaseEvidenceProjectSource):
     @staticmethod
     def get_source_type() -> str:
         return "bigquery"
+
+    @classmethod
+    def extract_data_from_source(
+        cls, data: "EvidenceSourceTranslatorData"
+    ) -> dict[str, Any]:
+        """Extract table references from BigQuery source query."""
+        from dagster_evidence.utils import extract_table_references
+
+        # Get project and dataset from connection config options
+        options = data.source_content.connection.extra.get("options", {})
+        default_database = options.get("project_id")
+        default_schema = options.get("dataset")
+
+        table_refs = extract_table_references(
+            data.query.content,
+            default_database=default_database,
+            default_schema=default_schema,
+        )
+        return {"table_deps": table_refs}
+
+    @classmethod
+    def get_asset_spec(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetSpec:
+        """Get the AssetSpec for a BigQuery source query."""
+        deps = []
+        for ref in data.extracted_data.get("table_deps", []):
+            if ref.get("table"):
+                deps.append(dg.AssetKey([ref["table"]]))
+
+        return dg.AssetSpec(
+            key=dg.AssetKey([data.source_group, data.query.name]),
+            group_name=data.source_group,
+            kinds={"evidence", "source", "bigquery"},
+            deps=deps,
+        )

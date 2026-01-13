@@ -7,6 +7,7 @@ dependencies = [
     "dagster>=1.12.10",
     "gitpython>=3.1.0",
     "pyyaml>=6.0",
+    "sqlglot>=26.0.0",
 ]
 dynamic = ["version"]
 
@@ -29,7 +30,7 @@ requires = ["setuptools>=42"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["dagster_evidence", "dagster_evidence.lib", "dagster_evidence.components"]
+packages = ["dagster_evidence", "dagster_evidence.lib", "dagster_evidence.components", "dagster_evidence.utils"]
 
 [tool.setuptools.dynamic]
 version = {attr = "dagster_evidence.__version__"}

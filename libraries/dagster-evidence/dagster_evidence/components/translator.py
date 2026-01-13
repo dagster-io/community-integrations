@@ -148,13 +148,14 @@ class DagsterEvidenceTranslator:
     def _get_source_asset_spec(
         self, data: EvidenceSourceTranslatorData
     ) -> dg.AssetSpec:
-        """Default translation for source query assets."""
+        """Default translation for source query assets.
+
+        Delegates to the source class's get_asset_spec method, allowing
+        each source type to customize its asset spec generation.
+        """
         source_type = data.source_content.connection.type
-        return dg.AssetSpec(
-            key=dg.AssetKey([data.query.name]),
-            group_name=data.source_group,
-            kinds={"evidence", "source", source_type},
-        )
+        source_class = self.get_source_class(source_type)
+        return source_class.get_asset_spec(data)
 
     def _get_project_asset_spec(
         self, data: EvidenceProjectTranslatorData

@@ -118,9 +118,9 @@ class TestEvidenceProjectComponentV2:
         defs = component.build_defs_from_state(mock_context, state_path=state_path)
 
         assert isinstance(defs, dg.Definitions)
-        # Should have assets: 2 source assets + 1 main build asset
+        # Should have assets: 2 source assets + 1 main build asset + 2 external dep assets
         assets = list(defs.resolve_asset_graph().get_all_asset_keys())
-        assert len(assets) == 3
+        assert len(assets) == 5
 
     def test_component_includes_pipes_client_resource(
         self, mock_evidence_project, tmp_path
@@ -179,9 +179,15 @@ class TestComponentAssetGeneration:
         asset_keys = list(defs.resolve_asset_graph().get_all_asset_keys())
         key_paths = [key.path for key in asset_keys]
 
-        # Should have source assets
-        assert ("orders",) in key_paths or ["orders"] in key_paths
-        assert ("customers",) in key_paths or ["customers"] in key_paths
+        # Should have source assets with source group prefix
+        assert ("needful_things", "orders") in key_paths or [
+            "needful_things",
+            "orders",
+        ] in key_paths
+        assert ("needful_things", "customers") in key_paths or [
+            "needful_things",
+            "customers",
+        ] in key_paths
         # Should have main project asset
         assert ("test_project",) in key_paths or ["test_project"] in key_paths
 
@@ -212,9 +218,15 @@ class TestComponentAssetGeneration:
         deps = graph.get(main_asset_key).parent_keys
         dep_paths = [key.path for key in deps]
 
-        # Main asset should depend on source assets
-        assert ("orders",) in dep_paths or ["orders"] in dep_paths
-        assert ("customers",) in dep_paths or ["customers"] in dep_paths
+        # Main asset should depend on source assets (with source group prefix)
+        assert ("needful_things", "orders") in dep_paths or [
+            "needful_things",
+            "orders",
+        ] in dep_paths
+        assert ("needful_things", "customers") in dep_paths or [
+            "needful_things",
+            "customers",
+        ] in dep_paths
 
     def test_source_assets_have_correct_kinds(self, mock_evidence_project, tmp_path):
         """Verify source assets have evidence and source kinds."""
@@ -237,7 +249,7 @@ class TestComponentAssetGeneration:
         defs = component.build_defs_from_state(mock_context, state_path=state_path)
 
         graph = defs.resolve_asset_graph()
-        orders_key = dg.AssetKey(["orders"])
+        orders_key = dg.AssetKey(["needful_things", "orders"])
 
         if orders_key in graph.get_all_asset_keys():
             asset_node = graph.get(orders_key)

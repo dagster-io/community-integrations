@@ -119,10 +119,20 @@ class BaseEvidenceProject(dg.ConfigurableResource):
 
             # Generate asset specs via translator
             for query in source_content.queries:
+                # First create data without extracted_data
+                initial_data = EvidenceSourceTranslatorData(
+                    source_content=source_content,
+                    source_group=source_group,
+                    query=query,
+                )
+                # Extract data using source class
+                extracted = source_class.extract_data_from_source(initial_data)
+                # Create final data with extracted_data
                 data = EvidenceSourceTranslatorData(
                     source_content=source_content,
                     source_group=source_group,
                     query=query,
+                    extracted_data=extracted,
                 )
                 source_assets.append(translator.get_asset_spec(data))
 

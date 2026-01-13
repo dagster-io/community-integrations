@@ -119,7 +119,7 @@ class TestGetAssetSpecForSource:
         )
         spec = translator.get_asset_spec(data)
 
-        assert spec.key == dg.AssetKey(["orders"])
+        assert spec.key == dg.AssetKey(["needful_things", "orders"])
 
     def test_source_asset_spec_group_name(self):
         """Verify source asset spec has correct group name."""
@@ -306,7 +306,7 @@ class TestCustomTranslator:
         )
         spec = translator.get_asset_spec(data)
 
-        assert spec.key == dg.AssetKey(["custom_prefix", "orders"])
+        assert spec.key == dg.AssetKey(["custom_prefix", "needful_things", "orders"])
 
     def test_custom_translator_modifies_project_spec(self):
         """Verify custom translator can modify project asset spec."""
