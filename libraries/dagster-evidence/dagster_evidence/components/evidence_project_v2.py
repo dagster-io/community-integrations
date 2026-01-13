@@ -5,6 +5,7 @@ projects with Dagster, automatically discovering sources and generating assets.
 """
 
 from dataclasses import dataclass, field
+from functools import cached_property
 from pathlib import Path
 from typing import Annotated, Optional, Union
 
@@ -41,7 +42,6 @@ class EvidenceProjectComponentV2(StateBackedComponent, Resolvable):
     Attributes:
         evidence_project: Evidence project configuration (local or studio).
         defs_state: Configuration for state management.
-        translator: Optional custom translator class for customizing asset specs.
 
     Example:
 
@@ -74,18 +74,16 @@ class EvidenceProjectComponentV2(StateBackedComponent, Resolvable):
                   type: custom
                   deploy_command: "rsync -avz build/ user@server:/var/www/dashboard/"
 
-        Using a custom translator to customize asset specs:
+        Customizing asset specs by subclassing and overriding get_asset_spec:
 
         .. code-block:: python
 
             from dagster_evidence import (
-                DagsterEvidenceTranslator,
                 EvidenceSourceTranslatorData,
                 EvidenceProjectComponentV2,
             )
-            import dagster as dg
 
-            class CustomTranslator(DagsterEvidenceTranslator):
+            class CustomEvidenceComponent(EvidenceProjectComponentV2):
                 def get_asset_spec(self, data):
                     spec = super().get_asset_spec(data)
                     if isinstance(data, EvidenceSourceTranslatorData):
@@ -93,23 +91,6 @@ class EvidenceProjectComponentV2(StateBackedComponent, Resolvable):
                             key=spec.key.with_prefix("evidence"),
                         )
                     return spec
-
-            # In your code-based definitions
-            from dagster_evidence.components.projects import LocalEvidenceProject
-            from dagster_evidence.components.deployments import (
-                GithubPagesEvidenceProjectDeployment,
-            )
-
-            component = EvidenceProjectComponentV2(
-                evidence_project=LocalEvidenceProject(
-                    project_path="./my-evidence-project",
-                    project_deployment=GithubPagesEvidenceProjectDeployment(
-                        github_repo="my-org/my-dashboard",
-                        github_token=dg.EnvVar("GITHUB_TOKEN"),
-                    ),
-                ),
-                translator=CustomTranslator,
-            )
     """
 
     evidence_project: Annotated[
@@ -129,14 +110,10 @@ class EvidenceProjectComponentV2(StateBackedComponent, Resolvable):
         default_factory=DefsStateConfigArgs.legacy_code_server_snapshots
     )
 
-    translator: Optional[type[DagsterEvidenceTranslator]] = None
-
-    @property
+    @cached_property
     def _base_translator(self) -> DagsterEvidenceTranslator:
         """Return the translator instance for this component."""
-        if self.translator is None:
-            return DagsterEvidenceTranslator()
-        return self.translator()
+        return DagsterEvidenceTranslator()
 
     @public
     def get_asset_spec(

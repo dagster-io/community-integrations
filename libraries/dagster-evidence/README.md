@@ -1,21 +1,39 @@
 # dagster-evidence
 
-Dagster integration with [evidence](https://evidence.dev/)
+Dagster integration with [Evidence](https://evidence.dev/), enabling you to orchestrate Evidence.dev dashboard projects as Dagster assets.
+
+## Features
+
+- **Automatic asset discovery**: Automatically generates Dagster assets from Evidence project sources
+- **Build and deployment**: Builds Evidence projects and deploys them to your hosting platform
+- **Customizable translation**: Extend the translator to customize how Evidence sources map to Dagster assets
+- **Type-safe configuration**: Pydantic-based configuration with YAML support
+
+## Deployment Support
+
+**Currently Implemented:**
+- ✅ **GitHub Pages**: Deploy to GitHub Pages with automatic git push
+- ✅ **Custom commands**: Run any custom deployment script or command
+
+**Need another deployment target?** Open an issue and tag [@milicevica23](https://github.com/milicevica23) with your deployment requirements.
+
+## Supported Data Sources
+
+- DuckDB
+- MotherDuck
+- BigQuery
+
+Need additional source types? You can extend the translator to add custom sources, or contribute to the project!
 
 ### TODO
-- write documentation with examples on dagster libraries
-- develop translator for project and get_asset_spec in component to be able to override 
-- check sigma tests and compare with what is in this repo
-- add documentation within the code and examples as in other integrations
-- enable at least one more deployment
 - add more sources in the example project
-- add beta decorators on the objects
-- check if secrets are visible somewhere in the UI when defining in the component 
+- check if secrets are visible somewhere in the UI when defining in the component
 
-#### Nice to have for now
+#### Future work:
 - add more metadata to the objects
-- add source query compilation and giving dependencies as tablea/schema/dataset
+- add source query compilation and giving dependencies as tablea/schema/dataset in order that it can be connected to the upstream assets in dagster, this has to be done with sql glot for SQL
 - try out to put metadata in a source/project and read it in the translator for example dagster group where this project should be
-- integrate sensors in the 
+- integrate sensors in motherduck source to detect changes in the datasets
+
 
  
