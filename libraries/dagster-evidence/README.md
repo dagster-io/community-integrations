@@ -26,14 +26,13 @@ Dagster integration with [Evidence](https://evidence.dev/), enabling you to orch
 Need additional source types? You can extend the translator to add custom sources, or contribute to the project!
 
 ### TODO
-- add more sources in the example project
 - check if secrets are visible somewhere in the UI when defining in the component
 
 #### Future work:
 - add more metadata to the objects
-- add source query compilation and giving dependencies as tablea/schema/dataset in order that it can be connected to the upstream assets in dagster, this has to be done with sql glot for SQL
 - try out to put metadata in a source/project and read it in the translator for example dagster group where this project should be
-- integrate sensors in motherduck source to detect changes in the datasets
+- integrate sensors in motherduck and gsheets source to detect changes in the datasets
+- add motherduck kind to dagster
 
 
  

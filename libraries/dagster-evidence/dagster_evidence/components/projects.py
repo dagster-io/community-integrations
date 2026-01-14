@@ -99,17 +99,17 @@ class BaseEvidenceProject(dg.ConfigurableResource):
         self,
         evidence_project_data: EvidenceProjectData,
         translator: "DagsterEvidenceTranslator",
-    ) -> list[dg.AssetSpec]:
+    ) -> list[dg.AssetsDefinition]:
         """Load source assets using the translator.
 
         Args:
             evidence_project_data: Parsed project data containing sources.
-            translator: Translator instance for converting Evidence objects to AssetSpecs.
+            translator: Translator instance for converting Evidence objects to assets.
 
         Returns:
-            List of AssetSpecs for all source queries.
+            List of AssetsDefinition for all source queries.
         """
-        source_assets: list[dg.AssetSpec] = []
+        source_assets: list[dg.AssetsDefinition] = []
         for source_group, source_content in evidence_project_data.sources_by_id.items():
             # Use translator to get source class (validates source type is known)
             source_type = source_content.connection.type
@@ -249,6 +249,14 @@ class LocalEvidenceProject(BaseEvidenceProject):
                 query_content = sql_file.read_text()
                 queries.append({"name": query_name, "content": query_content})
 
+            # For gsheets, synthesize queries from sheets config (no SQL files)
+            if connection.get("type") == "gsheets":
+                from .sources import GSheetsEvidenceProjectSource
+
+                queries = GSheetsEvidenceProjectSource.build_queries_from_sheets_config(
+                    connection
+                )
+
             result[folder.name] = SourceContent.from_dict(
                 {"connection": connection, "queries": queries}
             )
@@ -270,15 +278,22 @@ class LocalEvidenceProject(BaseEvidenceProject):
         project_data = EvidenceProjectTranslatorData(
             project_name=self.get_evidence_project_name(),
             sources_by_id=evidence_project_data.sources_by_id,
-            source_deps=[spec.key for spec in source_assets],
+            source_deps=[asset.key for asset in source_assets],
         )
         project_spec = translator.get_asset_spec(project_data)
+
+        # Create automation condition that triggers when any direct dependency is updated
+        # Source assets now have their own automation conditions that cascade updates
+        automation_condition = dg.AutomationCondition.any_deps_match(
+            dg.AutomationCondition.newly_updated()
+        )
 
         # Create the executable asset using the translated spec
         @dg.asset(
             key=project_spec.key,
             kinds=project_spec.kinds or {"evidence"},
             deps=[each_source_asset.key for each_source_asset in source_assets],
+            automation_condition=automation_condition,
         )
         def build_and_deploy_evidence_project(
             context: dg.AssetExecutionContext,

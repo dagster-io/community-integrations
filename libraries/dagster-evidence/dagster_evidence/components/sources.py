@@ -338,18 +338,20 @@ class BaseEvidenceProjectSource:
     @public
     @classmethod
     @abstractmethod
-    def get_asset_spec(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetSpec:
-        """Get the AssetSpec for a source query.
+    def get_source_asset(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetsDefinition:
+        """Get the AssetsDefinition for a source query.
 
         Each source type must implement this method to define how its
-        assets are represented in Dagster.
+        assets are represented in Dagster. The returned asset includes
+        an automation condition that triggers when upstream dependencies
+        are updated.
 
         Args:
             data: The translator data containing source and query information.
                   The extracted_data field contains data from extract_data_from_source.
 
         Returns:
-            The AssetSpec for the source query.
+            The AssetsDefinition for the source query with automation condition.
 
         Example:
 
@@ -361,19 +363,29 @@ class BaseEvidenceProjectSource:
                         return "postgres"
 
                     @classmethod
-                    def get_asset_spec(cls, data):
+                    def get_source_asset(cls, data):
                         # Use extracted table dependencies
                         deps = []
                         for ref in data.extracted_data.get("table_deps", []):
                             if ref.get("table"):
                                 deps.append(dg.AssetKey([ref["table"]]))
 
-                        return dg.AssetSpec(
-                            key=dg.AssetKey(["postgres", data.query.name]),
+                        key = dg.AssetKey(["postgres", data.query.name])
+                        has_deps = bool(deps)
+
+                        @dg.asset(
+                            key=key,
                             group_name=data.source_group,
                             kinds={"evidence", "postgres"},
                             deps=deps,
+                            automation_condition=dg.AutomationCondition.any_deps_match(
+                                dg.AutomationCondition.newly_updated()
+                            ) if has_deps else None,
                         )
+                        def _source_asset():
+                            return dg.MaterializeResult()
+
+                        return _source_asset
         """
         raise NotImplementedError()
 
@@ -420,19 +432,30 @@ class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
         return {"table_deps": table_refs}
 
     @classmethod
-    def get_asset_spec(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetSpec:
-        """Get the AssetSpec for a DuckDB source query."""
+    def get_source_asset(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetsDefinition:
+        """Get the AssetsDefinition for a DuckDB source query."""
         deps = []
         for ref in data.extracted_data.get("table_deps", []):
             if ref.get("table"):
                 deps.append(dg.AssetKey([ref["table"]]))
 
-        return dg.AssetSpec(
-            key=dg.AssetKey([data.source_group, data.query.name]),
-            group_name=data.source_group,
+        key = dg.AssetKey([data.source_group, data.query.name])
+        group_name = data.source_group
+        has_deps = bool(deps)
+
+        @dg.asset(
+            key=key,
+            group_name=group_name,
             kinds={"evidence", "source", "duckdb"},
             deps=deps,
+            automation_condition=dg.AutomationCondition.any_deps_match(
+                dg.AutomationCondition.newly_updated()
+            ) if has_deps else None,
         )
+        def _source_asset():
+            return dg.MaterializeResult()
+
+        return _source_asset
 
 
 @beta
@@ -477,19 +500,30 @@ class MotherDuckEvidenceProjectSource(BaseEvidenceProjectSource):
         return {"table_deps": table_refs}
 
     @classmethod
-    def get_asset_spec(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetSpec:
-        """Get the AssetSpec for a MotherDuck source query."""
+    def get_source_asset(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetsDefinition:
+        """Get the AssetsDefinition for a MotherDuck source query."""
         deps = []
         for ref in data.extracted_data.get("table_deps", []):
             if ref.get("table"):
                 deps.append(dg.AssetKey([ref["table"]]))
 
-        return dg.AssetSpec(
-            key=dg.AssetKey([data.source_group, data.query.name]),
-            group_name=data.source_group,
+        key = dg.AssetKey([data.source_group, data.query.name])
+        group_name = data.source_group
+        has_deps = bool(deps)
+
+        @dg.asset(
+            key=key,
+            group_name=group_name,
             kinds={"evidence", "source", "motherduck"},
             deps=deps,
+            automation_condition=dg.AutomationCondition.any_deps_match(
+                dg.AutomationCondition.newly_updated()
+            ) if has_deps else None,
         )
+        def _source_asset():
+            return dg.MaterializeResult()
+
+        return _source_asset
 
 
 @beta
@@ -534,16 +568,140 @@ class BigQueryEvidenceProjectSource(BaseEvidenceProjectSource):
         return {"table_deps": table_refs}
 
     @classmethod
-    def get_asset_spec(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetSpec:
-        """Get the AssetSpec for a BigQuery source query."""
+    def get_source_asset(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetsDefinition:
+        """Get the AssetsDefinition for a BigQuery source query."""
         deps = []
         for ref in data.extracted_data.get("table_deps", []):
             if ref.get("table"):
                 deps.append(dg.AssetKey([ref["table"]]))
 
-        return dg.AssetSpec(
-            key=dg.AssetKey([data.source_group, data.query.name]),
-            group_name=data.source_group,
+        key = dg.AssetKey([data.source_group, data.query.name])
+        group_name = data.source_group
+        has_deps = bool(deps)
+
+        @dg.asset(
+            key=key,
+            group_name=group_name,
             kinds={"evidence", "source", "bigquery"},
             deps=deps,
+            automation_condition=dg.AutomationCondition.any_deps_match(
+                dg.AutomationCondition.newly_updated()
+            ) if has_deps else None,
         )
+        def _source_asset():
+            return dg.MaterializeResult()
+
+        return _source_asset
+
+
+@beta
+@public
+class GSheetsEvidenceProjectSource(BaseEvidenceProjectSource):
+    """Google Sheets source for Evidence projects.
+
+    Handles Evidence sources configured with ``type: gsheets`` in connection.yaml.
+    Unlike SQL-based sources, gsheets sources define sheets and pages declaratively
+    rather than using SQL queries.
+
+    Example:
+
+        connection.yaml for a Google Sheets source:
+
+        .. code-block:: yaml
+
+            name: my_sheets
+            type: gsheets
+            options:
+              ratelimitms: 2500
+            sheets:
+              sales_data:
+                id: 1Sc4nyLSSNETSIEpNKzheh5AFJJ-YA-wQeubFgeeEw9g
+                pages:
+                  - q1_sales
+                  - q2_sales
+              inventory:
+                id: kj235Bo3wRFG9kj3tp98grnPB-P97iu87lv877gliuId
+
+        This generates assets:
+        - ``[source_group, "sales_data", "q1_sales"]``
+        - ``[source_group, "sales_data", "q2_sales"]``
+        - ``[source_group, "inventory"]``
+    """
+
+    @staticmethod
+    def get_source_type() -> str:
+        return "gsheets"
+
+    @classmethod
+    def extract_data_from_source(
+        cls, data: "EvidenceSourceTranslatorData"
+    ) -> dict[str, Any]:
+        """Extract sheet configuration from Google Sheets source.
+
+        Google Sheets sources don't have SQL to parse, so this returns
+        the sheets configuration for use in get_asset_spec.
+        """
+        sheets_config = data.source_content.connection.extra.get("sheets", {})
+        return {"sheets_config": sheets_config}
+
+    @classmethod
+    def get_source_asset(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetsDefinition:
+        """Get the AssetsDefinition for a Google Sheets source.
+
+        Parses the query name to extract sheet_name and optional page_name,
+        then builds a 3-part asset key: [source_group, sheet_name, page_name].
+        """
+        # Parse query.name to get sheet_name and optional page_name
+        # Format: "sheet_name" or "sheet_name/page_name"
+        parts = data.query.name.split("/", 1)
+        sheet_name = parts[0]
+        page_name = parts[1] if len(parts) > 1 else None
+
+        # Build asset key: [source_group, sheet_name, page_name] or [source_group, sheet_name]
+        if page_name:
+            key = dg.AssetKey([data.source_group, sheet_name, page_name])
+        else:
+            key = dg.AssetKey([data.source_group, sheet_name])
+
+        group_name = data.source_group
+
+        @dg.asset(
+            key=key,
+            group_name=group_name,
+            kinds={"evidence", "source", "gsheets"},
+            deps=[],  # No upstream deps for gsheets - they are source of truth
+        )
+        def _source_asset():
+            return dg.MaterializeResult()
+
+        return _source_asset
+
+    @classmethod
+    def build_queries_from_sheets_config(
+        cls, connection: dict[str, Any]
+    ) -> list[dict[str, str]]:
+        """Build virtual queries from sheets configuration.
+
+        This method synthesizes SourceQuery-compatible dictionaries from
+        the sheets configuration in connection.yaml. Each sheet/page
+        combination becomes a "virtual query" with an empty content field.
+
+        Args:
+            connection: The full connection configuration dictionary.
+
+        Returns:
+            List of query dictionaries with "name" and "content" keys.
+        """
+        queries: list[dict[str, str]] = []
+        sheets = connection.get("sheets", {})
+        for sheet_name, sheet_config in sheets.items():
+            if not isinstance(sheet_config, dict):
+                continue
+            pages = sheet_config.get("pages", [])
+            if pages:
+                for page in pages:
+                    queries.append({"name": f"{sheet_name}/{page}", "content": ""})
+            else:
+                # No pages specified - create single asset for the sheet
+                queries.append({"name": sheet_name, "content": ""})
+        return queries

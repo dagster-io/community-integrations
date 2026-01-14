@@ -16,6 +16,7 @@ from .sources import (
     DuckdbEvidenceProjectSource,
     EvidenceProjectTranslatorData,
     EvidenceSourceTranslatorData,
+    GSheetsEvidenceProjectSource,
     MotherDuckEvidenceProjectSource,
 )
 
@@ -63,6 +64,7 @@ class DagsterEvidenceTranslator:
         "duckdb": DuckdbEvidenceProjectSource,
         "motherduck": MotherDuckEvidenceProjectSource,
         "bigquery": BigQueryEvidenceProjectSource,
+        "gsheets": GSheetsEvidenceProjectSource,
     }
 
     @public
@@ -112,17 +114,18 @@ class DagsterEvidenceTranslator:
     @public
     def get_asset_spec(
         self, data: Union[EvidenceSourceTranslatorData, EvidenceProjectTranslatorData]
-    ) -> dg.AssetSpec:
-        """Get the AssetSpec for an Evidence object (source query or project).
+    ) -> Union[dg.AssetSpec, dg.AssetsDefinition]:
+        """Get the asset for an Evidence object (source query or project).
 
-        Override this method to customize asset spec generation.
+        Override this method to customize asset generation.
 
         Args:
             data: Either EvidenceSourceTranslatorData for source queries
                   or EvidenceProjectTranslatorData for the main project asset.
 
         Returns:
-            The AssetSpec for the Evidence object.
+            For source queries: AssetsDefinition with automation condition.
+            For project: AssetSpec for the Evidence project.
 
         Example:
 
@@ -130,32 +133,28 @@ class DagsterEvidenceTranslator:
 
                 class CustomTranslator(DagsterEvidenceTranslator):
                     def get_asset_spec(self, data):
-                        spec = super().get_asset_spec(data)
-                        if isinstance(data, EvidenceSourceTranslatorData):
-                            return spec.replace_attributes(
-                                key=spec.key.with_prefix("evidence"),
-                                metadata={"source_type": data.source_content.connection.type},
-                            )
-                        return spec
+                        asset = super().get_asset_spec(data)
+                        # Customize as needed
+                        return asset
         """
         if isinstance(data, EvidenceSourceTranslatorData):
-            return self._get_source_asset_spec(data)
+            return self._get_source_asset(data)
         elif isinstance(data, EvidenceProjectTranslatorData):
             return self._get_project_asset_spec(data)
         else:
             raise TypeError(f"Unknown data type: {type(data)}")
 
-    def _get_source_asset_spec(
+    def _get_source_asset(
         self, data: EvidenceSourceTranslatorData
-    ) -> dg.AssetSpec:
+    ) -> dg.AssetsDefinition:
         """Default translation for source query assets.
 
-        Delegates to the source class's get_asset_spec method, allowing
-        each source type to customize its asset spec generation.
+        Delegates to the source class's get_source_asset method, allowing
+        each source type to customize its asset generation.
         """
         source_type = data.source_content.connection.type
         source_class = self.get_source_class(source_type)
-        return source_class.get_asset_spec(data)
+        return source_class.get_source_asset(data)
 
     def _get_project_asset_spec(
         self, data: EvidenceProjectTranslatorData
