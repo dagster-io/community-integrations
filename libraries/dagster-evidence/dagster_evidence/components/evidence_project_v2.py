@@ -118,7 +118,7 @@ class EvidenceProjectComponentV2(StateBackedComponent, Resolvable):
     @public
     def get_asset_spec(
         self, data: Union[EvidenceSourceTranslatorData, EvidenceProjectTranslatorData]
-    ) -> dg.AssetSpec:
+    ) -> Union[dg.AssetSpec, dg.AssetsDefinition]:
         """Get asset spec for an Evidence object using the configured translator.
 
         Override this method in a subclass to customize how Evidence sources
@@ -129,7 +129,8 @@ class EvidenceProjectComponentV2(StateBackedComponent, Resolvable):
                   or EvidenceProjectTranslatorData for the main project asset.
 
         Returns:
-            An AssetSpec that represents the Evidence object in Dagster.
+            For source queries: AssetsDefinition with automation condition.
+            For project: AssetSpec for the Evidence project.
 
         Example:
 
