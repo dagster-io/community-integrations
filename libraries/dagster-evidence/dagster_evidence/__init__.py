@@ -9,7 +9,7 @@ from dagster_evidence.components.translator import DagsterEvidenceTranslator
 from dagster_evidence.lib.evidence_project import EvidenceProject
 from dagster_evidence.resource import EvidenceResource
 
-__version__ = "0.1.7"
+__version__ = "0.2.0"
 
 __all__ = [
     "EvidenceProjectComponentV2",

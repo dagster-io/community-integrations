@@ -525,11 +525,14 @@ class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
                     schema = ref.get("schema", "main")
                     if table_name:
                         try:
-                            result = conn.execute(f"""
+                            result = conn.execute(
+                                """
                                 SELECT estimated_size
                                 FROM duckdb_tables()
-                                WHERE table_name = '{table_name}' AND schema_name = '{schema}'
-                            """).fetchone()
+                                WHERE table_name = ? AND schema_name = ?
+                            """,
+                                [table_name, schema],
+                            ).fetchone()
                             table_counts[f"{schema}.{table_name}"] = (
                                 result[0] if result else 0
                             )
@@ -683,11 +686,14 @@ class MotherDuckEvidenceProjectSource(BaseEvidenceProjectSource):
                     schema = ref.get("schema", "main")
                     if table_name:
                         try:
-                            result = conn.execute(f"""
+                            result = conn.execute(
+                                """
                                 SELECT estimated_size
                                 FROM duckdb_tables()
-                                WHERE table_name = '{table_name}' AND schema_name = '{schema}'
-                            """).fetchone()
+                                WHERE table_name = ? AND schema_name = ?
+                            """,
+                                [table_name, schema],
+                            ).fetchone()
                             table_counts[f"{schema}.{table_name}"] = (
                                 result[0] if result else 0
                             )

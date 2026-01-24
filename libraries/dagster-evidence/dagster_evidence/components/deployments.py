@@ -364,8 +364,16 @@ class GithubPagesEvidenceProjectDeploymentArgs(dg.Model, dg.Resolvable):
 class EvidenceProjectNetlifyDeployment(BaseEvidenceProjectDeployment):
     """Deploy Evidence project to Netlify.
 
-    Note:
-        This deployment type is not yet fully implemented.
+    **Coming Soon** - This deployment type is planned but not yet implemented.
+
+    This deployment type will push the built Evidence project to Netlify,
+    enabling automatic hosting and CDN distribution.
+
+    Planned Features:
+        - Deploy via Netlify CLI or API
+        - Support for deploy previews
+        - Environment variable configuration
+        - Build hooks integration
 
     Attributes:
         netlify_project_url: URL of the Netlify project.
@@ -377,6 +385,12 @@ class EvidenceProjectNetlifyDeployment(BaseEvidenceProjectDeployment):
             project_deployment:
               type: netlify
               netlify_project_url: https://app.netlify.com/sites/my-dashboard
+              netlify_auth_token: ${NETLIFY_AUTH_TOKEN}
+
+    Note:
+        If you need Netlify deployment support, please open an issue on GitHub
+        to help prioritize this feature. In the meantime, you can use the
+        ``custom`` deployment type with the Netlify CLI.
     """
 
     netlify_project_url: str
@@ -396,8 +410,7 @@ class EvidenceProjectNetlifyDeployment(BaseEvidenceProjectDeployment):
 class EvidenceProjectNetlifyDeploymentArgs(dg.Model, dg.Resolvable):
     """Arguments for deploying Evidence project to Netlify.
 
-    Note:
-        This deployment type is not yet fully implemented.
+    **Coming Soon** - This deployment type is planned but not yet implemented.
 
     Example:
 
@@ -410,6 +423,15 @@ class EvidenceProjectNetlifyDeploymentArgs(dg.Model, dg.Resolvable):
     Attributes:
         type: Must be "netlify" to use this deployment type.
         netlify_project_url: URL of the Netlify project.
+
+    Note:
+        Use the ``custom`` deployment type with Netlify CLI as a workaround:
+
+        .. code-block:: yaml
+
+            project_deployment:
+              type: custom
+              deploy_command: "netlify deploy --prod --dir=."
     """
 
     type: Literal["netlify"] = Field(

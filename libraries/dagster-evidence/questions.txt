@@ -1,4 +1,0 @@
-what is with the version of this package? it was already there but it is not following anything and there is no really a version in the community integrations? What should I do?
-what is the difference between dataclass and record decorator, sigma integration is using record more? 
-I am a bit confused when something is used with dagster._<modul>  is it like intern and should this be used in general?
-is there a way to work with graphite in this project in order to be able to open more smaller MRs?

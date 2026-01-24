@@ -497,11 +497,17 @@ class LocalEvidenceProjectArgs(dg.Model, dg.Resolvable):
 class EvidenceStudioProject(BaseEvidenceProject):
     """Evidence Studio cloud-hosted project.
 
-    This project type connects to Evidence Studio to fetch project
-    configuration and sources from the cloud.
+    **Coming Soon** - This project type is planned but not yet implemented.
 
-    Note:
-        This project type is not yet fully implemented.
+    This project type will connect to Evidence Studio to fetch project
+    configuration and sources from the cloud, enabling seamless integration
+    between Dagster pipelines and Evidence Studio hosted dashboards.
+
+    Planned Features:
+        - Fetch source configurations from Evidence Studio API
+        - Sync local data sources with cloud project
+        - Trigger cloud builds from Dagster
+        - Monitor deployment status
 
     Attributes:
         evidence_studio_url: URL of the Evidence Studio workspace.
@@ -513,6 +519,10 @@ class EvidenceStudioProject(BaseEvidenceProject):
             evidence_project:
               project_type: evidence_studio
               evidence_studio_url: https://evidence.studio/my-workspace
+
+    Note:
+        If you need Evidence Studio integration, please open an issue on GitHub
+        to help prioritize this feature.
     """
 
     evidence_studio_url: str
@@ -538,6 +548,8 @@ class EvidenceStudioProject(BaseEvidenceProject):
 class EvidenceStudioProjectArgs(dg.Model, dg.Resolvable):
     """Arguments for configuring an Evidence Studio project.
 
+    **Coming Soon** - This project type is planned but not yet implemented.
+
     Example:
 
         .. code-block:: yaml
@@ -551,6 +563,10 @@ class EvidenceStudioProjectArgs(dg.Model, dg.Resolvable):
         project_type: Must be "evidence_studio" to use this project type.
         evidence_studio_url: URL of the Evidence Studio workspace.
         evidence_project_git_url: Git URL for the underlying project repository.
+
+    Note:
+        Use the ``local`` project type with a git clone of your Evidence project
+        as a workaround until Evidence Studio integration is implemented.
     """
 
     project_type: Literal["evidence_studio"] = Field(

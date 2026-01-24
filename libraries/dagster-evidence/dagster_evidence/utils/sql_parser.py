@@ -4,7 +4,11 @@ This module provides utilities for parsing SQL queries and extracting
 table references that can be used to determine asset dependencies.
 """
 
+import logging
+
 from dagster._annotations import beta, public
+
+logger = logging.getLogger(__name__)
 
 
 @beta
@@ -78,5 +82,6 @@ def extract_table_references(
                 )
 
         return tables
-    except Exception:
+    except Exception as e:
+        logger.debug(f"Failed to parse SQL: {e}")
         return []
