@@ -64,7 +64,14 @@ class BaseEvidenceProject(dg.ConfigurableResource):
     projects and EvidenceStudioProject for cloud-hosted projects.
 
     Subclass this class to implement custom project types.
+
+    Attributes:
+        enable_source_assets_hiding: When True, hides source assets but preserves
+            their dependencies on the project asset. The actual table dependencies
+            (extracted from SQL via table_deps) are still linked to the project asset.
     """
+
+    enable_source_assets_hiding: bool = False
 
     @public
     @abstractmethod
@@ -99,7 +106,7 @@ class BaseEvidenceProject(dg.ConfigurableResource):
         self,
         evidence_project_data: EvidenceProjectData,
         translator: "DagsterEvidenceTranslator",
-    ) -> list[dg.AssetsDefinition]:
+    ) -> tuple[list[dg.AssetsDefinition], list[dg.AssetKey]]:
         """Load source assets using the translator.
 
         Args:
@@ -107,15 +114,25 @@ class BaseEvidenceProject(dg.ConfigurableResource):
             translator: Translator instance for converting Evidence objects to assets.
 
         Returns:
-            List of AssetsDefinition for all source queries.
+            A tuple containing:
+            - List of AssetsDefinition for source queries (may be empty if hiding is enabled)
+            - List of AssetKeys for project dependencies (source asset keys or table_deps keys)
         """
         source_assets: list[dg.AssetsDefinition] = []
+        project_deps: list[dg.AssetKey] = []
+
         for source_group, source_content in evidence_project_data.sources_by_id.items():
             # Use translator to get source class (validates source type is known)
             source_type = source_content.connection.type
             source_class = translator.get_source_class(source_type)
             # Instantiate source (useful for potential future source-specific logic)
             _source = source_class(source_content)
+
+            # Check if this source type should hide its assets
+            should_hide = (
+                self.enable_source_assets_hiding
+                and source_class.get_hide_source_asset_default()
+            )
 
             # Generate asset specs via translator
             for query in source_content.queries:
@@ -134,9 +151,22 @@ class BaseEvidenceProject(dg.ConfigurableResource):
                     query=query,
                     extracted_data=extracted,
                 )
-                source_assets.append(translator.get_asset_spec(data))
 
-        return source_assets
+                if should_hide:
+                    # Don't create source asset, but add table_deps directly to project_deps
+                    table_deps = extracted.get("table_deps", [])
+                    for ref in table_deps:
+                        if ref.get("table"):
+                            project_deps.append(dg.AssetKey([ref["table"]]))
+                else:
+                    # Create the source asset and add its key to project_deps
+                    # For source data, translator returns AssetsDefinition
+                    asset = translator.get_asset_spec(data)
+                    assert isinstance(asset, dg.AssetsDefinition)
+                    source_assets.append(asset)
+                    project_deps.append(asset.key)
+
+        return source_assets, project_deps
 
     @public
     @abstractmethod
@@ -271,16 +301,20 @@ class LocalEvidenceProject(BaseEvidenceProject):
         evidence_project_data: EvidenceProjectData,
         translator: "DagsterEvidenceTranslator",
     ) -> Sequence[dg.AssetsDefinition | dg.AssetSpec]:
-        # Get source assets via translator
-        source_assets = self.load_source_assets(evidence_project_data, translator)
+        # Get source assets and project dependencies via translator
+        source_assets, source_deps = self.load_source_assets(
+            evidence_project_data, translator
+        )
 
         # Get project asset spec via translator
         project_data = EvidenceProjectTranslatorData(
             project_name=self.get_evidence_project_name(),
             sources_by_id=evidence_project_data.sources_by_id,
-            source_deps=[asset.key for asset in source_assets],
+            source_deps=source_deps,
         )
         project_spec = translator.get_asset_spec(project_data)
+        # For project data, translator returns AssetSpec
+        assert isinstance(project_spec, dg.AssetSpec)
 
         # Create automation condition that triggers when any direct dependency is updated
         # Source assets now have their own automation conditions that cascade updates
@@ -289,10 +323,12 @@ class LocalEvidenceProject(BaseEvidenceProject):
         )
 
         # Create the executable asset using the translated spec
+        # Use the returned source_deps which may contain table_deps directly
+        # when source asset hiding is enabled
         @dg.asset(
             key=project_spec.key,
             kinds=project_spec.kinds or {"evidence"},
-            deps=[each_source_asset.key for each_source_asset in source_assets],
+            deps=source_deps,
             automation_condition=automation_condition,
         )
         def build_and_deploy_evidence_project(
@@ -397,6 +433,8 @@ class LocalEvidenceProjectArgs(dg.Model, dg.Resolvable):
         project_type: Must be "local" to use this project type.
         project_path: Path to the Evidence project directory.
         project_deployment: Deployment configuration for the built project.
+        enable_source_assets_hiding: When True, hides source assets but preserves
+            their dependencies on the project asset.
     """
 
     project_type: Literal["local"] = Field(
@@ -421,6 +459,10 @@ class LocalEvidenceProjectArgs(dg.Model, dg.Resolvable):
             examples=[],
         ),
     ]
+    enable_source_assets_hiding: bool = Field(
+        default=False,
+        description="When True, hides source assets but preserves their dependencies on the project asset.",
+    )
 
 
 @beta
@@ -531,6 +573,9 @@ def resolve_evidence_project(
                 context.resolve_source_relative_path(resolved["project_path"])
             ),
             project_deployment=resolved["project_deployment"],
+            enable_source_assets_hiding=resolved.get(
+                "enable_source_assets_hiding", False
+            ),
         )
     elif project_type == "evidence_studio":
         resolved = resolve_fields(

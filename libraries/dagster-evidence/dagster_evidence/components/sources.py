@@ -288,6 +288,23 @@ class BaseEvidenceProjectSource:
     source_content: SourceContent
 
     @public
+    @classmethod
+    def get_hide_source_asset_default(cls) -> bool:
+        """Return whether this source type should hide its assets by default.
+
+        When enabled via ``enable_source_assets_hiding`` on the project, sources
+        that return True here will not create intermediate source assets. Instead,
+        their table dependencies (extracted from SQL) are linked directly to the
+        project asset.
+
+        Override in subclasses to change the default behavior.
+
+        Returns:
+            True to hide source assets by default, False to show them.
+        """
+        return False
+
+    @public
     @staticmethod
     @abstractmethod
     def get_source_type() -> str:
@@ -338,7 +355,9 @@ class BaseEvidenceProjectSource:
     @public
     @classmethod
     @abstractmethod
-    def get_source_asset(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetsDefinition:
+    def get_source_asset(
+        cls, data: "EvidenceSourceTranslatorData"
+    ) -> dg.AssetsDefinition:
         """Get the AssetsDefinition for a source query.
 
         Each source type must implement this method to define how its
@@ -407,6 +426,10 @@ class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
             filename: ./data/analytics.duckdb
     """
 
+    @classmethod
+    def get_hide_source_asset_default(cls) -> bool:
+        return True
+
     @staticmethod
     def get_source_type() -> str:
         return "duckdb"
@@ -432,7 +455,9 @@ class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
         return {"table_deps": table_refs}
 
     @classmethod
-    def get_source_asset(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetsDefinition:
+    def get_source_asset(
+        cls, data: "EvidenceSourceTranslatorData"
+    ) -> dg.AssetsDefinition:
         """Get the AssetsDefinition for a DuckDB source query."""
         deps = []
         for ref in data.extracted_data.get("table_deps", []):
@@ -450,7 +475,9 @@ class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
             deps=deps,
             automation_condition=dg.AutomationCondition.any_deps_match(
                 dg.AutomationCondition.newly_updated()
-            ) if has_deps else None,
+            )
+            if has_deps
+            else None,
         )
         def _source_asset():
             return dg.MaterializeResult()
@@ -476,6 +503,10 @@ class MotherDuckEvidenceProjectSource(BaseEvidenceProjectSource):
             database: my_database
     """
 
+    @classmethod
+    def get_hide_source_asset_default(cls) -> bool:
+        return True
+
     @staticmethod
     def get_source_type() -> str:
         return "motherduck"
@@ -500,7 +531,9 @@ class MotherDuckEvidenceProjectSource(BaseEvidenceProjectSource):
         return {"table_deps": table_refs}
 
     @classmethod
-    def get_source_asset(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetsDefinition:
+    def get_source_asset(
+        cls, data: "EvidenceSourceTranslatorData"
+    ) -> dg.AssetsDefinition:
         """Get the AssetsDefinition for a MotherDuck source query."""
         deps = []
         for ref in data.extracted_data.get("table_deps", []):
@@ -518,7 +551,9 @@ class MotherDuckEvidenceProjectSource(BaseEvidenceProjectSource):
             deps=deps,
             automation_condition=dg.AutomationCondition.any_deps_match(
                 dg.AutomationCondition.newly_updated()
-            ) if has_deps else None,
+            )
+            if has_deps
+            else None,
         )
         def _source_asset():
             return dg.MaterializeResult()
@@ -544,6 +579,10 @@ class BigQueryEvidenceProjectSource(BaseEvidenceProjectSource):
             credentials: ${GOOGLE_APPLICATION_CREDENTIALS}
     """
 
+    @classmethod
+    def get_hide_source_asset_default(cls) -> bool:
+        return True
+
     @staticmethod
     def get_source_type() -> str:
         return "bigquery"
@@ -568,7 +607,9 @@ class BigQueryEvidenceProjectSource(BaseEvidenceProjectSource):
         return {"table_deps": table_refs}
 
     @classmethod
-    def get_source_asset(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetsDefinition:
+    def get_source_asset(
+        cls, data: "EvidenceSourceTranslatorData"
+    ) -> dg.AssetsDefinition:
         """Get the AssetsDefinition for a BigQuery source query."""
         deps = []
         for ref in data.extracted_data.get("table_deps", []):
@@ -586,7 +627,9 @@ class BigQueryEvidenceProjectSource(BaseEvidenceProjectSource):
             deps=deps,
             automation_condition=dg.AutomationCondition.any_deps_match(
                 dg.AutomationCondition.newly_updated()
-            ) if has_deps else None,
+            )
+            if has_deps
+            else None,
         )
         def _source_asset():
             return dg.MaterializeResult()
@@ -645,7 +688,9 @@ class GSheetsEvidenceProjectSource(BaseEvidenceProjectSource):
         return {"sheets_config": sheets_config}
 
     @classmethod
-    def get_source_asset(cls, data: "EvidenceSourceTranslatorData") -> dg.AssetsDefinition:
+    def get_source_asset(
+        cls, data: "EvidenceSourceTranslatorData"
+    ) -> dg.AssetsDefinition:
         """Get the AssetsDefinition for a Google Sheets source.
 
         Parses the query name to extract sheet_name and optional page_name,

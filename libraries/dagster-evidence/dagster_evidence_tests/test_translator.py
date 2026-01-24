@@ -132,9 +132,11 @@ class TestGetAssetSpecForSource:
             source_group="my_source_group",
             query=source_content.queries[0],
         )
-        spec = translator.get_asset_spec(data)
+        asset_def = translator.get_asset_spec(data)
+        assert isinstance(asset_def, dg.AssetsDefinition)
 
-        assert spec.group_name == "my_source_group"
+        # AssetsDefinition stores group names by key
+        assert asset_def.group_names_by_key[asset_def.key] == "my_source_group"
 
     def test_source_asset_spec_kinds(self):
         """Verify source asset spec has correct kinds."""
@@ -147,8 +149,11 @@ class TestGetAssetSpecForSource:
             source_group="needful_things",
             query=source_content.queries[0],
         )
-        spec = translator.get_asset_spec(data)
+        asset_def = translator.get_asset_spec(data)
+        assert isinstance(asset_def, dg.AssetsDefinition)
 
+        # Get the spec from the AssetsDefinition to check kinds
+        spec = list(asset_def.specs)[0]
         assert "evidence" in spec.kinds
         assert "source" in spec.kinds
         assert "duckdb" in spec.kinds
@@ -167,8 +172,11 @@ class TestGetAssetSpecForSource:
             source_group="analytics",
             query=source_content.queries[0],
         )
-        spec = translator.get_asset_spec(data)
+        asset_def = translator.get_asset_spec(data)
+        assert isinstance(asset_def, dg.AssetsDefinition)
 
+        # Get the spec from the AssetsDefinition to check kinds
+        spec = list(asset_def.specs)[0]
         assert "motherduck" in spec.kinds
 
     def test_bigquery_source_asset_spec_kinds(self):
@@ -187,8 +195,11 @@ class TestGetAssetSpecForSource:
             source_group="warehouse",
             query=source_content.queries[0],
         )
-        spec = translator.get_asset_spec(data)
+        asset_def = translator.get_asset_spec(data)
+        assert isinstance(asset_def, dg.AssetsDefinition)
 
+        # Get the spec from the AssetsDefinition to check kinds
+        spec = list(asset_def.specs)[0]
         assert "bigquery" in spec.kinds
 
 
@@ -219,6 +230,7 @@ class TestGetAssetSpecForProject:
             source_deps=[],
         )
         spec = translator.get_asset_spec(data)
+        assert isinstance(spec, dg.AssetSpec)
 
         assert "evidence" in spec.kinds
 
@@ -232,6 +244,7 @@ class TestGetAssetSpecForProject:
             source_deps=source_deps,
         )
         spec = translator.get_asset_spec(data)
+        assert isinstance(spec, dg.AssetSpec)
 
         # spec.deps returns AssetDep objects, so extract the asset keys
         dep_keys = [dep.asset_key for dep in spec.deps]
@@ -284,16 +297,30 @@ class TestCustomTranslator:
         assert translator.get_source_class("duckdb") == DuckdbEvidenceProjectSource
 
     def test_custom_translator_overrides_get_asset_spec(self):
-        """Verify custom translator can override get_asset_spec."""
+        """Verify custom translator can override get_asset_spec for sources.
+
+        Note: Source assets return AssetsDefinition, so customization is done
+        by returning a new asset definition rather than modifying an AssetSpec.
+        """
 
         class CustomTranslator(DagsterEvidenceTranslator):
             def get_asset_spec(self, data):
-                spec = super().get_asset_spec(data)
                 if isinstance(data, EvidenceSourceTranslatorData):
-                    return spec.replace_attributes(
-                        key=spec.key.with_prefix("custom_prefix"),
+                    # For source data, create a custom asset with modified key
+                    key = dg.AssetKey(
+                        ["custom_prefix", data.source_group, data.query.name]
                     )
-                return spec
+
+                    @dg.asset(
+                        key=key,
+                        group_name=data.source_group,
+                        kinds={"evidence", "source", "custom"},
+                    )
+                    def _custom_source_asset():
+                        return dg.MaterializeResult()
+
+                    return _custom_source_asset
+                return super().get_asset_spec(data)
 
         translator = CustomTranslator()
         source_content = SourceContent.from_dict(
@@ -304,21 +331,25 @@ class TestCustomTranslator:
             source_group="needful_things",
             query=source_content.queries[0],
         )
-        spec = translator.get_asset_spec(data)
+        asset_def = translator.get_asset_spec(data)
 
-        assert spec.key == dg.AssetKey(["custom_prefix", "needful_things", "orders"])
+        assert asset_def.key == dg.AssetKey(
+            ["custom_prefix", "needful_things", "orders"]
+        )
 
     def test_custom_translator_modifies_project_spec(self):
         """Verify custom translator can modify project asset spec."""
 
         class CustomTranslator(DagsterEvidenceTranslator):
             def get_asset_spec(self, data):
-                spec = super().get_asset_spec(data)
+                result = super().get_asset_spec(data)
                 if isinstance(data, EvidenceProjectTranslatorData):
-                    return spec.replace_attributes(
-                        key=spec.key.with_prefix("dashboards"),
+                    # For project data, result is always AssetSpec
+                    assert isinstance(result, dg.AssetSpec)
+                    return result.replace_attributes(
+                        key=result.key.with_prefix("dashboards"),
                     )
-                return spec
+                return result
 
         translator = CustomTranslator()
         data = EvidenceProjectTranslatorData(

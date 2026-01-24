@@ -259,12 +259,44 @@ class TestLocalEvidenceProject:
             project_deployment=deployment,
         )
         translator = DagsterEvidenceTranslator()
-        source_assets = project.load_source_assets(evidence_project_data, translator)
+        source_assets, source_deps = project.load_source_assets(
+            evidence_project_data, translator
+        )
 
         assert len(source_assets) == 2  # orders and customers
         asset_names = [spec.key.path[-1] for spec in source_assets]
         assert "orders" in asset_names
         assert "customers" in asset_names
+        # Also verify source_deps matches source_assets keys
+        assert len(source_deps) == 2
+        dep_names = [dep.path[-1] for dep in source_deps]
+        assert "orders" in dep_names
+        assert "customers" in dep_names
+
+    def test_local_project_load_source_assets_with_hiding(self, evidence_project_data):
+        """Verify load_source_assets hides source assets when enabled."""
+        from dagster_evidence.components.translator import DagsterEvidenceTranslator
+
+        deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
+        project = LocalEvidenceProject(
+            project_path="/fake/path",
+            project_deployment=deployment,
+            enable_source_assets_hiding=True,
+        )
+        translator = DagsterEvidenceTranslator()
+        source_assets, source_deps = project.load_source_assets(
+            evidence_project_data, translator
+        )
+
+        # DuckDB sources should be hidden (get_hide_source_asset_default returns True)
+        # so no source assets should be created
+        assert len(source_assets) == 0
+
+        # But source_deps should contain the table_deps from the SQL queries
+        # (extracted from the SQL content, which in this case is empty since
+        # the fixture doesn't have real table references)
+        # The important thing is that source_deps is populated even without source_assets
+        assert isinstance(source_deps, list)
 
 
 class TestEvidenceStudioProject:

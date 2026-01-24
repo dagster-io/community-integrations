@@ -33,6 +33,7 @@ Need additional source types? You can extend the translator to add custom source
 - try out to put metadata in a source/project and read it in the translator for example dagster group where this project should be
 - integrate sensors in motherduck and gsheets source to detect changes in the datasets
 - add motherduck kind to dagster
+- hide sources layer and connect direct evidence project with source tables 
 
 
  
