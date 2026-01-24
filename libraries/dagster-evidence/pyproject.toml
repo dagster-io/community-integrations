@@ -12,7 +12,10 @@ dynamic = ["version"]
 [project.optional-dependencies]
 github-pages = ["gitpython>=3.1.0"]
 sql = ["sqlglot>=26.0.0"]
-all = ["gitpython>=3.1.0", "sqlglot>=26.0.0"]
+duckdb = ["duckdb>=0.10.0"]
+bigquery = ["google-cloud-bigquery>=3.0.0"]
+gsheets = ["google-api-python-client>=2.0.0", "google-auth>=2.0.0"]
+all = ["gitpython>=3.1.0", "sqlglot>=26.0.0", "duckdb>=0.10.0", "google-cloud-bigquery>=3.0.0", "google-api-python-client>=2.0.0", "google-auth>=2.0.0"]
 test = [
     "pytest",
     "pytest-mock",
@@ -26,6 +29,10 @@ dev-dependencies = [
     "pyright>=1.1.386",
     "gitpython>=3.1.0",
     "sqlglot>=26.0.0",
+    "duckdb>=0.10.0",
+    "google-cloud-bigquery>=3.0.0",
+    "google-api-python-client>=2.0.0",
+    "google-auth>=2.0.0",
 ]
 
 [build-system]

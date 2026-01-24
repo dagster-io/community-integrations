@@ -101,6 +101,7 @@ class TestEvidenceProjectComponentV2:
         project = LocalEvidenceProject(
             project_path=str(mock_evidence_project),
             project_deployment=deployment,
+            enable_source_assets_hiding=False,  # Disable hiding to see source assets
         )
 
         component = EvidenceProjectComponentV2(evidence_project=project)
@@ -162,6 +163,7 @@ class TestComponentAssetGeneration:
         project = LocalEvidenceProject(
             project_path=str(mock_evidence_project),
             project_deployment=deployment,
+            enable_source_assets_hiding=False,  # Disable hiding to see source assets
         )
 
         component = EvidenceProjectComponentV2(evidence_project=project)
@@ -197,6 +199,7 @@ class TestComponentAssetGeneration:
         project = LocalEvidenceProject(
             project_path=str(mock_evidence_project),
             project_deployment=deployment,
+            enable_source_assets_hiding=False,  # Disable hiding to see source assets
         )
 
         component = EvidenceProjectComponentV2(evidence_project=project)
@@ -234,6 +237,7 @@ class TestComponentAssetGeneration:
         project = LocalEvidenceProject(
             project_path=str(mock_evidence_project),
             project_deployment=deployment,
+            enable_source_assets_hiding=False,  # Disable hiding to see source assets
         )
 
         component = EvidenceProjectComponentV2(evidence_project=project)

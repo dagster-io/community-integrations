@@ -264,7 +264,7 @@ class GithubPagesEvidenceProjectDeployment(BaseEvidenceProjectDeployment):
         except ImportError:
             raise ImportError(
                 "GitPython is required for GitHub Pages deployment. "
-                "Install it with: uv pip install dagster-evidence[github-pages]"
+                "Install it with: pip install dagster-evidence[github-pages]"
             ) from None
 
         if not os.path.isdir(evidence_project_build_path):

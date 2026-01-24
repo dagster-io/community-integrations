@@ -172,12 +172,13 @@ class EvidenceProjectComponentV2(StateBackedComponent, Resolvable):
             state_path.read_text(), EvidenceProjectData
         )
 
-        assets = self.evidence_project.load_evidence_project_assets(
+        assets, sensors = self.evidence_project.load_evidence_project_assets(
             evidence_project_data,
             translator=self._base_translator,
         )
 
         return dg.Definitions(
             assets=assets,
+            sensors=sensors,
             resources={"pipes_subprocess_client": dg.PipesSubprocessClient()},
         )

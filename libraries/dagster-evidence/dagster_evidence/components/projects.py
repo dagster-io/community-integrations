@@ -93,7 +93,9 @@ class BaseEvidenceProject(dg.ConfigurableResource):
         self,
         evidence_project_data: EvidenceProjectData,
         translator: "DagsterEvidenceTranslator",
-    ) -> Sequence[dg.AssetsDefinition | dg.AssetSpec]:
+    ) -> tuple[
+        Sequence[dg.AssetsDefinition | dg.AssetSpec], Sequence[dg.SensorDefinition]
+    ]:
         """Load and build Dagster assets for this Evidence project.
 
         Args:
@@ -101,7 +103,9 @@ class BaseEvidenceProject(dg.ConfigurableResource):
             translator: Translator instance for converting Evidence objects to AssetSpecs.
 
         Returns:
-            A sequence of AssetSpecs and AssetsDefinitions.
+            A tuple containing:
+            - A sequence of AssetSpecs and AssetsDefinitions
+            - A sequence of SensorDefinitions for source change detection
         """
         raise NotImplementedError()
 
@@ -110,7 +114,7 @@ class BaseEvidenceProject(dg.ConfigurableResource):
         self,
         evidence_project_data: EvidenceProjectData,
         translator: "DagsterEvidenceTranslator",
-    ) -> tuple[list[dg.AssetsDefinition], list[dg.AssetKey]]:
+    ) -> tuple[list[dg.AssetsDefinition], list[dg.AssetKey], list[dg.SensorDefinition]]:
         """Load source assets using the translator.
 
         Args:
@@ -121,9 +125,11 @@ class BaseEvidenceProject(dg.ConfigurableResource):
             A tuple containing:
             - List of AssetsDefinition for source queries (may be empty if hiding is enabled)
             - List of AssetKeys for project dependencies (source asset keys or table_deps keys)
+            - List of SensorDefinition for source change detection
         """
         source_assets: list[dg.AssetsDefinition] = []
         project_deps: list[dg.AssetKey] = []
+        source_sensors: list[dg.SensorDefinition] = []
 
         for source_group, source_content in evidence_project_data.sources_by_id.items():
             # Use translator to get source class (validates source type is known)
@@ -170,7 +176,18 @@ class BaseEvidenceProject(dg.ConfigurableResource):
                     source_assets.append(asset)
                     project_deps.append(asset.key)
 
-        return source_assets, project_deps
+                    # Check if we should create a sensor for this source
+                    should_create_sensor = (
+                        self.enable_source_sensors
+                        and source_class.get_source_sensor_enabled_default()
+                    )
+
+                    if should_create_sensor:
+                        sensor = source_class.get_source_sensor(data, asset.key)
+                        if sensor is not None:
+                            source_sensors.append(sensor)
+
+        return source_assets, project_deps, source_sensors
 
     @public
     @abstractmethod
@@ -304,9 +321,11 @@ class LocalEvidenceProject(BaseEvidenceProject):
         self,
         evidence_project_data: EvidenceProjectData,
         translator: "DagsterEvidenceTranslator",
-    ) -> Sequence[dg.AssetsDefinition | dg.AssetSpec]:
-        # Get source assets and project dependencies via translator
-        source_assets, source_deps = self.load_source_assets(
+    ) -> tuple[
+        Sequence[dg.AssetsDefinition | dg.AssetSpec], Sequence[dg.SensorDefinition]
+    ]:
+        # Get source assets, project dependencies, and sensors via translator
+        source_assets, source_deps, source_sensors = self.load_source_assets(
             evidence_project_data, translator
         )
 
@@ -398,7 +417,7 @@ class LocalEvidenceProject(BaseEvidenceProject):
                 )
                 return dg.MaterializeResult(metadata={"status": "success"})
 
-        return list(source_assets) + [build_and_deploy_evidence_project]
+        return list(source_assets) + [build_and_deploy_evidence_project], source_sensors
 
     def _run_cmd(
         self,
@@ -467,6 +486,10 @@ class LocalEvidenceProjectArgs(dg.Model, dg.Resolvable):
         default=True,
         description="When True, hides source assets but preserves their dependencies on the project asset.",
     )
+    enable_source_sensors: bool = Field(
+        default=False,
+        description="When True, creates sensors for source assets to detect changes in underlying data sources.",
+    )
 
 
 @beta
@@ -504,7 +527,9 @@ class EvidenceStudioProject(BaseEvidenceProject):
         self,
         evidence_project_data: EvidenceProjectData,
         translator: "DagsterEvidenceTranslator",
-    ) -> Sequence[dg.AssetsDefinition | dg.AssetSpec]:
+    ) -> tuple[
+        Sequence[dg.AssetsDefinition | dg.AssetSpec], Sequence[dg.SensorDefinition]
+    ]:
         raise NotImplementedError()
 
 
@@ -580,6 +605,7 @@ def resolve_evidence_project(
             enable_source_assets_hiding=resolved.get(
                 "enable_source_assets_hiding", False
             ),
+            enable_source_sensors=resolved.get("enable_source_sensors", False),
         )
     elif project_type == "evidence_studio":
         resolved = resolve_fields(

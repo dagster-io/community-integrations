@@ -305,6 +305,44 @@ class BaseEvidenceProjectSource:
         return False
 
     @public
+    @classmethod
+    def get_source_sensor_enabled_default(cls) -> bool:
+        """Return whether sensors are enabled by default for this source type.
+
+        When enabled via ``enable_source_sensors`` on the project, sources
+        that return True here will have sensors created to detect changes
+        in the underlying data.
+
+        Override in subclasses to enable sensor support.
+
+        Returns:
+            True to enable sensors by default, False to disable them.
+        """
+        return False
+
+    @public
+    @classmethod
+    def get_source_sensor(
+        cls,
+        data: "EvidenceSourceTranslatorData",
+        asset_key: dg.AssetKey,
+    ) -> dg.SensorDefinition | None:
+        """Get a sensor for this source to detect data changes.
+
+        Override in subclasses to implement source-specific change detection.
+        The sensor should detect changes in the underlying data and trigger
+        the source asset materialization when changes are detected.
+
+        Args:
+            data: The translator data containing source and query information.
+            asset_key: The asset key of the source asset to trigger.
+
+        Returns:
+            A SensorDefinition that monitors for changes, or None if not supported.
+        """
+        return None
+
+    @public
     @staticmethod
     @abstractmethod
     def get_source_type() -> str:
@@ -430,9 +468,84 @@ class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
     def get_hide_source_asset_default(cls) -> bool:
         return True
 
+    @classmethod
+    def get_source_sensor_enabled_default(cls) -> bool:
+        return True
+
     @staticmethod
     def get_source_type() -> str:
         return "duckdb"
+
+    @classmethod
+    def get_source_sensor(
+        cls,
+        data: "EvidenceSourceTranslatorData",
+        asset_key: dg.AssetKey,
+    ) -> dg.SensorDefinition | None:
+        """Get a sensor that monitors DuckDB tables for changes.
+
+        Uses information_schema queries with read-only connection to detect
+        changes in table row counts.
+        """
+        import json
+
+        options = data.source_content.connection.extra.get("options", {})
+        db_path = options.get("filename")
+        if not db_path:
+            return None
+
+        table_deps = data.extracted_data.get("table_deps", [])
+        if not table_deps:
+            return None
+
+        source_group = data.source_group
+        query_name = data.query.name
+        sensor_name = f"{source_group}_{query_name}_sensor"
+
+        @dg.sensor(name=sensor_name, asset_selection=[asset_key])
+        def duckdb_sensor(context: dg.SensorEvaluationContext):
+            try:
+                import duckdb
+            except ImportError:
+                raise ImportError(
+                    "duckdb is required for DuckDB sensors. "
+                    "Install it with: pip install dagster-evidence[duckdb]"
+                ) from None
+
+            try:
+                conn = duckdb.connect(db_path, read_only=True)
+            except Exception as e:
+                context.log.warning(f"Could not connect to DuckDB: {e}")
+                return
+
+            try:
+                table_counts: dict[str, int] = {}
+                for ref in table_deps:
+                    table_name = ref.get("table")
+                    schema = ref.get("schema", "main")
+                    if table_name:
+                        try:
+                            result = conn.execute(f"""
+                                SELECT estimated_size
+                                FROM duckdb_tables()
+                                WHERE table_name = '{table_name}' AND schema_name = '{schema}'
+                            """).fetchone()
+                            table_counts[f"{schema}.{table_name}"] = (
+                                result[0] if result else 0
+                            )
+                        except Exception:
+                            table_counts[f"{schema}.{table_name}"] = 0
+            finally:
+                conn.close()
+
+            cursor = json.loads(context.cursor) if context.cursor else {}
+            last_counts = cursor.get("counts", {})
+
+            if table_counts != last_counts:
+                context.update_cursor(json.dumps({"counts": table_counts}))
+                yield dg.RunRequest(asset_selection=[asset_key])
+
+        return duckdb_sensor
 
     @classmethod
     def extract_data_from_source(
@@ -507,9 +620,90 @@ class MotherDuckEvidenceProjectSource(BaseEvidenceProjectSource):
     def get_hide_source_asset_default(cls) -> bool:
         return True
 
+    @classmethod
+    def get_source_sensor_enabled_default(cls) -> bool:
+        return True
+
     @staticmethod
     def get_source_type() -> str:
         return "motherduck"
+
+    @classmethod
+    def get_source_sensor(
+        cls,
+        data: "EvidenceSourceTranslatorData",
+        asset_key: dg.AssetKey,
+    ) -> dg.SensorDefinition | None:
+        """Get a sensor that monitors MotherDuck tables for changes.
+
+        Uses information_schema queries with read-only connection to detect
+        changes in table row counts.
+        """
+        import json
+        import os
+
+        options = data.source_content.connection.extra.get("options", {})
+        database = options.get("database")
+        token = options.get("token") or os.environ.get("MOTHERDUCK_TOKEN")
+
+        if not database or not token:
+            return None
+
+        table_deps = data.extracted_data.get("table_deps", [])
+        if not table_deps:
+            return None
+
+        source_group = data.source_group
+        query_name = data.query.name
+        sensor_name = f"{source_group}_{query_name}_sensor"
+
+        @dg.sensor(name=sensor_name, asset_selection=[asset_key])
+        def motherduck_sensor(context: dg.SensorEvaluationContext):
+            try:
+                import duckdb
+            except ImportError:
+                raise ImportError(
+                    "duckdb is required for MotherDuck sensors. "
+                    "Install it with: pip install dagster-evidence[duckdb]"
+                ) from None
+
+            md_token = os.environ.get("MOTHERDUCK_TOKEN", token)
+            connection_string = f"md:{database}?motherduck_token={md_token}"
+
+            try:
+                conn = duckdb.connect(connection_string, read_only=True)
+            except Exception as e:
+                context.log.warning(f"Could not connect to MotherDuck: {e}")
+                return
+
+            try:
+                table_counts: dict[str, int] = {}
+                for ref in table_deps:
+                    table_name = ref.get("table")
+                    schema = ref.get("schema", "main")
+                    if table_name:
+                        try:
+                            result = conn.execute(f"""
+                                SELECT estimated_size
+                                FROM duckdb_tables()
+                                WHERE table_name = '{table_name}' AND schema_name = '{schema}'
+                            """).fetchone()
+                            table_counts[f"{schema}.{table_name}"] = (
+                                result[0] if result else 0
+                            )
+                        except Exception:
+                            table_counts[f"{schema}.{table_name}"] = 0
+            finally:
+                conn.close()
+
+            cursor = json.loads(context.cursor) if context.cursor else {}
+            last_counts = cursor.get("counts", {})
+
+            if table_counts != last_counts:
+                context.update_cursor(json.dumps({"counts": table_counts}))
+                yield dg.RunRequest(asset_selection=[asset_key])
+
+        return motherduck_sensor
 
     @classmethod
     def extract_data_from_source(
@@ -583,9 +777,77 @@ class BigQueryEvidenceProjectSource(BaseEvidenceProjectSource):
     def get_hide_source_asset_default(cls) -> bool:
         return True
 
+    @classmethod
+    def get_source_sensor_enabled_default(cls) -> bool:
+        return True
+
     @staticmethod
     def get_source_type() -> str:
         return "bigquery"
+
+    @classmethod
+    def get_source_sensor(
+        cls,
+        data: "EvidenceSourceTranslatorData",
+        asset_key: dg.AssetKey,
+    ) -> dg.SensorDefinition | None:
+        """Get a sensor that monitors BigQuery tables for changes.
+
+        Uses BigQuery API to check table.modified timestamps.
+        """
+        import json
+
+        options = data.source_content.connection.extra.get("options", {})
+        project_id = options.get("project_id")
+
+        if not project_id:
+            return None
+
+        table_deps = data.extracted_data.get("table_deps", [])
+        if not table_deps:
+            return None
+
+        source_group = data.source_group
+        query_name = data.query.name
+        sensor_name = f"{source_group}_{query_name}_sensor"
+
+        @dg.sensor(name=sensor_name, asset_selection=[asset_key])
+        def bigquery_sensor(context: dg.SensorEvaluationContext):
+            try:
+                from google.cloud import bigquery
+            except ImportError:
+                raise ImportError(
+                    "google-cloud-bigquery is required for BigQuery sensors. "
+                    "Install it with: pip install dagster-evidence[bigquery]"
+                ) from None
+
+            try:
+                client = bigquery.Client(project=project_id)
+            except Exception as e:
+                context.log.warning(f"Could not connect to BigQuery: {e}")
+                return
+
+            mod_times: dict[str, str] = {}
+            for ref in table_deps:
+                table_name = ref.get("table")
+                dataset = ref.get("schema")
+                if table_name and dataset:
+                    try:
+                        table_ref = f"{project_id}.{dataset}.{table_name}"
+                        table = client.get_table(table_ref)
+                        if table.modified:
+                            mod_times[table_ref] = table.modified.isoformat()
+                    except Exception:
+                        pass
+
+            cursor = json.loads(context.cursor) if context.cursor else {}
+            last_mod_times = cursor.get("mod_times", {})
+
+            if mod_times != last_mod_times:
+                context.update_cursor(json.dumps({"mod_times": mod_times}))
+                yield dg.RunRequest(asset_selection=[asset_key])
+
+        return bigquery_sensor
 
     @classmethod
     def extract_data_from_source(
@@ -671,9 +933,93 @@ class GSheetsEvidenceProjectSource(BaseEvidenceProjectSource):
         - ``[source_group, "inventory"]``
     """
 
+    @classmethod
+    def get_source_sensor_enabled_default(cls) -> bool:
+        return True
+
     @staticmethod
     def get_source_type() -> str:
         return "gsheets"
+
+    @classmethod
+    def get_source_sensor(
+        cls,
+        data: "EvidenceSourceTranslatorData",
+        asset_key: dg.AssetKey,
+    ) -> dg.SensorDefinition | None:
+        """Get a sensor that monitors Google Sheets for changes.
+
+        Uses Google Drive API to check modifiedTime and version.
+        """
+        import json
+
+        options = data.source_content.connection.extra.get("options", {})
+        service_account_path = options.get("service_account_path")
+        sheets_config = data.source_content.connection.extra.get("sheets", {})
+
+        # Parse query.name to get sheet_name
+        parts = data.query.name.split("/", 1)
+        sheet_name = parts[0]
+
+        sheet_config = sheets_config.get(sheet_name, {})
+        sheet_id = sheet_config.get("id") if isinstance(sheet_config, dict) else None
+
+        if not sheet_id:
+            return None
+
+        source_group = data.source_group
+        query_name = data.query.name.replace("/", "_")
+        sensor_name = f"{source_group}_{query_name}_sensor"
+
+        @dg.sensor(name=sensor_name, asset_selection=[asset_key])
+        def gsheets_sensor(context: dg.SensorEvaluationContext):
+            try:
+                from google.oauth2 import service_account
+                from googleapiclient.discovery import build
+            except ImportError:
+                raise ImportError(
+                    "google-api-python-client is required for Google Sheets sensors. "
+                    "Install it with: pip install dagster-evidence[gsheets]"
+                ) from None
+
+            try:
+                if service_account_path:
+                    credentials = service_account.Credentials.from_service_account_file(
+                        service_account_path,
+                        scopes=["https://www.googleapis.com/auth/drive.readonly"],
+                    )
+                else:
+                    # Use default credentials
+                    import google.auth
+
+                    credentials, _ = google.auth.default(
+                        scopes=["https://www.googleapis.com/auth/drive.readonly"]
+                    )
+
+                service = build("drive", "v3", credentials=credentials)
+                file_metadata = (
+                    service.files()
+                    .get(fileId=sheet_id, fields="modifiedTime,version")
+                    .execute()
+                )
+
+                current_state = {
+                    "modified_time": file_metadata.get("modifiedTime"),
+                    "version": file_metadata.get("version"),
+                }
+            except Exception as e:
+                context.log.warning(f"Could not fetch Google Sheet metadata: {e}")
+                return
+
+            cursor = json.loads(context.cursor) if context.cursor else {}
+
+            if current_state.get("modified_time") != cursor.get(
+                "modified_time"
+            ) or current_state.get("version") != cursor.get("version"):
+                context.update_cursor(json.dumps(current_state))
+                yield dg.RunRequest(asset_selection=[asset_key])
+
+        return gsheets_sensor
 
     @classmethod
     def extract_data_from_source(

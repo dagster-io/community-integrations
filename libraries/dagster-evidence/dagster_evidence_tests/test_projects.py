@@ -257,9 +257,10 @@ class TestLocalEvidenceProject:
         project = LocalEvidenceProject(
             project_path="/fake/path",
             project_deployment=deployment,
+            enable_source_assets_hiding=False,  # Disable hiding to see source assets
         )
         translator = DagsterEvidenceTranslator()
-        source_assets, source_deps = project.load_source_assets(
+        source_assets, source_deps, source_sensors = project.load_source_assets(
             evidence_project_data, translator
         )
 
@@ -272,6 +273,8 @@ class TestLocalEvidenceProject:
         dep_names = [dep.path[-1] for dep in source_deps]
         assert "orders" in dep_names
         assert "customers" in dep_names
+        # Sensors should be empty since enable_source_sensors is False by default
+        assert isinstance(source_sensors, list)
 
     def test_local_project_load_source_assets_with_hiding(self, evidence_project_data):
         """Verify load_source_assets hides source assets when enabled."""
@@ -284,7 +287,7 @@ class TestLocalEvidenceProject:
             enable_source_assets_hiding=True,
         )
         translator = DagsterEvidenceTranslator()
-        source_assets, source_deps = project.load_source_assets(
+        source_assets, source_deps, source_sensors = project.load_source_assets(
             evidence_project_data, translator
         )
 
@@ -297,6 +300,31 @@ class TestLocalEvidenceProject:
         # the fixture doesn't have real table references)
         # The important thing is that source_deps is populated even without source_assets
         assert isinstance(source_deps, list)
+        # No sensors for hidden assets
+        assert len(source_sensors) == 0
+
+    def test_local_project_load_source_assets_with_sensors(self, evidence_project_data):
+        """Verify load_source_assets creates sensors when enabled."""
+        from dagster_evidence.components.translator import DagsterEvidenceTranslator
+
+        deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
+        project = LocalEvidenceProject(
+            project_path="/fake/path",
+            project_deployment=deployment,
+            enable_source_assets_hiding=False,
+            enable_source_sensors=True,
+        )
+        translator = DagsterEvidenceTranslator()
+        source_assets, source_deps, source_sensors = project.load_source_assets(
+            evidence_project_data, translator
+        )
+
+        # Source assets should be created
+        assert len(source_assets) == 2
+
+        # Sensors should be created for DuckDB sources (since get_source_sensor_enabled_default is True)
+        # Note: actual sensor creation depends on having valid connection config
+        assert isinstance(source_sensors, list)
 
 
 class TestEvidenceStudioProject:

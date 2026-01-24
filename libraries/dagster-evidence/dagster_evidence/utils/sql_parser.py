@@ -58,7 +58,7 @@ def extract_table_references(
     except ImportError:
         raise ImportError(
             "sqlglot is required for SQL table reference extraction. "
-            "Install it with: uv pip install dagster-evidence[sql]"
+            "Install it with: pip install dagster-evidence[sql]"
         ) from None
 
     try:
