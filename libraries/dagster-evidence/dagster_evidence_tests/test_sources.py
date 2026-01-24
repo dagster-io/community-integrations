@@ -437,3 +437,214 @@ class TestGSheetsSourceType:
             connection
         )
         assert queries == []
+
+
+class TestSourceDagsterMetadata:
+    """Tests for per-source Dagster metadata configuration."""
+
+    def test_metadata_parsing_full(self):
+        """Verify all metadata fields are parsed from connection."""
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "duckdb",
+                    "options": {"filename": "test.db"},
+                    "meta": {
+                        "dagster": {
+                            "create_source_sensor": False,
+                            "hide_source_asset": False,
+                            "group_name": "custom_analytics",
+                        }
+                    },
+                },
+                "queries": [],
+            }
+        )
+        meta = source_content.connection.dagster_metadata
+        assert meta.create_source_sensor is False
+        assert meta.hide_source_asset is False
+        assert meta.group_name == "custom_analytics"
+
+    def test_metadata_parsing_partial(self):
+        """Verify partial metadata is parsed correctly (other fields None)."""
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "duckdb",
+                    "options": {"filename": "test.db"},
+                    "meta": {
+                        "dagster": {
+                            "group_name": "my_group",
+                        }
+                    },
+                },
+                "queries": [],
+            }
+        )
+        meta = source_content.connection.dagster_metadata
+        assert meta.create_source_sensor is None
+        assert meta.hide_source_asset is None
+        assert meta.group_name == "my_group"
+
+    def test_metadata_parsing_empty(self):
+        """Verify missing metadata results in all None values."""
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "duckdb",
+                    "options": {"filename": "test.db"},
+                },
+                "queries": [],
+            }
+        )
+        meta = source_content.connection.dagster_metadata
+        assert meta.create_source_sensor is None
+        assert meta.hide_source_asset is None
+        assert meta.group_name is None
+
+    def test_effective_group_name_with_override(self):
+        """Verify effective_group_name returns override when set."""
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "duckdb",
+                    "meta": {
+                        "dagster": {
+                            "group_name": "override_group",
+                        }
+                    },
+                },
+                "queries": [{"name": "test", "content": "SELECT 1"}],
+            }
+        )
+        data = EvidenceSourceTranslatorData(
+            source_content=source_content,
+            source_group="original_folder_name",
+            query=source_content.queries[0],
+        )
+        assert data.effective_group_name == "override_group"
+
+    def test_effective_group_name_without_override(self):
+        """Verify effective_group_name returns source_group when no override."""
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "duckdb",
+                },
+                "queries": [{"name": "test", "content": "SELECT 1"}],
+            }
+        )
+        data = EvidenceSourceTranslatorData(
+            source_content=source_content,
+            source_group="my_source_folder",
+            query=source_content.queries[0],
+        )
+        assert data.effective_group_name == "my_source_folder"
+
+    def test_meta_section_excluded_from_extra(self):
+        """Verify meta section is not included in connection.extra."""
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "duckdb",
+                    "options": {"filename": "test.db"},
+                    "meta": {
+                        "dagster": {"group_name": "test"},
+                    },
+                },
+                "queries": [],
+            }
+        )
+        assert "meta" not in source_content.connection.extra
+        assert "options" in source_content.connection.extra
+
+
+class TestSourceInstanceMethods:
+    """Tests for source instance methods that check metadata overrides."""
+
+    def test_get_hide_source_asset_uses_metadata_override(self):
+        """Verify get_hide_source_asset returns metadata value when set."""
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "duckdb",
+                    "meta": {
+                        "dagster": {
+                            "hide_source_asset": False,  # Override DuckDB default of True
+                        }
+                    },
+                },
+                "queries": [],
+            }
+        )
+        source = DuckdbEvidenceProjectSource(source_content)
+        # DuckDB default is True, but metadata overrides to False
+        assert source.get_hide_source_asset() is False
+
+    def test_get_hide_source_asset_falls_back_to_default(self):
+        """Verify get_hide_source_asset uses class default when metadata is None."""
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "duckdb",
+                },
+                "queries": [],
+            }
+        )
+        source = DuckdbEvidenceProjectSource(source_content)
+        # Should use class default (True for DuckDB)
+        assert source.get_hide_source_asset() is True
+
+    def test_get_source_sensor_enabled_uses_metadata_override(self):
+        """Verify get_source_sensor_enabled returns metadata value when set."""
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "duckdb",
+                    "meta": {
+                        "dagster": {
+                            "create_source_sensor": False,  # Override DuckDB default of True
+                        }
+                    },
+                },
+                "queries": [],
+            }
+        )
+        source = DuckdbEvidenceProjectSource(source_content)
+        # DuckDB default is True, but metadata overrides to False
+        assert source.get_source_sensor_enabled() is False
+
+    def test_get_source_sensor_enabled_falls_back_to_default(self):
+        """Verify get_source_sensor_enabled uses class default when metadata is None."""
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "gsheets",
+                    "sheets": {},
+                },
+                "queries": [],
+            }
+        )
+        source = GSheetsEvidenceProjectSource(source_content)
+        # Should use class default (True for gsheets)
+        assert source.get_source_sensor_enabled() is True
+
+    def test_gsheets_hide_override_to_true(self):
+        """Verify gsheets can override hide_source_asset to True."""
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "gsheets",
+                    "sheets": {},
+                    "meta": {
+                        "dagster": {
+                            "hide_source_asset": True,  # Override gsheets default of False
+                        }
+                    },
+                },
+                "queries": [],
+            }
+        )
+        source = GSheetsEvidenceProjectSource(source_content)
+        # gsheets default is False, but metadata overrides to True
+        assert source.get_hide_source_asset() is True

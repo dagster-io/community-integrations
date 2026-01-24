@@ -6,7 +6,7 @@ including queries, connections, and the translator data classes.
 
 from abc import abstractmethod
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 import dagster as dg
@@ -50,6 +50,55 @@ class SourceQuery:
 @public
 @whitelist_for_serdes
 @dataclass
+class SourceDagsterMetadata:
+    """Dagster-specific metadata for Evidence sources.
+
+    Parsed from the ``meta.dagster`` section of connection.yaml.
+
+    Attributes:
+        create_source_sensor: Override whether sensors are created for this source.
+            If None, uses the source type's default (get_source_sensor_enabled_default).
+        hide_source_asset: Override whether this source's assets are hidden.
+            If None, uses the source type's default (get_hide_source_asset_default).
+        group_name: Override the asset group name for this source.
+            If None, uses the source folder name.
+
+    Example:
+
+        A ``connection.yaml`` file with Dagster metadata:
+
+        .. code-block:: yaml
+
+            name: motherduck_source
+            type: motherduck
+            options:
+              database: analytics
+            meta:
+              dagster:
+                create_source_sensor: false
+                hide_source_asset: false
+                group_name: analytics_sources
+
+        Would be parsed as:
+
+        .. code-block:: python
+
+            SourceDagsterMetadata(
+                create_source_sensor=False,
+                hide_source_asset=False,
+                group_name="analytics_sources"
+            )
+    """
+
+    create_source_sensor: bool | None = None
+    hide_source_asset: bool | None = None
+    group_name: str | None = None
+
+
+@beta
+@public
+@whitelist_for_serdes
+@dataclass
 class SourceConnection:
     """Represents connection configuration for an Evidence source.
 
@@ -58,6 +107,7 @@ class SourceConnection:
     Attributes:
         type: The source type identifier (e.g., "duckdb", "bigquery", "motherduck").
         extra: Additional connection-specific fields from the YAML file.
+        dagster_metadata: Dagster-specific metadata parsed from meta.dagster section.
 
     Example:
 
@@ -74,12 +124,16 @@ class SourceConnection:
 
             SourceConnection(
                 type="duckdb",
-                extra={"filename": "./data/analytics.duckdb"}
+                extra={"filename": "./data/analytics.duckdb"},
+                dagster_metadata=SourceDagsterMetadata()
             )
     """
 
     type: str
     extra: dict[str, Any]  # Additional connection-specific fields
+    dagster_metadata: SourceDagsterMetadata = field(
+        default_factory=lambda: SourceDagsterMetadata()
+    )
 
 
 @beta
@@ -144,11 +198,41 @@ class SourceContent:
                     ]
                 }
                 source = SourceContent.from_dict(data)
+
+            With Dagster metadata:
+
+            .. code-block:: python
+
+                data = {
+                    "connection": {
+                        "type": "duckdb",
+                        "filename": "data.db",
+                        "meta": {
+                            "dagster": {
+                                "create_source_sensor": False,
+                                "hide_source_asset": False,
+                                "group_name": "custom_group"
+                            }
+                        }
+                    },
+                    "queries": [...]
+                }
         """
         connection_data = data.get("connection", {})
+        # Parse dagster metadata from meta.dagster section
+        meta = connection_data.get("meta", {})
+        dagster_meta = meta.get("dagster", {})
+        dagster_metadata = SourceDagsterMetadata(
+            create_source_sensor=dagster_meta.get("create_source_sensor"),
+            hide_source_asset=dagster_meta.get("hide_source_asset"),
+            group_name=dagster_meta.get("group_name"),
+        )
         connection = SourceConnection(
             type=connection_data.get("type", ""),
-            extra={k: v for k, v in connection_data.items() if k != "type"},
+            extra={
+                k: v for k, v in connection_data.items() if k not in ("type", "meta")
+            },
+            dagster_metadata=dagster_metadata,
         )
         queries = [
             SourceQuery(name=q.get("name", ""), content=q.get("content", ""))
@@ -205,6 +289,20 @@ class EvidenceSourceTranslatorData:
     source_group: str  # The source folder name (e.g., "orders_db")
     query: SourceQuery  # The specific query being translated
     extracted_data: dict[str, Any] = {}  # Additional extracted data (e.g., table_deps)
+
+    @public
+    @property
+    def effective_group_name(self) -> str:
+        """Get the effective group name, considering metadata override.
+
+        Returns the group_name from dagster metadata if set, otherwise
+        returns the source_group (folder name).
+
+        Returns:
+            The effective group name to use for asset grouping.
+        """
+        meta = self.source_content.connection.dagster_metadata
+        return meta.group_name if meta.group_name else self.source_group
 
 
 @beta
@@ -319,6 +417,36 @@ class BaseEvidenceProjectSource:
             True to enable sensors by default, False to disable them.
         """
         return False
+
+    @public
+    def get_hide_source_asset(self) -> bool:
+        """Return whether this source should hide its assets.
+
+        Checks per-source metadata override first (meta.dagster.hide_source_asset),
+        then falls back to the class default (get_hide_source_asset_default).
+
+        Returns:
+            True to hide source assets, False to show them.
+        """
+        meta = self.source_content.connection.dagster_metadata
+        if meta.hide_source_asset is not None:
+            return meta.hide_source_asset
+        return self.get_hide_source_asset_default()
+
+    @public
+    def get_source_sensor_enabled(self) -> bool:
+        """Return whether sensors are enabled for this source.
+
+        Checks per-source metadata override first (meta.dagster.create_source_sensor),
+        then falls back to the class default (get_source_sensor_enabled_default).
+
+        Returns:
+            True to enable sensors, False to disable them.
+        """
+        meta = self.source_content.connection.dagster_metadata
+        if meta.create_source_sensor is not None:
+            return meta.create_source_sensor
+        return self.get_source_sensor_enabled_default()
 
     @public
     @classmethod
@@ -581,7 +709,7 @@ class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
                 deps.append(dg.AssetKey([ref["table"]]))
 
         key = dg.AssetKey([data.source_group, data.query.name])
-        group_name = data.source_group
+        group_name = data.effective_group_name
         has_deps = bool(deps)
 
         @dg.asset(
@@ -741,7 +869,7 @@ class MotherDuckEvidenceProjectSource(BaseEvidenceProjectSource):
                 deps.append(dg.AssetKey([ref["table"]]))
 
         key = dg.AssetKey([data.source_group, data.query.name])
-        group_name = data.source_group
+        group_name = data.effective_group_name
         has_deps = bool(deps)
 
         @dg.asset(
@@ -885,7 +1013,7 @@ class BigQueryEvidenceProjectSource(BaseEvidenceProjectSource):
                 deps.append(dg.AssetKey([ref["table"]]))
 
         key = dg.AssetKey([data.source_group, data.query.name])
-        group_name = data.source_group
+        group_name = data.effective_group_name
         has_deps = bool(deps)
 
         @dg.asset(
@@ -1060,7 +1188,7 @@ class GSheetsEvidenceProjectSource(BaseEvidenceProjectSource):
         else:
             key = dg.AssetKey([data.source_group, sheet_name])
 
-        group_name = data.source_group
+        group_name = data.effective_group_name
 
         @dg.asset(
             key=key,

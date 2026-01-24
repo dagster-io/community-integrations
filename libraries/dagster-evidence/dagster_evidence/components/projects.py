@@ -135,13 +135,12 @@ class BaseEvidenceProject(dg.ConfigurableResource):
             # Use translator to get source class (validates source type is known)
             source_type = source_content.connection.type
             source_class = translator.get_source_class(source_type)
-            # Instantiate source (useful for potential future source-specific logic)
-            _source = source_class(source_content)
+            # Instantiate source to use instance methods for per-source metadata overrides
+            source = source_class(source_content)
 
-            # Check if this source type should hide its assets
+            # Check if this source should hide its assets (uses instance method for overrides)
             should_hide = (
-                self.enable_source_assets_hiding
-                and source_class.get_hide_source_asset_default()
+                self.enable_source_assets_hiding and source.get_hide_source_asset()
             )
 
             # Generate asset specs via translator
@@ -176,10 +175,10 @@ class BaseEvidenceProject(dg.ConfigurableResource):
                     source_assets.append(asset)
                     project_deps.append(asset.key)
 
-                    # Check if we should create a sensor for this source
+                    # Check if we should create a sensor for this source (uses instance method)
                     should_create_sensor = (
                         self.enable_source_sensors
-                        and source_class.get_source_sensor_enabled_default()
+                        and source.get_source_sensor_enabled()
                     )
 
                     if should_create_sensor:

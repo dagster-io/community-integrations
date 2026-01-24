@@ -4,6 +4,7 @@ from dagster_evidence.components.evidence_project_v2 import EvidenceProjectCompo
 from dagster_evidence.components.sources import (
     EvidenceProjectTranslatorData,
     EvidenceSourceTranslatorData,
+    SourceDagsterMetadata,
 )
 from dagster_evidence.components.translator import DagsterEvidenceTranslator
 from dagster_evidence.lib.evidence_project import EvidenceProject
@@ -18,6 +19,7 @@ __all__ = [
     "DagsterEvidenceTranslator",
     "EvidenceSourceTranslatorData",
     "EvidenceProjectTranslatorData",
+    "SourceDagsterMetadata",
 ]
 
 DagsterLibraryRegistry.register(

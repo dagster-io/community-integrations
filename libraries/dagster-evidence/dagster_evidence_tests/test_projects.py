@@ -423,3 +423,181 @@ class TestCreateEvidenceProjectHelper:
         assert project_path.exists()
         assert (project_path / "package.json").exists()
         assert not (project_path / "sources").exists()
+
+
+class TestLoadSourceAssetsMetadataOverrides:
+    """Tests for per-source metadata overrides in load_source_assets."""
+
+    def test_hide_source_asset_override_true(self):
+        """Verify metadata can force hiding (gsheets: default False -> True)."""
+        from dagster_evidence.components.sources import SourceContent
+        from dagster_evidence.components.translator import DagsterEvidenceTranslator
+
+        # gsheets normally has hide_source_asset_default=False
+        # We override it to True via metadata
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "gsheets",
+                    "sheets": {"sales": {"id": "test_id"}},
+                    "meta": {
+                        "dagster": {
+                            "hide_source_asset": True,
+                        }
+                    },
+                },
+                "queries": [{"name": "sales", "content": ""}],
+            }
+        )
+
+        project_data = EvidenceProjectData(
+            project_name="test_project",
+            sources_by_id={"sheets_source": source_content},
+        )
+
+        deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
+        project = LocalEvidenceProject(
+            project_path="/fake/path",
+            project_deployment=deployment,
+            enable_source_assets_hiding=True,  # Global flag enabled
+        )
+        translator = DagsterEvidenceTranslator()
+        source_assets, source_deps, source_sensors = project.load_source_assets(
+            project_data, translator
+        )
+
+        # gsheets would normally create assets, but metadata overrides to hide
+        assert len(source_assets) == 0
+
+    def test_hide_source_asset_override_false(self):
+        """Verify metadata can prevent hiding (duckdb: default True -> False)."""
+        from dagster_evidence.components.sources import SourceContent
+        from dagster_evidence.components.translator import DagsterEvidenceTranslator
+
+        # duckdb normally has hide_source_asset_default=True
+        # We override it to False via metadata
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "duckdb",
+                    "options": {"filename": "test.db"},
+                    "meta": {
+                        "dagster": {
+                            "hide_source_asset": False,
+                        }
+                    },
+                },
+                "queries": [{"name": "orders", "content": "SELECT * FROM orders"}],
+            }
+        )
+
+        project_data = EvidenceProjectData(
+            project_name="test_project",
+            sources_by_id={"duckdb_source": source_content},
+        )
+
+        deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
+        project = LocalEvidenceProject(
+            project_path="/fake/path",
+            project_deployment=deployment,
+            enable_source_assets_hiding=True,  # Global flag enabled
+        )
+        translator = DagsterEvidenceTranslator()
+        source_assets, source_deps, source_sensors = project.load_source_assets(
+            project_data, translator
+        )
+
+        # duckdb would normally hide assets, but metadata overrides to show
+        assert len(source_assets) == 1
+        assert source_assets[0].key.path[-1] == "orders"
+
+    def test_sensor_override_false_disables_sensor(self):
+        """Verify metadata can disable sensor (duckdb: default True -> False)."""
+        from dagster_evidence.components.sources import SourceContent
+        from dagster_evidence.components.translator import DagsterEvidenceTranslator
+
+        # duckdb normally has get_source_sensor_enabled_default=True
+        # We override it to False via metadata
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "duckdb",
+                    "options": {"filename": "test.db"},
+                    "meta": {
+                        "dagster": {
+                            "hide_source_asset": False,  # Show asset so sensor logic is evaluated
+                            "create_source_sensor": False,
+                        }
+                    },
+                },
+                "queries": [{"name": "orders", "content": "SELECT * FROM orders"}],
+            }
+        )
+
+        project_data = EvidenceProjectData(
+            project_name="test_project",
+            sources_by_id={"duckdb_source": source_content},
+        )
+
+        deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
+        project = LocalEvidenceProject(
+            project_path="/fake/path",
+            project_deployment=deployment,
+            enable_source_assets_hiding=True,
+            enable_source_sensors=True,  # Global sensor flag enabled
+        )
+        translator = DagsterEvidenceTranslator()
+        source_assets, source_deps, source_sensors = project.load_source_assets(
+            project_data, translator
+        )
+
+        # Asset should be created but no sensor (disabled by metadata)
+        assert len(source_assets) == 1
+        assert len(source_sensors) == 0
+
+    def test_group_name_override_in_asset(self):
+        """Verify metadata group_name is used in asset creation."""
+        from dagster_evidence.components.sources import SourceContent
+        from dagster_evidence.components.translator import DagsterEvidenceTranslator
+
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "duckdb",
+                    "options": {"filename": "test.db"},
+                    "meta": {
+                        "dagster": {
+                            "hide_source_asset": False,
+                            "group_name": "analytics_core",
+                        }
+                    },
+                },
+                "queries": [{"name": "orders", "content": "SELECT * FROM orders"}],
+            }
+        )
+
+        project_data = EvidenceProjectData(
+            project_name="test_project",
+            sources_by_id={"original_folder_name": source_content},
+        )
+
+        deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
+        project = LocalEvidenceProject(
+            project_path="/fake/path",
+            project_deployment=deployment,
+            enable_source_assets_hiding=True,
+        )
+        translator = DagsterEvidenceTranslator()
+        source_assets, source_deps, source_sensors = project.load_source_assets(
+            project_data, translator
+        )
+
+        # Asset should use the overridden group name
+        assert len(source_assets) == 1
+        asset = source_assets[0]
+        # The group_name is used in the asset definition, not the key
+        # Key still uses source_group for stability
+        assert asset.key.path == ["original_folder_name", "orders"]
+        # Group name is set in the asset spec - we can check via the specs_by_key
+        spec = asset.specs_by_key[asset.key]
+        assert spec.group_name == "analytics_core"
