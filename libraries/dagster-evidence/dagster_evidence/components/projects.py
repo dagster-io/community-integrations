@@ -69,9 +69,13 @@ class BaseEvidenceProject(dg.ConfigurableResource):
         enable_source_assets_hiding: When True, hides source assets but preserves
             their dependencies on the project asset. The actual table dependencies
             (extracted from SQL via table_deps) are still linked to the project asset.
+        enable_source_sensors: When True, creates sensors for source assets to detect
+            changes in underlying data sources. Sensors are only created for non-hidden
+            source types that support sensor detection.
     """
 
-    enable_source_assets_hiding: bool = False
+    enable_source_assets_hiding: bool = True
+    enable_source_sensors: bool = False
 
     @public
     @abstractmethod
@@ -460,7 +464,7 @@ class LocalEvidenceProjectArgs(dg.Model, dg.Resolvable):
         ),
     ]
     enable_source_assets_hiding: bool = Field(
-        default=False,
+        default=True,
         description="When True, hides source assets but preserves their dependencies on the project asset.",
     )
 

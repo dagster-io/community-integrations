@@ -4,9 +4,6 @@ This module provides utilities for parsing SQL queries and extracting
 table references that can be used to determine asset dependencies.
 """
 
-import sqlglot
-from sqlglot import exp
-
 from dagster._annotations import beta, public
 
 
@@ -55,6 +52,15 @@ def extract_table_references(
             refs = extract_table_references("SELECT * FROM prod.sales.orders")
             # Returns: [{"database": "prod", "schema": "sales", "table": "orders"}]
     """
+    try:
+        import sqlglot
+        from sqlglot import exp
+    except ImportError:
+        raise ImportError(
+            "sqlglot is required for SQL table reference extraction. "
+            "Install it with: uv pip install dagster-evidence[sql]"
+        ) from None
+
     try:
         parsed = sqlglot.parse(sql_query)
         tables: list[dict[str, str | None]] = []

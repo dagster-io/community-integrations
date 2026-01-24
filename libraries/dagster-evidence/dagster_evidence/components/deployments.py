@@ -258,7 +258,14 @@ class GithubPagesEvidenceProjectDeployment(BaseEvidenceProjectDeployment):
     ) -> None:
         """Deploy Evidence project build to GitHub Pages using GitPython."""
         from datetime import datetime, timezone
-        from git import Repo
+
+        try:
+            from git import Repo
+        except ImportError:
+            raise ImportError(
+                "GitPython is required for GitHub Pages deployment. "
+                "Install it with: uv pip install dagster-evidence[github-pages]"
+            ) from None
 
         if not os.path.isdir(evidence_project_build_path):
             raise FileNotFoundError(

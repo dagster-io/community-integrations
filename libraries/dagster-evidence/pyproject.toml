@@ -5,13 +5,14 @@ readme = "README.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
     "dagster>=1.12.10",
-    "gitpython>=3.1.0",
     "pyyaml>=6.0",
-    "sqlglot>=26.0.0",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
+github-pages = ["gitpython>=3.1.0"]
+sql = ["sqlglot>=26.0.0"]
+all = ["gitpython>=3.1.0", "sqlglot>=26.0.0"]
 test = [
     "pytest",
     "pytest-mock",
@@ -23,6 +24,8 @@ dev-dependencies = [
     "pytest",
     "pytest-mock",
     "pyright>=1.1.386",
+    "gitpython>=3.1.0",
+    "sqlglot>=26.0.0",
 ]
 
 [build-system]
