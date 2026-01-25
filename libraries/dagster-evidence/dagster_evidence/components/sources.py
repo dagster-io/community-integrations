@@ -527,6 +527,31 @@ class BaseEvidenceProjectSource:
         """
         return None
 
+    @classmethod
+    def _build_description_with_sql(cls, data: "EvidenceSourceTranslatorData") -> str:
+        """Build description with raw SQL for SQL-based sources."""
+        return (
+            f"Evidence {cls.get_source_type()} source: {data.query.name}\n\n"
+            f"**Raw SQL:**\n```sql\n{data.query.content}\n```"
+        )
+
+    @classmethod
+    def _build_base_metadata(
+        cls, data: "EvidenceSourceTranslatorData"
+    ) -> dict[str, Any]:
+        """Build base metadata dictionary for source assets."""
+        metadata: dict[str, Any] = {
+            "Source Type": cls.get_source_type(),
+        }
+        if data.query.content:
+            metadata["Raw SQL"] = dg.MetadataValue.md(
+                f"```sql\n{data.query.content}\n```"
+            )
+        table_deps = data.extracted_data.get("table_deps", [])
+        if table_deps:
+            metadata["Table Dependencies"] = dg.MetadataValue.json(table_deps)
+        return metadata
+
     @public
     @staticmethod
     @abstractmethod
@@ -772,11 +797,17 @@ class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
         group_name = data.effective_group_name
         has_deps = bool(deps)
 
+        # Add description and metadata
+        description = cls._build_description_with_sql(data)
+        metadata = cls._build_base_metadata(data)
+
         @dg.asset(
             key=key,
             group_name=group_name,
             kinds={"evidence", "source", "duckdb"},
             deps=deps,
+            description=description,
+            metadata=metadata,
             automation_condition=dg.AutomationCondition.any_deps_match(
                 dg.AutomationCondition.newly_updated()
             )
@@ -931,11 +962,17 @@ class MotherDuckEvidenceProjectSource(BaseEvidenceProjectSource):
         group_name = data.effective_group_name
         has_deps = bool(deps)
 
+        # Add description and metadata
+        description = cls._build_description_with_sql(data)
+        metadata = cls._build_base_metadata(data)
+
         @dg.asset(
             key=key,
             group_name=group_name,
             kinds={"evidence", "source", "motherduck"},
             deps=deps,
+            description=description,
+            metadata=metadata,
             automation_condition=dg.AutomationCondition.any_deps_match(
                 dg.AutomationCondition.newly_updated()
             )
@@ -1074,11 +1111,17 @@ class BigQueryEvidenceProjectSource(BaseEvidenceProjectSource):
         group_name = data.effective_group_name
         has_deps = bool(deps)
 
+        # Add description and metadata
+        description = cls._build_description_with_sql(data)
+        metadata = cls._build_base_metadata(data)
+
         @dg.asset(
             key=key,
             group_name=group_name,
             kinds={"evidence", "source", "bigquery"},
             deps=deps,
+            description=description,
+            metadata=metadata,
             automation_condition=dg.AutomationCondition.any_deps_match(
                 dg.AutomationCondition.newly_updated()
             )
@@ -1247,11 +1290,29 @@ class GSheetsEvidenceProjectSource(BaseEvidenceProjectSource):
 
         group_name = data.effective_group_name
 
+        # Build description
+        description = f"Evidence Google Sheets source: {sheet_name}"
+        if page_name:
+            description += f" / {page_name}"
+
+        # Build metadata with sheet URL
+        metadata: dict[str, Any] = {"Source Type": "gsheets"}
+        sheets_config = data.extracted_data.get("sheets_config", {})
+        sheet_config = sheets_config.get(sheet_name, {})
+        sheet_id = sheet_config.get("id") if isinstance(sheet_config, dict) else None
+        if sheet_id:
+            metadata["Sheet ID"] = sheet_id
+            metadata["Sheet URL"] = dg.MetadataValue.url(
+                f"https://docs.google.com/spreadsheets/d/{sheet_id}"
+            )
+
         @dg.asset(
             key=key,
             group_name=group_name,
             kinds={"evidence", "source", "gsheets"},
             deps=[],  # No upstream deps for gsheets - they are source of truth
+            description=description,
+            metadata=metadata,
         )
         def _source_asset():
             return dg.MaterializeResult()
