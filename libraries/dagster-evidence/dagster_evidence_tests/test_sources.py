@@ -173,22 +173,24 @@ class TestSourceDefaults:
         assert GSheetsEvidenceProjectSource.get_hide_source_asset_default() is False
 
     def test_duckdb_sensor_enabled_default(self):
-        """Verify DuckDB sources have sensors enabled by default."""
-        assert DuckdbEvidenceProjectSource.get_source_sensor_enabled_default() is True
+        """Verify DuckDB sources have sensors disabled by default."""
+        assert DuckdbEvidenceProjectSource.get_source_sensor_enabled_default() is False
 
     def test_motherduck_sensor_enabled_default(self):
-        """Verify MotherDuck sources have sensors enabled by default."""
+        """Verify MotherDuck sources have sensors disabled by default."""
         assert (
-            MotherDuckEvidenceProjectSource.get_source_sensor_enabled_default() is True
+            MotherDuckEvidenceProjectSource.get_source_sensor_enabled_default() is False
         )
 
     def test_bigquery_sensor_enabled_default(self):
-        """Verify BigQuery sources have sensors enabled by default."""
-        assert BigQueryEvidenceProjectSource.get_source_sensor_enabled_default() is True
+        """Verify BigQuery sources have sensors disabled by default."""
+        assert (
+            BigQueryEvidenceProjectSource.get_source_sensor_enabled_default() is False
+        )
 
     def test_gsheets_sensor_enabled_default(self):
-        """Verify Google Sheets sources have sensors enabled by default."""
-        assert GSheetsEvidenceProjectSource.get_source_sensor_enabled_default() is True
+        """Verify Google Sheets sources have sensors disabled by default."""
+        assert GSheetsEvidenceProjectSource.get_source_sensor_enabled_default() is False
 
 
 class TestExtractDataFromSource:
@@ -626,8 +628,8 @@ class TestSourceInstanceMethods:
             }
         )
         source = GSheetsEvidenceProjectSource(source_content)
-        # Should use class default (True for gsheets)
-        assert source.get_source_sensor_enabled() is True
+        # Should use class default (False for gsheets)
+        assert source.get_source_sensor_enabled() is False
 
     def test_gsheets_hide_override_to_true(self):
         """Verify gsheets can override hide_source_asset to True."""

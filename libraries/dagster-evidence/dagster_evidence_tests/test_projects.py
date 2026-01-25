@@ -249,19 +249,42 @@ class TestLocalEvidenceProject:
         assert data.project_name == "test_project"
         assert "needful_things" in data.sources_by_id
 
-    def test_local_project_load_source_assets(self, evidence_project_data):
-        """Verify load_source_assets creates AssetSpecs from project data."""
+    def test_local_project_load_source_assets(self):
+        """Verify load_source_assets creates AssetSpecs from project data with metadata override."""
+        from dagster_evidence.components.sources import SourceContent
         from dagster_evidence.components.translator import DagsterEvidenceTranslator
+
+        # Use metadata override to show source assets (DuckDB hides by default)
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "duckdb",
+                    "options": {"filename": "data.duckdb"},
+                    "meta": {
+                        "dagster": {
+                            "hide_source_asset": False,  # Override to show assets
+                        }
+                    },
+                },
+                "queries": [
+                    {"name": "orders", "content": "SELECT * FROM orders"},
+                    {"name": "customers", "content": "SELECT * FROM customers"},
+                ],
+            }
+        )
+        project_data = EvidenceProjectData(
+            project_name="test_project",
+            sources_by_id={"needful_things": source_content},
+        )
 
         deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
         project = LocalEvidenceProject(
             project_path="/fake/path",
             project_deployment=deployment,
-            enable_source_assets_hiding=False,  # Disable hiding to see source assets
         )
         translator = DagsterEvidenceTranslator()
         source_assets, source_deps, source_sensors = project.load_source_assets(
-            evidence_project_data, translator
+            project_data, translator
         )
 
         assert len(source_assets) == 2  # orders and customers
@@ -273,18 +296,17 @@ class TestLocalEvidenceProject:
         dep_names = [dep.path[-1] for dep in source_deps]
         assert "orders" in dep_names
         assert "customers" in dep_names
-        # Sensors should be empty since enable_source_sensors is False by default
+        # Sensors should be empty since source sensor default is False
         assert isinstance(source_sensors, list)
 
     def test_local_project_load_source_assets_with_hiding(self, evidence_project_data):
-        """Verify load_source_assets hides source assets when enabled."""
+        """Verify load_source_assets hides source assets based on source type default."""
         from dagster_evidence.components.translator import DagsterEvidenceTranslator
 
         deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
         project = LocalEvidenceProject(
             project_path="/fake/path",
             project_deployment=deployment,
-            enable_source_assets_hiding=True,
         )
         translator = DagsterEvidenceTranslator()
         source_assets, source_deps, source_sensors = project.load_source_assets(
@@ -303,26 +325,49 @@ class TestLocalEvidenceProject:
         # No sensors for hidden assets
         assert len(source_sensors) == 0
 
-    def test_local_project_load_source_assets_with_sensors(self, evidence_project_data):
-        """Verify load_source_assets creates sensors when enabled."""
+    def test_local_project_load_source_assets_with_sensors(self):
+        """Verify load_source_assets creates sensors when enabled via metadata."""
+        from dagster_evidence.components.sources import SourceContent
         from dagster_evidence.components.translator import DagsterEvidenceTranslator
+
+        # Use metadata overrides to show assets and enable sensors
+        source_content = SourceContent.from_dict(
+            {
+                "connection": {
+                    "type": "duckdb",
+                    "options": {"filename": "data.duckdb"},
+                    "meta": {
+                        "dagster": {
+                            "hide_source_asset": False,
+                            "create_source_sensor": True,
+                        }
+                    },
+                },
+                "queries": [
+                    {"name": "orders", "content": "SELECT * FROM orders"},
+                    {"name": "customers", "content": "SELECT * FROM customers"},
+                ],
+            }
+        )
+        project_data = EvidenceProjectData(
+            project_name="test_project",
+            sources_by_id={"needful_things": source_content},
+        )
 
         deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
         project = LocalEvidenceProject(
             project_path="/fake/path",
             project_deployment=deployment,
-            enable_source_assets_hiding=False,
-            enable_source_sensors=True,
         )
         translator = DagsterEvidenceTranslator()
         source_assets, source_deps, source_sensors = project.load_source_assets(
-            evidence_project_data, translator
+            project_data, translator
         )
 
         # Source assets should be created
         assert len(source_assets) == 2
 
-        # Sensors should be created for DuckDB sources (since get_source_sensor_enabled_default is True)
+        # Sensors should be created (enabled via metadata)
         # Note: actual sensor creation depends on having valid connection config
         assert isinstance(source_sensors, list)
 
@@ -459,7 +504,6 @@ class TestLoadSourceAssetsMetadataOverrides:
         project = LocalEvidenceProject(
             project_path="/fake/path",
             project_deployment=deployment,
-            enable_source_assets_hiding=True,  # Global flag enabled
         )
         translator = DagsterEvidenceTranslator()
         source_assets, source_deps, source_sensors = project.load_source_assets(
@@ -500,7 +544,6 @@ class TestLoadSourceAssetsMetadataOverrides:
         project = LocalEvidenceProject(
             project_path="/fake/path",
             project_deployment=deployment,
-            enable_source_assets_hiding=True,  # Global flag enabled
         )
         translator = DagsterEvidenceTranslator()
         source_assets, source_deps, source_sensors = project.load_source_assets(
@@ -512,12 +555,11 @@ class TestLoadSourceAssetsMetadataOverrides:
         assert source_assets[0].key.path[-1] == "orders"
 
     def test_sensor_override_false_disables_sensor(self):
-        """Verify metadata can disable sensor (duckdb: default True -> False)."""
+        """Verify metadata can disable sensor (explicit False overrides any default)."""
         from dagster_evidence.components.sources import SourceContent
         from dagster_evidence.components.translator import DagsterEvidenceTranslator
 
-        # duckdb normally has get_source_sensor_enabled_default=True
-        # We override it to False via metadata
+        # We set create_source_sensor=False via metadata to ensure no sensor is created
         source_content = SourceContent.from_dict(
             {
                 "connection": {
@@ -543,8 +585,6 @@ class TestLoadSourceAssetsMetadataOverrides:
         project = LocalEvidenceProject(
             project_path="/fake/path",
             project_deployment=deployment,
-            enable_source_assets_hiding=True,
-            enable_source_sensors=True,  # Global sensor flag enabled
         )
         translator = DagsterEvidenceTranslator()
         source_assets, source_deps, source_sensors = project.load_source_assets(
@@ -585,7 +625,6 @@ class TestLoadSourceAssetsMetadataOverrides:
         project = LocalEvidenceProject(
             project_path="/fake/path",
             project_deployment=deployment,
-            enable_source_assets_hiding=True,
         )
         translator = DagsterEvidenceTranslator()
         source_assets, source_deps, source_sensors = project.load_source_assets(
@@ -601,3 +640,150 @@ class TestLoadSourceAssetsMetadataOverrides:
         # Group name is set in the asset spec - we can check via the specs_by_key
         spec = asset.specs_by_key[asset.key]
         assert spec.group_name == "analytics_core"
+
+
+class TestProjectDagsterMetadata:
+    """Tests for project-level Dagster metadata configuration."""
+
+    def test_parse_project_metadata_with_group_name(self, tmp_path):
+        """Verify group_name is parsed from evidence.config.yaml."""
+        project_path = create_evidence_project(
+            base_path=tmp_path,
+            project_name="metadata_test",
+            sources=SAMPLE_SOURCES_DUCKDB,
+            with_config=False,  # We'll create our own config
+        )
+        # Create evidence.config.yaml with dagster metadata
+        config = {
+            "deployment": {"basePath": "/test"},
+            "meta": {
+                "dagster": {
+                    "group_name": "dashboards",
+                }
+            },
+        }
+        with open(project_path / "evidence.config.yaml", "w") as f:
+            yaml.dump(config, f)
+
+        deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
+        project = LocalEvidenceProject(
+            project_path=str(project_path),
+            project_deployment=deployment,
+        )
+
+        metadata = project._parse_project_dagster_metadata()
+        assert metadata.group_name == "dashboards"
+
+    def test_parse_project_metadata_missing_config(self, tmp_path):
+        """Verify missing config returns default metadata."""
+        project_path = create_evidence_project(
+            base_path=tmp_path,
+            project_name="no_config",
+            sources=SAMPLE_SOURCES_DUCKDB,
+            with_config=False,
+        )
+
+        deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
+        project = LocalEvidenceProject(
+            project_path=str(project_path),
+            project_deployment=deployment,
+        )
+
+        metadata = project._parse_project_dagster_metadata()
+        assert metadata.group_name is None
+
+    def test_parse_project_metadata_no_dagster_section(self, tmp_path):
+        """Verify missing meta.dagster section returns None values."""
+        project_path = create_evidence_project(
+            base_path=tmp_path,
+            project_name="no_dagster_section",
+            sources=SAMPLE_SOURCES_DUCKDB,
+            with_config=True,  # Creates config but without meta.dagster
+        )
+
+        deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
+        project = LocalEvidenceProject(
+            project_path=str(project_path),
+            project_deployment=deployment,
+        )
+
+        metadata = project._parse_project_dagster_metadata()
+        assert metadata.group_name is None
+
+    def test_project_asset_uses_group_name_override(self, tmp_path):
+        """Verify project asset uses group_name from config."""
+        from dagster_evidence.components.translator import DagsterEvidenceTranslator
+
+        project_path = create_evidence_project(
+            base_path=tmp_path,
+            project_name="grouped_project",
+            sources=SAMPLE_SOURCES_DUCKDB,
+            with_config=False,
+        )
+        # Create evidence.config.yaml with dagster metadata
+        config = {
+            "meta": {
+                "dagster": {
+                    "group_name": "analytics_dashboards",
+                }
+            },
+        }
+        with open(project_path / "evidence.config.yaml", "w") as f:
+            yaml.dump(config, f)
+
+        deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
+        project = LocalEvidenceProject(
+            project_path=str(project_path),
+            project_deployment=deployment,
+        )
+        translator = DagsterEvidenceTranslator()
+        project_data = project.parse_evidence_project()
+        assets, sensors = project.load_evidence_project_assets(project_data, translator)
+
+        # Find the project asset (the one with build_and_deploy function)
+        project_asset = None
+        for asset in assets:
+            if isinstance(asset, dg.AssetsDefinition):
+                if asset.key.path == ["grouped_project"]:
+                    project_asset = asset
+                    break
+
+        assert project_asset is not None, "Project asset not found"
+
+        # Verify group_name is set correctly
+        spec = project_asset.specs_by_key[project_asset.key]
+        assert spec.group_name == "analytics_dashboards"
+
+    def test_project_asset_no_group_name_uses_default(self, tmp_path):
+        """Verify project asset uses Dagster's default grouping when no group_name is set."""
+        from dagster_evidence.components.translator import DagsterEvidenceTranslator
+
+        project_path = create_evidence_project(
+            base_path=tmp_path,
+            project_name="default_group_project",
+            sources=SAMPLE_SOURCES_DUCKDB,
+            with_config=True,  # Config without dagster metadata
+        )
+
+        deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
+        project = LocalEvidenceProject(
+            project_path=str(project_path),
+            project_deployment=deployment,
+        )
+        translator = DagsterEvidenceTranslator()
+        project_data = project.parse_evidence_project()
+        assets, sensors = project.load_evidence_project_assets(project_data, translator)
+
+        # Find the project asset
+        project_asset = None
+        for asset in assets:
+            if isinstance(asset, dg.AssetsDefinition):
+                if asset.key.path == ["default_group_project"]:
+                    project_asset = asset
+                    break
+
+        assert project_asset is not None, "Project asset not found"
+
+        # When no group_name is configured, Dagster uses 'default' as the group name
+        spec = project_asset.specs_by_key[project_asset.key]
+        assert spec.group_name == "default"

@@ -20,6 +20,14 @@ SAMPLE_DUCKDB_CONNECTION = {
     "options": {"filename": "data.duckdb"},
 }
 
+# Connection config with source assets visible (for tests that need to verify source assets)
+SAMPLE_DUCKDB_CONNECTION_VISIBLE = {
+    "name": "needful_things",
+    "type": "duckdb",
+    "options": {"filename": "data.duckdb"},
+    "meta": {"dagster": {"hide_source_asset": False}},
+}
+
 SAMPLE_QUERIES = [
     {"name": "orders", "content": "SELECT * FROM orders"},
     {"name": "customers", "content": "SELECT * FROM customers"},
@@ -29,6 +37,16 @@ SAMPLE_SOURCES_DUCKDB: dict[str, SourceContent] = {
     "needful_things": SourceContent.from_dict(
         {
             "connection": SAMPLE_DUCKDB_CONNECTION,
+            "queries": SAMPLE_QUERIES,
+        }
+    )
+}
+
+# Sources with visible assets (hide_source_asset: False)
+SAMPLE_SOURCES_DUCKDB_VISIBLE: dict[str, SourceContent] = {
+    "needful_things": SourceContent.from_dict(
+        {
+            "connection": SAMPLE_DUCKDB_CONNECTION_VISIBLE,
             "queries": SAMPLE_QUERIES,
         }
     )
@@ -101,15 +119,14 @@ class TestEvidenceProjectComponentV2:
         project = LocalEvidenceProject(
             project_path=str(mock_evidence_project),
             project_deployment=deployment,
-            enable_source_assets_hiding=False,  # Disable hiding to see source assets
         )
 
         component = EvidenceProjectComponentV2(evidence_project=project)
 
-        # Create state file with project data
+        # Create state file with project data (using visible sources to see source assets)
         project_data = EvidenceProjectData(
             project_name="test_project",
-            sources_by_id=SAMPLE_SOURCES_DUCKDB,
+            sources_by_id=SAMPLE_SOURCES_DUCKDB_VISIBLE,
         )
         state_path = tmp_path / "state.json"
         state_path.write_text(dg.serialize_value(project_data))
@@ -163,14 +180,14 @@ class TestComponentAssetGeneration:
         project = LocalEvidenceProject(
             project_path=str(mock_evidence_project),
             project_deployment=deployment,
-            enable_source_assets_hiding=False,  # Disable hiding to see source assets
         )
 
         component = EvidenceProjectComponentV2(evidence_project=project)
 
+        # Use visible sources to see source assets
         project_data = EvidenceProjectData(
             project_name="test_project",
-            sources_by_id=SAMPLE_SOURCES_DUCKDB,
+            sources_by_id=SAMPLE_SOURCES_DUCKDB_VISIBLE,
         )
         state_path = tmp_path / "state.json"
         state_path.write_text(dg.serialize_value(project_data))
@@ -199,14 +216,14 @@ class TestComponentAssetGeneration:
         project = LocalEvidenceProject(
             project_path=str(mock_evidence_project),
             project_deployment=deployment,
-            enable_source_assets_hiding=False,  # Disable hiding to see source assets
         )
 
         component = EvidenceProjectComponentV2(evidence_project=project)
 
+        # Use visible sources to see source assets
         project_data = EvidenceProjectData(
             project_name="test_project",
-            sources_by_id=SAMPLE_SOURCES_DUCKDB,
+            sources_by_id=SAMPLE_SOURCES_DUCKDB_VISIBLE,
         )
         state_path = tmp_path / "state.json"
         state_path.write_text(dg.serialize_value(project_data))
@@ -237,14 +254,14 @@ class TestComponentAssetGeneration:
         project = LocalEvidenceProject(
             project_path=str(mock_evidence_project),
             project_deployment=deployment,
-            enable_source_assets_hiding=False,  # Disable hiding to see source assets
         )
 
         component = EvidenceProjectComponentV2(evidence_project=project)
 
+        # Use visible sources to see source assets
         project_data = EvidenceProjectData(
             project_name="test_project",
-            sources_by_id=SAMPLE_SOURCES_DUCKDB,
+            sources_by_id=SAMPLE_SOURCES_DUCKDB_VISIBLE,
         )
         state_path = tmp_path / "state.json"
         state_path.write_text(dg.serialize_value(project_data))

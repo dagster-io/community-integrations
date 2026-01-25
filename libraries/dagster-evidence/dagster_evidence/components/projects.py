@@ -31,6 +31,7 @@ from .deployments import (
 from .sources import (
     EvidenceProjectTranslatorData,
     EvidenceSourceTranslatorData,
+    ProjectDagsterMetadata,
     SourceContent,
 )
 
@@ -64,18 +65,7 @@ class BaseEvidenceProject(dg.ConfigurableResource):
     projects and EvidenceStudioProject for cloud-hosted projects.
 
     Subclass this class to implement custom project types.
-
-    Attributes:
-        enable_source_assets_hiding: When True, hides source assets but preserves
-            their dependencies on the project asset. The actual table dependencies
-            (extracted from SQL via table_deps) are still linked to the project asset.
-        enable_source_sensors: When True, creates sensors for source assets to detect
-            changes in underlying data sources. Sensors are only created for non-hidden
-            source types that support sensor detection.
     """
-
-    enable_source_assets_hiding: bool = True
-    enable_source_sensors: bool = False
 
     @public
     @abstractmethod
@@ -139,9 +129,7 @@ class BaseEvidenceProject(dg.ConfigurableResource):
             source = source_class(source_content)
 
             # Check if this source should hide its assets (uses instance method for overrides)
-            should_hide = (
-                self.enable_source_assets_hiding and source.get_hide_source_asset()
-            )
+            should_hide = source.get_hide_source_asset()
 
             # Generate asset specs via translator
             for query in source_content.queries:
@@ -176,10 +164,7 @@ class BaseEvidenceProject(dg.ConfigurableResource):
                     project_deps.append(asset.key)
 
                     # Check if we should create a sensor for this source (uses instance method)
-                    should_create_sensor = (
-                        self.enable_source_sensors
-                        and source.get_source_sensor_enabled()
-                    )
+                    should_create_sensor = source.get_source_sensor_enabled()
 
                     if should_create_sensor:
                         sensor = source_class.get_source_sensor(data, asset.key)
@@ -316,6 +301,26 @@ class LocalEvidenceProject(BaseEvidenceProject):
     def get_evidence_project_name(self) -> str:
         return Path(self.project_path).name
 
+    def _parse_project_dagster_metadata(self) -> ProjectDagsterMetadata:
+        """Parse Dagster metadata from evidence.config.yaml.
+
+        Returns:
+            ProjectDagsterMetadata instance with parsed values,
+            or default metadata if config doesn't exist or lacks dagster section.
+        """
+        config_path = Path(self.project_path) / "evidence.config.yaml"
+        if not config_path.exists():
+            return ProjectDagsterMetadata()
+
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f) or {}
+
+        meta = config.get("meta", {})
+        dagster_meta = meta.get("dagster", {})
+        return ProjectDagsterMetadata(
+            group_name=dagster_meta.get("group_name"),
+        )
+
     def load_evidence_project_assets(
         self,
         evidence_project_data: EvidenceProjectData,
@@ -328,11 +333,15 @@ class LocalEvidenceProject(BaseEvidenceProject):
             evidence_project_data, translator
         )
 
+        # Parse project-level Dagster metadata from evidence.config.yaml
+        project_metadata = self._parse_project_dagster_metadata()
+
         # Get project asset spec via translator
         project_data = EvidenceProjectTranslatorData(
             project_name=self.get_evidence_project_name(),
             sources_by_id=evidence_project_data.sources_by_id,
             source_deps=source_deps,
+            dagster_metadata=project_metadata,
         )
         project_spec = translator.get_asset_spec(project_data)
         # For project data, translator returns AssetSpec
@@ -352,6 +361,7 @@ class LocalEvidenceProject(BaseEvidenceProject):
             kinds=project_spec.kinds or {"evidence"},
             deps=source_deps,
             automation_condition=automation_condition,
+            group_name=project_spec.group_name,
         )
         def build_and_deploy_evidence_project(
             context: dg.AssetExecutionContext,
@@ -455,8 +465,6 @@ class LocalEvidenceProjectArgs(dg.Model, dg.Resolvable):
         project_type: Must be "local" to use this project type.
         project_path: Path to the Evidence project directory.
         project_deployment: Deployment configuration for the built project.
-        enable_source_assets_hiding: When True, hides source assets but preserves
-            their dependencies on the project asset.
     """
 
     project_type: Literal["local"] = Field(
@@ -481,14 +489,6 @@ class LocalEvidenceProjectArgs(dg.Model, dg.Resolvable):
             examples=[],
         ),
     ]
-    enable_source_assets_hiding: bool = Field(
-        default=True,
-        description="When True, hides source assets but preserves their dependencies on the project asset.",
-    )
-    enable_source_sensors: bool = Field(
-        default=False,
-        description="When True, creates sensors for source assets to detect changes in underlying data sources.",
-    )
 
 
 @beta
@@ -617,10 +617,6 @@ def resolve_evidence_project(
                 context.resolve_source_relative_path(resolved["project_path"])
             ),
             project_deployment=resolved["project_deployment"],
-            enable_source_assets_hiding=resolved.get(
-                "enable_source_assets_hiding", False
-            ),
-            enable_source_sensors=resolved.get("enable_source_sensors", False),
         )
     elif project_type == "evidence_studio":
         resolved = resolve_fields(

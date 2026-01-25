@@ -164,4 +164,5 @@ class DagsterEvidenceTranslator:
             key=dg.AssetKey([data.project_name]),
             kinds={"evidence"},
             deps=data.source_deps,
+            group_name=data.effective_group_name,
         )

@@ -99,6 +99,44 @@ class SourceDagsterMetadata:
 @public
 @whitelist_for_serdes
 @dataclass
+class ProjectDagsterMetadata:
+    """Dagster-specific metadata for Evidence projects.
+
+    Parsed from the ``meta.dagster`` section of evidence.config.yaml.
+
+    Attributes:
+        group_name: Override the asset group name for the project asset.
+            If None, uses Dagster's default grouping.
+
+    Example:
+
+        An ``evidence.config.yaml`` file with Dagster metadata:
+
+        .. code-block:: yaml
+
+            deployment:
+              basePath: /sales-dashboard
+
+            meta:
+              dagster:
+                group_name: dashboards
+
+        Would be parsed as:
+
+        .. code-block:: python
+
+            ProjectDagsterMetadata(
+                group_name="dashboards"
+            )
+    """
+
+    group_name: str | None = None
+
+
+@beta
+@public
+@whitelist_for_serdes
+@dataclass
 class SourceConnection:
     """Represents connection configuration for an Evidence source.
 
@@ -318,6 +356,7 @@ class EvidenceProjectTranslatorData:
         project_name: The name of the Evidence project.
         sources_by_id: Dictionary mapping source folder names to their content.
         source_deps: List of AssetKeys for source assets this project depends on.
+        dagster_metadata: Dagster-specific metadata parsed from evidence.config.yaml.
 
     Example:
 
@@ -346,6 +385,20 @@ class EvidenceProjectTranslatorData:
     project_name: str
     sources_by_id: dict[str, SourceContent]
     source_deps: Sequence[AssetKey]  # Dependencies on source assets
+    dagster_metadata: ProjectDagsterMetadata = ProjectDagsterMetadata()
+
+    @public
+    @property
+    def effective_group_name(self) -> str | None:
+        """Get the effective group name from metadata, or None for default.
+
+        Returns the group_name from dagster metadata if set, otherwise
+        returns None to use Dagster's default grouping.
+
+        Returns:
+            The effective group name to use for asset grouping, or None.
+        """
+        return self.dagster_metadata.group_name
 
 
 @beta
@@ -598,7 +651,7 @@ class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
 
     @classmethod
     def get_source_sensor_enabled_default(cls) -> bool:
-        return True
+        return False
 
     @staticmethod
     def get_source_type() -> str:
@@ -753,7 +806,7 @@ class MotherDuckEvidenceProjectSource(BaseEvidenceProjectSource):
 
     @classmethod
     def get_source_sensor_enabled_default(cls) -> bool:
-        return True
+        return False
 
     @staticmethod
     def get_source_type() -> str:
@@ -913,7 +966,7 @@ class BigQueryEvidenceProjectSource(BaseEvidenceProjectSource):
 
     @classmethod
     def get_source_sensor_enabled_default(cls) -> bool:
-        return True
+        return False
 
     @staticmethod
     def get_source_type() -> str:
@@ -1069,7 +1122,7 @@ class GSheetsEvidenceProjectSource(BaseEvidenceProjectSource):
 
     @classmethod
     def get_source_sensor_enabled_default(cls) -> bool:
-        return True
+        return False
 
     @staticmethod
     def get_source_type() -> str:
