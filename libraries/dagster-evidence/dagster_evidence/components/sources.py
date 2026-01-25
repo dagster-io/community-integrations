@@ -4,6 +4,7 @@ This module defines the data structures used to represent Evidence project sourc
 including queries, connections, and the translator data classes.
 """
 
+import os
 from abc import abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -327,6 +328,9 @@ class EvidenceSourceTranslatorData:
     source_group: str  # The source folder name (e.g., "orders_db")
     query: SourceQuery  # The specific query being translated
     extracted_data: dict[str, Any] = {}  # Additional extracted data (e.g., table_deps)
+    source_path: str | None = (
+        None  # Absolute path to source directory (for resolving relative paths)
+    )
 
     @public
     @property
@@ -647,7 +651,7 @@ class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
 
     @classmethod
     def get_hide_source_asset_default(cls) -> bool:
-        return True
+        return False
 
     @classmethod
     def get_source_sensor_enabled_default(cls) -> bool:
@@ -675,6 +679,10 @@ class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
         if not db_path:
             return None
 
+        # Resolve relative path against source_path
+        if data.source_path and not os.path.isabs(db_path):
+            db_path = os.path.join(data.source_path, db_path)
+
         table_deps = data.extracted_data.get("table_deps", [])
         if not table_deps:
             return None
@@ -696,8 +704,7 @@ class DuckdbEvidenceProjectSource(BaseEvidenceProjectSource):
             try:
                 conn = duckdb.connect(db_path, read_only=True)
             except Exception as e:
-                context.log.warning(f"Could not connect to DuckDB: {e}")
-                return
+                raise Exception(f"Could not connect to DuckDB: {e}") from e
 
             try:
                 table_counts: dict[str, int] = {}
@@ -802,7 +809,7 @@ class MotherDuckEvidenceProjectSource(BaseEvidenceProjectSource):
 
     @classmethod
     def get_hide_source_asset_default(cls) -> bool:
-        return True
+        return False
 
     @classmethod
     def get_source_sensor_enabled_default(cls) -> bool:
@@ -857,8 +864,7 @@ class MotherDuckEvidenceProjectSource(BaseEvidenceProjectSource):
             try:
                 conn = duckdb.connect(connection_string, read_only=True)
             except Exception as e:
-                context.log.warning(f"Could not connect to MotherDuck: {e}")
-                return
+                raise Exception(f"Could not connect to MotherDuck: {e}") from e
 
             try:
                 table_counts: dict[str, int] = {}
@@ -1011,8 +1017,7 @@ class BigQueryEvidenceProjectSource(BaseEvidenceProjectSource):
             try:
                 client = bigquery.Client(project=project_id)
             except Exception as e:
-                context.log.warning(f"Could not connect to BigQuery: {e}")
-                return
+                raise Exception(f"Could not connect to BigQuery: {e}") from e
 
             mod_times: dict[str, str] = {}
             for ref in table_deps:
@@ -1166,7 +1171,7 @@ class GSheetsEvidenceProjectSource(BaseEvidenceProjectSource):
             except ImportError:
                 raise ImportError(
                     "google-api-python-client is required for Google Sheets sensors. "
-                    "Install it with: pip install dagster-evidence[gsheets]"
+                    "Install it with: uv pip install 'dagster-evidence[gsheets]'"
                 ) from None
 
             try:
@@ -1195,8 +1200,7 @@ class GSheetsEvidenceProjectSource(BaseEvidenceProjectSource):
                     "version": file_metadata.get("version"),
                 }
             except Exception as e:
-                context.log.warning(f"Could not fetch Google Sheet metadata: {e}")
-                return
+                raise Exception(f"Could not fetch Google Sheet metadata: {e}") from e
 
             cursor = json.loads(context.cursor) if context.cursor else {}
 

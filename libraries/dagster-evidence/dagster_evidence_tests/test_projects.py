@@ -300,7 +300,7 @@ class TestLocalEvidenceProject:
         assert isinstance(source_sensors, list)
 
     def test_local_project_load_source_assets_with_hiding(self, evidence_project_data):
-        """Verify load_source_assets hides source assets based on source type default."""
+        """Verify load_source_assets creates source assets when not hidden."""
         from dagster_evidence.components.translator import DagsterEvidenceTranslator
 
         deployment = CustomEvidenceProjectDeployment(deploy_command="echo deploy")
@@ -313,16 +313,13 @@ class TestLocalEvidenceProject:
             evidence_project_data, translator
         )
 
-        # DuckDB sources should be hidden (get_hide_source_asset_default returns True)
-        # so no source assets should be created
-        assert len(source_assets) == 0
+        # DuckDB sources are not hidden by default (get_hide_source_asset_default returns False)
+        # so source assets should be created (2 queries in the fixture)
+        assert len(source_assets) == 2
 
-        # But source_deps should contain the table_deps from the SQL queries
-        # (extracted from the SQL content, which in this case is empty since
-        # the fixture doesn't have real table references)
-        # The important thing is that source_deps is populated even without source_assets
+        # source_deps should be a list
         assert isinstance(source_deps, list)
-        # No sensors for hidden assets
+        # No sensors by default (sensor disabled by default for DuckDB)
         assert len(source_sensors) == 0
 
     def test_local_project_load_source_assets_with_sensors(self):

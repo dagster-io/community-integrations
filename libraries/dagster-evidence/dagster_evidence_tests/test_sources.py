@@ -157,12 +157,12 @@ class TestSourceDefaults:
     """Tests for source default behavior methods."""
 
     def test_duckdb_hide_source_asset_default(self):
-        """Verify DuckDB sources hide assets by default."""
-        assert DuckdbEvidenceProjectSource.get_hide_source_asset_default() is True
+        """Verify DuckDB sources do not hide assets by default."""
+        assert DuckdbEvidenceProjectSource.get_hide_source_asset_default() is False
 
     def test_motherduck_hide_source_asset_default(self):
-        """Verify MotherDuck sources hide assets by default."""
-        assert MotherDuckEvidenceProjectSource.get_hide_source_asset_default() is True
+        """Verify MotherDuck sources do not hide assets by default."""
+        assert MotherDuckEvidenceProjectSource.get_hide_source_asset_default() is False
 
     def test_bigquery_hide_source_asset_default(self):
         """Verify BigQuery sources hide assets by default."""
@@ -594,8 +594,8 @@ class TestSourceInstanceMethods:
             }
         )
         source = DuckdbEvidenceProjectSource(source_content)
-        # Should use class default (True for DuckDB)
-        assert source.get_hide_source_asset() is True
+        # Should use class default (False for DuckDB)
+        assert source.get_hide_source_asset() is False
 
     def test_get_source_sensor_enabled_uses_metadata_override(self):
         """Verify get_source_sensor_enabled returns metadata value when set."""

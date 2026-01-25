@@ -131,6 +131,9 @@ class BaseEvidenceProject(dg.ConfigurableResource):
             # Check if this source should hide its assets (uses instance method for overrides)
             should_hide = source.get_hide_source_asset()
 
+            # Get the source path for resolving relative paths
+            source_path = self.get_source_path(source_group)
+
             # Generate asset specs via translator
             for query in source_content.queries:
                 # First create data without extracted_data
@@ -138,6 +141,7 @@ class BaseEvidenceProject(dg.ConfigurableResource):
                     source_content=source_content,
                     source_group=source_group,
                     query=query,
+                    source_path=source_path,
                 )
                 # Extract data using source class
                 extracted = source_class.extract_data_from_source(initial_data)
@@ -147,6 +151,7 @@ class BaseEvidenceProject(dg.ConfigurableResource):
                     source_group=source_group,
                     query=query,
                     extracted_data=extracted,
+                    source_path=source_path,
                 )
 
                 if should_hide:
@@ -182,6 +187,21 @@ class BaseEvidenceProject(dg.ConfigurableResource):
             Dictionary mapping source folder names to their SourceContent.
         """
         raise NotImplementedError()
+
+    @public
+    def get_source_path(self, source_group: str) -> str | None:
+        """Get the absolute path to a source directory.
+
+        This method is used to resolve relative paths in source configurations
+        (e.g., DuckDB database file paths).
+
+        Args:
+            source_group: The source folder name (e.g., "orders_db").
+
+        Returns:
+            The absolute path to the source directory, or None if not applicable.
+        """
+        return None
 
     @public
     def parse_evidence_project(self) -> EvidenceProjectData:
@@ -300,6 +320,17 @@ class LocalEvidenceProject(BaseEvidenceProject):
 
     def get_evidence_project_name(self) -> str:
         return Path(self.project_path).name
+
+    def get_source_path(self, source_group: str) -> str | None:
+        """Get the absolute path to a source directory.
+
+        Args:
+            source_group: The source folder name (e.g., "orders_db").
+
+        Returns:
+            The absolute path to the source directory.
+        """
+        return str(Path(self.project_path) / "sources" / source_group)
 
     def _parse_project_dagster_metadata(self) -> ProjectDagsterMetadata:
         """Parse Dagster metadata from evidence.config.yaml.
