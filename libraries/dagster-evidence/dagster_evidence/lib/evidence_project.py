@@ -41,7 +41,7 @@ class EvidenceProject(Component, Resolvable):
     def build_defs(self, context: ComponentLoadContext) -> Definitions:
         project_path = os.path.abspath(context.path / self.project_path)
 
-        def _run_cmd(cmd: Sequence[str]):
+        def _run_cmd(cmd: Sequence[str]) -> None:
             print(
                 f"{project_path}$ {' '.join(cmd)}",
                 file=sys.stderr,
@@ -51,7 +51,7 @@ class EvidenceProject(Component, Resolvable):
                 cwd=project_path,
                 check=True,
                 capture_output=False,
-                env=os.environ,
+                env=dict(os.environ),
             )
 
         @multi_asset(specs=[self.asset])

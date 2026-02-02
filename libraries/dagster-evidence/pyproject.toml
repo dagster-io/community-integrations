@@ -2,17 +2,37 @@
 name = "dagster-evidence"
 description = "Dagster integration with evidence.dev"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 dependencies = [
-    "dagster>=1.10.9",
+    "dagster>=1.12.10",
+    "pyyaml>=6.0",
 ]
 dynamic = ["version"]
+
+[project.optional-dependencies]
+github-pages = ["gitpython>=3.1.0"]
+sql = ["sqlglot>=26.0.0"]
+duckdb = ["duckdb>=0.10.0"]
+bigquery = ["google-cloud-bigquery>=3.0.0"]
+gsheets = ["google-api-python-client>=2.0.0", "google-auth>=2.0.0"]
+all = ["gitpython>=3.1.0", "sqlglot>=26.0.0", "duckdb>=0.10.0", "google-cloud-bigquery>=3.0.0", "google-api-python-client>=2.0.0", "google-auth>=2.0.0"]
+test = [
+    "pytest",
+    "pytest-mock",
+]
 
 [tool.uv]
 dev-dependencies = [
     "ruff",
     "pytest",
+    "pytest-mock",
     "pyright>=1.1.386",
+    "gitpython>=3.1.0",
+    "sqlglot>=26.0.0",
+    "duckdb>=0.10.0",
+    "google-cloud-bigquery>=3.0.0",
+    "google-api-python-client>=2.0.0",
+    "google-auth>=2.0.0",
 ]
 
 [build-system]
@@ -20,7 +40,7 @@ requires = ["setuptools>=42"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["dagster_evidence", "dagster_evidence.lib"]
+packages = ["dagster_evidence", "dagster_evidence.lib", "dagster_evidence.components", "dagster_evidence.utils"]
 
 [tool.setuptools.dynamic]
 version = {attr = "dagster_evidence.__version__"}
