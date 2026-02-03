@@ -447,3 +447,52 @@ def test_upath_io_manager_multi_partitions_definition_load_multiple_partitions(
             {"time": str(today - timedelta(days=2)), "static": "a"}
         ),
     )
+
+
+def test_polars_upath_io_manager_partition_metadata(
+    io_manager_and_df: tuple[BasePolarsUPathIOManager, pl.DataFrame],
+):
+    """Test that partitioned assets emit dagster/partition_row_count and
+    non-partitioned assets emit dagster/row_count."""
+    manager, df = io_manager_and_df
+
+    partitions_def = StaticPartitionsDefinition(["a", "b"])
+
+    @asset(io_manager_def=manager, partitions_def=partitions_def)
+    def partitioned_asset() -> pl.DataFrame:
+        return df
+
+    @asset(io_manager_def=manager)
+    def non_partitioned_asset() -> pl.DataFrame:
+        return df
+
+    # Test partitioned asset emits dagster/partition_row_count
+    partitioned_result = materialize(
+        [partitioned_asset],
+        partition_key="a",
+    )
+    partitioned_events = list(
+        filter(
+            lambda evt: evt.is_handled_output,
+            partitioned_result.events_for_node("partitioned_asset"),
+        )
+    )
+    partitioned_metadata = partitioned_events[0].event_specific_data.metadata  # type: ignore
+    assert "dagster/partition_row_count" in partitioned_metadata
+    assert partitioned_metadata["dagster/partition_row_count"].value == len(df)
+    assert "dagster/row_count" not in partitioned_metadata
+
+    # Test non-partitioned asset emits dagster/row_count
+    non_partitioned_result = materialize(
+        [non_partitioned_asset],
+    )
+    non_partitioned_events = list(
+        filter(
+            lambda evt: evt.is_handled_output,
+            non_partitioned_result.events_for_node("non_partitioned_asset"),
+        )
+    )
+    non_partitioned_metadata = non_partitioned_events[0].event_specific_data.metadata  # type: ignore
+    assert "dagster/row_count" in non_partitioned_metadata
+    assert non_partitioned_metadata["dagster/row_count"].value == len(df)
+    assert "dagster/partition_row_count" not in non_partitioned_metadata
