@@ -173,7 +173,10 @@ def get_polars_metadata(
 
         metadata["table"] = table_metadata
         metadata["stats"] = stats_metadata
-        metadata["dagster/row_count"] = MetadataValue.int(df.shape[0])
+        if context.has_partition_key:
+            metadata["dagster/partition_row_count"] = MetadataValue.int(df.shape[0])
+        else:
+            metadata["dagster/row_count"] = MetadataValue.int(df.shape[0])
         metadata["estimated_size_mb"] = MetadataValue.float(
             df.estimated_size(unit="mb")
         )

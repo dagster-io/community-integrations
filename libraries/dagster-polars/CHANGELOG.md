@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixes
+
+- Partitioned assets/outputs now log `dagster/partition_row_count` metadata instead of `dagster/row_count`. See https://docs.dagster.io/guides/build/assets/metadata-and-tags for more details. 
+
 ## Added
 
 - Added new `schema_mode` (defaults to `None`, can be set to `overwrite` or `merge`) parameter to `PolarsDeltaIOManager`. Previously schema mode had to be configured for each asset individually.
