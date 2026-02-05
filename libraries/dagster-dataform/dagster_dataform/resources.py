@@ -175,15 +175,66 @@ class DataformRepositoryResource:
         return response  # pyright: ignore[reportReturnType]
 
     def create_workflow_invocation(
-        self, compilation_result_name: str
+        self,
+        compilation_result_name: str,
+        included_targets: list[str | dict] | None = None,
+        included_tags: list[str] | None = None,
+        transitive_dependencies_included: bool = True,
+        transitive_dependents_included: bool = False,
+        fully_refresh_incremental_tables_enabled: bool = False,
+        service_account: str | None = None,
     ) -> dataform_v1.WorkflowInvocation:
-        """Create a workflow invocation. Returns the workflow invocation object."""
+        """Create a workflow invocation. Returns the workflow invocation object.
+
+        Args:
+            compilation_result_name: The compilation result to use for the invocation.
+            included_targets: List of targets to include (selective execution).
+                Each target can be either:
+                - A string (just the name, database/schema will be empty)
+                - A dict with keys: database, schema, name
+            included_tags: List of tags to filter targets by.
+            transitive_dependencies_included: Include upstream dependencies of selected targets.
+            transitive_dependents_included: Include downstream dependents of selected targets.
+            fully_refresh_incremental_tables_enabled: Force full refresh of incremental tables.
+            service_account: Service account email to run the workflow as. If not set,
+                uses the repository's default service account (requires impersonation permission).
+        """
+        workflow_invocation = dataform_v1.WorkflowInvocation(
+            compilation_result=compilation_result_name,
+        )
+
+        # Build invocation config if any options are specified
+        if included_targets or included_tags or service_account:
+            invocation_config = dataform_v1.InvocationConfig(
+                transitive_dependencies_included=transitive_dependencies_included,
+                transitive_dependents_included=transitive_dependents_included,
+                fully_refresh_incremental_tables_enabled=fully_refresh_incremental_tables_enabled,
+            )
+            if included_targets:
+                targets = []
+                for target in included_targets:
+                    if isinstance(target, dict):
+                        # Only pass non-None values to avoid protobuf serialization issues
+                        target_kwargs = {}
+                        if target.get("database"):
+                            target_kwargs["database"] = target["database"]
+                        if target.get("schema"):
+                            target_kwargs["schema"] = target["schema"]
+                        if target.get("name"):
+                            target_kwargs["name"] = target["name"]
+                        targets.append(dataform_v1.Target(**target_kwargs))
+                    else:
+                        targets.append(dataform_v1.Target(name=target))
+                invocation_config.included_targets = targets
+            if included_tags:
+                invocation_config.included_tags = included_tags
+            if service_account:
+                invocation_config.service_account = service_account
+            workflow_invocation.invocation_config = invocation_config
 
         request = dataform_v1.CreateWorkflowInvocationRequest(
             parent=f"projects/{self.project_id}/locations/{self.location}/repositories/{self.repository_id}",
-            workflow_invocation=dataform_v1.WorkflowInvocation(
-                compilation_result=compilation_result_name,
-            ),
+            workflow_invocation=workflow_invocation,
         )
 
         response = self.client.create_workflow_invocation(request=request)

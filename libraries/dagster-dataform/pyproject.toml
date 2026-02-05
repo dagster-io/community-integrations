@@ -5,7 +5,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "dagster-webserver>=1.8.12",
-    "dagster==1.11.4",
+    "dagster>=1.11.4",
     "google-cloud-dataform>=0.6.2",
 ]
 dynamic = ["version"]
@@ -15,7 +15,7 @@ dev-dependencies = [
     "ruff",
     "pytest",
     "pyright>=1.1.386",
-    "dagster==1.11.4",
+    "dagster>=1.11.4",
 ]
 
 [build-system]

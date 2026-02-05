@@ -319,6 +319,64 @@ def test_dataform_repository_resource_create_workflow_invocation(mock_dataform_c
     ],
     indirect=True,
 )
+def test_dataform_repository_resource_create_workflow_invocation_with_selective_execution(
+    mock_dataform_client,
+):
+    resource = DataformRepositoryResource(
+        project_id="test-project",
+        repository_id="test-repo",
+        location="us-central1",
+        environment="dev",
+        client=mock_dataform_client,
+    )
+
+    workflow_invocation = resource.create_workflow_invocation(
+        compilation_result_name="test-compilation-result",
+        included_targets=[
+            "target_1",
+            {"database": "db", "schema": "schema", "name": "target_2"},
+        ],
+        included_tags=["tag_1", "tag_2"],
+    )
+
+    expected_request = dataform_v1.CreateWorkflowInvocationRequest(
+        parent="projects/test-project/locations/us-central1/repositories/test-repo",
+        workflow_invocation=dataform_v1.WorkflowInvocation(
+            compilation_result="test-compilation-result",
+            invocation_config=dataform_v1.InvocationConfig(
+                included_targets=[
+                    dataform_v1.Target(name="target_1"),
+                    dataform_v1.Target(database="db", schema="schema", name="target_2"),
+                ],
+                included_tags=["tag_1", "tag_2"],
+                transitive_dependencies_included=True,
+                transitive_dependents_included=False,
+                fully_refresh_incremental_tables_enabled=False,
+            ),
+        ),
+    )
+
+    mock_dataform_client.create_workflow_invocation.assert_called_once_with(
+        request=expected_request
+    )
+
+    assert workflow_invocation is not None
+    assert workflow_invocation.name == "test-workflow-invocation"
+
+
+@pytest.mark.parametrize(
+    "mock_dataform_client",
+    [
+        {
+            "git_commitish": "dev",
+            "default_database": "test-database",
+            "default_schema": "test-schema",
+            "default_location": "us-central1",
+            "assertion_schema": "test-assertion-schema",
+        }
+    ],
+    indirect=True,
+)
 def test_dataform_repository_resource_get_workflow_invocation_details(
     mock_dataform_client,
 ):
