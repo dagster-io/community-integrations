@@ -10,7 +10,7 @@ from dagster_dataform.dataform_orchestration_schedule import (
     create_dataform_orchestration_schedule as create_dataform_orchestration_schedule,
 )
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
 DagsterLibraryRegistry.register(
     "dagster-dataform", __version__, is_dagster_package=False
