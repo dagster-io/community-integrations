@@ -16,6 +16,8 @@ def create_dataform_orchestration_schedule(
     schema_suffix: str | None = None,
     table_prefix: str | None = None,
     builtin_assertion_name_prefix: str | None = None,
+    included_targets: list[str | dict] | None = None,
+    included_tags: list[str] | None = None,
     vars: dict[str, Any] | None = None,
 ):
     """
@@ -42,6 +44,8 @@ def create_dataform_orchestration_schedule(
 
         workflow_invocation = resource.create_workflow_invocation(
             compilation_result_name=compilation_result.name,
+            included_targets=included_targets,
+            included_tags=included_tags,
         )
 
         context.log.info(f"Created workflow invocation: {workflow_invocation.name}")

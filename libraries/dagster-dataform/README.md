@@ -13,7 +13,7 @@ A Dagster integration for Google Cloud Dataform that provides asset definitions 
 - **GCP Integration**: Seamless integration with Google Cloud Platform using default credentials
 
 > [!NOTE]  
->  Everytime a code location is reloaded, a new compilation result is created for the targeted branch (environment). Therefore if changes are mode to the branch, all that is necessary to refresh Dataform Asset/Asset Check metadata in Dagster is to reload the code location.
+>  Everytime a code location is reloaded, a new compilation result is created for the targeted branch (environment). Therefore if changes are made to the branch, all that is necessary to refresh Dataform Asset/Asset Check metadata in Dagster is to reload the code location.
 
 ### Orchestration
 Orchestrate Dataform invocations remotely via configuration of a dagster schedule automation. This configuration offers more flexibility than release and workflow configurations through the GCP Console in Dataform, including settings like assertion schema.
@@ -144,7 +144,7 @@ This integration contains placeholder alerting jobs that are triggered on workfl
 - **workflow_invocation_failure_notification_job**: This job will be run for any workflow invocation action that *is not* an assertion with a terminal state != "SUCCEEDED"
 - **asset_check_failure_notification_job**: This job will be run for any workflow invocation action that *is* an assertion with a terminal state != "SUCCEEDED"
 
-There are a few constraints to be mindful of regarding these custome jobs:
+There are a few constraints to be mindful of regarding these custom jobs:
 - The `workflow_invocation_failure_notification_job` must be named "dataform_workflow_invocation_failure_notification_job" (and the op must be named "dataform_workflow_invocation_failure_notification_op")
 - The `asset_check_failure_notification_job` must be named "dataform_asset_check_failure_notification_job" (and the op must be named "dataform_asset_check_failure_notification_op")
 
@@ -295,6 +295,11 @@ Creates a Dagster schedule that orchestrates Dataform workflow executions on a c
 - `table_prefix` (str, optional): Prefix to prepend to table names
 - `builtin_assertion_name_prefix` (str, optional): Prefix for built-in assertion names
 - `vars` (Dict[str, Any], optional): Variables to pass to the Dataform compilation
+- `included_targets` (List[str | Dict], optional): List of targets to execute. Can be simple strings (target names) or dictionaries specifying `name`, `schema`, and `database`.
+- `included_tags` (List[str], optional): List of tags to execute.
+- `transitive_dependencies_included` (bool, optional): Whether to include upstream dependencies of the selected targets (default: True).
+- `transitive_dependents_included` (bool, optional): Whether to include downstream dependents of the selected targets (default: False).
+- `fully_refresh_incremental_tables_enabled` (bool, optional): Whether to force full refresh of incremental tables (default: False).
 
 **Returns:**
 - `ScheduleDefinition`: A configured Dagster schedule that orchestrates Dataform workflows
@@ -315,6 +320,27 @@ schedule = create_dataform_orchestration_schedule(
     default_database="analytics",
     assertion_schema="data_quality",
     vars={"environment": "production"}
+)
+```
+
+**Selective Execution Example:**
+
+You can configure the schedule to run only specific targets or tags. Note that by default, Dataform includes transitive dependencies (upstream models), ensuring your selection runs with fresh data.
+
+```python
+schedule = create_dataform_orchestration_schedule(
+    resource=resource,
+    cron_schedule="0 3 * * *",
+    git_commitish="main",
+    # Run specific tags
+    included_tags=["daily_critical"],
+    # Run specific targets
+    included_targets=[
+        "my_critical_model",
+        {"name": "complex_model", "schema": "analytics"}
+    ],
+    # Optional: Disable upstream dependency inclusion to run EXACTLY these targets
+    # transitive_dependencies_included=False
 )
 ```
 
