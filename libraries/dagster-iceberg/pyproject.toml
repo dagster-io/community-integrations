@@ -10,7 +10,7 @@ dependencies = [
   "dagster>=1.8.2",
   "pendulum>=3.0.0",
   "pydantic>=2.0.0",
-  "pyiceberg[pyarrow]>=0.8",
+  "pyiceberg[pyarrow]>=0.8,<0.11",
   "tenacity>=8.5.0",
 ]
 classifiers = [
@@ -134,7 +134,7 @@ dev = [
   "dagster-pyspark>=0.26.1",
   "docker",
   "fsspec[http]>=2025.2.0",
-  "pyiceberg[sql-postgres]",
+  "pyiceberg[sql-postgres]<0.11",
   "pyright>=1.1.385",
   "pytest>=8.3.2",
   "pytest-cov>=6.0.0",
