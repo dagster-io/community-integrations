@@ -4,25 +4,27 @@ import datetime as dt
 import itertools
 import logging
 from abc import abstractmethod
-from collections.abc import Iterable, Sequence
-from typing import (
-    Generic,
-    TypeVar,
-    cast,
-)
+from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
 from dagster._core.definitions import TimeWindow
-from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
 from pyiceberg import expressions as E
 from pyiceberg import types as T
-from pyiceberg.partitioning import PartitionField, PartitionSpec
-from pyiceberg.schema import Schema
-from pyiceberg.table import Table
-from pyiceberg.table.update.spec import UpdateSpec
 from pyiceberg.transforms import IdentityTransform
 
 from dagster_iceberg._utils.retries import IcebergOperationWithRetry
 from dagster_iceberg._utils.transforms import diff_to_transformation
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+
+    from dagster._core.storage.db_io_manager import (
+        TablePartitionDimension,
+        TableSlice,
+    )
+    from pyiceberg.partitioning import PartitionField, PartitionSpec
+    from pyiceberg.schema import Schema
+    from pyiceberg.table import Table
+    from pyiceberg.table.update.spec import UpdateSpec
 
 time_partition_dt_types = (T.TimestampType, T.DateType)
 partition_types = T.StringType
