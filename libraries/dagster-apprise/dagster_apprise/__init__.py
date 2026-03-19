@@ -27,5 +27,5 @@ __all__ = [
 
 
 DagsterLibraryRegistry.register(
-    "example-integration", __version__, is_dagster_package=False
+    "dagster-apprise", __version__, is_dagster_package=False
 )
