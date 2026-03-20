@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, Any, Optional, cast
 import polars as pl
 import pyarrow.dataset as ds
 from dagster import InputContext, OutputContext
-from fsspec.implementations.local import LocalFileSystem
 from packaging.version import Version
 
 from dagster_polars.io_managers.base import BasePolarsUPathIOManager
@@ -141,25 +140,25 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
         path: "UPath",
     ):
         context_metadata = context.definition_metadata or {}
+        compression = context_metadata.get("compression", "zstd")
+        compression_level = context_metadata.get("compression_level")
+        statistics = context_metadata.get("statistics", False)
+        row_group_size = context_metadata.get("row_group_size")
 
-        fs = path.fs if hasattr(path, "fs") else None
-        if isinstance(fs, LocalFileSystem):
-            compression = context_metadata.get("compression", "zstd")
-            compression_level = context_metadata.get("compression_level")
-            statistics = context_metadata.get("statistics", False)
-            row_group_size = context_metadata.get("row_group_size")
-
+        # sink_parquet with storage_options is supported in Polars >= 1.0.0
+        if Version(pl.__version__) >= Version("1.0.0"):
             df.sink_parquet(
                 str(path),
                 compression=compression,
                 compression_level=compression_level,
                 statistics=statistics,
                 row_group_size=row_group_size,
+                storage_options=self.storage_options,
             )
         else:
-            # TODO(ion): add sink_parquet once this PR gets merged: https://github.com/pola-rs/polars/pull/11519
             context.log.warning(
-                "Cloud sink is not possible yet, instead it's dispatched to pyarrow writer which collects it into memory first.",
+                "Cloud sink with storage_options requires Polars >= 1.0.0, "
+                "falling back to collecting the LazyFrame first.",
             )
             return self.write_df_to_path(context, df.collect(), path)
 
@@ -199,13 +198,16 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
                     row_group_size=row_group_size,
                 )
         else:
-            df.write_parquet(
-                str(path),
-                compression=compression,  # type: ignore
+            # storage_options for write_parquet was added in Polars 1.17.0
+            kwargs: dict[str, Any] = dict(
+                compression=compression,
                 compression_level=compression_level,
                 statistics=statistics,
                 row_group_size=row_group_size,
             )
+            if Version(pl.__version__) >= Version("1.17.0"):
+                kwargs["storage_options"] = self.storage_options
+            df.write_parquet(str(path), **kwargs)  # type: ignore
 
     def scan_df_from_path(
         self,

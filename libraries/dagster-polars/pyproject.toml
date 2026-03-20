@@ -36,12 +36,14 @@ Repository = "https://github.com/dagster-io/community-integrations/tree/main/lib
 dev-dependencies = [
     "deepdiff>=6.3.0",
     "hypothesis[zoneinfo]>=6.89.0",
+    "moto[server]>=5.0.0",
     "ruff",
     "polars>=1.31.0",
     "pytest>=8",
     "pytest-cases>=3.6.14",
     "pytest-mock",
     "pyright>=1.1.386",
+    "s3fs>=2024.0.0",
 ]
 
 [build-system]
