@@ -272,6 +272,7 @@ dependencies = [
     { name = "dagster" },
     { name = "openlineage-python" },
     { name = "packaging" },
+    { name = "pyyaml" },
 ]
 
 [package.dev-dependencies]
@@ -287,6 +288,7 @@ requires-dist = [
     { name = "dagster", specifier = ">=1.11.6" },
     { name = "openlineage-python", specifier = ">=1.7.0" },
     { name = "packaging" },
+    { name = "pyyaml" },
 ]
 
 [package.metadata.requires-dev]

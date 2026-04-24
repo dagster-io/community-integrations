@@ -2,6 +2,7 @@ from dagster_openlineage.version import __version__
 
 from dagster_openlineage.adapter import OpenLineageAdapter
 from dagster_openlineage.sensor import openlineage_sensor
+from dagster_openlineage.storage import OpenLineageEventLogStorage
 from dagster_openlineage.utils import make_step_job_name, to_utc_iso_8601
 from dagster_openlineage.compat import (
     get_pipeline_origin,
@@ -28,6 +29,7 @@ if _dagster_lib_spec is not None:
 
 __all__ = [
     "OpenLineageAdapter",
+    "OpenLineageEventLogStorage",
     "openlineage_sensor",
     "make_step_job_name",
     "to_utc_iso_8601",

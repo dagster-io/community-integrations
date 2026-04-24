@@ -8,6 +8,7 @@ dependencies = [
     "openlineage-python>=1.7.0",
     "packaging",
     "cattrs",
+    "pyyaml",
 ]
 
 dynamic = ["version"]  
