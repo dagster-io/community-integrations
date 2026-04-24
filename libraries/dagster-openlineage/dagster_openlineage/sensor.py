@@ -36,9 +36,9 @@ else:
     from dagster._core.definitions.run_request import (  # pyright: ignore[reportMissingImports]
         SkipReason,
     )
-    from dagster._core.definitions.sensor_definition import (  # pyright: ignore[reportMissingImports]
-        SensorEvaluationContext,
-        sensor,
+    from dagster._core.definitions.sensor_definition import (  # pyright: ignore[reportMissingImports, reportAttributeAccessIssue]
+        SensorEvaluationContext,  # pyright: ignore[reportAttributeAccessIssue]
+        sensor,  # pyright: ignore[reportAttributeAccessIssue]
     )
 
 _ADAPTER = OpenLineageAdapter()
@@ -116,7 +116,7 @@ def openlineage_sensor(
         ol_cursor = (
             OpenLineageCursor.from_json(context.cursor)
             if context.cursor
-            else OpenLineageCursor(after_storage_id)
+            else OpenLineageCursor(after_storage_id or 0)
         )
         last_storage_id = ol_cursor.last_storage_id
         running_pipelines = ol_cursor.running_pipelines
@@ -125,7 +125,7 @@ def openlineage_sensor(
             context.instance,
             concerned_event_types,
             last_storage_id,
-            record_filter_limit,
+            record_filter_limit or 0,
         )
 
         raised_exception = None
@@ -175,12 +175,18 @@ def openlineage_sensor(
                         _handle_pipeline_event(
                             running_pipelines,
                             dagster_event_type,
-                            pipeline_name,
+                            pipeline_name or "",
                             pipeline_run_id,
                             timestamp,
                             repository_name,
                         )
                     elif dagster_event_type in STEP_EVENTS:
+                        if pipeline_name is None or step_key is None:
+                            # Step events should always carry both; skip
+                            # defensively when Dagster surfaces unexpected
+                            # shape rather than crash the tick.
+                            last_storage_id = record.storage_id
+                            continue
                         _handle_step_event(
                             running_pipelines,
                             dagster_event_type,
@@ -207,7 +213,7 @@ def openlineage_sensor(
         log.info(msg)
         yield SkipReason(msg)
 
-    return _openlineage_sensor
+    return _openlineage_sensor  # pyright: ignore[reportReturnType]
 
 
 def _handle_pipeline_event(

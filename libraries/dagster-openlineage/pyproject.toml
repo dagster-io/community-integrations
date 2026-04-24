@@ -34,10 +34,12 @@ version = { attr = "dagster_openlineage.version.__version__" }
 "dagster_dg.library" = { dagster_openlineage = "dagster_openlineage" }  
 "dagster_dg.plugin" = { dagster_openlineage = "dagster_openlineage" }  
   
-[tool.pyright]  
-reportMissingImports = "none"  
-reportArgumentType = "none"  
-reportReturnType = "none"  
-reportCallIssue = "none"  
-reportOptionalMemberAccess = "none"  
-reportAttributeAccessIssue = "none"
+[tool.pyright]
+# Silences kept narrow and bounded to v0.2-touched files:
+#  * reportMissingImports: dagster._core.definitions.* fallbacks used only
+#    when the public API isn't available on older pins (still within the
+#    1.11.6 floor window for some paths).
+#  * reportPrivateImportUsage: dagster re-exports event data classes from
+#    dagster._core.events where public paths do not exist.
+reportMissingImports = "none"
+reportPrivateImportUsage = "none"

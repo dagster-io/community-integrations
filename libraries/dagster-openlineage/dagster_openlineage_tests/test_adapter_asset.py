@@ -1,7 +1,9 @@
 # Copyright 2018-2025 contributors to the OpenLineage project
 # SPDX-License-Identifier: Apache-2.0
 
-# pyright: reportOptionalSubscript=false, reportOperatorIssue=false, reportOptionalIterable=false
+# pyright: reportOptionalSubscript=false, reportOperatorIssue=false, reportOptionalIterable=false, reportArgumentType=false, reportAttributeAccessIssue=false
+# Optional facet/input collections and facet-subtype attribute access are
+# exercised here under known-safe adapter invariants.
 
 import time
 from unittest.mock import MagicMock
