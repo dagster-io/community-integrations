@@ -14,7 +14,7 @@ from dagster_openlineage.utils import (
 )
 
 from dagster import EventRecordsFilter
-from dagster.core.events import PIPELINE_EVENTS, STEP_EVENTS
+from dagster_openlineage.compat import PIPELINE_EVENTS, STEP_EVENTS
 
 from .conftest import make_pipeline_run_with_external_pipeline_origin
 

@@ -7,10 +7,11 @@ from typing import Dict, Optional
 
 from openlineage.client import OpenLineageClient, set_producer
 from openlineage.client.constants import DEFAULT_NAMESPACE_NAME
-from openlineage.client.facet import ParentRunFacet
-from openlineage.client.run import Job, Run, RunEvent, RunState
-from dagster_openlineage.version import __version__ as OPENLINEAGE_DAGSTER_VERSION
+from openlineage.client.event_v2 import Job, Run, RunEvent, RunState
+from openlineage.client.facet_v2 import parent_run as parent_run_facet
+
 from dagster_openlineage.utils import make_step_job_name, to_utc_iso_8601
+from dagster_openlineage.version import __version__ as OPENLINEAGE_DAGSTER_VERSION
 
 _DEFAULT_NAMESPACE_NAME = os.getenv("OPENLINEAGE_NAMESPACE", DEFAULT_NAMESPACE_NAME)
 _PRODUCER = (
@@ -38,13 +39,6 @@ class OpenLineageAdapter:
         timestamp: float,
         repository_name: Optional[str] = None,
     ):
-        """Emits OpenLineage event to indicate start of Dagster pipeline run.
-        :param pipeline_name: Dagster pipeline name
-        :param pipeline_run_id: Dagster-generated unique identifier for a pipeline run
-        :param timestamp: Unix timestamp of Dagster event
-        :param repository_name: Dagster repository name
-        :return:
-        """
         self._emit_pipeline_event(
             RunState.START, pipeline_name, pipeline_run_id, timestamp, repository_name
         )
@@ -56,13 +50,6 @@ class OpenLineageAdapter:
         timestamp: float,
         repository_name: Optional[str] = None,
     ):
-        """Emits OpenLineage event to indicate completion of Dagster pipeline run.
-        :param pipeline_name: Dagster pipeline name
-        :param pipeline_run_id: Dagster-generated unique identifier for a pipeline run
-        :param timestamp: Unix timestamp of Dagster event
-        :param repository_name: Dagster repository name
-        :return:
-        """
         self._emit_pipeline_event(
             RunState.COMPLETE,
             pipeline_name,
@@ -78,13 +65,6 @@ class OpenLineageAdapter:
         timestamp: float,
         repository_name: Optional[str] = None,
     ):
-        """Emits OpenLineage event to indicate failure of Dagster pipeline run.
-        :param pipeline_name: Dagster pipeline name
-        :param pipeline_run_id: Dagster-generated unique identifier for a pipeline run
-        :param timestamp: Unix timestamp of Dagster event
-        :param repository_name: Dagster repository name
-        :return:
-        """
         self._emit_pipeline_event(
             RunState.FAIL, pipeline_name, pipeline_run_id, timestamp, repository_name
         )
@@ -96,13 +76,6 @@ class OpenLineageAdapter:
         timestamp: float,
         repository_name: Optional[str] = None,
     ):
-        """Emits OpenLineage event to indicate cancellation of Dagster pipeline run.
-        :param pipeline_name: Dagster pipeline name
-        :param pipeline_run_id: Dagster-generated unique identifier for a pipeline run
-        :param timestamp: Unix timestamp of Dagster event
-        :param repository_name: Dagster repository name
-        :return:
-        """
         self._emit_pipeline_event(
             RunState.ABORT, pipeline_name, pipeline_run_id, timestamp, repository_name
         )
@@ -115,22 +88,16 @@ class OpenLineageAdapter:
         timestamp: float,
         repository_name: Optional[str],
     ):
+        namespace = repository_name if repository_name else _DEFAULT_NAMESPACE_NAME
         self._emit(
             RunEvent(
                 eventType=event_type,
                 eventTime=to_utc_iso_8601(timestamp),
                 run=self._build_run(
-                    namespace=repository_name
-                    if repository_name
-                    else _DEFAULT_NAMESPACE_NAME,
+                    namespace=namespace,
                     run_id=pipeline_run_id,
                 ),
-                job=self._build_job(
-                    namespace=repository_name
-                    if repository_name
-                    else _DEFAULT_NAMESPACE_NAME,
-                    job_name=pipeline_name,
-                ),
+                job=self._build_job(namespace=namespace, job_name=pipeline_name),
                 producer=_PRODUCER,
             )
         )
@@ -144,15 +111,6 @@ class OpenLineageAdapter:
         step_key: str,
         repository_name: Optional[str] = None,
     ):
-        """Emits OpenLineage event to indicate start of Dagster step (op) execution.
-        :param pipeline_name: Dagster pipeline name
-        :param pipeline_run_id: Dagster-generated unique identifier for a pipeline run
-        :param timestamp: Unix timestamp of Dagster event
-        :param step_run_id: Unique identifier for a step run (not associated with Dagster)
-        :param step_key: Dagster step key
-        :param repository_name: Dagster repository name
-        :return:
-        """
         self._emit_step_event(
             RunState.START,
             pipeline_name,
@@ -172,15 +130,6 @@ class OpenLineageAdapter:
         step_key: str,
         repository_name: Optional[str] = None,
     ):
-        """Emits OpenLineage event to indicate completion of Dagster step (op) execution.
-        :param pipeline_name: Dagster pipeline name
-        :param pipeline_run_id: Dagster-generated unique identifier for a pipeline run
-        :param timestamp: Unix timestamp of Dagster event
-        :param step_run_id: Unique identifier for a step run (not associated with Dagster)
-        :param step_key: Dagster step key
-        :param repository_name: Dagster repository name
-        :return:
-        """
         self._emit_step_event(
             RunState.COMPLETE,
             pipeline_name,
@@ -200,15 +149,6 @@ class OpenLineageAdapter:
         step_key: str,
         repository_name: Optional[str] = None,
     ):
-        """Emits OpenLineage event to indicate failure of Dagster step (op) execution.
-        :param pipeline_name: Dagster pipeline name
-        :param pipeline_run_id: Dagster-generated unique identifier for a pipeline run
-        :param timestamp: Unix timestamp of Dagster event
-        :param step_run_id: Unique identifier for a step run (not associated with Dagster)
-        :param step_key: Dagster step key
-        :param repository_name: Dagster repository name
-        :return:
-        """
         self._emit_step_event(
             RunState.FAIL,
             pipeline_name,
@@ -229,22 +169,19 @@ class OpenLineageAdapter:
         step_key: str,
         repository_name: Optional[str],
     ):
+        namespace = repository_name if repository_name else _DEFAULT_NAMESPACE_NAME
         self._emit(
             RunEvent(
                 eventType=event_type,
                 eventTime=to_utc_iso_8601(timestamp),
                 run=self._build_run(
-                    namespace=repository_name
-                    if repository_name
-                    else _DEFAULT_NAMESPACE_NAME,
+                    namespace=namespace,
                     run_id=step_run_id,
                     parent_run_id=pipeline_run_id,
                     parent_job_name=pipeline_name,
                 ),
                 job=self._build_job(
-                    namespace=repository_name
-                    if repository_name
-                    else _DEFAULT_NAMESPACE_NAME,
+                    namespace=namespace,
                     job_name=make_step_job_name(pipeline_name, step_key),
                 ),
                 producer=_PRODUCER,
@@ -264,16 +201,12 @@ class OpenLineageAdapter:
     ) -> Run:
         facets: Dict = {}
         if parent_run_id is not None and parent_job_name is not None:
-            facets.update(
-                {
-                    "parent": ParentRunFacet.create(
-                        parent_run_id, namespace, parent_job_name
-                    )
-                }
+            facets["parent"] = parent_run_facet.ParentRunFacet(
+                run=parent_run_facet.Run(runId=parent_run_id),
+                job=parent_run_facet.Job(namespace=namespace, name=parent_job_name),
             )
-        return Run(run_id, facets)
+        return Run(runId=run_id, facets=facets)
 
     @staticmethod
     def _build_job(namespace: str, job_name: str) -> Job:
-        facets: Dict = {}
-        return Job(namespace, job_name, facets)
+        return Job(namespace=namespace, name=job_name, facets={})

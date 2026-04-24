@@ -4,11 +4,12 @@ description = "Dagster integration for OpenLineage"
 readme = "README.md"  
 requires-python = ">=3.10"
 dependencies = [
-    "dagster>=1.6.9",
-    "openlineage-python",    
-    "packaging",   
-    "cattrs",  
-]  
+    "dagster>=1.11.6",
+    "openlineage-python>=1.7.0",
+    "packaging",
+    "cattrs",
+]
+
 dynamic = ["version"]  
     
 [tool.uv]  
