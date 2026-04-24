@@ -2,26 +2,29 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
-from typing import Dict, Optional, Set, Union
+from typing import Any, Dict, Optional, Set, Tuple, Union
+
+import dagster
+from dagster import AssetKey
 
 from dagster_openlineage.adapter import OpenLineageAdapter
-from dagster_openlineage.cursor import OpenLineageCursor, RunningPipeline, RunningStep
+from dagster_openlineage.compat import (
+    DagsterEventType,
+    DEFAULT_SENSOR_DAEMON_INTERVAL,
+    PIPELINE_EVENTS,
+    STEP_EVENTS,
+    SensorDefinition,
+)
+from dagster_openlineage.cursor import (
+    OpenLineageCursor,
+    RunningPipeline,
+    RunningStep,
+)
 from dagster_openlineage.utils import (
     get_event_log_records,
     get_repository_name,
     make_step_run_id,
 )
-
-from dagster_openlineage.compat import (
-    SensorDefinition,
-    DagsterEventType,
-    DEFAULT_SENSOR_DAEMON_INTERVAL,
-    PIPELINE_EVENTS,
-    STEP_EVENTS,
-)
-
-
-import dagster
 
 _has_sensor_context = hasattr(dagster, "SensorEvaluationContext")
 _has_skip_reason = hasattr(dagster, "SkipReason")
@@ -30,9 +33,11 @@ _has_sensor = hasattr(dagster, "sensor")
 if _has_sensor_context and _has_skip_reason and _has_sensor:
     from dagster import SensorEvaluationContext, SkipReason, sensor
 else:
-    from dagster.core.definitions.sensor_definition import (
-        SensorEvaluationContext,
+    from dagster._core.definitions.run_request import (  # pyright: ignore[reportMissingImports]
         SkipReason,
+    )
+    from dagster._core.definitions.sensor_definition import (  # pyright: ignore[reportMissingImports]
+        SensorEvaluationContext,
         sensor,
     )
 
@@ -40,30 +45,69 @@ _ADAPTER = OpenLineageAdapter()
 
 log = logging.getLogger(__name__)
 
+_ASSET_EVENT_TYPES: Set[DagsterEventType] = {
+    DagsterEventType.ASSET_MATERIALIZATION,
+    DagsterEventType.ASSET_MATERIALIZATION_PLANNED,
+    DagsterEventType.ASSET_FAILED_TO_MATERIALIZE,
+    DagsterEventType.ASSET_OBSERVATION,
+    DagsterEventType.ASSET_CHECK_EVALUATION,
+    DagsterEventType.ASSET_CHECK_EVALUATION_PLANNED,
+}
+
+# Event types outside the default PIPELINE | STEP filter that the asset path
+# needs to observe. The others are already members of STEP_EVENTS.
+_ASSET_ONLY_FILTER_EXTRAS: Set[DagsterEventType] = {
+    DagsterEventType.ASSET_MATERIALIZATION_PLANNED,
+    DagsterEventType.ASSET_FAILED_TO_MATERIALIZE,
+    DagsterEventType.ASSET_CHECK_EVALUATION_PLANNED,
+}
+
+_RUN_TERMINATION_TYPES: Set[DagsterEventType] = {
+    DagsterEventType.RUN_SUCCESS,
+    DagsterEventType.RUN_FAILURE,
+    DagsterEventType.RUN_CANCELED,
+}
+
 
 def openlineage_sensor(
     name: Optional[str] = "openlineage_sensor",
     description: Optional[str] = "OpenLineage sensor tails Dagster event logs, "
     "converts Dagster events into OpenLineage events, "
     "and emits them to an OpenLineage backend.",
-    concerned_event_types: Union[
-        DagsterEventType, Set[DagsterEventType]
-    ] = PIPELINE_EVENTS | STEP_EVENTS,
+    concerned_event_types: Optional[
+        Union[DagsterEventType, Set[DagsterEventType]]
+    ] = None,
     minimum_interval_seconds: Optional[int] = DEFAULT_SENSOR_DAEMON_INTERVAL,
     record_filter_limit: Optional[int] = 30,
     after_storage_id: Optional[int] = 0,
+    include_asset_events: bool = False,
 ) -> SensorDefinition:
-    """Wrapper to parameterize sensor configurations and return sensor definition.
-    :param name: sensor name
-    :param description: sensor description
-    :param concerned_event_types: event types to filter out event records
-    :param minimum_interval_seconds: minimum number of seconds that will elapse between evaluations
-    :param record_filter_limit: maximum number of event logs to process on each evaluation
-    :param after_storage_id: storage id to use as the initial after cursor when getting event logs
-    :return: OpenLineage sensor definition
-    """
+    """Build the OpenLineage sensor.
 
-    @sensor(  # type: ignore
+    ``include_asset_events=False`` (the v0.2 default) preserves v0.1 behavior —
+    only pipeline and step events reach the dispatcher. Set it to ``True`` to
+    opt in to asset-level emission via the sensor (Mechanism B). The flag is
+    the opt-in switch per the v0.2 plan; a one-shot WARN at sensor
+    construction reminds operators to configure at most one mechanism.
+
+    v0.3 will flip the default to ``True``.
+    """
+    if concerned_event_types is None:
+        filter_set = set(PIPELINE_EVENTS) | set(STEP_EVENTS)
+        if include_asset_events:
+            filter_set |= _ASSET_ONLY_FILTER_EXTRAS
+        concerned_event_types = filter_set
+
+    if include_asset_events:
+        log.warning(
+            "openlineage_sensor: include_asset_events=True. Configure at most "
+            "one of (a) OpenLineageEventLogStorage wrapper, (b) this sensor "
+            "with include_asset_events=True — running both emits duplicate OL "
+            "events (OL has no client-side idempotency and backend dedup is "
+            "not spec-defined)."
+        )
+
+    @sensor(  # pyright: ignore[reportCallIssue]
         name=name,
         minimum_interval_seconds=minimum_interval_seconds,
         description=description,
@@ -103,7 +147,31 @@ def openlineage_sensor(
                         else get_repository_name(context.instance, pipeline_run_id)
                     )
 
-                    if dagster_event_type in PIPELINE_EVENTS:
+                    if (
+                        include_asset_events
+                        and dagster_event_type in _ASSET_EVENT_TYPES
+                    ):
+                        _handle_asset_event(
+                            running_pipelines,
+                            dagster_event_type,
+                            pipeline_run_id,
+                            timestamp,
+                            entry,
+                        )
+                    elif dagster_event_type in PIPELINE_EVENTS:
+                        # Drain synthesis BEFORE the pipeline handler so the
+                        # planned-asset set is still reachable; the handler
+                        # pops the run entry on termination.
+                        if (
+                            include_asset_events
+                            and dagster_event_type in _RUN_TERMINATION_TYPES
+                        ):
+                            _drain_planned_as_failures(
+                                running_pipelines,
+                                pipeline_run_id,
+                                timestamp,
+                                terminal=False,
+                            )
                         _handle_pipeline_event(
                             running_pipelines,
                             dagster_event_type,
@@ -150,25 +218,12 @@ def _handle_pipeline_event(
     timestamp: float,
     repository_name: Optional[str],
 ):
-    """Handles pipeline events that are of type RUN_START, RUN_SUCCESS, RUN_FAILURE,
-    and RUN_CANCELED. Assumes event type is always in the order of RUN_START
-    followed by RUN_SUCCESS, RUN_FAILURE, or RUN_CANCELED.
-
-    :param running_pipelines: map of pipeline run ids to dynamically generated metadata
-                              for pipelines that are in progress between sensor evaluations.
-    :param dagster_event_type: Dagster pipeline event type
-    :param pipeline_name: Dagster pipeline name
-    :param pipeline_run_id: Dagster-generated unique identifier for a pipeline run
-    :param timestamp: Unix timestamp of Dagster event
-    :param repository_name: Dagster repository name
-    :return:
-    """
     if dagster_event_type == DagsterEventType.RUN_START:
         _ADAPTER.start_pipeline(
             pipeline_name, pipeline_run_id, timestamp, repository_name
         )
-        running_pipelines[pipeline_run_id] = RunningPipeline(
-            repository_name=repository_name
+        running_pipelines.setdefault(
+            pipeline_run_id, RunningPipeline(repository_name=repository_name)
         )
     elif dagster_event_type == DagsterEventType.RUN_SUCCESS:
         _ADAPTER.complete_pipeline(
@@ -196,20 +251,6 @@ def _handle_step_event(
     step_key: str,
     repository_name: Optional[str],
 ):
-    """Handles step events that are of type STEP_START, STEP_SUCCESS, and STEP_FAILURE.
-    Assumes event type is always in the order of STEP_START
-    followed by STEP_SUCCESS or STEP_FAILURE.
-
-    :param running_pipelines: map of pipeline run ids to dynamically generated metadata
-                              for running pipelines.
-    :param dagster_event_type: Dagster pipeline event type
-    :param pipeline_name: Dagster pipeline name
-    :param pipeline_run_id: Dagster-generated unique identifier for a pipeline run
-    :param timestamp: Unix timestamp of Dagster event
-    :param step_key: Dagster step key
-    :param repository_name: Dagster repository name
-    :return:
-    """
     running_pipeline = running_pipelines.get(
         pipeline_run_id, RunningPipeline(repository_name=repository_name)
     )
@@ -250,18 +291,101 @@ def _handle_step_event(
     running_pipelines[pipeline_run_id] = running_pipeline
 
 
+def _handle_asset_event(
+    running_pipelines: Dict[str, RunningPipeline],
+    dagster_event_type: DagsterEventType,
+    pipeline_run_id: str,
+    timestamp: float,
+    entry: Any,
+):
+    dagster_event = entry.get_dagster_event()
+    data = dagster_event.event_specific_data
+    running_pipeline = running_pipelines.setdefault(pipeline_run_id, RunningPipeline())
+    planned_paths: Set[Tuple[str, ...]] = running_pipeline.planned_asset_paths
+
+    if dagster_event_type == DagsterEventType.ASSET_MATERIALIZATION_PLANNED:
+        asset_key = data.asset_key
+        planned_paths.add(tuple(asset_key.path))
+        _ADAPTER.asset_materialization_planned(asset_key, pipeline_run_id, timestamp)
+
+    elif dagster_event_type == DagsterEventType.ASSET_MATERIALIZATION:
+        mat = data.materialization
+        asset_key = mat.asset_key
+        planned_paths.discard(tuple(asset_key.path))
+        _ADAPTER.asset_materialization(
+            asset_key,
+            pipeline_run_id,
+            timestamp,
+            metadata=mat.metadata,
+            partition_key=mat.partition,
+        )
+
+    elif dagster_event_type == DagsterEventType.ASSET_FAILED_TO_MATERIALIZE:
+        asset_key = data.asset_key
+        planned_paths.discard(tuple(asset_key.path))
+        _ADAPTER.asset_failed_to_materialize(
+            asset_key,
+            pipeline_run_id,
+            timestamp,
+            partition_key=data.partition,
+        )
+
+    elif dagster_event_type == DagsterEventType.ASSET_OBSERVATION:
+        obs = data.asset_observation
+        _ADAPTER.asset_observation(
+            obs.asset_key,
+            pipeline_run_id,
+            timestamp,
+            metadata=obs.metadata,
+            partition_key=obs.partition,
+        )
+
+    elif dagster_event_type == DagsterEventType.ASSET_CHECK_EVALUATION_PLANNED:
+        _ADAPTER.asset_check_evaluation_planned(
+            data.asset_key,
+            check_name=data.check_name,
+            run_id=pipeline_run_id,
+            timestamp=timestamp,
+            standalone=True,
+        )
+
+    elif dagster_event_type == DagsterEventType.ASSET_CHECK_EVALUATION:
+        _ADAPTER.asset_check_evaluation(
+            data.asset_key,
+            [data],
+            run_id=pipeline_run_id,
+            timestamp=timestamp,
+        )
+
+
+def _drain_planned_as_failures(
+    running_pipelines: Dict[str, RunningPipeline],
+    pipeline_run_id: str,
+    timestamp: float,
+    *,
+    terminal: bool,
+) -> None:
+    running_pipeline = running_pipelines.get(pipeline_run_id)
+    if running_pipeline is None:
+        return
+    remaining = running_pipeline.planned_asset_paths
+    for path in list(remaining):
+        _ADAPTER.asset_failed_to_materialize(
+            AssetKey(list(path)),
+            pipeline_run_id,
+            timestamp,
+            error_message="asset planned for run, run ended before materialization",
+        )
+    running_pipeline.planned_asset_paths = set()
+    if terminal:
+        running_pipelines.pop(pipeline_run_id, None)
+
+
 def _update_cursor(
     context: SensorEvaluationContext,
     last_storage_id: int,
     running_pipelines: Dict[str, RunningPipeline],
 ):
-    """Updates cursor for a given sensor evaluation context.
-    :param context: sensor evaluation context
-    :param last_storage_id: last process storage id
-    :param running_pipelines: pipeline runs that are in progress in between sensor runs
-                              for their state to be shared
-    :return:
-    """
     context.update_cursor(
         OpenLineageCursor(
             last_storage_id=last_storage_id, running_pipelines=running_pipelines
