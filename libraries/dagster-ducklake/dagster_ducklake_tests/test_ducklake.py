@@ -165,7 +165,7 @@ class TestS3Config:
         assert "USE_SSL true" in secret_sql
         assert "SCOPE 's3://test-bucket'" in secret_sql
 
-        assert data_path_sql == "DATA_PATH 's3://test-bucket/data/'"
+        assert data_path_sql == ", DATA_PATH 's3://test-bucket/data/'"
 
 
 class TestDuckLakeLocalDirectory:
@@ -182,7 +182,7 @@ class TestDuckLakeLocalDirectory:
         secret_sql, data_path_sql = config.get_ducklake_sql_parts("test_alias")
 
         assert secret_sql == ""
-        assert data_path_sql == "DATA_PATH '/tmp/data'"
+        assert data_path_sql == ", DATA_PATH '/tmp/data'"
 
 
 class TestDuckLakeResource:

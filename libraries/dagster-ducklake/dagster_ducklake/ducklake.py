@@ -111,18 +111,20 @@ class S3Config(BaseStorageBackend):
                 SCOPE 's3://{self.bucket}'
             );
         """
-        data_path_sql = f"DATA_PATH '{self.full_data_path}'"
+        data_path_sql = f", DATA_PATH '{self.full_data_path}'"
         return secret_sql, data_path_sql
 
 
 class DuckLakeLocalDirectory(BaseStorageBackend):
     """Configuration for a local filesystem storage directory."""
 
-    path: str = Field(description="Path to the local storage directory.")
+    path: str | None = Field(
+        default=None, description="Path to the local storage directory."
+    )
 
     def get_ducklake_sql_parts(self, alias: str) -> tuple[str, str]:
         """For local storage, no credential secret is needed."""
-        return "", f"DATA_PATH '{self.path}'"
+        return "", f", DATA_PATH '{self.path}'" if self.path else ""
 
 
 class DuckLakeResource(DuckDBConnectionProvider):
@@ -232,13 +234,15 @@ class DuckLakeResource(DuckDBConnectionProvider):
             cursor.execute(storage_secret_sql)
 
         ducklake_secret_name = f"secret_{self.alias}"
-        cursor.execute(f"""
+        cursor.execute(
+            f"""
             CREATE OR REPLACE SECRET {ducklake_secret_name} (
                 TYPE DUCKLAKE,
-                {metadata_params_sql},
+                {metadata_params_sql}
                 {storage_data_path_sql}
             );
-        """)
+        """
+        )
 
         options_clause = self._build_attach_options_clause()
         cursor.execute(
