@@ -9,7 +9,7 @@ from dagster_sharepoint.resource import (
     UploadResult as UploadResult,
 )
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 DagsterLibraryRegistry.register(
     "dagster-sharepoint", __version__, is_dagster_package=False
