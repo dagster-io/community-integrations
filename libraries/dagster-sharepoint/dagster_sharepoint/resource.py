@@ -9,7 +9,7 @@ from urllib.parse import quote
 import dagster as dg
 import requests
 from dagster._record import record
-from pydantic import Field, PrivateAttr
+from pydantic import Field, PrivateAttr, model_validator
 
 logger = dg.get_dagster_logger(__name__)
 
@@ -183,7 +183,15 @@ class SharePointResource(dg.ConfigurableResource):
             )
     """
 
-    site_id: str = Field(description="SharePoint site ID")
+    site_id: str | None = Field(default=None, description="SharePoint site ID")
+    site: str | None = Field(
+        default=None,
+        description="SharePoint site path to resolve, e.g. 'Finance' or 'teams/Finance'",
+    )
+    sharepoint_hostname: str | None = Field(
+        default=None,
+        description="SharePoint hostname used with site lookup, e.g. 'contoso.sharepoint.com'",
+    )
 
     client_id: str = Field(description="Azure AD Application (client) ID")
     client_secret: str = Field(description="Azure AD Application client secret")
@@ -191,6 +199,19 @@ class SharePointResource(dg.ConfigurableResource):
     tenant_id: str = Field(description="Azure AD Tenant ID")
 
     _token_cache: tuple[str, int] | None = PrivateAttr(default=None)
+    _site_id_cache: str | None = PrivateAttr(default=None)
+
+    @model_validator(mode="after")
+    def _validate_site_config(self) -> "SharePointResource":
+        if self.site_id:
+            return self
+
+        if self.site and self.sharepoint_hostname:
+            return self
+
+        raise ValueError(
+            "Provide either 'site_id' or both 'site' and 'sharepoint_hostname'."
+        )
 
     @property
     def access_token(self) -> str:
@@ -258,6 +279,37 @@ class SharePointResource(dg.ConfigurableResource):
         # Graph API returns ISO format: 2024-01-15T10:30:00Z
         return datetime.fromisoformat(datetime_str.replace("Z", "+00:00"))
 
+    def _get_site_id(self) -> str:
+        """Get the configured SharePoint site ID, resolving it from a site path if needed."""
+        if self.site_id:
+            return self.site_id
+
+        if self._site_id_cache:
+            return self._site_id_cache
+
+        sharepoint_hostname = self.sharepoint_hostname
+        site = self.site
+        if sharepoint_hostname is None or site is None:
+            raise ValueError(
+                "Provide either 'site_id' or both 'site' and 'sharepoint_hostname'."
+            )
+
+        hostname = (
+            sharepoint_hostname.removeprefix("https://")
+            .removeprefix("http://")
+            .strip("/")
+        )
+        site_path = site.strip("/")
+        if site_path.startswith("sites/"):
+            site_path = site_path.removeprefix("sites/")
+
+        encoded_site_path = quote(site_path, safe="/")
+        url = f"https://graph.microsoft.com/v1.0/sites/{hostname}:/sites/{encoded_site_path}"
+        response = self._make_request("GET", url)
+        site_id = response.json()["id"]
+        self._site_id_cache = site_id
+        return site_id
+
     def _make_request(self, method: str, url: str, **kwargs) -> requests.Response:
         """Make an authenticated request to Graph API with retry logic.
 
@@ -302,7 +354,7 @@ class SharePointResource(dg.ConfigurableResource):
         :return: Drive ID
         :rtype: str
         """
-        url = f"https://graph.microsoft.com/v1.0/sites/{self.site_id}/drive"
+        url = f"https://graph.microsoft.com/v1.0/sites/{self._get_site_id()}/drive"
         response = self._make_request("GET", url)
         return response.json()["id"]
 
@@ -312,7 +364,7 @@ class SharePointResource(dg.ConfigurableResource):
         :return: List of DriveInfo objects
         :rtype: List[DriveInfo]
         """
-        url = f"https://graph.microsoft.com/v1.0/sites/{self.site_id}/drives"
+        url = f"https://graph.microsoft.com/v1.0/sites/{self._get_site_id()}/drives"
         response = self._make_request("GET", url)
 
         drives = []
@@ -344,9 +396,9 @@ class SharePointResource(dg.ConfigurableResource):
         clean_path = path.strip("/")
         if clean_path:
             encoded_path = quote(clean_path, safe="")
-            url = f"https://graph.microsoft.com/v1.0/sites/{self.site_id}/drives/{drive_id}/root:/{encoded_path}"
+            url = f"https://graph.microsoft.com/v1.0/sites/{self._get_site_id()}/drives/{drive_id}/root:/{encoded_path}"
         else:
-            url = f"https://graph.microsoft.com/v1.0/sites/{self.site_id}/drives/{drive_id}/root"
+            url = f"https://graph.microsoft.com/v1.0/sites/{self._get_site_id()}/drives/{drive_id}/root"
 
         response = self._make_request("GET", url)
         return response.json()
@@ -409,7 +461,7 @@ class SharePointResource(dg.ConfigurableResource):
             parent_id = "root"
 
         # List children
-        url = f"https://graph.microsoft.com/v1.0/sites/{self.site_id}/drives/{drive_id}/items/{parent_id}/children"
+        url = f"https://graph.microsoft.com/v1.0/sites/{self._get_site_id()}/drives/{drive_id}/items/{parent_id}/children"
 
         folders = []
         while url:
@@ -509,7 +561,7 @@ class SharePointResource(dg.ConfigurableResource):
             parent_id = "root"
 
         # List children
-        url = f"https://graph.microsoft.com/v1.0/sites/{self.site_id}/drives/{drive_id}/items/{parent_id}/children"
+        url = f"https://graph.microsoft.com/v1.0/sites/{self._get_site_id()}/drives/{drive_id}/items/{parent_id}/children"
 
         files = []
         while url:
@@ -566,7 +618,7 @@ class SharePointResource(dg.ConfigurableResource):
         if not drive_id:
             drive_id = self.get_drive_id()
 
-        url = f"https://graph.microsoft.com/v1.0/sites/{self.site_id}/drives/{drive_id}/items/{file_id}/content"
+        url = f"https://graph.microsoft.com/v1.0/sites/{self._get_site_id()}/drives/{drive_id}/items/{file_id}/content"
         response = self._make_request("GET", url)
         return response.content
 
@@ -670,7 +722,7 @@ class SharePointResource(dg.ConfigurableResource):
         :rtype: Dict
         """
         encoded_path = quote(path, safe="")
-        url = f"https://graph.microsoft.com/v1.0/sites/{self.site_id}/drives/{drive_id}/root:/{encoded_path}:/content"
+        url = f"https://graph.microsoft.com/v1.0/sites/{self._get_site_id()}/drives/{drive_id}/root:/{encoded_path}:/content"
 
         headers = self._get_headers()
         headers["Content-Type"] = "application/octet-stream"
@@ -692,7 +744,7 @@ class SharePointResource(dg.ConfigurableResource):
         """
         # Create upload session
         encoded_path = quote(path, safe="")
-        session_url = f"https://graph.microsoft.com/v1.0/sites/{self.site_id}/drives/{drive_id}/root:/{encoded_path}:/createUploadSession"
+        session_url = f"https://graph.microsoft.com/v1.0/sites/{self._get_site_id()}/drives/{drive_id}/root:/{encoded_path}:/createUploadSession"
 
         session_response = self._make_request(
             "POST",
@@ -739,7 +791,7 @@ class SharePointResource(dg.ConfigurableResource):
         if not drive_id:
             drive_id = self.get_drive_id()
 
-        url = f"https://graph.microsoft.com/v1.0/sites/{self.site_id}/drives/{drive_id}/items/{file_id}"
+        url = f"https://graph.microsoft.com/v1.0/sites/{self._get_site_id()}/drives/{drive_id}/items/{file_id}"
         self._make_request("DELETE", url)
 
     def delete_file_by_path(self, file_path: str, drive_id: str | None = None) -> None:
@@ -779,7 +831,7 @@ class SharePointResource(dg.ConfigurableResource):
         else:
             parent_id = "root"
 
-        url = f"https://graph.microsoft.com/v1.0/sites/{self.site_id}/drives/{drive_id}/items/{parent_id}/children"
+        url = f"https://graph.microsoft.com/v1.0/sites/{self._get_site_id()}/drives/{drive_id}/items/{parent_id}/children"
 
         body = {
             "name": folder_name,
@@ -834,7 +886,7 @@ class SharePointResource(dg.ConfigurableResource):
             body["name"] = new_name
 
         # Make the move request
-        url = f"https://graph.microsoft.com/v1.0/sites/{self.site_id}/drives/{drive_id}/items/{file_id}"
+        url = f"https://graph.microsoft.com/v1.0/sites/{self._get_site_id()}/drives/{drive_id}/items/{file_id}"
         response = self._make_request("PATCH", url, json=body)
         result = response.json()
 
@@ -907,7 +959,7 @@ class SharePointResource(dg.ConfigurableResource):
         body = {"name": new_name}
 
         # Make the rename request
-        url = f"https://graph.microsoft.com/v1.0/sites/{self.site_id}/drives/{drive_id}/items/{file_id}"
+        url = f"https://graph.microsoft.com/v1.0/sites/{self._get_site_id()}/drives/{drive_id}/items/{file_id}"
         response = self._make_request("PATCH", url, json=body)
         result = response.json()
 
@@ -1005,7 +1057,7 @@ class SharePointResource(dg.ConfigurableResource):
         if not drive_id:
             drive_id = self.get_drive_id()
 
-        url = f"https://graph.microsoft.com/v1.0/sites/{self.site_id}/drives/{drive_id}/root/search(q='{quote(search_query)}')"
+        url = f"https://graph.microsoft.com/v1.0/sites/{self._get_site_id()}/drives/{drive_id}/root/search(q='{quote(search_query)}')"
 
         files = []
         count = 0

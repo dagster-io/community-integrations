@@ -36,6 +36,17 @@ class TestSharePointResource:
             tenant_id="test_tenant_id",
         )
 
+    @pytest.fixture
+    def sharepoint_resource_with_site(self) -> SharePointResource:
+        """Create a test SharePointResource instance using site lookup."""
+        return SharePointResource(
+            site="Finance",
+            sharepoint_hostname="contoso.sharepoint.com",
+            client_id="test_client_id",
+            client_secret="test_client_secret",
+            tenant_id="test_tenant_id",
+        )
+
     @pytest.fixture(autouse=True)
     def mock_responses(self) -> Generator[responses.RequestsMock, None, None]:
         """Auto-use fixture to activate responses for all tests."""
@@ -119,6 +130,55 @@ class TestSharePointResourceAuthentication(TestSharePointResource):
             token = sharepoint_resource.access_token
             assert token == "new_test_token"
             assert len(responses.calls) == 2
+
+
+class TestSharePointResourceSiteResolution(TestSharePointResource):
+    """Test site lookup functionality."""
+
+    @responses.activate
+    def test_get_site_id_from_site_path(
+        self, sharepoint_resource_with_site: SharePointResource
+    ) -> None:
+        """Test resolving a site ID from a SharePoint hostname + site path."""
+        responses.add(
+            responses.POST,
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "test_token", "expires_in": 3600},
+            status=200,
+        )
+        responses.add(
+            responses.GET,
+            "https://graph.microsoft.com/v1.0/sites/contoso.sharepoint.com:/sites/Finance",
+            json={"id": "resolved_site_id"},
+            status=200,
+        )
+
+        site_id = sharepoint_resource_with_site._get_site_id()
+
+        assert site_id == "resolved_site_id"
+        assert len(responses.calls) == 2
+
+    @responses.activate
+    def test_get_site_id_is_cached(
+        self, sharepoint_resource_with_site: SharePointResource
+    ) -> None:
+        """Test site ID resolution is only performed once."""
+        responses.add(
+            responses.POST,
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "test_token", "expires_in": 3600},
+            status=200,
+        )
+        responses.add(
+            responses.GET,
+            "https://graph.microsoft.com/v1.0/sites/contoso.sharepoint.com:/sites/Finance",
+            json={"id": "resolved_site_id"},
+            status=200,
+        )
+
+        assert sharepoint_resource_with_site._get_site_id() == "resolved_site_id"
+        assert sharepoint_resource_with_site._get_site_id() == "resolved_site_id"
+        assert len(responses.calls) == 2
 
 
 class TestSharePointResourceAPICalls(TestSharePointResource):

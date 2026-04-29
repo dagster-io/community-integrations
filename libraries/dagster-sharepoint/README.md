@@ -27,22 +27,43 @@ Before using this integration, you need to set up Azure AD authentication:
    - Tenant ID
    - Client ID (Application ID)
    - Client Secret
-   - SharePoint Site ID
+   - Either the SharePoint Site ID, or the SharePoint hostname + site path
 
 ## Usage
 
 ### Basic Setup
+
+You can configure the resource with either a known `site_id` or a `site` + `sharepoint_hostname` pair.
 
 ```python
 import dagster as dg
 from dagster_sharepoint import SharePointResource
 import os
 
-# Configure the resource
+# Configure the resource with a known site ID
 defs = dg.Definitions(
     resources={
         "sharepoint": SharePointResource(
             site_id=os.getenv("SHAREPOINT_SITE_ID"),
+            tenant_id=os.getenv("AZURE_TENANT_ID"),
+            client_id=os.getenv("AZURE_CLIENT_ID"),
+            client_secret=os.getenv("AZURE_CLIENT_SECRET")
+        )
+    }
+)
+```
+
+```python
+import dagster as dg
+from dagster_sharepoint import SharePointResource
+import os
+
+# Or let the resource resolve the site ID for you
+defs = dg.Definitions(
+    resources={
+        "sharepoint": SharePointResource(
+            site=os.getenv("SHAREPOINT_SITE"),
+            sharepoint_hostname=os.getenv("SHAREPOINT_HOSTNAME"),
             tenant_id=os.getenv("AZURE_TENANT_ID"),
             client_id=os.getenv("AZURE_CLIENT_ID"),
             client_secret=os.getenv("AZURE_CLIENT_SECRET")
