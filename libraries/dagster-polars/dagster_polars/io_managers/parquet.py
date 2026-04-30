@@ -63,12 +63,8 @@ def scan_parquet(path: "UPath", context: InputContext) -> pl.LazyFrame:
         hive_partitioning=context_metadata.get("hive_partitioning", True),
         retries=context_metadata.get("retries", 0),
     )
-    if Version(pl.__version__) >= Version("0.20.4"):
-        kwargs["row_index_name"] = context_metadata.get("row_index_name", None)
-        kwargs["row_index_offset"] = context_metadata.get("row_index_offset", 0)
-    else:
-        kwargs["row_count_name"] = context_metadata.get("row_count_name", None)
-        kwargs["row_count_offset"] = context_metadata.get("row_count_offset", 0)
+    kwargs["row_index_name"] = context_metadata.get("row_index_name", None)
+    kwargs["row_index_offset"] = context_metadata.get("row_index_offset", 0)
 
     # gh issue [dagster-io/dagster#28633]()
     INCOMPATIBLE_FSSPEC_KEYS = ["client_options"]
@@ -145,8 +141,8 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
         statistics = context_metadata.get("statistics", False)
         row_group_size = context_metadata.get("row_group_size")
 
-        # sink_parquet with storage_options is supported in Polars >= 1.0.0
-        if Version(pl.__version__) >= Version("1.0.0"):
+        # sink_parquet gained storage_options in Polars 1.17.0
+        if Version(pl.__version__) >= Version("1.17.0"):
             df.sink_parquet(
                 str(path),
                 compression=compression,
@@ -157,7 +153,7 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
             )
         else:
             context.log.warning(
-                "Cloud sink with storage_options requires Polars >= 1.0.0, "
+                "Cloud sink with storage_options requires Polars >= 1.17.0, "
                 "falling back to collecting the LazyFrame first.",
             )
             return self.write_df_to_path(context, df.collect(), path)
