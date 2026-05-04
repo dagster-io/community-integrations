@@ -110,3 +110,30 @@ def test_polars_parquet_io_manager_s3_lazy_write_read(s3_env, s3_client):
     # Verify we can read the data back correctly
     output = result.output_for_node("downstream_lazy")
     pl_testing.assert_frame_equal(output, test_df)
+
+
+def test_polars_parquet_io_manager_s3_no_explicit_storage_options(s3_env, s3_client):
+    """Regression test for issue #257 / dagster-io/dagster#22079.
+
+    The IO manager has no explicit ``storage_options``; credentials are
+    discovered by s3fs/boto3 from environment variables and surface as
+    fsspec-style keys (``key``/``secret``) on the ``UPath``. Polars's
+    ``scan_parquet`` uses ``object_store`` and expects ``aws_access_key_id``
+    instead — without remapping the read fails with
+    ``ComputeError: Generic S3 error: Missing bucket name``.
+    """
+    io_manager = PolarsParquetIOManager(base_dir=f"s3://{S3_BUCKET}/regression")
+
+    test_df = pl.DataFrame({"a": [1, 2, 3]})
+
+    @asset(io_manager_def=io_manager)
+    def upstream() -> pl.LazyFrame:
+        return test_df.lazy()
+
+    @asset(io_manager_def=io_manager)
+    def downstream(upstream: pl.LazyFrame) -> pl.DataFrame:
+        return upstream.collect()
+
+    result = materialize([upstream, downstream])
+    assert result.success
+    pl_testing.assert_frame_equal(result.output_for_node("downstream"), test_df)

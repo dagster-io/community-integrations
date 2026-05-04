@@ -39,19 +39,75 @@ def get_pyarrow_dataset(path: "UPath", context: InputContext) -> ds.Dataset:
     return dataset
 
 
-def scan_parquet(path: "UPath", context: InputContext) -> pl.LazyFrame:
+# fsspec exposes S3 credentials with different key names than the
+# ``object_store`` Rust crate that Polars uses under the hood. Without a
+# remap, Polars reads from S3 with empty credentials and fails with
+# "Generic S3 error: Missing bucket name" or similar — see
+# https://github.com/dagster-io/community-integrations/issues/257.
+_FSSPEC_TO_OBJECT_STORE = {
+    "key": "aws_access_key_id",
+    "secret": "aws_secret_access_key",
+    "token": "aws_session_token",
+}
+
+# fsspec keys with no ``object_store`` equivalent — drop on remap.
+_FSSPEC_DROP = frozenset(
+    {
+        "client_options",
+        "client_kwargs",
+        "config_kwargs",
+        "s3_additional_kwargs",
+        "default_block_size",
+        "default_cache_type",
+        "version_aware",
+        "anon",
+    }
+)
+
+
+def _remap_fsspec_storage_options(opts: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Translate fsspec-style storage_options into ``object_store`` keys.
+
+    Polars's ``scan_parquet`` / ``sink_parquet`` use Rust ``object_store`` and
+    expect keys like ``aws_access_key_id``. ``UPath.storage_options`` is
+    fsspec-shaped (``key``, ``secret``, ``client_kwargs``). Translate the
+    common subset; drop fsspec-only keys; pass already-``object_store`` keys
+    through unchanged.
+    """
+    if not opts:
+        return None
+    out: dict[str, Any] = {}
+    for k, v in opts.items():
+        if k in _FSSPEC_TO_OBJECT_STORE:
+            out[_FSSPEC_TO_OBJECT_STORE[k]] = v
+        elif k == "client_kwargs" and isinstance(v, dict):
+            if "region_name" in v:
+                out["aws_region"] = v["region_name"]
+            if "endpoint_url" in v:
+                out["aws_endpoint_url"] = v["endpoint_url"]
+        elif k in _FSSPEC_DROP:
+            continue
+        else:
+            # Already an object_store key (e.g. ``aws_access_key_id``,
+            # ``endpoint_url``, ``region``) — pass through.
+            out[k] = v
+    return out or None
+
+
+def scan_parquet(
+    path: "UPath",
+    context: InputContext,
+    storage_options: dict[str, Any] | None = None,
+) -> pl.LazyFrame:
     """Scan a parquet file and return a lazy frame (uses polars native reader).
 
     :param path:
     :param context:
+    :param storage_options: Explicit ``object_store`` storage options from the
+        IO manager. When supplied, takes precedence over ``path.storage_options``.
     :return:
     """
     context_metadata = context.definition_metadata or {}
-
-    storage_options = cast(
-        Optional[dict[str, Any]],
-        (path.storage_options if hasattr(path, "storage_options") else None),
-    )
 
     kwargs = dict(
         n_rows=context_metadata.get("n_rows", None),
@@ -66,17 +122,37 @@ def scan_parquet(path: "UPath", context: InputContext) -> pl.LazyFrame:
     kwargs["row_index_name"] = context_metadata.get("row_index_name", None)
     kwargs["row_index_offset"] = context_metadata.get("row_index_offset", 0)
 
-    # gh issue [dagster-io/dagster#28633]()
-    INCOMPATIBLE_FSSPEC_KEYS = ["client_options"]
-    pl_storage_options = (
-        None
-        if storage_options is None
-        else {
-            k: v
-            for k, v in storage_options.items()
-            if k not in INCOMPATIBLE_FSSPEC_KEYS
-        }
-    )
+    # On Polars >= 1.17 ``object_store`` is the cloud backend; remap fsspec
+    # keys so credentials reach the reader. Older Polars used a different
+    # backend (no remap helped), so keep the legacy fsspec passthrough for
+    # backwards compatibility — see issue #257.
+    if Version(pl.__version__) >= Version("1.17.0"):
+        # Prefer the IO manager's explicit ``storage_options`` (already
+        # ``object_store`` shaped — same dict the writer uses), falling back
+        # to a remap of the fsspec-derived path options.
+        path_options = cast(
+            Optional[dict[str, Any]],
+            (path.storage_options if hasattr(path, "storage_options") else None),
+        )
+        pl_storage_options = storage_options or _remap_fsspec_storage_options(
+            path_options
+        )
+    else:
+        legacy_options = cast(
+            Optional[dict[str, Any]],
+            (path.storage_options if hasattr(path, "storage_options") else None),
+        )
+        # gh issue [dagster-io/dagster#28633]()
+        INCOMPATIBLE_FSSPEC_KEYS = ["client_options"]
+        pl_storage_options = (
+            None
+            if legacy_options is None
+            else {
+                k: v
+                for k, v in legacy_options.items()
+                if k not in INCOMPATIBLE_FSSPEC_KEYS
+            }
+        )
 
     return pl.scan_parquet(str(path), storage_options=pl_storage_options, **kwargs)  # type: ignore
 
@@ -215,4 +291,4 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
         context: InputContext,
         partition_key: str | None = None,
     ) -> pl.LazyFrame:
-        return scan_parquet(path, context)
+        return scan_parquet(path, context, storage_options=self.storage_options)
