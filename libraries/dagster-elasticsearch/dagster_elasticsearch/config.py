@@ -26,6 +26,11 @@ class ElasticsearchIndexConfig(Config):
 class BaseConnectionConfig(ConfigurableResource, abc.ABC):
     """Base class for Elasticsearch connection configurations."""
 
+    @abc.abstractmethod
+    def to_client_kwargs(self) -> dict[str, Any]:
+        """Build kwargs for the Elasticsearch client constructor."""
+        raise NotImplementedError
+
 
 class HostsConfig(BaseConnectionConfig):
     """Connection parameters for self-hosted or generic Elasticsearch deployments."""

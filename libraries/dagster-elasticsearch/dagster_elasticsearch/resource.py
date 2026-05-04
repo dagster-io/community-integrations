@@ -3,7 +3,9 @@ from contextlib import contextmanager
 from typing import Any
 
 from dagster import ConfigurableResource
+from dagster._utils.backoff import backoff
 from elasticsearch import Elasticsearch
+from elasticsearch.exceptions import ConnectionError as ESConnectionError
 from pydantic import Field
 
 from .config import BaseConnectionConfig
@@ -41,6 +43,13 @@ class ElasticsearchResource(ConfigurableResource):
         default=None,
         description="Per-request timeout in seconds. Defaults to elasticsearch-py default.",
     )
+    connect_max_retries: int = Field(
+        default=5,
+        description=(
+            "Number of times to retry the initial Elasticsearch client "
+            "construction on connection errors."
+        ),
+    )
     additional_client_kwargs: dict[str, Any] = Field(
         default_factory=dict,
         description="Additional kwargs forwarded to the Elasticsearch client constructor.",
@@ -59,7 +68,12 @@ class ElasticsearchResource(ConfigurableResource):
 
     @contextmanager
     def get_client(self) -> Generator[Elasticsearch, None, None]:
-        client = Elasticsearch(**self._build_kwargs())
+        client = backoff(
+            fn=Elasticsearch,
+            retry_on=(ESConnectionError,),
+            kwargs=self._build_kwargs(),
+            max_retries=self.connect_max_retries,
+        )
         try:
             yield client
         finally:

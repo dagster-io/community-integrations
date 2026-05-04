@@ -280,3 +280,96 @@ def test_load_input_missing_index_returns_empty(
     ctx = build_input_context()
     docs = io.load_input(ctx)
     assert docs == []
+
+
+def test_definition_metadata_index_override(
+    es_url: str, index_name: str, es_client: Elasticsearch
+) -> None:
+    """definition_metadata['index'] overrides the resource-level index."""
+    override_index = f"{index_name}-override"
+
+    @asset(metadata={"index": override_index})
+    def docs() -> list[dict]:
+        return [{"_id": "1", "v": "x"}]
+
+    try:
+        result = materialize([docs], resources={"io_manager": _io(es_url, index_name)})
+        assert result.success
+        es_client.indices.refresh(index=override_index)
+        assert es_client.count(index=override_index)["count"] == 1
+        # Resource-level index untouched.
+        assert not es_client.indices.exists(index=index_name)
+    finally:
+        es_client.indices.delete(index=override_index, ignore_unavailable=True)
+
+
+def test_iterator_input_via_op(es_url: str, index_name: str, es_client: Elasticsearch) -> None:
+    """Op-style call passes an iterator straight through to handle_output.
+
+    Note: Dagster auto-iterates generators returned from @asset bodies
+    (treating yielded values as events), so direct generator-as-asset isn't
+    supported. Users with very large data should pre-collect to a list,
+    return a DataFrame/LazyFrame, or call the IO manager's handle_output
+    directly from a custom op.
+    """
+    from collections.abc import Iterator
+    from unittest.mock import MagicMock
+
+    from dagster_elasticsearch import ElasticsearchIOManager, HostsConfig
+
+    io = ElasticsearchIOManager(
+        connection_config=HostsConfig(hosts=[es_url]),
+        index=index_name,
+        bulk_chunk_size=100,
+    )
+
+    def _stream() -> Iterator[dict]:
+        for i in range(1500):
+            yield {"_id": str(i), "n": i}
+
+    ctx = MagicMock()
+    ctx.has_partition_key = False
+    ctx.run_id = "test"
+    ctx.definition_metadata = {}
+    ctx.output_metadata = {}
+    ctx.add_output_metadata = lambda *a, **k: None
+    io.handle_output(ctx, _stream())
+
+    es_client.indices.refresh(index=index_name)
+    assert es_client.count(index=index_name)["count"] == 1500
+
+
+def test_pyarrow_table_asset(es_url: str, index_name: str, es_client: Elasticsearch) -> None:
+    pa = pytest.importorskip("pyarrow")
+
+    @asset
+    def docs() -> Any:  # noqa: ANN401
+        return pa.Table.from_pylist([{"_id": str(i), "n": i} for i in range(500)])
+
+    result = materialize([docs], resources={"io_manager": _io(es_url, index_name)})
+    assert result.success
+    es_client.indices.refresh(index=index_name)
+    assert es_client.count(index=index_name)["count"] == 500
+
+
+def test_lazy_load_returns_iterator(es_url: str, index_name: str, es_client: Elasticsearch) -> None:
+    """load_input with lazy_load=True yields hits without materialising a list."""
+    es_client.indices.create(index=index_name)
+    for i in range(50):
+        es_client.index(index=index_name, id=str(i), document={"n": i})
+    es_client.indices.refresh(index=index_name)
+
+    io = ElasticsearchIOManager(
+        connection_config=HostsConfig(hosts=[es_url]),
+        index=index_name,
+        lazy_load=True,
+        scan_size=10,
+    )
+    from dagster import build_input_context
+
+    ctx = build_input_context()
+    result = io.load_input(ctx)
+    # Iterator, not list.
+    assert not isinstance(result, list)
+    docs = list(result)
+    assert len(docs) == 50

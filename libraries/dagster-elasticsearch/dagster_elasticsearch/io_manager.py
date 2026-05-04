@@ -8,7 +8,9 @@ from dagster import (
     MetadataValue,
     OutputContext,
 )
+from dagster._utils.backoff import backoff
 from elasticsearch import Elasticsearch
+from elasticsearch.exceptions import ConnectionError as ESConnectionError
 from elasticsearch.helpers import BulkIndexError, bulk, scan
 from pydantic import Field
 
@@ -21,22 +23,23 @@ RolloverStrategy = Literal["auto", "timestamp", "run_id", "partition", "none"]
 class ElasticsearchIOManager(ConfigurableIOManager):
     """IO manager that bulk-indexes asset outputs into Elasticsearch.
 
-    Accepts ``list[dict]`` or anything convertible via ``__iter__`` into dicts.
-    On read, returns ``list[dict]`` via the scan helper.
+    Accepts ``dict``, ``list[dict]``, Pydantic models, dataclasses, pandas
+    DataFrame, polars DataFrame/LazyFrame, pyarrow Table/RecordBatchReader,
+    or any iterable/generator yielding any of the above element types.
+    Documents are streamed through ``elasticsearch.helpers.bulk`` so the
+    full dataset is never held in memory.
+
+    On read, returns ``list[dict]`` via the scan helper (eager). Set
+    ``lazy_load=True`` to receive an iterator instead.
 
     With ``use_alias=True`` the manager writes to a fresh index and atomically
-    swaps a stable alias to the new index — readers and downstream assets always
-    see a consistent view via the alias name.
+    swaps a stable alias to the new index — readers and downstream assets
+    always see a consistent view via the alias name.
 
-    Rollover strategies (when ``use_alias=True``):
-        - ``auto``: ``partition`` if asset is partitioned, else ``timestamp``.
-        - ``timestamp``: UTC microsecond timestamp suffix, e.g.
-          ``my-index-20260504t120000z123456``. Microsecond precision avoids
-          collisions for materialisations less than a second apart.
-        - ``run_id``: Dagster run id suffix.
-        - ``partition``: partition key suffix (errors if asset isn't partitioned).
-        - ``none``: no suffix; alias swap still occurs but writes overwrite the
-          same physical index. Mostly useful for testing.
+    Most options can be overridden per-asset via ``definition_metadata`` (or
+    ``output_metadata`` for per-output overrides) using these keys:
+    ``index``, ``id_field``, ``bulk_chunk_size``, ``max_chunk_bytes``,
+    ``refresh``, ``rollover_strategy``, ``index_config``.
 
     Examples:
         .. code-block:: python
@@ -47,7 +50,7 @@ class ElasticsearchIOManager(ConfigurableIOManager):
                 HostsConfig,
             )
 
-            @asset
+            @asset(metadata={"index": "search-docs", "bulk_chunk_size": 100})
             def docs() -> list[dict]:
                 return [{"_id": "1", "title": "hello"}]
 
@@ -126,6 +129,22 @@ class ElasticsearchIOManager(ConfigurableIOManager):
             "(matching '{index}-*'). None disables cleanup."
         ),
     )
+    lazy_load: bool = Field(
+        default=False,
+        description=(
+            "When True, ``load_input`` returns an iterator that streams hits "
+            "from Elasticsearch instead of materialising a list. Useful for "
+            "very large source indices."
+        ),
+    )
+    scan_size: int = Field(
+        default=1000,
+        description="Page size for scroll-based reads in ``load_input``.",
+    )
+    scroll_keep_alive: str = Field(
+        default="5m",
+        description="Scroll context keep-alive duration for ``load_input``.",
+    )
     request_timeout: float | None = Field(
         default=None,
         description="Client-side per-request timeout in seconds.",
@@ -136,6 +155,13 @@ class ElasticsearchIOManager(ConfigurableIOManager):
             "Server-side timeout in seconds applied to cluster operations "
             "(index creation, bulk indexing, alias updates). Defaults to "
             "the elasticsearch-py default."
+        ),
+    )
+    connect_max_retries: int = Field(
+        default=5,
+        description=(
+            "Number of times to retry the initial Elasticsearch client "
+            "construction on connection errors."
         ),
     )
     additional_client_kwargs: dict[str, Any] = Field(
@@ -152,7 +178,12 @@ class ElasticsearchIOManager(ConfigurableIOManager):
         if self.request_timeout is not None:
             kwargs["request_timeout"] = self.request_timeout
         kwargs.update(self.additional_client_kwargs)
-        return Elasticsearch(**kwargs)
+        return backoff(
+            fn=Elasticsearch,
+            retry_on=(ESConnectionError,),
+            kwargs=kwargs,
+            max_retries=self.connect_max_retries,
+        )
 
     @property
     def _server_timeout_str(self) -> str | None:
@@ -160,42 +191,65 @@ class ElasticsearchIOManager(ConfigurableIOManager):
             return None
         return f"{self.server_timeout}s"
 
-    def _resolve_strategy(self, context: OutputContext) -> RolloverStrategy:
-        if self.rollover_strategy != "auto":
-            return self.rollover_strategy
+    def _override(self, context: OutputContext, key: str, default: Any) -> Any:  # noqa: ANN401
+        """Look up a value in output_metadata > definition_metadata > default."""
+        output_meta = getattr(context, "output_metadata", None) or {}
+        if key in output_meta:
+            return output_meta[key]
+        definition_meta = context.definition_metadata or {}
+        if key in definition_meta:
+            return definition_meta[key]
+        return default
+
+    def _resolve_strategy(
+        self, context: OutputContext, strategy: RolloverStrategy
+    ) -> RolloverStrategy:
+        if strategy != "auto":
+            return strategy
         if context.has_partition_key:
             return "partition"
         return "timestamp"
 
-    def _rollover_suffix(self, context: OutputContext) -> str:
-        strategy = self._resolve_strategy(context)
-        if strategy == "timestamp":
+    def _rollover_suffix(self, context: OutputContext, strategy: RolloverStrategy) -> str:
+        resolved = self._resolve_strategy(context, strategy)
+        if resolved == "timestamp":
             # ES index names must be lowercase, hence lowercase 't'/'z'.
             return datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dt%H%M%Sz%f")
-        if strategy == "run_id":
+        if resolved == "run_id":
             return context.run_id.replace("-", "")
-        if strategy == "partition":
+        if resolved == "partition":
             if not context.has_partition_key:
                 raise ValueError("rollover_strategy='partition' requires a partitioned asset")
             return _slugify(context.partition_key)
-        if strategy == "none":
+        if resolved == "none":
             return ""
-        raise ValueError(f"Unknown rollover strategy: {strategy}")
+        raise ValueError(f"Unknown rollover strategy: {resolved}")
 
-    def _target_index(self, context: OutputContext) -> str:
+    def _target_index(self, context: OutputContext, index: str) -> str:
+        strategy: RolloverStrategy = self._override(
+            context, "rollover_strategy", self.rollover_strategy
+        )
         if not self.use_alias:
             if context.has_partition_key:
-                return f"{self.index}-{_slugify(context.partition_key)}"
-            return self.index
-        suffix = self._rollover_suffix(context)
-        return self.index if not suffix else f"{self.index}-{suffix}"
+                return f"{index}-{_slugify(context.partition_key)}"
+            return index
+        suffix = self._rollover_suffix(context, strategy)
+        return index if not suffix else f"{index}-{suffix}"
 
     def _read_target(self, context: InputContext) -> str:
+        index = self.index
+        # Honour upstream definition_metadata so reads find the right index.
+        upstream_meta = (
+            context.upstream_output.definition_metadata
+            if context.upstream_output is not None
+            else None
+        ) or {}
+        index = upstream_meta.get("index", index)
         if self.use_alias:
-            return self.index
+            return index
         if context.has_partition_key:
-            return f"{self.index}-{_slugify(context.partition_key)}"
-        return self.index
+            return f"{index}-{_slugify(context.partition_key)}"
+        return index
 
     def _swap_alias(self, client: Elasticsearch, alias: str, new_index: str) -> None:
         """Atomically point alias at new_index, removing it from any prior indices."""
@@ -225,40 +279,48 @@ class ElasticsearchIOManager(ConfigurableIOManager):
                 keep.add(name)
 
     def handle_output(self, context: OutputContext, obj: Any) -> None:  # noqa: ANN401
-        target = self._target_index(context)
+        # Per-asset overrides — definition_metadata and output_metadata.
+        index = self._override(context, "index", self.index)
+        id_field = self._override(context, "id_field", self.id_field)
+        bulk_chunk_size = int(self._override(context, "bulk_chunk_size", self.bulk_chunk_size))
+        max_chunk_bytes = self._override(context, "max_chunk_bytes", self.max_chunk_bytes)
+        refresh = bool(self._override(context, "refresh", self.refresh))
+        index_config = self._override(context, "index_config", self.index_config)
+
+        target = self._target_index(context, index)
         client = self._client()
         server_timeout = self._server_timeout_str
         try:
             if self.use_alias:
                 # Always start from a clean rollover index when suffix is non-empty.
-                if target != self.index and client.indices.exists(index=target):
+                if target != index and client.indices.exists(index=target):
                     client.indices.delete(index=target)
                 create_kwargs: dict[str, Any] = {"index": target}
-                if self.index_config is not None:
-                    if self.index_config.mappings is not None:
-                        create_kwargs["mappings"] = self.index_config.mappings
-                    if self.index_config.settings is not None:
-                        create_kwargs["settings"] = self.index_config.settings
+                if index_config is not None:
+                    if index_config.mappings is not None:
+                        create_kwargs["mappings"] = index_config.mappings
+                    if index_config.settings is not None:
+                        create_kwargs["settings"] = index_config.settings
                 if server_timeout is not None:
                     create_kwargs["timeout"] = server_timeout
                 client.indices.create(**create_kwargs)
                 client.cluster.health(index=target, wait_for_status="yellow", timeout="30s")
 
             # Stream documents through bulk() so memory stays bounded for
-            # large LazyFrame/DataFrame inputs.
+            # large LazyFrame/DataFrame/iterator inputs.
             actions = (
-                _action(target, doc, self.id_field)
-                for doc in _iter_docs(obj, chunk_size=self.bulk_chunk_size)
+                _action(target, doc, id_field)
+                for doc in _iter_docs(obj, chunk_size=bulk_chunk_size)
             )
             bulk_kwargs: dict[str, Any] = {
                 "client": client,
                 "actions": actions,
-                "chunk_size": self.bulk_chunk_size,
+                "chunk_size": bulk_chunk_size,
                 "raise_on_error": self.fail_fast,
                 "stats_only": True,
             }
-            if self.max_chunk_bytes is not None:
-                bulk_kwargs["max_chunk_bytes"] = self.max_chunk_bytes
+            if max_chunk_bytes is not None:
+                bulk_kwargs["max_chunk_bytes"] = max_chunk_bytes
             if server_timeout is not None:
                 bulk_kwargs["timeout"] = server_timeout
             try:
@@ -271,12 +333,12 @@ class ElasticsearchIOManager(ConfigurableIOManager):
 
             # Refresh only when the index actually exists. If there were no
             # documents and use_alias=False the index was never created.
-            if self.refresh and client.indices.exists(index=target):
+            if refresh and client.indices.exists(index=target):
                 client.indices.refresh(index=target)
 
             if self.use_alias:
-                self._swap_alias(client, self.index, target)
-                self._cleanup_old(client, self.index, target)
+                self._swap_alias(client, index, target)
+                self._cleanup_old(client, index, target)
 
             metadata: dict[str, Any] = {
                 "index": MetadataValue.text(target),
@@ -288,13 +350,18 @@ class ElasticsearchIOManager(ConfigurableIOManager):
             if failure_count:
                 metadata["failures"] = MetadataValue.int(failure_count)
             if self.use_alias:
-                metadata["alias"] = MetadataValue.text(self.index)
+                metadata["alias"] = MetadataValue.text(index)
             context.add_output_metadata(metadata)
         finally:
             client.close()
 
-    def load_input(self, context: InputContext) -> list[dict]:
+    def load_input(self, context: InputContext) -> list[dict] | Iterable[dict]:
         target = self._read_target(context)
+        if self.lazy_load:
+            return self._lazy_load(target)
+        return list(self._lazy_load(target))
+
+    def _lazy_load(self, target: str) -> Iterable[dict]:
         client = self._client()
         try:
             # Missing index → empty result rather than NotFoundError, so a
@@ -302,11 +369,15 @@ class ElasticsearchIOManager(ConfigurableIOManager):
             if not (
                 client.indices.exists(index=target) or client.indices.exists_alias(name=target)
             ):
-                return []
-            return [
-                hit["_source"]
-                for hit in scan(client, index=target, query={"query": {"match_all": {}}})
-            ]
+                return
+            for hit in scan(
+                client,
+                index=target,
+                query={"query": {"match_all": {}}},
+                size=self.scan_size,
+                scroll=self.scroll_keep_alive,
+            ):
+                yield hit["_source"]
         finally:
             client.close()
 
@@ -315,13 +386,41 @@ def _slugify(value: str) -> str:
     return "".join(c if c.isalnum() else "-" for c in value.lower()).strip("-")
 
 
+def _coerce_to_dict(item: Any) -> dict:  # noqa: ANN401
+    """Best-effort conversion of an item to a JSON-ready dict.
+
+    Plain dicts pass through. Pydantic v2 BaseModel instances are dumped via
+    ``model_dump()``; v1 via ``dict()``. Dataclasses fall back to ``asdict``.
+    """
+    if isinstance(item, dict):
+        return item
+    model_dump = getattr(item, "model_dump", None)
+    if callable(model_dump):
+        result = model_dump()
+        assert isinstance(result, dict)
+        return result
+    pydantic_v1_dict = getattr(item, "dict", None)
+    if callable(pydantic_v1_dict) and type(item).__module__.startswith("pydantic"):
+        result = pydantic_v1_dict()
+        assert isinstance(result, dict)
+        return result
+    if hasattr(item, "__dataclass_fields__"):
+        from dataclasses import asdict
+
+        return asdict(item)
+    raise TypeError(
+        f"ElasticsearchIOManager cannot serialise list element of type "
+        f"{type(item).__name__}; supply dicts, Pydantic models, or dataclasses."
+    )
+
+
 def _iter_docs(obj: Any, chunk_size: int) -> Iterable[dict]:  # noqa: ANN401
     """Yield documents from supported inputs without materialising the whole set.
 
-    Polars LazyFrames are streamed via ``collect(streaming=True)`` and sliced
-    in ``chunk_size`` rows so very large parquet-backed datasets don't have to
-    fit in memory at once. Polars DataFrames and pandas DataFrames are sliced
-    similarly. ``list``/``dict`` inputs pass through unchanged.
+    Polars LazyFrames are streamed via ``collect(engine="streaming")`` and
+    sliced in ``chunk_size`` rows. Polars DataFrames and pandas DataFrames
+    are sliced similarly. PyArrow ``Table`` is sliced; ``RecordBatchReader``
+    streams batches. Generators/iterators of dicts/models pass through.
     """
     if obj is None:
         return
@@ -329,10 +428,11 @@ def _iter_docs(obj: Any, chunk_size: int) -> Iterable[dict]:  # noqa: ANN401
         yield obj
         return
     if isinstance(obj, list):
-        yield from obj
+        for item in obj:
+            yield _coerce_to_dict(item)
         return
 
-    # Detect by class + module name to avoid unconditional pandas/polars imports.
+    # Detect by class + module name to avoid unconditional optional imports.
     type_name = type(obj).__name__
     module_name = type(obj).__module__.split(".")[0]
 
@@ -360,9 +460,27 @@ def _iter_docs(obj: Any, chunk_size: int) -> Iterable[dict]:  # noqa: ANN401
             yield from slice_.to_dicts()
         return
 
+    if module_name == "pyarrow":
+        if type_name == "Table":
+            for batch in obj.to_batches(max_chunksize=chunk_size):
+                yield from batch.to_pylist()
+            return
+        if type_name == "RecordBatchReader":
+            for batch in obj:
+                # Each batch may exceed chunk_size; bulk() will re-chunk.
+                yield from batch.to_pylist()
+            return
+
+    # Final fallback: any other iterable of dicts/models.
+    if hasattr(obj, "__iter__"):
+        for item in obj:
+            yield _coerce_to_dict(item)
+        return
+
     raise TypeError(
         f"ElasticsearchIOManager cannot serialise {type(obj).__name__}; "
-        "supply a dict, list[dict], pandas DataFrame, or polars DataFrame/LazyFrame."
+        "supply a dict, list[dict], pandas DataFrame, polars DataFrame/LazyFrame, "
+        "pyarrow Table/RecordBatchReader, or any iterable of dicts/Pydantic models."
     )
 
 

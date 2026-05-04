@@ -113,6 +113,47 @@ Rollover strategies:
 
 When `use_alias=False` and the asset is partitioned, each partition writes to its own index `{index}-{partition_key}`. Reads target the same per-partition index.
 
+### Per-asset overrides
+
+Most IO manager fields can be overridden per-asset via `definition_metadata` (or `output_metadata` for per-output overrides). Resolution order: `output_metadata` > `definition_metadata` > resource-level config.
+
+```python
+@asset(metadata={
+    "index": "search-docs",
+    "bulk_chunk_size": 100,
+    "rollover_strategy": "run_id",
+})
+def docs() -> list[dict]:
+    ...
+```
+
+Supported keys: `index`, `id_field`, `bulk_chunk_size`, `max_chunk_bytes`, `refresh`, `rollover_strategy`, `index_config`.
+
+### Lazy reads
+
+For very large source indices, set `lazy_load=True` so `load_input` returns an iterator that streams hits via the scroll API instead of materialising a `list[dict]`:
+
+```python
+ElasticsearchIOManager(
+    connection_config=HostsConfig(hosts=["http://localhost:9200"]),
+    index="docs",
+    lazy_load=True,
+    scan_size=1000,           # page size
+    scroll_keep_alive="5m",   # scroll context lifetime
+)
+```
+
+### Output metadata
+
+Each materialisation records the following metadata on the asset:
+
+| Key       | Type   | When                          |
+|-----------|--------|-------------------------------|
+| `index`   | text   | always — physical index name  |
+| `indexed` | int    | always — successful doc count |
+| `failures`| int    | when `fail_fast=False` and any docs failed |
+| `alias`   | text   | when `use_alias=True`         |
+
 ### Index mappings and settings
 
 Pass `index_config` to control mappings and shard/replica settings on indices created by the IO manager (alias rollover only):

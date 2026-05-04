@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+
+- Per-asset overrides via `definition_metadata` and `output_metadata` for `index`, `id_field`, `bulk_chunk_size`, `max_chunk_bytes`, `refresh`, `rollover_strategy`, and `index_config` (mirrors the `dagster-iceberg` and `dagster-polars` patterns).
+- `backoff` retries on initial Elasticsearch client construction (`connect_max_retries` field, default 5) for both the resource and the IO manager (mirrors `dagster-chroma` and `dagster-weaviate`).
+- PyArrow `Table` and `RecordBatchReader` support in the IO manager. Optional dependency group `[arrow]`.
+- Iterator/generator input support (when wired through a custom op or passed directly to `handle_output`).
+- Pydantic v1/v2 model and dataclass elements supported in `list[...]` inputs.
+- `lazy_load: bool` on the IO manager — when True, `load_input` returns an iterator instead of materialising a list. New `scan_size` and `scroll_keep_alive` fields tune the underlying scroll.
+- `BaseConnectionConfig.to_client_kwargs` is now a declared abstract method, surfacing missing implementations under `mypy`.
+
 ## [0.0.1]
 
 ### Added
