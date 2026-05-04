@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 import polars as pl
 import pyarrow.dataset as ds
@@ -127,7 +127,11 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
 
     """
 
-    extension: str = ".parquet"  # ty: ignore
+    # ``ClassVar`` so pydantic stops treating ``extension`` as a model field
+    # and the parent's annotation (``Optional[str]`` on ``UPathIOManager``) is
+    # not reported as shadowed on every import. The parent declares
+    # ``extension`` as an instance var, hence the pyright override silencer.
+    extension: ClassVar[Optional[str]] = ".parquet"  # pyright: ignore[reportIncompatibleVariableOverride]
 
     def sink_df_to_path(
         self,

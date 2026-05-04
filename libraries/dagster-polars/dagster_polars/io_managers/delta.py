@@ -2,7 +2,7 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from enum import Enum
 from pprint import pformat
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 import polars as pl
 from dagster import InputContext, MetadataValue, MultiPartitionKey, OutputContext
@@ -190,7 +190,11 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
 
     """
 
-    extension: str = ".delta"  # ty: ignore
+    # ``ClassVar`` so pydantic stops treating ``extension`` as a model field
+    # and the parent's annotation (``Optional[str]`` on ``UPathIOManager``) is
+    # not reported as shadowed on every import. The parent declares
+    # ``extension`` as an instance var, hence the pyright override silencer.
+    extension: ClassVar[Optional[str]] = ".delta"  # pyright: ignore[reportIncompatibleVariableOverride]
     mode: DeltaWriteMode = DeltaWriteMode.overwrite.value  # type: ignore
     schema_mode: DeltaSchemaMode | None = None
     version: int | None = None
