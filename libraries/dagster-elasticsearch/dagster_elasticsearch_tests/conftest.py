@@ -7,9 +7,7 @@ from elasticsearch import Elasticsearch
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 
-ES_IMAGE = os.environ.get(
-    "ES_TEST_IMAGE", "docker.elastic.co/elasticsearch/elasticsearch:9.1.3"
-)
+ES_IMAGE = os.environ.get("ES_TEST_IMAGE", "docker.elastic.co/elasticsearch/elasticsearch:9.1.3")
 ES_PORT = 9200
 
 
