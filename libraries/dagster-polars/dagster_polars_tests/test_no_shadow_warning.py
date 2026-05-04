@@ -29,8 +29,6 @@ def test_no_extension_shadow_warning_on_import() -> None:
         _reload_io_managers()
 
     shadow = [
-        str(w.message)
-        for w in caught
-        if "shadows an attribute" in str(w.message)
+        str(w.message) for w in caught if "shadows an attribute" in str(w.message)
     ]
     assert not shadow, f"Pydantic shadow warning(s) leaked: {shadow}"
