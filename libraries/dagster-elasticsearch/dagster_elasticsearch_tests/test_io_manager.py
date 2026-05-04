@@ -46,6 +46,52 @@ def test_handle_output_dataframe(es_url: str, index_name: str, es_client: Elasti
     assert es_client.count(index=index_name)["count"] == 2
 
 
+def test_handle_output_polars_lazyframe(
+    es_url: str, index_name: str, es_client: Elasticsearch
+) -> None:
+    """Simulates a parquet-backed Polars LazyFrame from an upstream asset."""
+    pl = pytest.importorskip("polars")
+
+    @asset
+    def docs() -> Any:  # noqa: ANN401
+        return pl.DataFrame([{"_id": str(i), "n": i} for i in range(2500)]).lazy()
+
+    result = materialize(
+        [docs], resources={"io_manager": _io(es_url, index_name, bulk_chunk_size=500)}
+    )
+    assert result.success
+    es_client.indices.refresh(index=index_name)
+    assert es_client.count(index=index_name)["count"] == 2500
+
+
+def test_index_config_applies_mappings(
+    es_url: str, index_name: str, es_client: Elasticsearch
+) -> None:
+    from dagster_elasticsearch import ElasticsearchIndexConfig
+
+    @asset
+    def docs() -> list[dict]:
+        return [{"_id": "1", "title": "hello"}]
+
+    io = _io(
+        es_url,
+        index_name,
+        use_alias=True,
+        rollover_strategy="timestamp",
+        index_config=ElasticsearchIndexConfig(
+            mappings={"properties": {"title": {"type": "keyword"}}},
+            settings={"number_of_shards": 1},
+        ),
+    )
+    result = materialize([docs], resources={"io_manager": io})
+    assert result.success
+
+    aliased = es_client.indices.get_alias(name=index_name)
+    physical = next(iter(aliased.body.keys()))
+    mapping = es_client.indices.get_mapping(index=physical).body
+    assert mapping[physical]["mappings"]["properties"]["title"]["type"] == "keyword"
+
+
 def test_load_input_round_trip(es_url: str, index_name: str) -> None:
     @asset
     def producer() -> list[dict]:

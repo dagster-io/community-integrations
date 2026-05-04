@@ -9,10 +9,11 @@ from dagster import (
     OutputContext,
 )
 from elasticsearch import Elasticsearch
-from elasticsearch.helpers import bulk, scan
+from elasticsearch.helpers import BulkIndexError, bulk, scan
 from pydantic import Field
 
-from .config import BaseConnectionConfig
+from .config import BaseConnectionConfig, ElasticsearchIndexConfig
+from .errors import ElasticsearchBulkIndexError
 
 RolloverStrategy = Literal["auto", "timestamp", "run_id", "partition", "none"]
 
@@ -83,6 +84,29 @@ class ElasticsearchIOManager(ConfigurableIOManager):
         default=500,
         description="Number of docs per bulk request.",
     )
+    max_chunk_bytes: int | None = Field(
+        default=None,
+        description=(
+            "Maximum bulk request size in bytes. When set, overrides "
+            "``bulk_chunk_size`` as the limit if reached first. Useful for "
+            "very large documents."
+        ),
+    )
+    fail_fast: bool = Field(
+        default=True,
+        description=(
+            "Raise on the first per-document error during bulk indexing. "
+            "When False, errors are collected and logged but do not abort "
+            "the materialisation."
+        ),
+    )
+    index_config: ElasticsearchIndexConfig | None = Field(
+        default=None,
+        description=(
+            "Optional mappings and settings applied when the IO manager "
+            "creates an index (alias rollover only)."
+        ),
+    )
     refresh: bool = Field(
         default=True,
         description="Refresh the index after write so docs are immediately searchable.",
@@ -104,7 +128,15 @@ class ElasticsearchIOManager(ConfigurableIOManager):
     )
     request_timeout: float | None = Field(
         default=None,
-        description="Per-request timeout in seconds.",
+        description="Client-side per-request timeout in seconds.",
+    )
+    server_timeout: float | None = Field(
+        default=None,
+        description=(
+            "Server-side timeout in seconds applied to cluster operations "
+            "(index creation, bulk indexing, alias updates). Defaults to "
+            "the elasticsearch-py default."
+        ),
     )
     additional_client_kwargs: dict[str, Any] = Field(
         default_factory=dict,
@@ -121,6 +153,12 @@ class ElasticsearchIOManager(ConfigurableIOManager):
             kwargs["request_timeout"] = self.request_timeout
         kwargs.update(self.additional_client_kwargs)
         return Elasticsearch(**kwargs)
+
+    @property
+    def _server_timeout_str(self) -> str | None:
+        if self.server_timeout is None:
+            return None
+        return f"{self.server_timeout}s"
 
     def _resolve_strategy(self, context: OutputContext) -> RolloverStrategy:
         if self.rollover_strategy != "auto":
@@ -187,20 +225,49 @@ class ElasticsearchIOManager(ConfigurableIOManager):
                 keep.add(name)
 
     def handle_output(self, context: OutputContext, obj: Any) -> None:  # noqa: ANN401
-        docs = list(_to_docs(obj))
         target = self._target_index(context)
         client = self._client()
+        server_timeout = self._server_timeout_str
         try:
             if self.use_alias:
                 # Always start from a clean rollover index when suffix is non-empty.
                 if target != self.index and client.indices.exists(index=target):
                     client.indices.delete(index=target)
-                client.indices.create(index=target)
+                create_kwargs: dict[str, Any] = {"index": target}
+                if self.index_config is not None:
+                    if self.index_config.mappings is not None:
+                        create_kwargs["mappings"] = self.index_config.mappings
+                    if self.index_config.settings is not None:
+                        create_kwargs["settings"] = self.index_config.settings
+                if server_timeout is not None:
+                    create_kwargs["timeout"] = server_timeout
+                client.indices.create(**create_kwargs)
                 client.cluster.health(index=target, wait_for_status="yellow", timeout="30s")
 
-            actions = (_action(target, doc, self.id_field) for doc in docs)
-            if docs:
-                bulk(client, actions, chunk_size=self.bulk_chunk_size)
+            # Stream documents through bulk() so memory stays bounded for
+            # large LazyFrame/DataFrame inputs.
+            actions = (
+                _action(target, doc, self.id_field)
+                for doc in _iter_docs(obj, chunk_size=self.bulk_chunk_size)
+            )
+            bulk_kwargs: dict[str, Any] = {
+                "client": client,
+                "actions": actions,
+                "chunk_size": self.bulk_chunk_size,
+                "raise_on_error": self.fail_fast,
+                "stats_only": True,
+            }
+            if self.max_chunk_bytes is not None:
+                bulk_kwargs["max_chunk_bytes"] = self.max_chunk_bytes
+            if server_timeout is not None:
+                bulk_kwargs["timeout"] = server_timeout
+            try:
+                successes, failures = bulk(**bulk_kwargs)
+            except BulkIndexError as e:
+                raise ElasticsearchBulkIndexError(
+                    f"Bulk indexing failed with {len(e.errors)} error(s).",
+                    errors=e.errors,
+                ) from e
 
             if self.refresh:
                 client.indices.refresh(index=target)
@@ -211,8 +278,13 @@ class ElasticsearchIOManager(ConfigurableIOManager):
 
             metadata: dict[str, Any] = {
                 "index": MetadataValue.text(target),
-                "doc_count": MetadataValue.int(len(docs)),
+                "indexed": MetadataValue.int(successes),
             }
+            # stats_only=True guarantees `failures` is an int, but the
+            # elasticsearch-py type stubs declare it as `int | list`.
+            failure_count = failures if isinstance(failures, int) else len(failures)
+            if failure_count:
+                metadata["failures"] = MetadataValue.int(failure_count)
             if self.use_alias:
                 metadata["alias"] = MetadataValue.text(self.index)
             context.add_output_metadata(metadata)
@@ -235,20 +307,60 @@ def _slugify(value: str) -> str:
     return "".join(c if c.isalnum() else "-" for c in value.lower()).strip("-")
 
 
-def _to_docs(obj: Any) -> Iterable[dict]:  # noqa: ANN401
+def _iter_docs(obj: Any, chunk_size: int) -> Iterable[dict]:  # noqa: ANN401
+    """Yield documents from supported inputs without materialising the whole set.
+
+    Polars LazyFrames are streamed via ``collect(streaming=True)`` and sliced
+    in ``chunk_size`` rows so very large parquet-backed datasets don't have to
+    fit in memory at once. Polars DataFrames and pandas DataFrames are sliced
+    similarly. ``list``/``dict`` inputs pass through unchanged.
+    """
     if obj is None:
-        return []
+        return
     if isinstance(obj, dict):
-        return [obj]
+        yield obj
+        return
     if isinstance(obj, list):
-        return obj
-    # pandas DataFrame: detect by class name to avoid an unconditional pandas import.
-    if type(obj).__name__ == "DataFrame" and hasattr(obj, "to_dict"):
-        return obj.to_dict(orient="records")
+        yield from obj
+        return
+
+    # Detect by class + module name to avoid unconditional pandas/polars imports.
+    type_name = type(obj).__name__
+    module_name = type(obj).__module__.split(".")[0]
+
+    if type_name == "DataFrame" and module_name == "pandas":
+        for start in range(0, len(obj), chunk_size):
+            chunk = obj.iloc[start : start + chunk_size]
+            yield from chunk.to_dict(orient="records")
+        return
+
+    if module_name == "polars" and type_name == "LazyFrame":
+        # Stream the LazyFrame so we don't materialise the full result.
+        # Polars 1.25 renamed ``streaming=True`` → ``engine="streaming"``.
+        try:
+            frame = obj.collect(engine="streaming")
+        except TypeError:
+            try:
+                frame = obj.collect(streaming=True)  # type: ignore[call-arg]
+            except TypeError:
+                frame = obj.collect()
+        type_name = "DataFrame"
+        obj = frame
+
+    if module_name == "polars" and type_name == "DataFrame":
+        for slice_ in obj.iter_slices(n_rows=chunk_size):
+            yield from slice_.to_dicts()
+        return
+
     raise TypeError(
         f"ElasticsearchIOManager cannot serialise {type(obj).__name__}; "
-        "supply a dict, list[dict], or pandas DataFrame."
+        "supply a dict, list[dict], pandas DataFrame, or polars DataFrame/LazyFrame."
     )
+
+
+def _to_docs(obj: Any) -> Iterable[dict]:  # noqa: ANN401
+    """Backwards-compatible eager wrapper used by unit tests."""
+    return list(_iter_docs(obj, chunk_size=1000))
 
 
 def _action(index: str, doc: dict, id_field: str | None) -> dict:

@@ -1,7 +1,26 @@
 import abc
+from typing import Any
 
-from dagster import ConfigurableResource
+from dagster import Config, ConfigurableResource
 from pydantic import Field
+
+
+class ElasticsearchIndexConfig(Config):
+    """Mappings and settings applied when an index is created.
+
+    Use with :class:`ElasticsearchIOManager` (``index_config=...``) to provide
+    explicit field mappings and index settings instead of relying on
+    Elasticsearch's automatic mapping detection.
+    """
+
+    mappings: dict[str, Any] | None = Field(
+        default=None,
+        description="Elasticsearch field mappings (the ``mappings`` request body).",
+    )
+    settings: dict[str, Any] | None = Field(
+        default=None,
+        description="Elasticsearch index settings (the ``settings`` request body).",
+    )
 
 
 class BaseConnectionConfig(ConfigurableResource, abc.ABC):

@@ -11,8 +11,9 @@ A Dagster module that integrates with [Elasticsearch 9.x](https://www.elastic.co
 
 ```sh
 uv pip install dagster-elasticsearch
-# Optional: pandas DataFrame support in the IO manager.
+# Optional DataFrame support in the IO manager.
 uv pip install 'dagster-elasticsearch[pandas]'
+uv pip install 'dagster-elasticsearch[polars]'
 ```
 
 ## Resource
@@ -61,7 +62,9 @@ HostsConfig(
 
 ## IO manager
 
-`ElasticsearchIOManager` accepts `dict`, `list[dict]`, or `pandas.DataFrame` outputs and bulk-indexes them via `elasticsearch.helpers.bulk`. The `id_field` (default `_id`) is lifted from each document to become the Elasticsearch `_id`.
+`ElasticsearchIOManager` accepts `dict`, `list[dict]`, `pandas.DataFrame`, or Polars `DataFrame`/`LazyFrame` outputs and bulk-indexes them via `elasticsearch.helpers.bulk`. The `id_field` (default `_id`) is lifted from each document to become the Elasticsearch `_id`.
+
+DataFrame inputs are streamed in `bulk_chunk_size`-row slices, and Polars `LazyFrame`s are collected with the streaming engine — neither is materialised in full before indexing, so very large parquet-backed assets stay memory-bounded.
 
 ```python
 from dagster import Definitions, asset
@@ -109,6 +112,76 @@ Rollover strategies:
 ### Partitioned assets (without alias)
 
 When `use_alias=False` and the asset is partitioned, each partition writes to its own index `{index}-{partition_key}`. Reads target the same per-partition index.
+
+### Index mappings and settings
+
+Pass `index_config` to control mappings and shard/replica settings on indices created by the IO manager (alias rollover only):
+
+```python
+from dagster_elasticsearch import ElasticsearchIndexConfig, ElasticsearchIOManager, HostsConfig
+
+ElasticsearchIOManager(
+    connection_config=HostsConfig(hosts=["http://localhost:9200"]),
+    index="docs",
+    use_alias=True,
+    index_config=ElasticsearchIndexConfig(
+        mappings={
+            "properties": {
+                "title": {"type": "text"},
+                "tags": {"type": "keyword"},
+            }
+        },
+        settings={"number_of_shards": 3, "number_of_replicas": 1},
+    ),
+)
+```
+
+### Polars / Parquet handoff
+
+When an upstream asset uses `dagster-polars`'s `PolarsParquetIOManager` and a downstream asset writes to Elasticsearch, the downstream can pass through a `LazyFrame` straight from the upstream parquet:
+
+```python
+import dagster as dg
+import polars as pl
+
+@dg.asset(io_manager_key="parquet_io_manager")
+def raw_records() -> pl.DataFrame:
+    return pl.DataFrame([...])
+
+@dg.asset(io_manager_key="es_io_manager")
+def search_records(raw_records: pl.LazyFrame) -> pl.LazyFrame:
+    return raw_records.filter(pl.col("active"))
+```
+
+`ElasticsearchIOManager` collects the `LazyFrame` with Polars's streaming engine and yields slices of `bulk_chunk_size` rows into the Elasticsearch bulk helper, so the full result never has to fit in RAM.
+
+### Error handling
+
+Per-document indexing errors raise `ElasticsearchBulkIndexError`, exposing the underlying error list directly:
+
+```python
+from dagster_elasticsearch import ElasticsearchBulkIndexError
+
+try:
+    materialize([docs], resources={...})
+except ElasticsearchBulkIndexError as e:
+    for err in e.errors:
+        print(err)
+```
+
+Set `fail_fast=False` on the IO manager to log per-document errors instead of aborting the materialisation.
+
+## Troubleshooting
+
+**Cluster status `red` and shards stuck unassigned in local Docker.** Elasticsearch refuses to allocate shards once the host disk is over the high-watermark threshold (default 90%). Free space, or for local development only, disable the threshold:
+
+```sh
+curl -XPUT http://localhost:9200/_cluster/settings \
+  -H 'Content-Type: application/json' \
+  -d '{"persistent":{"cluster.routing.allocation.disk.threshold_enabled":"false"}}'
+```
+
+**`elasticsearch.BadRequestError: invalid_index_name_exception ... must be lowercase`.** Index names must be lowercase. The IO manager already lowercases timestamp suffixes; if you supply your own index name make sure it is lowercase too.
 
 ## Development
 

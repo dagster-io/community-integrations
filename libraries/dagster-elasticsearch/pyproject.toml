@@ -11,10 +11,12 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 pandas = ["pandas>=2.0"]
+polars = ["polars>=1.0"]
 
 [dependency-groups]
 dev = [
     "pandas>=2.0",
+    "polars>=1.0",
     "pyright>=1.1.408",
     "pytest>=9.0.3",
     "ruff>=0.15.9",
