@@ -1,0 +1,38 @@
+[project]
+name = "dagster-elasticsearch"
+description = "Dagster integration for Elasticsearch 9.x — resource and IO manager with optional alias rollover"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dagster>=1.13.0",
+    "elasticsearch>=9.3,<10",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+pandas = ["pandas>=2.0"]
+
+[dependency-groups]
+dev = [
+    "pandas>=2.0",
+    "pyright>=1.1.408",
+    "pytest>=9.0.3",
+    "ruff>=0.15.9",
+    "testcontainers>=4.4.0",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_elasticsearch"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_elasticsearch.__version__"}
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["ANN", "E", "F", "I"]
