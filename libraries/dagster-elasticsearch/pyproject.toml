@@ -1,15 +1,20 @@
 [project]
 name = "dagster-elasticsearch"
-description = "Dagster integration for Elasticsearch 9.x — resource and IO manager with optional alias rollover"
+description = "Dagster integration for Elasticsearch — resource and IO manager with optional alias rollover"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "dagster>=1.13.0",
-    "elasticsearch>=9.3,<10",
+    # Loose pin: Elasticsearch 8, 9, and 10 use the same bulk + alias APIs
+    # we exercise. Pin a specific major in your own project to match your
+    # server — elasticsearch-py refuses cross-major (e.g. v9 client + v8
+    # server).
+    "elasticsearch>=8.10,<11",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
+# DataFrame / table format support.
 pandas = ["pandas>=2.0"]
 polars = ["polars>=1.0"]
 arrow = ["pyarrow>=14"]

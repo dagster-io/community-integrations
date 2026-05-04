@@ -1,20 +1,36 @@
 # dagster-elasticsearch
 
-A Dagster module that integrates with [Elasticsearch 9.x](https://www.elastic.co/elasticsearch). It exposes:
+A Dagster module that integrates with [Elasticsearch](https://www.elastic.co/elasticsearch). It exposes:
 
 - `ElasticsearchResource` — a thin `ConfigurableResource` over the official `elasticsearch` Python client.
 - `ElasticsearchIOManager` — a `ConfigurableIOManager` that bulk-indexes asset outputs as documents, with optional **alias rollover** for zero-downtime atomic swaps.
-
-> Elasticsearch 9.x is required. Per the elasticsearch-py compatibility policy, the 9.x client refuses to talk to an 8.x server.
 
 ## Installation
 
 ```sh
 uv pip install dagster-elasticsearch
-# Optional DataFrame support in the IO manager.
+# Optional DataFrame / table format support in the IO manager.
 uv pip install 'dagster-elasticsearch[pandas]'
 uv pip install 'dagster-elasticsearch[polars]'
+uv pip install 'dagster-elasticsearch[arrow]'
 ```
+
+### Elasticsearch version compatibility
+
+`elasticsearch-py` refuses to talk to a server with a different major version. The base package depends on `elasticsearch>=8.10,<11`, leaving the choice of major up to your project. **Pin the major to match your cluster** in your own `pyproject.toml`:
+
+```toml
+# Elasticsearch 8.x cluster
+dependencies = ["dagster-elasticsearch", "elasticsearch>=8.10,<9"]
+
+# Elasticsearch 9.x cluster
+dependencies = ["dagster-elasticsearch", "elasticsearch>=9,<10"]
+
+# Elasticsearch 10.x cluster (when available)
+dependencies = ["dagster-elasticsearch", "elasticsearch>=10,<11"]
+```
+
+The integration uses only stable bulk and alias APIs that have been unchanged across Elasticsearch 8, 9, and 10.
 
 ## Resource
 

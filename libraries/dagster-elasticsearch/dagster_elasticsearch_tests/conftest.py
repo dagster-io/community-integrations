@@ -7,17 +7,24 @@ from elasticsearch import Elasticsearch
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 
-ES_IMAGE = "docker.elastic.co/elasticsearch/elasticsearch:9.1.3"
+ES_IMAGE = os.environ.get(
+    "ES_TEST_IMAGE", "docker.elastic.co/elasticsearch/elasticsearch:9.1.3"
+)
 ES_PORT = 9200
 
 
 @pytest.fixture(scope="session")
 def es_url() -> Generator[str, None, None]:
-    """Yield a base URL for an Elasticsearch 9.x cluster.
+    """Yield a base URL for an Elasticsearch cluster.
 
-    Uses the ES_URL environment variable when set (skips container management
-    so a local Docker container or a CI service can be reused). Otherwise
-    spins up a single-node ES container via testcontainers.
+    Uses the ``ES_URL`` environment variable when set (skips container
+    management so a local Docker container or a CI service can be reused).
+    Otherwise spins up a single-node container via testcontainers using the
+    image in ``ES_TEST_IMAGE`` (default Elasticsearch 9.1.3).
+
+    The ``elasticsearch`` Python client refuses to talk to a server with a
+    different major version, so the installed ``elasticsearch`` major must
+    match the ``ES_TEST_IMAGE`` major.
     """
     override = os.environ.get("ES_URL")
     if override:
