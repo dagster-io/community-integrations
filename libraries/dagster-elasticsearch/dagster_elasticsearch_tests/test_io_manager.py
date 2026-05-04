@@ -202,3 +202,81 @@ def test_alias_rollover_partition_strategy(
     physical = list(aliased.body.keys() if hasattr(aliased, "body") else aliased.keys())
     # Latest write (partition b) holds the alias
     assert physical == [f"{index_name}-b"]
+
+
+def test_handle_output_empty_list(es_url: str, index_name: str, es_client: Elasticsearch) -> None:
+    """Empty input must not error and should not create stray indices."""
+
+    @asset
+    def docs() -> list[dict]:
+        return []
+
+    result = materialize([docs], resources={"io_manager": _io(es_url, index_name)})
+    assert result.success
+    # No documents indexed, but no failure either.
+    assert not es_client.indices.exists(index=index_name)
+
+
+def test_handle_output_empty_with_alias_creates_index(
+    es_url: str, index_name: str, es_client: Elasticsearch
+) -> None:
+    """Empty input + alias rollover still creates the rollover index and alias."""
+
+    @asset
+    def docs() -> list[dict]:
+        return []
+
+    io = _io(es_url, index_name, use_alias=True, rollover_strategy="timestamp")
+    result = materialize([docs], resources={"io_manager": io})
+    assert result.success
+    assert es_client.indices.exists_alias(name=index_name)
+
+
+def test_special_chars_in_id(es_url: str, index_name: str, es_client: Elasticsearch) -> None:
+    """Document _id values containing slashes/colons must round-trip."""
+
+    @asset
+    def docs() -> list[dict]:
+        return [
+            {"_id": "ns:resource/123", "title": "first"},
+            {"_id": "https://example.com/x", "title": "second"},
+        ]
+
+    result = materialize([docs], resources={"io_manager": _io(es_url, index_name)})
+    assert result.success
+    es_client.indices.refresh(index=index_name)
+    # Use search to dodge URL-encoding pitfalls in client.get().
+    hits = es_client.search(index=index_name, query={"match_all": {}}).body["hits"]["hits"]
+    ids = sorted(h["_id"] for h in hits)
+    assert ids == ["https://example.com/x", "ns:resource/123"]
+
+
+def test_refresh_disabled(es_url: str, index_name: str, es_client: Elasticsearch) -> None:
+    """When refresh=False the IO manager skips the post-write refresh."""
+
+    @asset
+    def docs() -> list[dict]:
+        return [{"_id": "1", "v": "x"}]
+
+    result = materialize([docs], resources={"io_manager": _io(es_url, index_name, refresh=False)})
+    assert result.success
+    # An explicit refresh after the fact should still find the doc.
+    es_client.indices.refresh(index=index_name)
+    assert es_client.count(index=index_name)["count"] == 1
+
+
+def test_load_input_missing_index_returns_empty(
+    es_url: str, index_name: str, es_client: Elasticsearch
+) -> None:
+    """Reading from a non-existent index yields an empty list, not an error."""
+    from dagster import build_input_context
+
+    from dagster_elasticsearch import ElasticsearchIOManager, HostsConfig
+
+    io = ElasticsearchIOManager(
+        connection_config=HostsConfig(hosts=[es_url]),
+        index=index_name,
+    )
+    ctx = build_input_context()
+    docs = io.load_input(ctx)
+    assert docs == []

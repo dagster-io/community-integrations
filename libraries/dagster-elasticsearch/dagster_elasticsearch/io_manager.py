@@ -269,7 +269,9 @@ class ElasticsearchIOManager(ConfigurableIOManager):
                     errors=e.errors,
                 ) from e
 
-            if self.refresh:
+            # Refresh only when the index actually exists. If there were no
+            # documents and use_alias=False the index was never created.
+            if self.refresh and client.indices.exists(index=target):
                 client.indices.refresh(index=target)
 
             if self.use_alias:
@@ -295,6 +297,12 @@ class ElasticsearchIOManager(ConfigurableIOManager):
         target = self._read_target(context)
         client = self._client()
         try:
+            # Missing index → empty result rather than NotFoundError, so a
+            # downstream asset can run before the upstream has materialised.
+            if not (
+                client.indices.exists(index=target) or client.indices.exists_alias(name=target)
+            ):
+                return []
             return [
                 hit["_source"]
                 for hit in scan(client, index=target, query={"query": {"match_all": {}}})
