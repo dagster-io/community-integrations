@@ -4,6 +4,7 @@
 
 ### Added
 
+- `S3TablesCatalogConfig` — typed `IcebergCatalogConfig` subclass for AWS S3 Tables. Derives the Glue REST endpoint URL, SigV4 properties, and warehouse string from a `region` plus `table_bucket_arn` so users don't have to remember the format. User-supplied `properties` keys override the derived defaults.
 - Spark I/O manager.
 - Support for append mode in Iceberg I/O manager. Write mode options can be set via asset definition metadata using the `write_mode` key, or at runtime via output metadata with the same key. Runtime output metadata setting overrides asset definition metadata setting.
 - Support for upsert mode in Iceberg I/O manager and its variants.
