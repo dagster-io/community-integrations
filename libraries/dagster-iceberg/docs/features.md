@@ -24,6 +24,26 @@ io_manager = PyArrowIcebergIOManager(
 )
 ```
 
+### AWS S3 Tables
+
+[AWS S3 Tables](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-tables.html) is a managed Apache Iceberg catalog backed by a Glue REST endpoint that uses SigV4 to sign requests. The `S3TablesCatalogConfig` helper derives the REST endpoint URL, SigV4 properties, and warehouse string from a `region` plus `table_bucket_arn` so you don't have to assemble them by hand.
+
+```python
+from dagster_iceberg.config import S3TablesCatalogConfig
+from dagster_iceberg.io_manager.arrow import PyArrowIcebergIOManager
+
+io_manager = PyArrowIcebergIOManager(
+    name="s3_tables",
+    config=S3TablesCatalogConfig(
+        region="eu-west-2",
+        table_bucket_arn="arn:aws:s3tables:eu-west-2:123456789012:bucket/my-tables",
+    ),
+    namespace="analytics",
+)
+```
+
+`S3TablesCatalogConfig` is a thin subclass of `IcebergCatalogConfig`. Any keys you set in `properties` override the derived defaults, so you can still tweak individual REST properties (e.g. `rest.signing-region`) without redoing the full derivation. Authentication is delegated to boto3 — set `AWS_PROFILE` or any other supported credential source before launching Dagster.
+
 ## Implemented engines
 
 The following engines are currently implemented.

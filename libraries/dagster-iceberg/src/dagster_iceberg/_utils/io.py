@@ -1,24 +1,18 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
 from enum import Enum
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
-import pyarrow as pa
-from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
 from pydantic import BaseModel, ConfigDict
 from pyiceberg import __version__ as pyiceberg_version
 from pyiceberg import expressions as E
 from pyiceberg import table as iceberg_table
-from pyiceberg.catalog import Catalog
 from pyiceberg.exceptions import (
     CommitFailedException,
     NoSuchTableError,
     TableAlreadyExistsError,
 )
-from pyiceberg.partitioning import PartitionSpec
-from pyiceberg.schema import Schema
 
 from dagster_iceberg._utils.partitions import (
     DagsterPartitionToIcebergExpressionMapper,
@@ -28,6 +22,15 @@ from dagster_iceberg._utils.properties import update_table_properties
 from dagster_iceberg._utils.retries import IcebergOperationWithRetry
 from dagster_iceberg._utils.schema import update_table_schema
 from dagster_iceberg.version import __version__ as dagster_iceberg_version
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    import pyarrow as pa
+    from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
+    from pyiceberg.catalog import Catalog
+    from pyiceberg.partitioning import PartitionSpec
+    from pyiceberg.schema import Schema
 
 logger = logging.getLogger("dagster_iceberg._utils.io")
 
