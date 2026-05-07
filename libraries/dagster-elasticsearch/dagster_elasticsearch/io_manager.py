@@ -1,5 +1,7 @@
 import datetime
-from collections.abc import Iterable
+import logging
+import weakref
+from collections.abc import Iterable, Iterator
 from typing import Any, Literal
 
 from dagster import (
@@ -16,6 +18,8 @@ from pydantic import Field
 
 from .config import BaseConnectionConfig, ElasticsearchIndexConfig
 from .errors import ElasticsearchBulkIndexError
+
+_logger = logging.getLogger(__name__)
 
 RolloverStrategy = Literal["auto", "timestamp", "run_id", "partition", "none"]
 
@@ -358,14 +362,26 @@ class ElasticsearchIOManager(ConfigurableIOManager):
     def load_input(self, context: InputContext) -> list[dict] | Iterable[dict]:
         target = self._read_target(context)
         if self.lazy_load:
-            return self._lazy_load(target)
+            # Wrap the generator so the underlying client is closed even if
+            # the consumer never finishes iterating (early break, exception,
+            # or just dropping the iterator on the floor). The generator's
+            # own ``finally`` only fires on close/GC, but ``weakref.finalize``
+            # gives us a safety net tied to the wrapper's lifetime.
+            client = self._client()
+            iterator = _stream_hits(
+                client,
+                target,
+                scan_size=self.scan_size,
+                scroll_keep_alive=self.scroll_keep_alive,
+            )
+            return _ClientBoundIterator(iterator, client)
         return list(self._lazy_load(target))
 
     def _lazy_load(self, target: str) -> Iterable[dict]:
+        """Eager (list-materialising) path. Client is opened, fully consumed,
+        and closed in a single ``with``-style scope."""
         client = self._client()
         try:
-            # Missing index → empty result rather than NotFoundError, so a
-            # downstream asset can run before the upstream has materialised.
             if not (
                 client.indices.exists(index=target) or client.indices.exists_alias(name=target)
             ):
@@ -380,6 +396,71 @@ class ElasticsearchIOManager(ConfigurableIOManager):
                 yield hit["_source"]
         finally:
             client.close()
+
+
+def _stream_hits(
+    client: Elasticsearch,
+    target: str,
+    *,
+    scan_size: int,
+    scroll_keep_alive: str,
+) -> Iterator[dict]:
+    """Yield ``_source`` dicts from a scan over ``target``.
+
+    Missing index/alias yields nothing rather than raising, so a downstream
+    asset can run before the upstream has materialised.
+    """
+    if not (client.indices.exists(index=target) or client.indices.exists_alias(name=target)):
+        return
+    for hit in scan(
+        client,
+        index=target,
+        query={"query": {"match_all": {}}},
+        size=scan_size,
+        scroll=scroll_keep_alive,
+    ):
+        yield hit["_source"]
+
+
+class _ClientBoundIterator:
+    """Iterator wrapper that keeps an Elasticsearch client open for the
+    lifetime of the iteration and closes it deterministically.
+
+    Closes happen in three ways:
+    1. ``__iter__`` is exhausted (``StopIteration``).
+    2. ``close()`` is called explicitly (e.g. ``contextlib.closing``).
+    3. The wrapper is garbage-collected (``weakref.finalize``), which
+       fires even if the consumer drops the iterator without iterating.
+    """
+
+    def __init__(self, iterator: Iterator[dict], client: Elasticsearch) -> None:
+        self._iterator = iterator
+        self._client: Elasticsearch | None = client
+        self._finalizer = weakref.finalize(self, _close_client, client)
+
+    def __iter__(self) -> "_ClientBoundIterator":
+        return self
+
+    def __next__(self) -> dict:
+        try:
+            return next(self._iterator)
+        except StopIteration:
+            self.close()
+            raise
+
+    def close(self) -> None:
+        if self._finalizer.alive:
+            self._finalizer()
+        self._client = None
+
+
+def _close_client(client: Elasticsearch) -> None:
+    try:
+        client.close()
+    except Exception as exc:
+        # Best effort: connection may already be torn down. Log at debug
+        # so noise stays low but the failure isn't completely invisible.
+        _logger.debug("Elasticsearch client close failed: %s", exc)
 
 
 def _slugify(value: str) -> str:

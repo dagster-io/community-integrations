@@ -1,5 +1,7 @@
-"""Unit tests for IO manager helpers — no Elasticsearch required."""
+"""Unit tests for IO manager helpers. No Elasticsearch required."""
 
+import gc
+from collections.abc import Iterator
 from unittest.mock import MagicMock
 
 import pandas as pd
@@ -7,6 +9,7 @@ import pytest
 
 from dagster_elasticsearch.io_manager import (
     _action,
+    _ClientBoundIterator,
     _slugify,
     _to_docs,
 )
@@ -195,3 +198,66 @@ class TestBulkIndexError:
         e = ElasticsearchBulkIndexError("boom", errors=errors)
         assert e.errors == errors
         assert "boom" in str(e)
+
+
+# --- _ClientBoundIterator (lazy-load lifecycle) ----------------------------
+
+
+def _fake_client_with_close_counter() -> tuple[MagicMock, list[int]]:
+    counter: list[int] = [0]
+    client = MagicMock()
+
+    def _close() -> None:
+        counter[0] += 1
+
+    client.close.side_effect = _close
+    return client, counter
+
+
+def _docs() -> Iterator[dict]:
+    yield {"a": 1}
+    yield {"a": 2}
+    yield {"a": 3}
+
+
+def test_client_bound_iterator_closes_on_full_iteration() -> None:
+    client, counter = _fake_client_with_close_counter()
+    it = _ClientBoundIterator(_docs(), client)
+    out = list(it)
+    assert out == [{"a": 1}, {"a": 2}, {"a": 3}]
+    assert counter[0] == 1
+
+
+def test_client_bound_iterator_closes_on_explicit_close() -> None:
+    client, counter = _fake_client_with_close_counter()
+    it = _ClientBoundIterator(_docs(), client)
+    next(it)
+    it.close()
+    assert counter[0] == 1
+
+
+def test_client_bound_iterator_close_is_idempotent() -> None:
+    client, counter = _fake_client_with_close_counter()
+    it = _ClientBoundIterator(_docs(), client)
+    it.close()
+    it.close()
+    it.close()
+    assert counter[0] == 1
+
+
+def test_client_bound_iterator_closes_on_gc_when_dropped() -> None:
+    """Consumer drops the iterator without iterating. The weakref finalizer
+    must still close the client when the wrapper is garbage-collected."""
+    client, counter = _fake_client_with_close_counter()
+    it = _ClientBoundIterator(_docs(), client)
+    del it
+    gc.collect()
+    assert counter[0] == 1
+
+
+def test_client_bound_iterator_swallows_close_errors() -> None:
+    client = MagicMock()
+    client.close.side_effect = RuntimeError("connection already torn down")
+    it = _ClientBoundIterator(_docs(), client)
+    # Should not raise.
+    it.close()
