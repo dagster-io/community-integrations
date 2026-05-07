@@ -87,3 +87,71 @@ def test_only_fsspec_drop_keys_returns_none() -> None:
         )
         is None
     )
+
+
+def test_unknown_keys_are_dropped() -> None:
+    """A typo or unsupported key should not reach object_store. Drop silently
+    rather than handing an unknown key to the Rust binding."""
+    out = _remap_fsspec_storage_options(
+        {
+            "key": "k",
+            "secret": "s",
+            "aws_acccess_key_id": "typo",  # triple-c typo
+            "totally_made_up": True,
+        }
+    )
+    assert out == {"aws_access_key_id": "k", "aws_secret_access_key": "s"}
+
+
+def test_extracts_creds_and_session_token_from_client_kwargs() -> None:
+    """fsspec users sometimes nest credentials under ``client_kwargs`` using
+    the boto3-style names. Extract those too."""
+    out = _remap_fsspec_storage_options(
+        {
+            "client_kwargs": {
+                "aws_access_key_id": "k",
+                "aws_secret_access_key": "s",
+                "aws_session_token": "t",
+                "region_name": "ap-south-1",
+                "endpoint_url": "http://example.invalid",
+            }
+        }
+    )
+    assert out == {
+        "aws_access_key_id": "k",
+        "aws_secret_access_key": "s",
+        "aws_session_token": "t",
+        "aws_region": "ap-south-1",
+        "aws_endpoint_url": "http://example.invalid",
+    }
+
+
+def test_verify_false_maps_to_aws_allow_http() -> None:
+    """fsspec ``verify=False`` (skip TLS verification) ≈ object_store
+    ``aws_allow_http=true`` (allow plain HTTP). Map the boolean to the string
+    object_store expects."""
+    out = _remap_fsspec_storage_options(
+        {"client_kwargs": {"verify": False, "endpoint_url": "http://localhost:5555"}}
+    )
+    assert out == {
+        "aws_allow_http": "true",
+        "aws_endpoint_url": "http://localhost:5555",
+    }
+
+
+def test_passthrough_only_known_object_store_keys() -> None:
+    """object_store keys we know about are passed through. Generic
+    ``endpoint`` / ``region`` (used by non-AWS object_store backends) should
+    still come through unchanged."""
+    out = _remap_fsspec_storage_options(
+        {
+            "endpoint": "http://other.invalid",
+            "region": "eu-central-1",
+            "aws_skip_signature": "true",
+        }
+    )
+    assert out == {
+        "endpoint": "http://other.invalid",
+        "region": "eu-central-1",
+        "aws_skip_signature": "true",
+    }

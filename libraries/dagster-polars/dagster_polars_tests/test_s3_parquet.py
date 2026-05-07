@@ -8,9 +8,6 @@ are passed in fsspec shape via the IO manager's ``storage_options`` field.
 """
 
 import os
-import shutil
-import tempfile
-from pathlib import Path
 
 import boto3
 import polars as pl
@@ -78,24 +75,19 @@ def s3_env(moto_server, tmp_path):
     - Clear s3fs caches.
     """
     old_env = os.environ.copy()
-    old_home = os.environ.get("HOME")
-    fake_home = Path(tempfile.mkdtemp(prefix="dagster-polars-s3-env-"))
     try:
         for k in list(os.environ):
             if k.startswith("AWS_"):
                 del os.environ[k]
-        os.environ["HOME"] = str(fake_home)
-        os.environ["AWS_SHARED_CREDENTIALS_FILE"] = str(fake_home / "no-credentials")
-        os.environ["AWS_CONFIG_FILE"] = str(fake_home / "no-config")
+        os.environ["HOME"] = str(tmp_path)
+        os.environ["AWS_SHARED_CREDENTIALS_FILE"] = str(tmp_path / "no-credentials")
+        os.environ["AWS_CONFIG_FILE"] = str(tmp_path / "no-config")
         s3fs.S3FileSystem.clear_instance_cache()
         yield
     finally:
         os.environ.clear()
         os.environ.update(old_env)
-        if old_home is not None:
-            os.environ["HOME"] = old_home
         s3fs.S3FileSystem.clear_instance_cache()
-        shutil.rmtree(fake_home, ignore_errors=True)
 
 
 def test_polars_parquet_io_manager_s3_write_read(s3_env, s3_client):

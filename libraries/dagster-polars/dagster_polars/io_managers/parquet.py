@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 import polars as pl
@@ -44,35 +45,100 @@ def get_pyarrow_dataset(path: "UPath", context: InputContext) -> ds.Dataset:
 # remap, Polars reads from S3 with empty credentials and fails with
 # "Generic S3 error: Missing bucket name" or similar — see
 # https://github.com/dagster-io/community-integrations/issues/257.
+
+# Top-level fsspec → object_store key map.
 _FSSPEC_TO_OBJECT_STORE = {
     "key": "aws_access_key_id",
     "secret": "aws_secret_access_key",
     "token": "aws_session_token",
 }
 
-# fsspec keys with no ``object_store`` equivalent — drop on remap.
+# boto3-style keys nested inside fsspec ``client_kwargs`` → object_store keys.
+# fsspec/s3fs accept several aliases here; map all the common ones we have
+# seen in the wild.
+_CLIENT_KWARGS_TO_OBJECT_STORE = {
+    "region_name": "aws_region",
+    "endpoint_url": "aws_endpoint_url",
+    "aws_access_key_id": "aws_access_key_id",
+    "aws_secret_access_key": "aws_secret_access_key",
+    "aws_session_token": "aws_session_token",
+    "verify": "aws_allow_http",  # fsspec ``verify=False`` ≈ object_store HTTP allowed
+}
+
+# fsspec-only keys with no ``object_store`` equivalent — drop on remap.
 _FSSPEC_DROP = frozenset(
     {
         "client_options",
-        "client_kwargs",
         "config_kwargs",
         "s3_additional_kwargs",
         "default_block_size",
         "default_cache_type",
         "version_aware",
         "anon",
+        "use_listings_cache",
+        "listings_expiry_time",
+        "max_paths",
+        "skip_instance_cache",
+        "asynchronous",
+        "loop",
+    }
+)
+
+# object_store S3 keys we know about and pass through unchanged. Anything not
+# on this list, not in ``_FSSPEC_TO_OBJECT_STORE``, and not in
+# ``_FSSPEC_DROP`` is unknown — log a debug note and drop rather than forward
+# a possibly-misspelled key into the Rust binding (which would raise a less
+# helpful error).
+_OBJECT_STORE_PASSTHROUGH = frozenset(
+    {
+        "aws_access_key_id",
+        "aws_secret_access_key",
+        "aws_session_token",
+        "aws_region",
+        "aws_endpoint_url",
+        "aws_allow_http",
+        "aws_virtual_hosted_style_request",
+        "aws_skip_signature",
+        "aws_unsigned_payload",
+        "aws_checksum_algorithm",
+        "aws_server_side_encryption",
+        "aws_sse_kms_key_id",
+        "aws_sse_customer_key_base64",
+        "aws_metadata_endpoint",
+        "aws_container_credentials_relative_uri",
+        "aws_imdsv1_fallback",
+        "aws_request_payer",
+        "aws_s3_express",
+        "aws_disable_tagging",
+        # generic object_store keys (work across S3-compatible backends)
+        "endpoint",
+        "endpoint_url",
+        "region",
+        "access_key_id",
+        "secret_access_key",
+        "session_token",
+        "bucket",
+        "allow_http",
+        "allow_invalid_certificates",
+        "skip_signature",
+        "virtual_hosted_style_request",
+        "request_payer",
     }
 )
 
 
-def _remap_fsspec_storage_options(opts: dict[str, Any] | None) -> dict[str, Any] | None:
+def _remap_fsspec_storage_options(
+    opts: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
     """Translate fsspec-style storage_options into ``object_store`` keys.
 
     Polars's ``scan_parquet`` / ``sink_parquet`` use Rust ``object_store`` and
     expect keys like ``aws_access_key_id``. ``UPath.storage_options`` is
     fsspec-shaped (``key``, ``secret``, ``client_kwargs``). Translate the
-    common subset; drop fsspec-only keys; pass already-``object_store`` keys
-    through unchanged.
+    common subset, recurse into ``client_kwargs``, drop fsspec-only keys,
+    pass known ``object_store`` keys through unchanged. Unknown keys are
+    silently dropped to avoid forwarding typos into the Rust binding (which
+    surfaces them as opaque errors).
     """
     if not opts:
         return None
@@ -80,31 +146,39 @@ def _remap_fsspec_storage_options(opts: dict[str, Any] | None) -> dict[str, Any]
     for k, v in opts.items():
         if k in _FSSPEC_TO_OBJECT_STORE:
             out[_FSSPEC_TO_OBJECT_STORE[k]] = v
-        elif k == "client_kwargs" and isinstance(v, dict):
-            if "region_name" in v:
-                out["aws_region"] = v["region_name"]
-            if "endpoint_url" in v:
-                out["aws_endpoint_url"] = v["endpoint_url"]
+        elif k == "client_kwargs" and isinstance(v, Mapping):
+            for ck, cv in v.items():
+                target = _CLIENT_KWARGS_TO_OBJECT_STORE.get(ck)
+                if target is None:
+                    continue
+                if ck == "verify" and isinstance(cv, bool):
+                    # ``verify=False`` (fsspec) ↔ ``aws_allow_http=True``.
+                    out[target] = "true" if cv is False else "false"
+                else:
+                    out[target] = cv
         elif k in _FSSPEC_DROP:
             continue
-        else:
-            # Already an object_store key (e.g. ``aws_access_key_id``,
-            # ``endpoint_url``, ``region``) — pass through.
+        elif k in _OBJECT_STORE_PASSTHROUGH:
             out[k] = v
+        # else: unknown key — drop silently to avoid handing a typo to
+        # object_store, which would raise an unhelpful Rust-side error.
     return out or None
 
 
 def scan_parquet(
     path: "UPath",
     context: InputContext,
-    storage_options: dict[str, Any] | None = None,
+    storage_options: Mapping[str, Any] | None = None,
 ) -> pl.LazyFrame:
     """Scan a parquet file and return a lazy frame (uses polars native reader).
 
     :param path:
     :param context:
-    :param storage_options: Explicit ``object_store`` storage options from the
-        IO manager. When supplied, takes precedence over ``path.storage_options``.
+    :param storage_options: Storage options from the IO manager. May be
+        fsspec-shaped (``key``, ``secret``, ``client_kwargs``) or already
+        ``object_store``-shaped — both are passed through
+        :func:`_remap_fsspec_storage_options` before reaching Polars. When
+        supplied, takes precedence over ``path.storage_options``.
     :return:
     """
     context_metadata = context.definition_metadata or {}
