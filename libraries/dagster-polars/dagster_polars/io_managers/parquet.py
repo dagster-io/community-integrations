@@ -43,7 +43,7 @@ def get_pyarrow_dataset(path: "UPath", context: InputContext) -> ds.Dataset:
 # fsspec exposes S3 credentials with different key names than the
 # ``object_store`` Rust crate that Polars uses under the hood. Without a
 # remap, Polars reads from S3 with empty credentials and fails with
-# "Generic S3 error: Missing bucket name" or similar — see
+# "Generic S3 error: Missing bucket name" or similar. See
 # https://github.com/dagster-io/community-integrations/issues/257.
 
 # Top-level fsspec → object_store key map.
@@ -54,18 +54,20 @@ _FSSPEC_TO_OBJECT_STORE = {
 }
 
 # boto3-style keys nested inside fsspec ``client_kwargs`` → object_store keys.
-# fsspec/s3fs accept several aliases here; map all the common ones we have
-# seen in the wild.
+# We only translate the unambiguous ones. ``verify`` (TLS verification) is
+# deliberately not mapped: object_store distinguishes ``aws_allow_http``
+# (plain HTTP) from ``allow_invalid_certificates`` (TLS without cert checks),
+# whereas boto3 ``verify`` overloads bool / path-to-CA-bundle. Users who
+# need TLS tweaks can set the object_store key directly via storage_options.
 _CLIENT_KWARGS_TO_OBJECT_STORE = {
     "region_name": "aws_region",
     "endpoint_url": "aws_endpoint_url",
     "aws_access_key_id": "aws_access_key_id",
     "aws_secret_access_key": "aws_secret_access_key",
     "aws_session_token": "aws_session_token",
-    "verify": "aws_allow_http",  # fsspec ``verify=False`` ≈ object_store HTTP allowed
 }
 
-# fsspec-only keys with no ``object_store`` equivalent — drop on remap.
+# fsspec-only keys with no ``object_store`` equivalent. Drop on remap.
 _FSSPEC_DROP = frozenset(
     {
         "client_options",
@@ -84,13 +86,19 @@ _FSSPEC_DROP = frozenset(
     }
 )
 
-# object_store S3 keys we know about and pass through unchanged. Anything not
-# on this list, not in ``_FSSPEC_TO_OBJECT_STORE``, and not in
-# ``_FSSPEC_DROP`` is unknown — log a debug note and drop rather than forward
-# a possibly-misspelled key into the Rust binding (which would raise a less
-# helpful error).
+# object_store S3 keys we recognise and pass through unchanged. Everything
+# else (not in ``_FSSPEC_TO_OBJECT_STORE``, not in ``_FSSPEC_DROP``) is
+# treated as unknown and silently dropped to avoid forwarding a typo into
+# the Rust binding (which surfaces unknown keys as opaque errors).
+#
+# Scope deliberately limited to AWS-prefixed S3 keys. The unprefixed
+# ``allow_invalid_certificates`` and ``allow_http`` are HTTP-client level
+# settings object_store accepts irrespective of backend, so they are also
+# included. Users targeting non-AWS object_store backends can still pass
+# whatever keys they need by extending storage_options once this list grows.
 _OBJECT_STORE_PASSTHROUGH = frozenset(
     {
+        # AWS S3 specifics
         "aws_access_key_id",
         "aws_secret_access_key",
         "aws_session_token",
@@ -110,19 +118,11 @@ _OBJECT_STORE_PASSTHROUGH = frozenset(
         "aws_request_payer",
         "aws_s3_express",
         "aws_disable_tagging",
-        # generic object_store keys (work across S3-compatible backends)
-        "endpoint",
-        "endpoint_url",
-        "region",
-        "access_key_id",
-        "secret_access_key",
-        "session_token",
-        "bucket",
+        "aws_copy_if_not_exists",
+        "aws_conditional_put",
+        # HTTP-client / TLS toggles (backend-agnostic)
         "allow_http",
         "allow_invalid_certificates",
-        "skip_signature",
-        "virtual_hosted_style_request",
-        "request_payer",
     }
 )
 
@@ -149,18 +149,13 @@ def _remap_fsspec_storage_options(
         elif k == "client_kwargs" and isinstance(v, Mapping):
             for ck, cv in v.items():
                 target = _CLIENT_KWARGS_TO_OBJECT_STORE.get(ck)
-                if target is None:
-                    continue
-                if ck == "verify" and isinstance(cv, bool):
-                    # ``verify=False`` (fsspec) ↔ ``aws_allow_http=True``.
-                    out[target] = "true" if cv is False else "false"
-                else:
+                if target is not None:
                     out[target] = cv
         elif k in _FSSPEC_DROP:
             continue
         elif k in _OBJECT_STORE_PASSTHROUGH:
             out[k] = v
-        # else: unknown key — drop silently to avoid handing a typo to
+        # else: unknown key, drop silently to avoid handing a typo to
         # object_store, which would raise an unhelpful Rust-side error.
     return out or None
 
@@ -176,7 +171,7 @@ def scan_parquet(
     :param context:
     :param storage_options: Storage options from the IO manager. May be
         fsspec-shaped (``key``, ``secret``, ``client_kwargs``) or already
-        ``object_store``-shaped — both are passed through
+        ``object_store``-shaped. Both are passed through
         :func:`_remap_fsspec_storage_options` before reaching Polars. When
         supplied, takes precedence over ``path.storage_options``.
     :return:
@@ -199,14 +194,14 @@ def scan_parquet(
     # On Polars >= 1.17 ``object_store`` is the cloud backend; remap fsspec
     # keys so credentials reach the reader. Older Polars used a different
     # backend (no remap helped), so keep the legacy fsspec passthrough for
-    # backwards compatibility — see issue #257.
+    # backwards compatibility. See issue #257.
     if Version(pl.__version__) >= Version("1.17.0"):
         # ``self.storage_options`` (passed in via ``storage_options``) and
         # ``path.storage_options`` are both fsspec-shaped because they come
-        # from the same UPath kwargs. Remap unconditionally — already-
+        # from the same UPath kwargs. Remap unconditionally. Already-
         # ``object_store``-shaped keys pass through unchanged.
         path_options = cast(
-            Optional[dict[str, Any]],
+            Optional[Mapping[str, Any]],
             (path.storage_options if hasattr(path, "storage_options") else None),
         )
         pl_storage_options = _remap_fsspec_storage_options(
@@ -214,7 +209,7 @@ def scan_parquet(
         )
     else:
         legacy_options = cast(
-            Optional[dict[str, Any]],
+            Optional[Mapping[str, Any]],
             (path.storage_options if hasattr(path, "storage_options") else None),
         )
         # gh issue [dagster-io/dagster#28633]()

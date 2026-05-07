@@ -126,32 +126,36 @@ def test_extracts_creds_and_session_token_from_client_kwargs() -> None:
     }
 
 
-def test_verify_false_maps_to_aws_allow_http() -> None:
-    """fsspec ``verify=False`` (skip TLS verification) ≈ object_store
-    ``aws_allow_http=true`` (allow plain HTTP). Map the boolean to the string
-    object_store expects."""
+def test_verify_in_client_kwargs_is_dropped() -> None:
+    """``verify`` is deliberately not mapped: object_store distinguishes
+    ``aws_allow_http`` (plain HTTP) from ``allow_invalid_certificates``
+    (TLS without cert checks), and boto3 ``verify`` overloads the bool /
+    path-to-CA-bundle distinction. Drop it; users who need TLS tweaks can
+    set the object_store key directly."""
     out = _remap_fsspec_storage_options(
-        {"client_kwargs": {"verify": False, "endpoint_url": "http://localhost:5555"}}
+        {
+            "key": "k",
+            "client_kwargs": {"verify": False, "endpoint_url": "http://x.invalid"},
+        }
     )
     assert out == {
-        "aws_allow_http": "true",
-        "aws_endpoint_url": "http://localhost:5555",
+        "aws_access_key_id": "k",
+        "aws_endpoint_url": "http://x.invalid",
     }
 
 
 def test_passthrough_only_known_object_store_keys() -> None:
-    """object_store keys we know about are passed through. Generic
-    ``endpoint`` / ``region`` (used by non-AWS object_store backends) should
-    still come through unchanged."""
+    """AWS-prefixed S3 keys and the backend-agnostic HTTP toggles are passed
+    through. Unprefixed names like ``endpoint`` (which would route to a
+    different object_store backend) are not on the allowlist and get dropped."""
     out = _remap_fsspec_storage_options(
         {
-            "endpoint": "http://other.invalid",
-            "region": "eu-central-1",
             "aws_skip_signature": "true",
+            "allow_invalid_certificates": "true",
+            "endpoint": "http://other.invalid",  # not on allowlist
         }
     )
     assert out == {
-        "endpoint": "http://other.invalid",
-        "region": "eu-central-1",
         "aws_skip_signature": "true",
+        "allow_invalid_certificates": "true",
     }

@@ -165,7 +165,7 @@ def test_polars_parquet_io_manager_s3_fsspec_storage_options(s3_env, s3_client):
 
     The ``s3_env`` fixture strips every ``AWS_*`` env var and isolates the
     AWS credential files so neither s3fs/boto3 nor ``object_store`` can fall
-    back to the ambient environment — credentials must travel through
+    back to the ambient environment. Credentials must travel through
     ``storage_options``.
     """
     io_manager = PolarsParquetIOManager(
