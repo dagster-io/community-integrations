@@ -127,15 +127,16 @@ def scan_parquet(
     # backend (no remap helped), so keep the legacy fsspec passthrough for
     # backwards compatibility — see issue #257.
     if Version(pl.__version__) >= Version("1.17.0"):
-        # Prefer the IO manager's explicit ``storage_options`` (already
-        # ``object_store`` shaped — same dict the writer uses), falling back
-        # to a remap of the fsspec-derived path options.
+        # ``self.storage_options`` (passed in via ``storage_options``) and
+        # ``path.storage_options`` are both fsspec-shaped because they come
+        # from the same UPath kwargs. Remap unconditionally — already-
+        # ``object_store``-shaped keys pass through unchanged.
         path_options = cast(
             Optional[dict[str, Any]],
             (path.storage_options if hasattr(path, "storage_options") else None),
         )
-        pl_storage_options = storage_options or _remap_fsspec_storage_options(
-            path_options
+        pl_storage_options = _remap_fsspec_storage_options(
+            storage_options or path_options
         )
     else:
         legacy_options = cast(
@@ -229,7 +230,7 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
                 compression_level=compression_level,
                 statistics=statistics,
                 row_group_size=row_group_size,
-                storage_options=self.storage_options,
+                storage_options=_remap_fsspec_storage_options(self.storage_options),
             )
         else:
             context.log.warning(
@@ -282,7 +283,9 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
                 row_group_size=row_group_size,
             )
             if Version(pl.__version__) >= Version("1.17.0"):
-                kwargs["storage_options"] = self.storage_options
+                kwargs["storage_options"] = _remap_fsspec_storage_options(
+                    self.storage_options
+                )
             df.write_parquet(str(path), **kwargs)  # type: ignore
 
     def scan_df_from_path(
