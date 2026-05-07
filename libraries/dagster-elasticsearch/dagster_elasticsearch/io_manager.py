@@ -33,7 +33,7 @@ class ElasticsearchIOManager(ConfigurableIOManager):
     ``lazy_load=True`` to receive an iterator instead.
 
     With ``use_alias=True`` the manager writes to a fresh index and atomically
-    swaps a stable alias to the new index — readers and downstream assets
+    swaps a stable alias to the new index. Readers and downstream assets
     always see a consistent view via the alias name.
 
     Most options can be overridden per-asset via ``definition_metadata`` (or
@@ -279,7 +279,7 @@ class ElasticsearchIOManager(ConfigurableIOManager):
                 keep.add(name)
 
     def handle_output(self, context: OutputContext, obj: Any) -> None:  # noqa: ANN401
-        # Per-asset overrides — definition_metadata and output_metadata.
+        # Per-asset overrides via definition_metadata and output_metadata.
         index = self._override(context, "index", self.index)
         id_field = self._override(context, "id_field", self.id_field)
         bulk_chunk_size = int(self._override(context, "bulk_chunk_size", self.bulk_chunk_size))

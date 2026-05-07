@@ -1,36 +1,37 @@
 # dagster-elasticsearch
 
-A Dagster module that integrates with [Elasticsearch](https://www.elastic.co/elasticsearch). It exposes:
+A Dagster integration for [Elasticsearch](https://www.elastic.co/elasticsearch). Two pieces:
 
-- `ElasticsearchResource` — a thin `ConfigurableResource` over the official `elasticsearch` Python client.
-- `ElasticsearchIOManager` — a `ConfigurableIOManager` that bulk-indexes asset outputs as documents, with optional **alias rollover** for zero-downtime atomic swaps.
+- `ElasticsearchResource` is a thin `ConfigurableResource` over the official `elasticsearch` Python client.
+- `ElasticsearchIOManager` bulk-indexes asset outputs as documents, with optional **alias rollover** for atomic, zero-downtime swaps.
 
 ## Installation
 
 ```sh
 uv pip install dagster-elasticsearch
+
 # Optional DataFrame / table format support in the IO manager.
 uv pip install 'dagster-elasticsearch[pandas]'
 uv pip install 'dagster-elasticsearch[polars]'
 uv pip install 'dagster-elasticsearch[arrow]'
 ```
 
-### Elasticsearch version compatibility
+### Picking an Elasticsearch version
 
-`elasticsearch-py` refuses to talk to a server with a different major version. The base package depends on `elasticsearch>=8.10,<11`, leaving the choice of major up to your project. **Pin the major to match your cluster** in your own `pyproject.toml`:
+`elasticsearch-py` won't talk to a server with a different major version, so this package is loose-pinned (`elasticsearch>=8.10,<11`) and leaves the major up to your project. Pin it yourself in `pyproject.toml`:
 
 ```toml
-# Elasticsearch 8.x cluster
+# 8.x
 dependencies = ["dagster-elasticsearch", "elasticsearch>=8.10,<9"]
 
-# Elasticsearch 9.x cluster
+# 9.x
 dependencies = ["dagster-elasticsearch", "elasticsearch>=9,<10"]
 
-# Elasticsearch 10.x cluster (when available)
+# 10.x (when available)
 dependencies = ["dagster-elasticsearch", "elasticsearch>=10,<11"]
 ```
 
-The integration uses only stable bulk and alias APIs that have been unchanged across Elasticsearch 8, 9, and 10.
+The bulk and alias APIs the integration uses haven't changed across 8, 9, and 10.
 
 ## Resource
 
@@ -59,7 +60,7 @@ defs = Definitions(
 
 ### Authentication
 
-`HostsConfig` and `CloudConfig` both accept either an `api_key` or a `username` + `password` pair (basic auth). `HostsConfig` also accepts `bearer_auth`, `ca_certs`, and `verify_certs`.
+`HostsConfig` and `CloudConfig` both accept either an `api_key` or a `username` + `password` pair. `HostsConfig` also takes `bearer_auth`, `ca_certs`, and `verify_certs`.
 
 ```python
 from dagster_elasticsearch import CloudConfig, HostsConfig
@@ -78,9 +79,9 @@ HostsConfig(
 
 ## IO manager
 
-`ElasticsearchIOManager` accepts `dict`, `list[dict]`, `pandas.DataFrame`, or Polars `DataFrame`/`LazyFrame` outputs and bulk-indexes them via `elasticsearch.helpers.bulk`. The `id_field` (default `_id`) is lifted from each document to become the Elasticsearch `_id`.
+`ElasticsearchIOManager` takes `dict`, `list[dict]`, `pandas.DataFrame`, or Polars `DataFrame`/`LazyFrame` outputs and bulk-indexes them via `elasticsearch.helpers.bulk`. The `id_field` (default `_id`) is lifted from each document and used as the Elasticsearch `_id`.
 
-DataFrame inputs are streamed in `bulk_chunk_size`-row slices, and Polars `LazyFrame`s are collected with the streaming engine — neither is materialised in full before indexing, so very large parquet-backed assets stay memory-bounded.
+DataFrame inputs are streamed in `bulk_chunk_size`-row slices. Polars `LazyFrame`s are collected with the streaming engine. Neither is materialised in full before indexing, so very large parquet-backed assets stay memory-bounded.
 
 ```python
 from dagster import Definitions, asset
@@ -103,7 +104,7 @@ defs = Definitions(
 
 ### Alias rollover
 
-Set `use_alias=True` and the IO manager writes every materialisation to a fresh physical index, then atomically swaps a stable alias to the new index via the `_aliases` API. Readers and downstream assets always see a consistent view via the alias name.
+With `use_alias=True`, every materialisation writes to a fresh physical index, then atomically swaps a stable alias to the new index via `_aliases`. Readers and downstream assets always see a consistent view via the alias name.
 
 ```python
 ElasticsearchIOManager(
@@ -115,19 +116,19 @@ ElasticsearchIOManager(
 )
 ```
 
-Rollover strategies:
-
-| Strategy     | Suffix                                     | Notes                                       |
-|--------------|--------------------------------------------|---------------------------------------------|
-| `auto`       | `partition` if partitioned else `timestamp`| Default.                                    |
-| `timestamp`  | `YYYYMMDDtHHMMSSzMICROS`                   | Microsecond precision avoids collisions.    |
-| `run_id`     | Dagster run id                             | Opaque but unique per run.                  |
-| `partition`  | Slugified partition key                    | Errors if asset isn't partitioned.          |
-| `none`       | (empty)                                    | Alias swap is a no-op; mostly for testing.  |
+| Strategy     | Suffix                                     | Notes                                    |
+|--------------|--------------------------------------------|------------------------------------------|
+| `auto`       | `partition` if partitioned, else `timestamp` | Default.                                 |
+| `timestamp`  | `YYYYMMDDtHHMMSSzMICROS`                   | Microsecond precision avoids collisions. |
+| `run_id`     | Dagster run id                             | Opaque but unique per run.               |
+| `partition`  | Slugified partition key                    | Errors if the asset isn't partitioned.   |
+| `none`       | (empty)                                    | Alias swap is a no-op. Mostly for tests. |
 
 ### Partitioned assets (without alias)
 
 When `use_alias=False` and the asset is partitioned, each partition writes to its own index `{index}-{partition_key}`. Reads target the same per-partition index.
+
+> **Note on multi-partition loads.** `ElasticsearchIOManager` is a plain `IOManager`, not a `UPathIOManager`. Loading inputs that span multiple partitions (e.g. a downstream asset depending on every partition of an upstream) calls `load_input` once per partition. Fine for tens of partitions; for hundreds-or-thousands you may want a different read strategy (one ES query against the alias, for instance, or a dedicated downstream asset that reads via the resource and not the IO manager).
 
 ### Per-asset overrides
 
@@ -147,7 +148,7 @@ Supported keys: `index`, `id_field`, `bulk_chunk_size`, `max_chunk_bytes`, `refr
 
 ### Lazy reads
 
-For very large source indices, set `lazy_load=True` so `load_input` returns an iterator that streams hits via the scroll API instead of materialising a `list[dict]`:
+For very large source indices, set `lazy_load=True` so `load_input` returns an iterator that streams hits via the scroll API instead of building a `list[dict]`:
 
 ```python
 ElasticsearchIOManager(
@@ -161,18 +162,18 @@ ElasticsearchIOManager(
 
 ### Output metadata
 
-Each materialisation records the following metadata on the asset:
+Each materialisation records the following on the asset:
 
-| Key       | Type   | When                          |
-|-----------|--------|-------------------------------|
-| `index`   | text   | always — physical index name  |
-| `indexed` | int    | always — successful doc count |
-| `failures`| int    | when `fail_fast=False` and any docs failed |
-| `alias`   | text   | when `use_alias=True`         |
+| Key        | Type | When                                           |
+|------------|------|------------------------------------------------|
+| `index`    | text | Always. Physical index that was written to.    |
+| `indexed`  | int  | Always. Number of documents indexed.           |
+| `failures` | int  | When `fail_fast=False` and some docs failed.   |
+| `alias`    | text | When `use_alias=True`. The stable alias name.  |
 
 ### Index mappings and settings
 
-Pass `index_config` to control mappings and shard/replica settings on indices created by the IO manager (alias rollover only):
+Pass `index_config` to control mappings and shard/replica settings on indices the IO manager creates (alias rollover only):
 
 ```python
 from dagster_elasticsearch import ElasticsearchIndexConfig, ElasticsearchIOManager, HostsConfig
@@ -195,7 +196,7 @@ ElasticsearchIOManager(
 
 ### Polars / Parquet handoff
 
-When an upstream asset uses `dagster-polars`'s `PolarsParquetIOManager` and a downstream asset writes to Elasticsearch, the downstream can pass through a `LazyFrame` straight from the upstream parquet:
+If an upstream asset uses `dagster-polars`'s `PolarsParquetIOManager` and a downstream asset writes to Elasticsearch, the downstream can take a `LazyFrame` straight from the upstream parquet:
 
 ```python
 import dagster as dg
@@ -210,11 +211,11 @@ def search_records(raw_records: pl.LazyFrame) -> pl.LazyFrame:
     return raw_records.filter(pl.col("active"))
 ```
 
-`ElasticsearchIOManager` collects the `LazyFrame` with Polars's streaming engine and yields slices of `bulk_chunk_size` rows into the Elasticsearch bulk helper, so the full result never has to fit in RAM.
+The IO manager collects the `LazyFrame` with Polars's streaming engine and yields `bulk_chunk_size`-row slices into the Elasticsearch bulk helper, so the full result never has to fit in RAM.
 
 ### Error handling
 
-Per-document indexing errors raise `ElasticsearchBulkIndexError`, exposing the underlying error list directly:
+Per-document indexing errors raise `ElasticsearchBulkIndexError`. The underlying error list is on `.errors`:
 
 ```python
 from dagster_elasticsearch import ElasticsearchBulkIndexError
@@ -230,7 +231,7 @@ Set `fail_fast=False` on the IO manager to log per-document errors instead of ab
 
 ## Troubleshooting
 
-**Cluster status `red` and shards stuck unassigned in local Docker.** Elasticsearch refuses to allocate shards once the host disk is over the high-watermark threshold (default 90%). Free space, or for local development only, disable the threshold:
+**Cluster status `red` and shards stuck unassigned in local Docker.** Elasticsearch refuses to allocate shards once the host disk is over the high-watermark threshold (default 90%). Either free up space, or (for local development only) disable the threshold:
 
 ```sh
 curl -XPUT http://localhost:9200/_cluster/settings \
@@ -238,7 +239,7 @@ curl -XPUT http://localhost:9200/_cluster/settings \
   -d '{"persistent":{"cluster.routing.allocation.disk.threshold_enabled":"false"}}'
 ```
 
-**`elasticsearch.BadRequestError: invalid_index_name_exception ... must be lowercase`.** Index names must be lowercase. The IO manager already lowercases timestamp suffixes; if you supply your own index name make sure it is lowercase too.
+**`elasticsearch.BadRequestError: invalid_index_name_exception ... must be lowercase`.** Index names have to be lowercase. The IO manager lowercases timestamp suffixes itself, but if you supply your own index name make sure it is lowercase too.
 
 ## Development
 
@@ -248,7 +249,7 @@ make ruff
 make check
 ```
 
-Set `ES_URL` to reuse an already-running cluster instead of spinning up a fresh container per test session:
+Set `ES_URL` to reuse a running cluster instead of spinning up a fresh container per test session:
 
 ```sh
 ES_URL=http://localhost:9200 uv run pytest
