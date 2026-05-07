@@ -1,5 +1,6 @@
 from dagster._core.libraries import DagsterLibraryRegistry
 
+from dagster_elasticsearch.checks import build_indexed_asset_check
 from dagster_elasticsearch.config import (
     BaseConnectionConfig,
     CloudConfig,
@@ -18,6 +19,7 @@ __all__ = [
     "ElasticsearchIndexConfig",
     "ElasticsearchResource",
     "HostsConfig",
+    "build_indexed_asset_check",
 ]
 __version__ = "0.0.1"
 

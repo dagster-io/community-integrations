@@ -229,6 +229,62 @@ except ElasticsearchBulkIndexError as e:
 
 Set `fail_fast=False` on the IO manager to log per-document errors instead of aborting the materialisation.
 
+## Asset checks
+
+Every materialisation records output metadata (`index`, `indexed`, `failures`, `alias`) on the asset, so an [asset check](https://docs.dagster.io/concepts/assets/asset-checks) can read it back and fail the run when something looks off (zero docs indexed, too many failures, and so on).
+
+The integration ships a one-liner helper for the most common case:
+
+```python
+from dagster import Definitions, asset
+from dagster_elasticsearch import ElasticsearchIOManager, build_indexed_asset_check
+
+
+@asset(io_manager_key="es_io_manager")
+def search_docs() -> list[dict]:
+    return [{"_id": "1", "title": "hello"}, {"_id": "2", "title": "world"}]
+
+
+defs = Definitions(
+    assets=[search_docs],
+    asset_checks=[
+        build_indexed_asset_check(asset=search_docs, min_indexed=1, max_failures=0),
+    ],
+    resources={"es_io_manager": ElasticsearchIOManager(...)},
+)
+```
+
+If you need something more bespoke (compare against an upstream row count, alert at warning severity, etc.), write the check by hand:
+
+```python
+from dagster import (
+    AssetCheckResult,
+    AssetCheckSeverity,
+    asset,
+    asset_check,
+)
+from dagster_elasticsearch import ElasticsearchIOManager
+
+
+@asset(io_manager_key="es_io_manager")
+def search_docs() -> list[dict]:
+    return [{"_id": "1", "title": "hello"}, {"_id": "2", "title": "world"}]
+
+
+@asset_check(asset=search_docs)
+def at_least_one_indexed(context) -> AssetCheckResult:
+    record = context.instance.get_latest_materialization_event(search_docs.key)
+    metadata = record.asset_materialization.metadata if record else {}
+    indexed = metadata.get("indexed").value if metadata.get("indexed") else 0
+    failures = metadata.get("failures").value if metadata.get("failures") else 0
+
+    return AssetCheckResult(
+        passed=indexed > 0 and failures == 0,
+        severity=AssetCheckSeverity.ERROR,
+        metadata={"indexed": indexed, "failures": failures},
+    )
+```
+
 ## Troubleshooting
 
 **Cluster status `red` and shards stuck unassigned in local Docker.** Elasticsearch refuses to allocate shards once the host disk is over the high-watermark threshold (default 90%). Either free up space, or (for local development only) disable the threshold:
