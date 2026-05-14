@@ -1,6 +1,6 @@
 [project]
-name = "example-integration"
-description = "<insert description here>"
+name = "dagster_hf_datasets"
+description = "Dagster Integration with HF Datasets"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -22,7 +22,7 @@ requires = ["setuptools>=42"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["example_integration"]
+packages = ["dagster_hf_datasets"]
 
 [tool.setuptools.dynamic]
-version = {attr = "example_integration.__version__"}
+version = {attr = "dagster_hf_datasets.__version__"}
