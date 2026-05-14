@@ -8,11 +8,11 @@ from dagster import ConfigurableResource
 from datasets import (
     Dataset,
     DatasetDict,
+    Features,
     IterableDataset,
     IterableDatasetDict,
     load_dataset,
 )
-from huggingface_hub import login
 from pydantic import Field
 
 HFDatasetLike = (
@@ -27,48 +27,56 @@ class HuggingFaceResource(ConfigurableResource):
     """
     Dagster resource for interacting with Hugging Face Datasets.
 
-    This resource intentionally preserves Hugging Face dataset semantics
-    and delegates directly to `datasets.load_dataset(...)` rather than
-    introducing custom loading abstractions.
+    This resource intentionally preserves Hugging Face dataset
+    semantics and delegates directly to
+    `datasets.load_dataset(...)`.
 
     Responsibilities:
-    - Authentication
-    - Dataset loading
-    - Cache configuration
-    - Offline mode support
-    - Lightweight metadata helpers
+    - authentication configuration
+    - dataset loading
+    - cache configuration
+    - offline mode support
+    - lightweight metadata extraction
     """
 
     token: str | None = Field(
         default=None,
-        description="Optional Hugging Face access token.",
+        description=(
+            "Optional Hugging Face access token."
+        ),
     )
 
     token_path: str | None = Field(
         default=None,
-        description="Optional path to a file containing a Hugging Face token.",
+        description=(
+            "Optional path to a file containing "
+            "a Hugging Face token."
+        ),
     )
 
     cache_dir: str | None = Field(
         default=None,
-        description="Optional Hugging Face datasets cache directory.",
+        description=(
+            "Optional Hugging Face datasets "
+            "cache directory."
+        ),
     )
 
     offline: bool = Field(
         default=False,
-        description="Enable Hugging Face offline mode.",
+        description=(
+            "Enable Hugging Face offline mode."
+        ),
     )
 
-    def setup_for_execution(self, _: Any) -> None:
+    def setup_for_execution(
+        self,
+        _: Any,
+    ) -> None:
         """
-        Configure authentication and environment before execution.
+        Configure Hugging Face execution environment.
         """
         self._configure_offline_mode()
-
-        resolved_token = self._resolve_token()
-
-        if resolved_token:
-            login(token=resolved_token, add_to_git_credential=False)
 
     def load_dataset(
         self,
@@ -80,47 +88,54 @@ class HuggingFaceResource(ConfigurableResource):
         **kwargs: Any,
     ) -> HFDatasetLike:
         """
-        Load a dataset using Hugging Face Datasets.
+        Load dataset using Hugging Face Datasets.
 
-        This method intentionally mirrors the semantics of
-        `datasets.load_dataset(...)`.
+        This method intentionally mirrors the
+        semantics of `datasets.load_dataset(...)`.
 
         Args:
             path:
-                Dataset repository path or local dataset script.
+                Dataset repository path or local
+                dataset script.
             config:
                 Dataset configuration name.
             split:
-                Dataset split to load.
+                Dataset split.
             revision:
-                Dataset revision, tag, branch, or commit hash.
+                Dataset revision, tag, branch,
+                or commit hash.
             streaming:
                 Enable streaming mode.
             **kwargs:
-                Additional keyword arguments forwarded directly to
+                Additional keyword arguments
+                forwarded directly to
                 `datasets.load_dataset(...)`.
 
         Returns:
-            A Hugging Face Dataset-compatible object.
+            Hugging Face dataset object.
         """
+        resolved_token = self._resolve_token()
+
         return load_dataset(
             path=path,
             name=config,
             split=split,
             revision=revision,
             streaming=streaming,
+            token=resolved_token,
             cache_dir=self.cache_dir,
             **kwargs,
         )
 
     @staticmethod
-    def get_num_rows(dataset: HFDatasetLike) -> int | dict[str, int] | None:
+    def get_num_rows(
+        dataset: HFDatasetLike,
+    ) -> int | dict[str, int] | None:
         """
-        Extract row count metadata from a dataset.
+        Extract row count metadata.
 
-        Returns:
-            Integer row count, mapping of split -> row count,
-            or None if unavailable (e.g. streaming datasets).
+        Streaming datasets may not expose
+        deterministic row counts.
         """
         if isinstance(dataset, Dataset):
             return dataset.num_rows
@@ -136,17 +151,30 @@ class HuggingFaceResource(ConfigurableResource):
     @staticmethod
     def get_features(
         dataset: HFDatasetLike,
-    ) -> Any:
+    ) -> (
+        Features
+        | dict[str, Features]
+        | None
+    ):
         """
-        Extract feature/schema metadata from a dataset.
-
-        Returns:
-            Dataset features object or mapping of split -> features.
+        Extract dataset feature/schema metadata.
         """
-        if isinstance(dataset, (Dataset, IterableDataset)):
+        if isinstance(
+            dataset,
+            (
+                Dataset,
+                IterableDataset,
+            ),
+        ):
             return dataset.features
 
-        if isinstance(dataset, (DatasetDict, IterableDatasetDict)):
+        if isinstance(
+            dataset,
+            (
+                DatasetDict,
+                IterableDatasetDict,
+            ),
+        ):
             return {
                 split: ds.features
                 for split, ds in dataset.items()
@@ -161,38 +189,51 @@ class HuggingFaceResource(ConfigurableResource):
         """
         Extract dataset fingerprint metadata.
 
-        Returns:
-            Dataset fingerprint or mapping of split -> fingerprint.
+        Streaming datasets may not expose
+        fingerprints.
         """
         if isinstance(dataset, Dataset):
-            return dataset._fingerprint
+            return getattr(
+                dataset,
+                "_fingerprint",
+                None,
+            )
 
         if isinstance(dataset, DatasetDict):
             return {
-                split: ds._fingerprint
+                split: getattr(
+                    ds,
+                    "_fingerprint",
+                    None,
+                )
                 for split, ds in dataset.items()
             }
 
         return None
 
     @staticmethod
-    def get_revision(dataset: HFDatasetLike) -> str | None:
+    def get_revision(
+        dataset: HFDatasetLike,
+    ) -> str | None:
         """
-        Attempt to extract dataset revision metadata.
-
-        Returns:
-            Dataset revision string if available.
+        Attempt to extract dataset revision/version.
         """
         try:
             return dataset.info.version.version
-        except AttributeError:
+        except (
+            AttributeError,
+            TypeError,
+        ):
             return None
 
-    def _resolve_token(self) -> str | None:
+    def _resolve_token(
+        self,
+    ) -> str | None:
         """
-        Resolve Hugging Face token using precedence order:
+        Resolve Hugging Face token.
 
-        1. Explicit token field
+        Precedence order:
+        1. explicit token field
         2. token_path file
         3. HF_TOKEN environment variable
         """
@@ -203,15 +244,24 @@ class HuggingFaceResource(ConfigurableResource):
             token_file = Path(self.token_path)
 
             if token_file.exists():
-                return token_file.read_text().strip()
+                return (
+                    token_file.read_text(
+                        encoding="utf-8"
+                    ).strip()
+                )
 
         return os.getenv("HF_TOKEN")
 
-    def _configure_offline_mode(self) -> None:
+    def _configure_offline_mode(
+        self,
+    ) -> None:
         """
-        Configure Hugging Face offline mode environment.
+        Configure Hugging Face offline mode.
         """
         if self.offline:
             os.environ["HF_HUB_OFFLINE"] = "1"
         else:
-            os.environ.pop("HF_HUB_OFFLINE", None)
+            os.environ.pop(
+                "HF_HUB_OFFLINE",
+                None,
+            )

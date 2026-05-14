@@ -8,15 +8,16 @@ class DatasetCardBuilder:
     """
     Lightweight Hugging Face dataset card builder.
 
-    This utility intentionally focuses on:
+    Focus areas:
     - provenance
     - reproducibility
     - transformation lineage
+    - lightweight metadata documentation
 
-    and avoids:
-    - advanced templating
-    - registry synchronization
+    Explicit non-goals:
+    - advanced templating systems
     - governance workflows
+    - synchronization orchestration
     """
 
     def __init__(
@@ -40,13 +41,15 @@ class DatasetCardBuilder:
 
     def build(self) -> str:
         """
-        Build a lightweight Hugging Face dataset card.
+        Build lightweight Hugging Face dataset card.
         """
         generated_at = datetime.now(
             UTC
         ).isoformat()
 
-        processing_section = self._build_processing_steps()
+        processing_section = (
+            self._build_processing_steps()
+        )
 
         metadata_section = (
             self._build_metadata_section()
@@ -94,8 +97,13 @@ generated_by:
 """
 
     def _build_processing_steps(self) -> str:
+        """
+        Build processing lineage section.
+        """
         if not self.processing_steps:
-            return "- No processing steps recorded."
+            return (
+                "- No processing steps recorded."
+            )
 
         return "\n".join(
             f"- {step}"
@@ -103,6 +111,9 @@ generated_by:
         )
 
     def _build_metadata_section(self) -> str:
+        """
+        Build metadata summary section.
+        """
         if not self.metadata:
             return "- No additional metadata."
 
