@@ -6,7 +6,7 @@ from .assets.multi_asset import hf_multi_asset
 __version__ = "0.0.1"
 
 DagsterLibraryRegistry.register(
-    "example-integration", __version__, is_dagster_package=False
+    "dagster-hf-datasets", __version__, is_dagster_package=False
 )
 
 __all__ = [
