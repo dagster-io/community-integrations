@@ -3,10 +3,22 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from dagster import AssetExecutionContext, MaterializeResult, asset
+from dagster import (
+    AssetExecutionContext,
+    MaterializeResult,
+    PartitionsDefinition,
+    asset,
+)
 
-from dagster_hf_datasets._metadata import build_dataset_metadata
-from dagster_hf_datasets.resources import HuggingFaceResource
+from dagster_hf_datasets._metadata import (
+    build_dataset_metadata,
+)
+from dagster_hf_datasets._partitions import (
+    HFPartitionMapping,
+)
+from dagster_hf_datasets.resources import (
+    HuggingFaceResource,
+)
 
 
 def hf_dataset_asset(
@@ -21,43 +33,20 @@ def hf_dataset_asset(
     key_prefix: str | list[str] | None = None,
     metadata: dict[str, Any] | None = None,
     tags: dict[str, str] | None = None,
+    io_manager_key: str | None = None,
+    partitions_def: PartitionsDefinition | None = None,
 ) -> Callable[[Callable[..., Any]], Any]:
     """
     Dagster asset decorator for Hugging Face datasets.
 
-    This decorator preserves Hugging Face dataset loading semantics
-    while exposing datasets as first-class Dagster assets.
+    This decorator preserves Hugging Face dataset loading
+    semantics while exposing datasets as first-class
+    Dagster assets.
 
-    Example:
-        @hf_dataset_asset(
-            path="glue",
-            config="qqp",
-            split="train",
-        )
-        def glue_qqp():
-            ...
-
-    Args:
-        path:
-            Hugging Face dataset repository path.
-        config:
-            Dataset configuration name.
-        split:
-            Dataset split.
-        revision:
-            Dataset revision/tag/commit hash.
-        streaming:
-            Enable streaming mode.
-        name:
-            Dagster asset name override.
-        group_name:
-            Dagster asset group.
-        key_prefix:
-            Dagster asset key prefix.
-        metadata:
-            Additional Dagster metadata.
-        tags:
-            Dagster asset tags.
+    Supported orchestration semantics:
+    - metadata propagation
+    - partition-aware loading
+    - IO manager integration
     """
 
     def decorator(fn: Callable[..., Any]) -> Any:
@@ -73,20 +62,40 @@ def hf_dataset_asset(
             key_prefix=key_prefix,
             metadata=metadata,
             tags=tags,
+            io_manager_key=io_manager_key,
+            partitions_def=partitions_def,
         )
         def _asset(
             context: AssetExecutionContext,
             huggingface: HuggingFaceResource,
         ) -> MaterializeResult:
+            resolved_revision = revision
+            resolved_config = config
+
+            if context.has_partition_key:
+                partition = (
+                    HFPartitionMapping.from_partition_key(
+                        context.partition_key
+                    )
+                )
+
+                if partition.is_revision:
+                    resolved_revision = partition.value
+
+                elif partition.is_config:
+                    resolved_config = partition.value
+
             dataset = huggingface.load_dataset(
                 path=path,
-                config=config,
+                config=resolved_config,
                 split=split,
-                revision=revision,
+                revision=resolved_revision,
                 streaming=streaming,
             )
 
-            dataset_metadata = build_dataset_metadata(dataset)
+            dataset_metadata = build_dataset_metadata(
+                dataset
+            )
 
             context.log.info(
                 f"Loaded Hugging Face dataset: {path}"
@@ -95,9 +104,15 @@ def hf_dataset_asset(
             return MaterializeResult(
                 metadata={
                     "path": path,
-                    "config": config,
+                    "config": resolved_config,
                     "split": split,
+                    "revision": resolved_revision,
                     "streaming": streaming,
+                    "partition_key": (
+                        context.partition_key
+                        if context.has_partition_key
+                        else None
+                    ),
                     **dataset_metadata,
                 },
                 value=dataset,
@@ -106,23 +121,3 @@ def hf_dataset_asset(
         return _asset
 
     return decorator
-
-
-def _default_asset_name(
-    *,
-    path: str,
-    config: str | None,
-    split: str | None,
-) -> str:
-    """
-    Generate deterministic default Dagster asset names.
-    """
-    parts = [path.replace("/", "_")]
-
-    if config:
-        parts.append(config)
-
-    if split:
-        parts.append(split)
-
-    return "_".join(parts)
