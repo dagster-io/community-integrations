@@ -5,11 +5,6 @@ import importlib.util
 from typing import TYPE_CHECKING, Any
 
 import dagster
-from packaging import version as version_parser
-
-DAGSTER_VERSION = version_parser.parse(dagster.__version__)
-IS_GE_1_11_6 = DAGSTER_VERSION >= version_parser.parse("1.11.6")
-IS_GE_1_8_0 = DAGSTER_VERSION >= version_parser.parse("1.8.0")
 
 from dagster import SensorDefinition, DagsterEventType  # noqa: F401,E402
 
@@ -30,23 +25,16 @@ if PIPELINE_EVENTS is None or STEP_EVENTS is None:
 
 
 def get_pipeline_origin(run: Any) -> Any:
-    """Return pipeline origin across Dagster versions."""
-    if IS_GE_1_11_6:
-        return getattr(run, "remote_pipeline_origin", None)
-    return getattr(run, "external_pipeline_origin", None)  # pyright: ignore[reportAttributeAccessIssue]
+    """Return pipeline origin. Floor is Dagster >= 1.11.6; remote_pipeline_origin is stable."""
+    return getattr(run, "remote_pipeline_origin", None)
 
 
 def get_job_origin(run: Any) -> Any:
-    """Return job origin across Dagster versions.
-
-    Dagster 1.8.0+ uses remote_job_origin; some 1.8–1.11 versions still expose
-    external_job_origin on DagsterRun.
-    """
-    if IS_GE_1_8_0:
-        origin = getattr(run, "remote_job_origin", None)
-        if origin is not None:
-            return origin
-        return getattr(run, "external_job_origin", None)  # pyright: ignore[reportAttributeAccessIssue]
+    """Return job origin. Floor is Dagster >= 1.11.6; prefer remote_job_origin, fall back to
+    external_job_origin for the narrow 1.11.x window where both attrs may coexist."""
+    origin = getattr(run, "remote_job_origin", None)
+    if origin is not None:
+        return origin
     return getattr(run, "external_job_origin", None)  # pyright: ignore[reportAttributeAccessIssue]
 
 
@@ -69,8 +57,6 @@ __all__ = [
     "DEFAULT_SENSOR_DAEMON_INTERVAL",
     "PIPELINE_EVENTS",
     "STEP_EVENTS",
-    "IS_GE_1_11_6",
-    "IS_GE_1_8_0",
     "get_pipeline_origin",
     "get_job_origin",
     "get_repository_origin",

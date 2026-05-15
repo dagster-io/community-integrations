@@ -287,3 +287,119 @@ def test_synthesis_lock_safe_under_concurrent_store_event():
         t.join()
     assert wrapper._planned_assets.get(run_id, set()) == set()
     assert client.emit.call_count == asset_count * 2
+
+
+# ---------------------------------------------------------------------------
+# LRU eviction (comment 3)
+# ---------------------------------------------------------------------------
+
+
+def test_lru_eviction_removes_oldest_run_when_cap_exceeded():
+    from dagster_openlineage.storage import _MAX_SYNTHESIS_RUNS
+
+    wrapper, _ = _make_wrapper_with_capture()
+    # Fill the tracker to the cap, each with a distinct run_id.
+    first_run_id = _rid()
+    wrapper.store_event(_planned_event(first_run_id, AssetKey(["a"])))
+    for _ in range(_MAX_SYNTHESIS_RUNS - 1):
+        wrapper.store_event(_planned_event(_rid(), AssetKey(["x"])))
+
+    assert len(wrapper._planned_assets) == _MAX_SYNTHESIS_RUNS
+    assert first_run_id in wrapper._planned_assets
+
+    # Adding one more run should evict the oldest (first_run_id).
+    wrapper.store_event(_planned_event(_rid(), AssetKey(["new"])))
+    assert len(wrapper._planned_assets) == _MAX_SYNTHESIS_RUNS
+    assert first_run_id not in wrapper._planned_assets
+
+
+def test_orphaned_planned_assets_logged_on_run_success(caplog):
+    from dagster import DagsterEvent, DagsterEventType, EventLogEntry
+
+    wrapper, _ = _make_wrapper_with_capture()
+    run_id = _rid()
+    wrapper.store_event(_planned_event(run_id, AssetKey(["orphan"])))
+
+    success_event = EventLogEntry(
+        error_info=None,
+        level="debug",
+        user_message="",
+        run_id=run_id,
+        timestamp=time.time(),
+        step_key=None,
+        job_name="a_job",
+        dagster_event=DagsterEvent(
+            event_type_value=DagsterEventType.RUN_SUCCESS.value,
+            job_name="a_job",
+        ),
+    )
+    with caplog.at_level("DEBUG", logger="dagster_openlineage.storage"):
+        wrapper.store_event(success_event)
+
+    assert "orphan" in caplog.text
+    # Planned assets entry is cleared after success.
+    assert run_id not in wrapper._planned_assets
+
+
+# ---------------------------------------------------------------------------
+# standalone detection for ASSET_CHECK_EVALUATION_PLANNED (comment 8)
+# ---------------------------------------------------------------------------
+
+
+def _check_evaluation_planned_event(run_id: str, asset_key: AssetKey):
+    from dagster import DagsterEvent, DagsterEventType, EventLogEntry
+    from dagster._core.events import (
+        AssetCheckEvaluationPlanned as AssetCheckEvaluationPlannedData,
+    )
+
+    return EventLogEntry(
+        error_info=None,
+        level="debug",
+        user_message="",
+        run_id=run_id,
+        timestamp=time.time(),
+        step_key=None,
+        job_name="a_job",
+        dagster_event=DagsterEvent(
+            event_type_value=DagsterEventType.ASSET_CHECK_EVALUATION_PLANNED.value,
+            job_name="a_job",
+            event_specific_data=AssetCheckEvaluationPlannedData(
+                asset_key=asset_key, check_name="my_check"
+            ),
+        ),
+    )
+
+
+def test_check_evaluation_planned_standalone_when_no_materialization():
+    """No ASSET_MATERIALIZATION_PLANNED for the run → standalone=True → START emitted."""
+    wrapper, client = _make_wrapper_with_capture()
+    run_id = _rid()
+    wrapper.store_event(_check_evaluation_planned_event(run_id, AssetKey(["orders"])))
+    start_events = [
+        c.args[0]
+        for c in client.emit.call_args_list
+        if isinstance(c.args[0], RunEvent) and c.args[0].eventType == RunState.START
+    ]
+    assert len(start_events) == 1
+    assert start_events[0].job.name == "orders__checks"
+
+
+def test_check_evaluation_planned_embedded_when_materialization_planned():
+    """ASSET_MATERIALIZATION_PLANNED precedes the check → standalone=False → no START."""
+    wrapper, client = _make_wrapper_with_capture()
+    run_id = _rid()
+    # Materialization planned first — marks the run as having a materialization.
+    wrapper.store_event(_planned_event(run_id, AssetKey(["orders"])))
+    client.reset_mock()
+    # Now the check evaluation planned arrives for the same run.
+    wrapper.store_event(_check_evaluation_planned_event(run_id, AssetKey(["orders"])))
+    # standalone=False → adapter returns early without emitting.
+    start_events = [
+        c.args[0]
+        for c in client.emit.call_args_list
+        if isinstance(c.args[0], RunEvent)
+        and c.args[0].eventType == RunState.START
+        and hasattr(c.args[0], "job")
+        and c.args[0].job.name.endswith("__checks")
+    ]
+    assert start_events == []

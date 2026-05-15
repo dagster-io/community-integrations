@@ -45,6 +45,11 @@ _ADAPTER = OpenLineageAdapter()
 
 log = logging.getLogger(__name__)
 
+# Maximum running_pipelines entries persisted in the cursor JSON. Entries are
+# trimmed (oldest first) when the limit is exceeded so we never hit DB row
+# size limits for cursor storage.
+_MAX_CURSOR_RUNNING_PIPELINES = 1000
+
 _ASSET_EVENT_TYPES: Set[DagsterEventType] = {
     DagsterEventType.ASSET_MATERIALIZATION,
     DagsterEventType.ASSET_MATERIALIZATION_PLANNED,
@@ -113,6 +118,29 @@ def openlineage_sensor(
         description=description,
     )
     def _openlineage_sensor(context: SensorEvaluationContext):
+        # Runtime duplicate-mechanism guard: if OpenLineageEventLogStorage is
+        # the active storage, asset events are already being emitted by
+        # Mechanism A. Disable asset processing for this tick to prevent
+        # duplicate OL events.
+        _process_asset = include_asset_events
+        if _process_asset:
+            try:
+                from dagster_openlineage.storage import (
+                    OpenLineageEventLogStorage as _OLStorage,
+                )
+
+                if isinstance(context.instance.event_log_storage, _OLStorage):
+                    log.warning(
+                        "openlineage_sensor: OpenLineageEventLogStorage is the "
+                        "active event_log_storage. Disabling sensor asset event "
+                        "processing for this tick to prevent duplicate OL emissions. "
+                        "Configure at most one of: (a) OpenLineageEventLogStorage "
+                        "wrapper, (b) sensor with include_asset_events=True."
+                    )
+                    _process_asset = False
+            except Exception:
+                pass  # cannot determine storage type; proceed as configured
+
         ol_cursor = (
             OpenLineageCursor.from_json(context.cursor)
             if context.cursor
@@ -147,10 +175,7 @@ def openlineage_sensor(
                         else get_repository_name(context.instance, pipeline_run_id)
                     )
 
-                    if (
-                        include_asset_events
-                        and dagster_event_type in _ASSET_EVENT_TYPES
-                    ):
+                    if _process_asset and dagster_event_type in _ASSET_EVENT_TYPES:
                         _handle_asset_event(
                             running_pipelines,
                             dagster_event_type,
@@ -163,7 +188,7 @@ def openlineage_sensor(
                         # planned-asset set is still reachable; the handler
                         # pops the run entry on termination.
                         if (
-                            include_asset_events
+                            _process_asset
                             and dagster_event_type in _RUN_TERMINATION_TYPES
                         ):
                             _drain_planned_as_failures(
@@ -392,6 +417,18 @@ def _update_cursor(
     last_storage_id: int,
     running_pipelines: Dict[str, RunningPipeline],
 ):
+    if len(running_pipelines) > _MAX_CURSOR_RUNNING_PIPELINES:
+        log.warning(
+            "openlineage_sensor: running_pipelines cursor has %d entries "
+            "(limit %d); oldest entries will be evicted. This may indicate "
+            "runs that never emit a terminal event.",
+            len(running_pipelines),
+            _MAX_CURSOR_RUNNING_PIPELINES,
+        )
+        # dict preserves insertion order (Python 3.7+); keep the most-recent entries.
+        keys = list(running_pipelines.keys())
+        for key in keys[:-_MAX_CURSOR_RUNNING_PIPELINES]:
+            del running_pipelines[key]
     context.update_cursor(
         OpenLineageCursor(
             last_storage_id=last_storage_id, running_pipelines=running_pipelines

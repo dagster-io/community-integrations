@@ -1,10 +1,20 @@
 # Copyright 2018-2025 contributors to the OpenLineage project
 # SPDX-License-Identifier: Apache-2.0
 
+import time
 import uuid
 from unittest.mock import patch
 
 from openlineage.client.uuid import generate_new_uuid
+
+from dagster import (
+    DagsterEvent,
+    DagsterEventType,
+    EventLogEntry,
+    EventLogRecord,
+    EventRecordsFilter,
+)
+from dagster_openlineage.compat import PIPELINE_EVENTS, STEP_EVENTS
 from dagster_openlineage.utils import (
     get_event_log_records,
     get_repository_name,
@@ -12,9 +22,6 @@ from dagster_openlineage.utils import (
     make_step_run_id,
     to_utc_iso_8601,
 )
-
-from dagster import EventRecordsFilter
-from dagster_openlineage.compat import PIPELINE_EVENTS, STEP_EVENTS
 
 from .conftest import make_pipeline_run_with_external_pipeline_origin
 
@@ -47,6 +54,89 @@ def test_get_event_log_records(mock_instance):
             EventRecordsFilter(event_type=event_type, after_cursor=last_storage_id),
             limit=record_filter_limit,
         )
+
+
+@patch("dagster_openlineage.utils.DagsterInstance")
+def test_get_event_log_records_sorted_by_storage_id(mock_instance):
+    """Merged records must come out in storage_id order, not timestamp order."""
+    now = time.time()
+
+    def _make_record(storage_id: int, timestamp: float) -> EventLogRecord:
+        entry = EventLogEntry(
+            error_info=None,
+            level="debug",
+            user_message="",
+            run_id="r",
+            timestamp=timestamp,
+            step_key=None,
+            job_name="j",
+            dagster_event=DagsterEvent(
+                event_type_value=DagsterEventType.RUN_START.value,
+                job_name="j",
+            ),
+        )
+        return EventLogRecord(storage_id=storage_id, event_log_entry=entry)
+
+    # Two records from different type queries: storage_id ordering differs from timestamp.
+    rec_early_storage = _make_record(
+        storage_id=1, timestamp=now + 10
+    )  # older ID, newer ts
+    rec_late_storage = _make_record(storage_id=5, timestamp=now)  # newer ID, older ts
+
+    mock_instance.get_event_records.side_effect = [
+        [rec_late_storage],
+        [rec_early_storage],
+    ]
+
+    result = list(
+        get_event_log_records(
+            mock_instance,
+            {DagsterEventType.RUN_START, DagsterEventType.RUN_SUCCESS},
+            0,
+            10,
+        )
+    )
+    assert [r.storage_id for r in result] == [1, 5]
+
+
+@patch("dagster_openlineage.utils.DagsterInstance")
+def test_get_event_log_records_applies_total_limit(mock_instance):
+    """Total returned records must not exceed record_filter_limit even when
+    multiple event types each return that many records."""
+    now = time.time()
+    limit = 3
+
+    def _make_record(storage_id: int) -> EventLogRecord:
+        entry = EventLogEntry(
+            error_info=None,
+            level="debug",
+            user_message="",
+            run_id="r",
+            timestamp=now,
+            step_key=None,
+            job_name="j",
+            dagster_event=DagsterEvent(
+                event_type_value=DagsterEventType.RUN_START.value,
+                job_name="j",
+            ),
+        )
+        return EventLogRecord(storage_id=storage_id, event_log_entry=entry)
+
+    # Each type returns `limit` records — without a total cap we'd get 2*limit.
+    mock_instance.get_event_records.side_effect = [
+        [_make_record(i) for i in range(limit)],
+        [_make_record(i + limit) for i in range(limit)],
+    ]
+
+    result = list(
+        get_event_log_records(
+            mock_instance,
+            {DagsterEventType.RUN_START, DagsterEventType.RUN_SUCCESS},
+            0,
+            limit,
+        )
+    )
+    assert len(result) == limit
 
 
 @patch("dagster_openlineage.utils.DagsterInstance")

@@ -366,19 +366,34 @@ class OpenLineageAdapter:
         partition_key: Optional[str] = None,
         run_tags: Optional[Mapping[str, str]] = None,
     ) -> None:
+        """Emit a ``DatasetEvent`` for an asset observation.
+
+        **Known limitation (v0.2):** The OpenLineage v2 ``DatasetEvent`` type
+        does not carry a ``Run`` object, so both ``run_id`` and ``partition_key``
+        are intentionally dropped from the emitted event:
+
+        - ``run_id`` is not attached — consumers cannot correlate this event
+          back to a Dagster run. If run correlation is required, use
+          ``asset_materialization`` instead.
+        - ``partition_key`` is not resolved to a ``NominalTime`` facet —
+          ``NominalTime`` is a run-level facet and has no home on
+          ``DatasetEvent``. Partition context is therefore absent.
+
+        Consumers should treat ``DatasetEvent`` observations as dataset-level
+        metadata snapshots only, not as run-scoped lineage records.
+        """
         namespace = self._resolve_namespace(run_tags)
         facets = self._build_asset_output_facets(metadata, namespace)
         dataset = StaticDataset(
             namespace=namespace, name="/".join(asset_key.path), facets=facets
         )
-        run_facets = self._build_asset_run_facets(partition_key)
+        # run_id and partition_key cannot be encoded in DatasetEvent (see docstring).
+        del run_id, partition_key
         event = DatasetEvent(
             eventTime=to_utc_iso_8601(timestamp),
             producer=_PRODUCER,
             dataset=dataset,
         )
-        # DatasetEvent in event_v2 does not carry run facets; emit as-is.
-        del run_id, run_facets
         self._emit(event)
 
     def asset_check_evaluation_planned(

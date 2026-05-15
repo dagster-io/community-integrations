@@ -28,6 +28,7 @@ from __future__ import annotations
 import inspect
 import logging
 import threading
+from collections import OrderedDict
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Set
 
 import yaml
@@ -40,6 +41,12 @@ from dagster_openlineage.compat import DagsterEventType
 from dagster_openlineage.emitter import DEFAULT_TIMEOUT_SECONDS
 
 log = logging.getLogger(__name__)
+
+# Maximum number of in-flight runs tracked in memory for failure synthesis.
+# Entries are evicted FIFO (oldest-first) when the limit is reached. Hard-crashed
+# runs (no terminal event) would otherwise accumulate indefinitely in a long-lived
+# daemon process.
+_MAX_SYNTHESIS_RUNS = 1000
 
 
 _OVERRIDDEN = frozenset(
@@ -99,7 +106,9 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
         )
         self._synthesis_lock = threading.Lock()
         # run_id -> planned but not-yet-materialized asset keys.
-        self._planned_assets: Dict[str, Set[AssetKey]] = {}
+        # OrderedDict preserves insertion order so we can evict the oldest entry
+        # (FIFO) when _MAX_SYNTHESIS_RUNS is exceeded.
+        self._planned_assets: OrderedDict[str, Set[AssetKey]] = OrderedDict()
         super().__init__()
 
     # ------------------------------------------------------------------
@@ -119,6 +128,11 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
                 "config": Field(dict, is_required=False, default_value={}),
             },
             "namespace": Field(str, is_required=False),
+            # Supports {namespace} token only in Mechanism A. The {tag:KEY}
+            # token is parsed and accepted but always resolves to an empty
+            # string here because EventLogStorage has no access to RunStorage
+            # or run tags at store_event time. Use Mechanism B (the sensor)
+            # if you need {tag:KEY} resolution.
             "namespace_template": Field(str, is_required=False),
             "timeout": Field(
                 float, is_required=False, default_value=DEFAULT_TIMEOUT_SECONDS
@@ -194,7 +208,20 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
             data = de.event_specific_data
             asset_key = data.asset_key
             with self._synthesis_lock:
-                self._planned_assets.setdefault(run_id, set()).add(asset_key)
+                if run_id not in self._planned_assets:
+                    # Evict oldest entry when the cap is reached so the dict
+                    # stays bounded even if runs hard-crash without a terminal
+                    # event.
+                    if len(self._planned_assets) >= _MAX_SYNTHESIS_RUNS:
+                        evicted_id, _ = self._planned_assets.popitem(last=False)
+                        log.debug(
+                            "Evicted synthesis state for run %s; "
+                            "_MAX_SYNTHESIS_RUNS=%d reached",
+                            evicted_id,
+                            _MAX_SYNTHESIS_RUNS,
+                        )
+                    self._planned_assets[run_id] = set()
+                self._planned_assets[run_id].add(asset_key)
             self._adapter.asset_materialization_planned(
                 asset_key, run_id, ts, run_tags=run_tags
             )
@@ -243,16 +270,21 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
 
         elif etype == DagsterEventType.ASSET_CHECK_EVALUATION_PLANNED:
             data = de.event_specific_data
+            # Standalone detection heuristic: if the run already has planned
+            # materialization entries in _planned_assets, the check shares a
+            # run with an asset materialization (embedded check) → standalone=False.
+            # If not, this is a standalone check-only run → standalone=True.
+            # Dagster emits ASSET_MATERIALIZATION_PLANNED before
+            # ASSET_CHECK_EVALUATION_PLANNED within a combined run, so the
+            # heuristic is reliable for store_event's per-event ordering.
+            with self._synthesis_lock:
+                standalone = run_id not in self._planned_assets
             self._adapter.asset_check_evaluation_planned(
                 data.asset_key,
                 check_name=data.check_name,
                 run_id=run_id,
                 timestamp=ts,
-                # Standalone detection requires cross-event context the
-                # wrapper does not hold; dispatch-time heuristic treats a
-                # PLANNED without a same-run materialization planned as
-                # standalone. Cheap approximation: always emit the start.
-                standalone=True,
+                standalone=standalone,
                 run_tags=run_tags,
             )
 
@@ -277,7 +309,17 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
             DagsterEventType.RUN_CANCELED,
         ):
             with self._synthesis_lock:
-                self._planned_assets.pop(run_id, None)
+                orphaned = self._planned_assets.pop(run_id, None)
+            if orphaned:
+                log.debug(
+                    "Run %s ended (%s) with %d planned asset(s) that never "
+                    "materialized — likely skipped or excluded by asset selection. "
+                    "No failure events emitted: %s",
+                    run_id,
+                    etype.value,
+                    len(orphaned),
+                    sorted(k.to_user_string() for k in orphaned),
+                )
 
     def _drain_planned_as_failures(
         self,
@@ -309,9 +351,15 @@ def _format_error_message(error: Any) -> Optional[str]:
 
 
 def _run_tags_for(wrapped: EventLogStorage, run_id: str) -> Dict[str, str]:
-    # The wrapper does not hold a direct RunStorage reference; the tags are
-    # only needed for namespace template splitting, so return empty when we
-    # cannot resolve — the adapter falls back to the configured namespace.
+    # v0.2 known limitation: EventLogStorage has no access to RunStorage or
+    # DagsterInstance, so run tags are never available at store_event time.
+    # Returning {} means the {tag:KEY} namespace template token always
+    # resolves to an empty string for Mechanism A (storage wrapper); the
+    # adapter then falls back to the configured default namespace.
+    #
+    # If you need {tag:KEY} namespace resolution, use Mechanism B (the
+    # openlineage_sensor with include_asset_events=True), which has access
+    # to context.instance and can look up run tags per event.
     del wrapped, run_id
     return {}
 
@@ -328,8 +376,25 @@ for _name in _resolve_abstracts():
     else:
         setattr(OpenLineageEventLogStorage, _name, _make_method_delegate(_name))
 
-# Clear the abstract flag on the concrete class; delegate implementations
-# cover every remaining name.
+# Verify the loop covered every abstract name. If a future Dagster bump adds a
+# new abstract method, _resolve_abstracts() will include it and the loop above
+# will delegate it — but this assertion fires at import time if for any reason
+# a name slipped through (e.g. a setattr failure or an _OVERRIDDEN omission).
+_delegation_gap = frozenset(
+    name
+    for name in _resolve_abstracts()
+    if name not in _OVERRIDDEN and name not in vars(OpenLineageEventLogStorage)
+)
+assert not _delegation_gap, (
+    f"OpenLineageEventLogStorage delegation gap — abstract methods not covered: "
+    f"{_delegation_gap}. Add them to _OVERRIDDEN or extend the setattr loop."
+)
+
+# Clearing __abstractmethods__ is required because Python's ABC machinery reads
+# this frozenset at instantiation time and does not inspect dynamically-added
+# class attributes. The setattr loop above already provided a concrete
+# implementation for every name that was in __abstractmethods__, so the class
+# is fully implemented — the assertion above proves there are no gaps.
 OpenLineageEventLogStorage.__abstractmethods__ = frozenset()
 
 

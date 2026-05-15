@@ -1,15 +1,14 @@
 # Copyright 2018-2025 contributors to the OpenLineage project
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 import tempfile
 import time
 from unittest import mock
 from unittest.mock import call, patch
 
 from openlineage.client.uuid import generate_new_uuid
-from dagster_openlineage.sensor import openlineage_sensor
 
-from dagster_openlineage.compat import DagsterEventType
 from dagster import (
     AssetKey,
     AssetMaterialization,
@@ -26,8 +25,11 @@ from dagster._core.events import (
     AssetMaterializationPlannedData,
     StepMaterializationData,
 )
-
 from dagster.core.test_utils import instance_for_test
+
+from dagster_openlineage.compat import DagsterEventType
+from dagster_openlineage.cursor import OpenLineageCursor
+from dagster_openlineage.sensor import _MAX_CURSOR_RUNNING_PIPELINES, openlineage_sensor
 
 from .conftest import make_test_event_log_record
 
@@ -494,3 +496,71 @@ def test_sensor_opt_in_synthesis_selective_per_asset(
         assert mock_adapter.asset_failed_to_materialize.call_count == 1
         failed_key = mock_adapter.asset_failed_to_materialize.call_args.args[0]
         assert failed_key == AssetKey(["b"])
+
+
+@patch("dagster_openlineage.sensor._ADAPTER")
+@patch("dagster_openlineage.sensor.get_event_log_records")
+def test_sensor_auto_disables_asset_events_when_ol_wrapper_is_active(
+    mock_event_log_records, mock_adapter
+):
+    """When OpenLineageEventLogStorage is the active storage, the sensor must
+    skip asset event processing (Mechanism A already emits them).
+    Instance is created via the Dagster config system — same path as production."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        overrides = {
+            "event_log_storage": {
+                "module": "dagster_openlineage.storage",
+                "class": "OpenLineageEventLogStorage",
+                "config": {
+                    "wrapped": {
+                        "module": "dagster.core.storage.event_log",
+                        "class": "ConsolidatedSqliteEventLogStorage",
+                        "config": {"base_dir": temp_dir},
+                    },
+                },
+            },
+        }
+        with instance_for_test(temp_dir=temp_dir, overrides=overrides) as instance:
+            run_id = str(generate_new_uuid())
+            mock_event_log_records.return_value = [
+                _make_asset_event_record(
+                    DagsterEventType.ASSET_MATERIALIZATION,
+                    run_id,
+                    AssetKey(["orders"]),
+                )
+            ]
+            context = build_sensor_context(instance=instance)
+            openlineage_sensor(include_asset_events=True).evaluate_tick(context)
+            # Asset event must NOT be dispatched — the wrapper handles it.
+            mock_adapter.asset_materialization.assert_not_called()
+
+
+@patch("dagster_openlineage.sensor._ADAPTER")
+@patch("dagster_openlineage.sensor.get_event_log_records")
+def test_cursor_running_pipelines_trimmed_when_over_limit(
+    mock_event_log_records, mock_adapter
+):
+    """_update_cursor must evict oldest entries when running_pipelines exceeds the cap."""
+    with instance_for_test() as instance:
+        over_limit = _MAX_CURSOR_RUNNING_PIPELINES + 5
+        mock_event_log_records.return_value = []
+
+        big_cursor = json.dumps(
+            {
+                "last_storage_id": 0,
+                "running_pipelines": {
+                    k: {
+                        "running_steps": {},
+                        "repository_name": None,
+                        "planned_asset_paths": [],
+                    }
+                    for k in [str(generate_new_uuid()) for _ in range(over_limit)]
+                },
+            }
+        )
+        context = build_sensor_context(instance=instance, cursor=big_cursor)
+        openlineage_sensor().evaluate_tick(context)
+
+        assert context.cursor is not None
+        restored = OpenLineageCursor.from_json(context.cursor)
+        assert len(restored.running_pipelines) <= _MAX_CURSOR_RUNNING_PIPELINES
