@@ -319,6 +319,9 @@ def _handle_step_event(
             repository_name,
         )
         running_steps.pop(step_key, None)
+    # LRU: delete-then-reinsert promotes the run to the most-recently-used
+    # position so active runs are not evicted ahead of idle ones by _update_cursor.
+    running_pipelines.pop(pipeline_run_id, None)
     running_pipelines[pipeline_run_id] = running_pipeline
 
 
@@ -331,7 +334,10 @@ def _handle_asset_event(
 ):
     dagster_event = entry.get_dagster_event()
     data = dagster_event.event_specific_data
-    running_pipeline = running_pipelines.setdefault(pipeline_run_id, RunningPipeline())
+    # LRU: delete-then-reinsert so this run moves to the most-recently-used
+    # position. setdefault would leave existing keys at their original slot.
+    running_pipeline = running_pipelines.pop(pipeline_run_id, None) or RunningPipeline()
+    running_pipelines[pipeline_run_id] = running_pipeline
     planned_paths: Set[Tuple[str, ...]] = running_pipeline.planned_asset_paths
 
     if dagster_event_type == DagsterEventType.ASSET_MATERIALIZATION_PLANNED:

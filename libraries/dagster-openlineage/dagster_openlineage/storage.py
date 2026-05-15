@@ -209,9 +209,9 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
             asset_key = data.asset_key
             with self._synthesis_lock:
                 if run_id not in self._planned_assets:
-                    # Evict oldest entry when the cap is reached so the dict
-                    # stays bounded even if runs hard-crash without a terminal
-                    # event.
+                    # Evict oldest (least-recently-used) entry when the cap is
+                    # reached so the dict stays bounded even if runs hard-crash
+                    # without a terminal event.
                     if len(self._planned_assets) >= _MAX_SYNTHESIS_RUNS:
                         evicted_id, _ = self._planned_assets.popitem(last=False)
                         log.debug(
@@ -221,6 +221,11 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
                             _MAX_SYNTHESIS_RUNS,
                         )
                     self._planned_assets[run_id] = set()
+                else:
+                    # LRU: promote run to the most-recently-used position so
+                    # long-running jobs that keep planning assets are not
+                    # evicted ahead of runs that have been idle since insertion.
+                    self._planned_assets.move_to_end(run_id)
                 self._planned_assets[run_id].add(asset_key)
             self._adapter.asset_materialization_planned(
                 asset_key, run_id, ts, run_tags=run_tags
