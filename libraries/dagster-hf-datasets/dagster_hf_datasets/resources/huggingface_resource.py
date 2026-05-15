@@ -15,7 +15,7 @@ from datasets import (
 )
 from pydantic import Field
 
-HFDatasetLike = (
+type HFDatasetLike = (
     Dataset
     | DatasetDict
     | IterableDataset

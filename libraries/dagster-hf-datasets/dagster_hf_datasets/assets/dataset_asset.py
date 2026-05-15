@@ -20,6 +20,26 @@ from dagster_hf_datasets.resources import (
     HuggingFaceResource,
 )
 
+def _default_asset_name(
+    *,
+    path: str,
+    config: str | None = None,
+    split: str | None = None,
+) -> str:
+    """
+    Generate a deterministic Dagster asset name
+    from Hugging Face dataset coordinates.
+    """
+
+    parts = [path.replace("/", "_")]
+
+    if config:
+        parts.append(config)
+
+    if split:
+        parts.append(split)
+
+    return "__".join(parts)
 
 def hf_dataset_asset(
     *,

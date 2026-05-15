@@ -10,7 +10,7 @@ from datasets import (
     IterableDatasetDict,
 )
 
-HFDatasetLike = (
+type HFDatasetLike = (
     Dataset
     | DatasetDict
     | IterableDataset
