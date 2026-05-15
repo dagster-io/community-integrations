@@ -15,12 +15,7 @@ from datasets import (
 )
 from pydantic import Field
 
-type HFDatasetLike = (
-    Dataset
-    | DatasetDict
-    | IterableDataset
-    | IterableDatasetDict
-)
+type HFDatasetLike = Dataset | DatasetDict | IterableDataset | IterableDatasetDict
 
 
 class HuggingFaceResource(ConfigurableResource):
@@ -41,32 +36,22 @@ class HuggingFaceResource(ConfigurableResource):
 
     token: str | None = Field(
         default=None,
-        description=(
-            "Optional Hugging Face access token."
-        ),
+        description=("Optional Hugging Face access token."),
     )
 
     token_path: str | None = Field(
         default=None,
-        description=(
-            "Optional path to a file containing "
-            "a Hugging Face token."
-        ),
+        description=("Optional path to a file containing " "a Hugging Face token."),
     )
 
     cache_dir: str | None = Field(
         default=None,
-        description=(
-            "Optional Hugging Face datasets "
-            "cache directory."
-        ),
+        description=("Optional Hugging Face datasets " "cache directory."),
     )
 
     offline: bool = Field(
         default=False,
-        description=(
-            "Enable Hugging Face offline mode."
-        ),
+        description=("Enable Hugging Face offline mode."),
     )
 
     def setup_for_execution(
@@ -141,21 +126,14 @@ class HuggingFaceResource(ConfigurableResource):
             return dataset.num_rows
 
         if isinstance(dataset, DatasetDict):
-            return {
-                split: ds.num_rows
-                for split, ds in dataset.items()
-            }
+            return {split: ds.num_rows for split, ds in dataset.items()}
 
         return None
 
     @staticmethod
     def get_features(
         dataset: HFDatasetLike,
-    ) -> (
-        Features
-        | dict[str, Features]
-        | None
-    ):
+    ) -> Features | dict[str, Features] | None:
         """
         Extract dataset feature/schema metadata.
         """
@@ -175,10 +153,7 @@ class HuggingFaceResource(ConfigurableResource):
                 IterableDatasetDict,
             ),
         ):
-            return {
-                split: ds.features
-                for split, ds in dataset.items()
-            }
+            return {split: ds.features for split, ds in dataset.items()}
 
         return None
 
@@ -244,11 +219,7 @@ class HuggingFaceResource(ConfigurableResource):
             token_file = Path(self.token_path)
 
             if token_file.exists():
-                return (
-                    token_file.read_text(
-                        encoding="utf-8"
-                    ).strip()
-                )
+                return token_file.read_text(encoding="utf-8").strip()
 
         return os.getenv("HF_TOKEN")
 

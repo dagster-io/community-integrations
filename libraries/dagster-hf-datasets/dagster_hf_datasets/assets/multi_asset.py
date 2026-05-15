@@ -87,11 +87,7 @@ def hf_multi_asset(
             resolved_config = config
 
             if context.has_partition_key:
-                partition = (
-                    HFPartitionMapping.from_partition_key(
-                        context.partition_key
-                    )
-                )
+                partition = HFPartitionMapping.from_partition_key(context.partition_key)
 
                 if partition.is_revision:
                     resolved_revision = partition.value
@@ -121,47 +117,31 @@ def hf_multi_asset(
 
             results: dict[str, MaterializeResult] = {}
 
-            for split_name, split_dataset in (
-                dataset.items()
-            ):
+            for split_name, split_dataset in dataset.items():
                 if (
                     context.selected_output_names
-                    and split_name
-                    not in context.selected_output_names
+                    and split_name not in context.selected_output_names
                 ):
                     continue
 
-                split_metadata = (
-                    build_dataset_metadata(
-                        split_dataset
-                    )
+                split_metadata = build_dataset_metadata(split_dataset)
+
+                results[split_name] = MaterializeResult(
+                    metadata={
+                        "path": path,
+                        "config": resolved_config,
+                        "split": split_name,
+                        "revision": (resolved_revision),
+                        "streaming": streaming,
+                        "partition_key": (
+                            context.partition_key if context.has_partition_key else None
+                        ),
+                        **split_metadata,
+                    },
+                    value=split_dataset,
                 )
 
-                results[split_name] = (
-                    MaterializeResult(
-                        metadata={
-                            "path": path,
-                            "config": resolved_config,
-                            "split": split_name,
-                            "revision": (
-                                resolved_revision
-                            ),
-                            "streaming": streaming,
-                            "partition_key": (
-                                context.partition_key
-                                if context.has_partition_key
-                                else None
-                            ),
-                            **split_metadata,
-                        },
-                        value=split_dataset,
-                    )
-                )
-
-            context.log.info(
-                f"Loaded Hugging Face "
-                f"DatasetDict: {path}"
-            )
+            context.log.info(f"Loaded Hugging Face " f"DatasetDict: {path}")
 
             return results
 

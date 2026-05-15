@@ -34,26 +34,18 @@ class DatasetCardBuilder:
         self.source_dataset = source_dataset
         self.source_revision = source_revision
         self.description = description
-        self.processing_steps = (
-            processing_steps or []
-        )
+        self.processing_steps = processing_steps or []
         self.metadata = metadata or {}
 
     def build(self) -> str:
         """
         Build lightweight Hugging Face dataset card.
         """
-        generated_at = datetime.now(
-            UTC
-        ).isoformat()
+        generated_at = datetime.now(UTC).isoformat()
 
-        processing_section = (
-            self._build_processing_steps()
-        )
+        processing_section = self._build_processing_steps()
 
-        metadata_section = (
-            self._build_metadata_section()
-        )
+        metadata_section = self._build_metadata_section()
 
         return f"""---
 language:
@@ -101,14 +93,9 @@ generated_by:
         Build processing lineage section.
         """
         if not self.processing_steps:
-            return (
-                "- No processing steps recorded."
-            )
+            return "- No processing steps recorded."
 
-        return "\n".join(
-            f"- {step}"
-            for step in self.processing_steps
-        )
+        return "\n".join(f"- {step}" for step in self.processing_steps)
 
     def _build_metadata_section(self) -> str:
         """
@@ -118,6 +105,5 @@ generated_by:
             return "- No additional metadata."
 
         return "\n".join(
-            f"- **{key}**: `{value}`"
-            for key, value in self.metadata.items()
+            f"- **{key}**: `{value}`" for key, value in self.metadata.items()
         )

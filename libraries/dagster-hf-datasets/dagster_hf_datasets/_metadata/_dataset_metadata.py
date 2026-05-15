@@ -10,12 +10,7 @@ from datasets import (
     IterableDatasetDict,
 )
 
-type HFDatasetLike = (
-    Dataset
-    | DatasetDict
-    | IterableDataset
-    | IterableDatasetDict
-)
+type HFDatasetLike = Dataset | DatasetDict | IterableDataset | IterableDatasetDict
 
 
 def extract_num_rows(
@@ -37,10 +32,7 @@ def extract_num_rows(
         return dataset.num_rows
 
     if isinstance(dataset, DatasetDict):
-        return {
-            split: ds.num_rows
-            for split, ds in dataset.items()
-        }
+        return {split: ds.num_rows for split, ds in dataset.items()}
 
     return None
 
@@ -62,10 +54,7 @@ def extract_features(
         return dataset.features
 
     if isinstance(dataset, (DatasetDict, IterableDatasetDict)):
-        return {
-            split: ds.features
-            for split, ds in dataset.items()
-        }
+        return {split: ds.features for split, ds in dataset.items()}
 
     return None
 
@@ -92,8 +81,7 @@ def extract_feature_names(
         return list(features.keys())
 
     return {
-        split: list(split_features.keys())
-        for split, split_features in features.items()
+        split: list(split_features.keys()) for split, split_features in features.items()
     }
 
 
@@ -119,10 +107,7 @@ def extract_fingerprint(
         return dataset._fingerprint
 
     if isinstance(dataset, DatasetDict):
-        return {
-            split: ds._fingerprint
-            for split, ds in dataset.items()
-        }
+        return {split: ds._fingerprint for split, ds in dataset.items()}
 
     return None
 

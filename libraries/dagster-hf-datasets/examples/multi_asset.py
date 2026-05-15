@@ -1,7 +1,7 @@
 from dagster import Definitions
 
 from dagster_hf_datasets.assets import (
-    hf_dataset_asset,
+    hf_multi_asset,
 )
 from dagster_hf_datasets.io_manager import (
     HFParquetIOManager,
@@ -11,24 +11,28 @@ from dagster_hf_datasets.resources import (
 )
 
 
-@hf_dataset_asset(
-    path="nyu-mll/glue",
-    config="qqp",
-    split="train",
-    group_name="huggingface_datasets",
+@hf_multi_asset(
+    path="allenai/c4",
+    streaming=True,
+    group_name="huggingface_streaming",
     io_manager_key="hf_parquet_io_manager",
 )
-def glue_qqp_train():
+def c4_streaming_assets():
     """
-    Materialize the GLUE QQP train split
-    as a Dagster asset.
+    Materialize streaming dataset splits
+    as separate Dagster assets.
+
+    Demonstrates:
+    - Hugging Face streaming
+    - DatasetDict orchestration
+    - scalable ingestion
     """
     ...
 
 
 defs = Definitions(
     assets=[
-        glue_qqp_train,
+        c4_streaming_assets,
     ],
     resources={
         "huggingface": HuggingFaceResource(

@@ -20,6 +20,7 @@ from dagster_hf_datasets.resources import (
     HuggingFaceResource,
 )
 
+
 def _default_asset_name(
     *,
     path: str,
@@ -40,6 +41,7 @@ def _default_asset_name(
         parts.append(split)
 
     return "__".join(parts)
+
 
 def hf_dataset_asset(
     *,
@@ -93,11 +95,7 @@ def hf_dataset_asset(
             resolved_config = config
 
             if context.has_partition_key:
-                partition = (
-                    HFPartitionMapping.from_partition_key(
-                        context.partition_key
-                    )
-                )
+                partition = HFPartitionMapping.from_partition_key(context.partition_key)
 
                 if partition.is_revision:
                     resolved_revision = partition.value
@@ -113,13 +111,9 @@ def hf_dataset_asset(
                 streaming=streaming,
             )
 
-            dataset_metadata = build_dataset_metadata(
-                dataset
-            )
+            dataset_metadata = build_dataset_metadata(dataset)
 
-            context.log.info(
-                f"Loaded Hugging Face dataset: {path}"
-            )
+            context.log.info(f"Loaded Hugging Face dataset: {path}")
 
             return MaterializeResult(
                 metadata={
@@ -129,9 +123,7 @@ def hf_dataset_asset(
                     "revision": resolved_revision,
                     "streaming": streaming,
                     "partition_key": (
-                        context.partition_key
-                        if context.has_partition_key
-                        else None
+                        context.partition_key if context.has_partition_key else None
                     ),
                     **dataset_metadata,
                 },

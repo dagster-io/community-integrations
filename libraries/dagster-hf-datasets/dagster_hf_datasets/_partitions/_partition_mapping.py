@@ -112,8 +112,7 @@ class HFPartitionMapping:
         """
         if ":" not in partition_key:
             raise ValueError(
-                "Invalid partition key format. "
-                "Expected '<partition_type>:<value>'."
+                "Invalid partition key format. " "Expected '<partition_type>:<value>'."
             )
 
         partition_type, value = partition_key.split(
@@ -128,21 +127,12 @@ class HFPartitionMapping:
 
     @property
     def is_revision(self) -> bool:
-        return (
-            self.partition_type
-            == DEFAULT_REVISION_PARTITION_KEY
-        )
+        return self.partition_type == DEFAULT_REVISION_PARTITION_KEY
 
     @property
     def is_config(self) -> bool:
-        return (
-            self.partition_type
-            == DEFAULT_CONFIG_PARTITION_KEY
-        )
+        return self.partition_type == DEFAULT_CONFIG_PARTITION_KEY
 
     @property
     def is_date(self) -> bool:
-        return (
-            self.partition_type
-            == DEFAULT_DATE_PARTITION_KEY
-        )
+        return self.partition_type == DEFAULT_DATE_PARTITION_KEY

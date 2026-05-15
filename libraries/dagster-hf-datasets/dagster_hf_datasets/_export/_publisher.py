@@ -54,9 +54,7 @@ class HFDatasetPublisher:
         processing_steps: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
         create_dataset_card: bool = True,
-        commit_message: str = (
-            "Upload dataset via dagster-hf-datasets"
-        ),
+        commit_message: str = ("Upload dataset via dagster-hf-datasets"),
     ) -> str:
         """
         Publish dataset to Hugging Face Hub.
@@ -88,10 +86,7 @@ class HFDatasetPublisher:
             commit_message=commit_message,
         )
 
-        return (
-            f"https://huggingface.co/datasets/"
-            f"{self.repo_id}"
-        )
+        return f"https://huggingface.co/datasets/" f"{self.repo_id}"
 
     def _upload_dataset_card(
         self,
@@ -119,9 +114,7 @@ class HFDatasetPublisher:
         card_content = card_builder.build()
 
         with TemporaryDirectory() as temp_dir:
-            card_path = (
-                Path(temp_dir) / "README.md"
-            )
+            card_path = Path(temp_dir) / "README.md"
 
             card_path.write_text(
                 card_content,
@@ -134,8 +127,5 @@ class HFDatasetPublisher:
                 repo_id=self.repo_id,
                 repo_type="dataset",
                 token=self.token,
-                commit_message=(
-                    f"{commit_message} "
-                    "(dataset card)"
-                ),
+                commit_message=(f"{commit_message} " "(dataset card)"),
             )

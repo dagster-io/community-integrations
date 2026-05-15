@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import pandas as pd
 from dagster import (
@@ -98,10 +97,7 @@ class HFParquetIOManager(ConfigurableIOManager):
         input_path = self._get_input_path(context)
 
         if not input_path.exists():
-            raise FileNotFoundError(
-                f"Input parquet file not found: "
-                f"{input_path}"
-            )
+            raise FileNotFoundError(f"Input parquet file not found: " f"{input_path}")
 
         return pd.read_parquet(input_path)
 
@@ -137,21 +133,11 @@ class HFParquetIOManager(ConfigurableIOManager):
         Build Dagster metadata for Dataset outputs.
         """
         return {
-            "path": MetadataValue.path(
-                str(output_path)
-            ),
-            "rows": MetadataValue.int(
-                dataset.num_rows
-            ),
-            "columns": MetadataValue.int(
-                len(dataset.column_names)
-            ),
-            "column_names": MetadataValue.json(
-                dataset.column_names
-            ),
-            "fingerprint": MetadataValue.text(
-                dataset._fingerprint
-            ),
+            "path": MetadataValue.path(str(output_path)),
+            "rows": MetadataValue.int(dataset.num_rows),
+            "columns": MetadataValue.int(len(dataset.column_names)),
+            "column_names": MetadataValue.json(dataset.column_names),
+            "fingerprint": MetadataValue.text(dataset._fingerprint),
         }
 
     def _build_dataframe_metadata(
@@ -164,18 +150,10 @@ class HFParquetIOManager(ConfigurableIOManager):
         Build Dagster metadata for DataFrame outputs.
         """
         return {
-            "path": MetadataValue.path(
-                str(output_path)
-            ),
-            "rows": MetadataValue.int(
-                len(dataframe)
-            ),
-            "columns": MetadataValue.int(
-                len(dataframe.columns)
-            ),
-            "column_names": MetadataValue.json(
-                list(dataframe.columns)
-            ),
+            "path": MetadataValue.path(str(output_path)),
+            "rows": MetadataValue.int(len(dataframe)),
+            "columns": MetadataValue.int(len(dataframe.columns)),
+            "column_names": MetadataValue.json(list(dataframe.columns)),
         }
 
     def _get_output_path(
@@ -188,14 +166,9 @@ class HFParquetIOManager(ConfigurableIOManager):
         Path format:
             <base_dir>/<asset_key>.parquet
         """
-        asset_path = "/".join(
-            context.asset_key.path
-        )
+        asset_path = "/".join(context.asset_key.path)
 
-        return (
-            Path(self.base_dir)
-            / f"{asset_path}.parquet"
-        )
+        return Path(self.base_dir) / f"{asset_path}.parquet"
 
     def _get_input_path(
         self,
@@ -207,18 +180,11 @@ class HFParquetIOManager(ConfigurableIOManager):
         upstream_output = context.upstream_output
 
         if upstream_output is None:
-            raise ValueError(
-                "Upstream output context is required."
-            )
+            raise ValueError("Upstream output context is required.")
 
-        asset_path = "/".join(
-            upstream_output.asset_key.path
-        )
+        asset_path = "/".join(upstream_output.asset_key.path)
 
-        return (
-            Path(self.base_dir)
-            / f"{asset_path}.parquet"
-        )
+        return Path(self.base_dir) / f"{asset_path}.parquet"
 
     @staticmethod
     def dataset_to_dataframe(
