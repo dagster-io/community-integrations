@@ -4,8 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from dagster import (
-    AssetExecutionContext,
-    MaterializeResult,
+    Output,
     PartitionsDefinition,
     asset,
 )
@@ -19,28 +18,6 @@ from dagster_hf_datasets._partitions import (
 from dagster_hf_datasets.resources import (
     HuggingFaceResource,
 )
-
-
-def _default_asset_name(
-    *,
-    path: str,
-    config: str | None = None,
-    split: str | None = None,
-) -> str:
-    """
-    Generate a deterministic Dagster asset name
-    from Hugging Face dataset coordinates.
-    """
-
-    parts = [path.replace("/", "_")]
-
-    if config:
-        parts.append(config)
-
-    if split:
-        parts.append(split)
-
-    return "__".join(parts)
 
 
 def hf_dataset_asset(
@@ -69,14 +46,19 @@ def hf_dataset_asset(
     - metadata propagation
     - partition-aware loading
     - IO manager integration
+    - streaming datasets
     """
 
     def decorator(fn: Callable[..., Any]) -> Any:
-        asset_name = name or _default_asset_name(
-            path=path,
-            config=config,
-            split=split,
-        )
+        """
+        Preserve the decorated function name
+        as the Dagster asset key by default.
+
+        This keeps Dagster dependency resolution
+        intuitive and predictable.
+        """
+
+        asset_name = name or fn.__name__
 
         @asset(
             name=asset_name,
@@ -88,14 +70,18 @@ def hf_dataset_asset(
             partitions_def=partitions_def,
         )
         def _asset(
-            context: AssetExecutionContext,
+            context,
             huggingface: HuggingFaceResource,
-        ) -> MaterializeResult:
+        ):
             resolved_revision = revision
             resolved_config = config
 
             if context.has_partition_key:
-                partition = HFPartitionMapping.from_partition_key(context.partition_key)
+                partition = (
+                    HFPartitionMapping.from_partition_key(
+                        context.partition_key
+                    )
+                )
 
                 if partition.is_revision:
                     resolved_revision = partition.value
@@ -111,11 +97,17 @@ def hf_dataset_asset(
                 streaming=streaming,
             )
 
-            dataset_metadata = build_dataset_metadata(dataset)
+            dataset_metadata = (
+                build_dataset_metadata(dataset)
+            )
 
-            context.log.info(f"Loaded Hugging Face dataset: {path}")
+            context.log.info(
+                f"Loaded Hugging Face "
+                f"dataset: {path}"
+            )
 
-            return MaterializeResult(
+            return Output(
+                value=dataset,
                 metadata={
                     "path": path,
                     "config": resolved_config,
@@ -123,11 +115,12 @@ def hf_dataset_asset(
                     "revision": resolved_revision,
                     "streaming": streaming,
                     "partition_key": (
-                        context.partition_key if context.has_partition_key else None
+                        context.partition_key
+                        if context.has_partition_key
+                        else None
                     ),
                     **dataset_metadata,
                 },
-                value=dataset,
             )
 
         return _asset

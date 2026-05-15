@@ -1,4 +1,9 @@
-from dagster import Definitions
+from __future__ import annotations
+
+from dagster import (
+    Definitions,
+    materialize,
+)
 
 from dagster_hf_datasets.assets import (
     hf_dataset_asset,
@@ -20,10 +25,11 @@ from dagster_hf_datasets.resources import (
 )
 def glue_qqp_train():
     """
-    Materialize the GLUE QQP train split
-    as a Dagster asset.
+    Materialize the GLUE QQP training split
+    as a Dagster asset backed by a
+    Hugging Face Dataset.
     """
-    ...
+    pass
 
 
 defs = Definitions(
@@ -42,3 +48,32 @@ defs = Definitions(
         ),
     },
 )
+
+
+if __name__ == "__main__":
+    result = materialize(
+        assets=[
+            glue_qqp_train,
+        ],
+        resources={
+            "huggingface": HuggingFaceResource(
+                cache_dir=".hf_cache",
+                offline=False,
+            ),
+            "hf_parquet_io_manager": (
+                HFParquetIOManager(
+                    base_dir=".dagster_hf_storage",
+                )
+            ),
+        },
+    )
+
+    if result.success:
+        print(
+            "Successfully materialized "
+            "GLUE QQP training dataset asset."
+        )
+    else:
+        raise RuntimeError(
+            "Dagster asset materialization failed."
+        )

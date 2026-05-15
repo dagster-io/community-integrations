@@ -3,6 +3,7 @@ from datasets import Dataset
 from dagster import (
     Definitions,
     asset,
+    materialize,
 )
 
 from dagster_hf_datasets._export import (
@@ -28,7 +29,8 @@ from dagster_hf_datasets.resources import (
 )
 def raw_glue_qqp():
     """
-    Raw GLUE QQP dataset ingestion.
+    Load the raw GLUE QQP training split
+    from the Hugging Face Hub.
     """
     ...
 
@@ -77,7 +79,9 @@ def filtered_glue_qqp(
             and len(q2.split()) >= 5
         )
 
-    return deduplicated_glue_qqp.filter(valid_example)
+    return deduplicated_glue_qqp.filter(
+        valid_example
+    )
 
 
 @asset
@@ -85,13 +89,22 @@ def golden_glue_qqp(
     filtered_glue_qqp: Dataset,
 ) -> Dataset:
     """
-    Normalize schema and enrich metadata.
+    Normalize text formatting and
+    produce a curated "golden" dataset.
     """
 
     def normalize(example: dict) -> dict:
         return {
-            "question1": (example["question1"].strip().lower()),
-            "question2": (example["question2"].strip().lower()),
+            "question1": (
+                example["question1"]
+                .strip()
+                .lower()
+            ),
+            "question2": (
+                example["question2"]
+                .strip()
+                .lower()
+            ),
             "label": example["label"],
         }
 
@@ -103,16 +116,27 @@ def publish_golden_glue(
     golden_glue_qqp: Dataset,
 ) -> str:
     """
-    Publish processed dataset
+    Publish the processed dataset
     to the Hugging Face Hub.
     """
 
+    print(
+        "\nPreparing dataset publication..."
+    )
+    print(
+        f"Dataset rows: "
+        f"{len(golden_glue_qqp)}"
+    )
+
     publisher = HFDatasetPublisher(
-        repo_id=("your-username/" "golden-glue-qqp"),
+        repo_id=(
+            "AINovice2005/"
+            "golden-glue-qqp"
+        ),
         private=False,
     )
 
-    return publisher.publish(
+    hub_url = publisher.publish(
         dataset=golden_glue_qqp,
         source_dataset="nyu-mll/glue",
         source_revision="main",
@@ -128,11 +152,23 @@ def publish_golden_glue(
             "Normalized text formatting",
         ],
         metadata={
-            "task": ("duplicate-question-detection"),
+            "task": (
+                "duplicate-question-detection"
+            ),
             "source_config": "qqp",
-            "pipeline": "golden_dataset_pipeline",
+            "pipeline": (
+                "golden_dataset_pipeline"
+            ),
         },
     )
+
+    print(
+        "\nDataset successfully pushed "
+        "to the Hugging Face Hub."
+    )
+    print(f"Hub URL: {hub_url}")
+
+    return hub_url
 
 
 defs = Definitions(
@@ -155,3 +191,66 @@ defs = Definitions(
         ),
     },
 )
+
+
+if __name__ == "__main__":
+    print(
+        "\n=== Dagster Hugging Face "
+        "Golden Dataset Pipeline ===\n"
+    )
+
+    print(
+        "This example demonstrates:\n"
+        "- Hugging Face dataset ingestion\n"
+        "- Dagster asset orchestration\n"
+        "- dataset transformations\n"
+        "- parquet-backed persistence\n"
+        "- lineage-aware processing\n"
+        "- Hugging Face Hub publishing\n"
+    )
+
+    print(
+        "Make sure you are authenticated "
+        "with Hugging Face before running:\n"
+    )
+
+    print("    hf auth login\n")
+
+    result = materialize(
+        [
+            raw_glue_qqp,
+            deduplicated_glue_qqp,
+            filtered_glue_qqp,
+            golden_glue_qqp,
+            publish_golden_glue,
+        ],
+        resources={
+            "huggingface": HuggingFaceResource(
+                cache_dir=".hf_cache",
+                offline=False,
+            ),
+            "hf_parquet_io_manager": (
+                HFParquetIOManager(
+                    base_dir=".dagster_hf_storage",
+                )
+            ),
+        },
+    )
+
+    print("\n=== Pipeline Result ===\n")
+
+    if result.success:
+        print(
+            "Pipeline completed successfully."
+        )
+    else:
+        print(
+            "Pipeline execution failed."
+        )
+
+    print(
+        "\nYou can also visualize these "
+        "assets in the Dagster UI:\n"
+    )
+
+    print("    dagster dev\n")
