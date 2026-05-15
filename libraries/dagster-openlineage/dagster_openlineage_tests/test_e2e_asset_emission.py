@@ -1,10 +1,6 @@
 # Copyright 2018-2025 contributors to the OpenLineage project
 # SPDX-License-Identifier: Apache-2.0
 
-# pyright: reportAbstractUsage=false, reportOptionalSubscript=false
-# Auto-delegation (class-body setattr loop) satisfies EventLogStorage's
-# abstractmethods at runtime; pyright can't see that.
-
 """End-to-end tests for v0.2 asset-centric OpenLineage emission.
 
 Exercises the full stack — real OpenLineageAdapter, real facet builders,
@@ -52,6 +48,7 @@ from dagster._core.storage.event_log import InMemoryEventLogStorage
 from dagster.core.test_utils import instance_for_test
 from openlineage.client import OpenLineageClient
 from openlineage.client.event_v2 import DatasetEvent, RunEvent, RunState
+from openlineage.client.generated.schema_dataset import SchemaDatasetFacet
 from openlineage.client.uuid import generate_new_uuid
 
 from dagster_openlineage.adapter import OpenLineageAdapter
@@ -193,8 +190,14 @@ def test_materialization_schema_facet_on_output():
         )
     )
     event: RunEvent = transport.run_events_of_type(RunState.COMPLETE)[0]
-    assert "schema" in event.outputs[0].facets
-    field_names = [f.name for f in event.outputs[0].facets["schema"].fields]
+    output_facets = event.outputs[0].facets
+    assert output_facets is not None
+    assert "schema" in output_facets
+    schema_facet = output_facets["schema"]
+    assert (
+        isinstance(schema_facet, SchemaDatasetFacet) and schema_facet.fields is not None
+    )
+    field_names = [f.name for f in schema_facet.fields]
     assert field_names == ["id", "name"]
 
 
@@ -206,6 +209,7 @@ def test_materialization_nominal_time_from_partition():
         _materialization_entry(_rid(), AssetKey(["orders"]), partition="2026-04-23")
     )
     event: RunEvent = transport.run_events_of_type(RunState.COMPLETE)[0]
+    assert event.run.facets is not None
     assert "nominalTime" in event.run.facets
 
 
@@ -224,7 +228,9 @@ def test_materialization_column_lineage_facet():
         )
     )
     event: RunEvent = transport.run_events_of_type(RunState.COMPLETE)[0]
-    assert "columnLineage" in event.outputs[0].facets
+    output_facets = event.outputs[0].facets
+    assert output_facets is not None
+    assert "columnLineage" in output_facets
 
 
 def test_failure_synthesis_emits_fail_for_unmaterilaized_asset():
@@ -237,6 +243,7 @@ def test_failure_synthesis_emits_fail_for_unmaterilaized_asset():
     fails = transport.run_events_of_type(RunState.FAIL)
     assert len(fails) == 1
     assert fails[0].job.name == "orders"
+    assert fails[0].run.facets is not None
     assert "errorMessage" in fails[0].run.facets
 
 
@@ -287,7 +294,9 @@ def test_datasource_facet_from_path_metadata():
         )
     )
     event: RunEvent = transport.run_events_of_type(RunState.COMPLETE)[0]
-    assert "dataSource" in event.outputs[0].facets
+    output_facets = event.outputs[0].facets
+    assert output_facets is not None
+    assert "dataSource" in output_facets
 
 
 def test_multiple_runs_tracked_independently():
