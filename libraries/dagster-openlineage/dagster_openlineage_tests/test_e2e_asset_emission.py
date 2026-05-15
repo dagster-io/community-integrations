@@ -77,7 +77,9 @@ def _make_wrapper(
     )
 
 
-def _planned_entry(run_id: str, asset_key: AssetKey, job_name: str = "a_job") -> EventLogEntry:
+def _planned_entry(
+    run_id: str, asset_key: AssetKey, job_name: str = "a_job"
+) -> EventLogEntry:
     return EventLogEntry(
         error_info=None,
         level="debug",
@@ -182,7 +184,9 @@ def test_materialization_schema_facet_on_output():
     """TableSchema metadata produces a ``schema`` facet on the output dataset."""
     transport = FakeOpenLineageTransport()
     wrapper = _make_wrapper(transport)
-    schema = TableSchema(columns=[TableColumn("id", "int"), TableColumn("name", "string")])
+    schema = TableSchema(
+        columns=[TableColumn("id", "int"), TableColumn("name", "string")]
+    )
     wrapper.store_event(
         _materialization_entry(
             _rid(), AssetKey(["orders"]), metadata={"dagster/column_schema": schema}
@@ -325,10 +329,14 @@ def test_real_asset_materialize_emits_start_and_complete():
     assert result.success
 
     asset_starts = [
-        e for e in transport.run_events_of_type(RunState.START) if e.job.name == "_e2e_orders"
+        e
+        for e in transport.run_events_of_type(RunState.START)
+        if e.job.name == "_e2e_orders"
     ]
     asset_completes = [
-        e for e in transport.run_events_of_type(RunState.COMPLETE) if e.job.name == "_e2e_orders"
+        e
+        for e in transport.run_events_of_type(RunState.COMPLETE)
+        if e.job.name == "_e2e_orders"
     ]
     assert len(asset_starts) == 1
     assert len(asset_completes) == 1
