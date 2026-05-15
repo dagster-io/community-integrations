@@ -1,5 +1,6 @@
 import os
-from typing import Iterator, Optional
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 import boto3
 import moto
@@ -13,7 +14,6 @@ from dagster._core.pipes.utils import (
 )
 from dagster_aws.pipes import PipesS3ContextInjector, PipesS3MessageReader
 from moto.server import ThreadedMotoServer
-from typing_extensions import TYPE_CHECKING
 
 import dagster_pipes_tests.cases
 import dagster_pipes_tests.cases.context_injector
@@ -88,7 +88,7 @@ def context_injector(params) -> PipesContextInjector:
 @pytest_cases.parametrize_with_cases(
     "params", cases=dagster_pipes_tests.cases.message_reader
 )
-def message_reader(params) -> Optional[PipesMessageReader]:
+def message_reader(params) -> PipesMessageReader | None:
     if params["type"] == "default":
         return None
     elif params["type"] == "s3":

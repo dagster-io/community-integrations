@@ -1,7 +1,18 @@
-from dagster import __version__
-from packaging import version
-
-from dagster_iceberg._utils.io import table_writer as table_writer
+from dagster_iceberg._utils.io import (
+    DEFAULT_PARTITION_FIELD_NAME_PREFIX as DEFAULT_PARTITION_FIELD_NAME_PREFIX,
+)
+from dagster_iceberg._utils.io import (
+    DEFAULT_WRITE_MODE as DEFAULT_WRITE_MODE,
+)
+from dagster_iceberg._utils.io import (
+    UpsertOptions as UpsertOptions,
+)
+from dagster_iceberg._utils.io import (
+    WriteMode as WriteMode,
+)
+from dagster_iceberg._utils.io import (
+    table_writer as table_writer,
+)
 from dagster_iceberg._utils.partitions import (
     DagsterPartitionToDaftSqlPredicateMapper as DagsterPartitionToDaftSqlPredicateMapper,
 )
@@ -11,19 +22,4 @@ from dagster_iceberg._utils.partitions import (
 from dagster_iceberg._utils.partitions import (
     DagsterPartitionToPolarsSqlPredicateMapper as DagsterPartitionToPolarsSqlPredicateMapper,
 )
-
-
-def preview(wrapped=None):
-    if version.parse(__version__) >= version.parse("1.10.0"):
-        from dagster._annotations import (
-            preview as decorator,  # pyright: ignore[reportAttributeAccessIssue]
-        )
-    else:
-        from dagster._annotations import (
-            experimental as decorator,  # pyright: ignore[reportAttributeAccessIssue]
-        )
-
-    if wrapped is not None:
-        return decorator(wrapped)
-
-    return decorator
+from dagster_iceberg._utils.warnings import preview as preview

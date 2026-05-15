@@ -1,0 +1,12 @@
+{
+  "name": "test-project",
+  "version": "1.0.0",
+  "scripts": {
+    "sources": "evidence sources",
+    "build": "evidence build",
+    "dev": "evidence dev"
+  },
+  "dependencies": {
+    "@evidence-dev/evidence": "^0.1.0"
+  }
+}

@@ -2,7 +2,7 @@
 name = "dagster-anthropic"
 description = "Dagster integration with Anthropic"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "dagster>=1.8.0",
     "anthropic>=0.42.0",

@@ -1,9 +1,6 @@
 import json
 from typing import (
     Any,
-    Dict,
-    List,
-    Optional,
     cast,
 )
 
@@ -97,7 +94,7 @@ def _resolve_metadata_value(
         check.failed(f"Unexpected metadata type {metadata_type}")
 
 
-def assert_known_metadata(metadata: Dict[str, MetadataValue]):
+def assert_known_metadata(metadata: dict[str, MetadataValue]):
     assert metadata is not None
 
     for key in METADATA:
@@ -115,7 +112,7 @@ class PipesTestSuite:
     def test_components(
         self,
         request,
-        metadata: Dict[str, Any],
+        metadata: dict[str, Any],
         context_injector: PipesContextInjector,
         message_reader: PipesMessageReader,
         tmpdir_factory,
@@ -187,7 +184,7 @@ class PipesTestSuite:
         self,
         request,
         context_injector: PipesContextInjector,
-        metadata: Dict[str, Any],
+        metadata: dict[str, Any],
         tmpdir_factory,
         capsys,
     ):
@@ -283,7 +280,7 @@ class PipesTestSuite:
             raise_on_error=False,
         )
 
-        with open(str(messages_file), "r") as f:
+        with open(str(messages_file)) as f:
             for line in f.readlines():
                 message = json.loads(line)
                 method = message["method"]
@@ -435,8 +432,8 @@ class PipesTestSuite:
     def test_message_report_asset_materialization(
         self,
         request,
-        data_version: Optional[str],
-        asset_key: Optional[List[str]],
+        data_version: str | None,
+        asset_key: list[str] | None,
         tmpdir_factory,
         capsys,
     ):
@@ -526,7 +523,7 @@ class PipesTestSuite:
         self,
         request,
         passed: bool,
-        asset_key: Optional[List[str]],
+        asset_key: list[str] | None,
         severity: PipesAssetCheckSeverity,
         tmpdir_factory,
         capsys,

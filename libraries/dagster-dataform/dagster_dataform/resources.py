@@ -1,5 +1,5 @@
 import dagster as dg
-from typing import Optional, List, Dict, Any
+from typing import Any
 
 from dagster_dataform.utils import get_epoch_time_ago, empty_fn
 
@@ -16,7 +16,7 @@ class DataformRepositoryResource:
         location: str,
         environment: str,
         sensor_minimum_interval_seconds: int = 120,
-        client: Optional[dataform_v1.DataformClient] = None,
+        client: dataform_v1.DataformClient | None = None,
         asset_fresh_policy_lag_minutes: float = 1440,
     ):
         self.project_id = project_id
@@ -36,15 +36,15 @@ class DataformRepositoryResource:
     def create_compilation_result(
         self,
         git_commitish: str,
-        default_database: Optional[str] = None,
-        default_schema: Optional[str] = None,
-        default_location: Optional[str] = None,
-        assertion_schema: Optional[str] = None,
-        database_suffix: Optional[str] = None,
-        schema_suffix: Optional[str] = None,
-        table_prefix: Optional[str] = None,
-        builtin_assertion_name_prefix: Optional[str] = None,
-        vars: Optional[Dict[str, Any]] = None,
+        default_database: str | None = None,
+        default_schema: str | None = None,
+        default_location: str | None = None,
+        assertion_schema: str | None = None,
+        database_suffix: str | None = None,
+        schema_suffix: str | None = None,
+        table_prefix: str | None = None,
+        builtin_assertion_name_prefix: str | None = None,
+        vars: dict[str, Any] | None = None,
     ) -> dataform_v1.CompilationResult:
         """Create a compilation result and return the name."""
         compilation_result = dataform_v1.CompilationResult()
@@ -72,7 +72,7 @@ class DataformRepositoryResource:
 
         return response
 
-    def get_latest_compilation_result_name(self) -> Optional[str]:
+    def get_latest_compilation_result_name(self) -> str | None:
         """Get the latest compilation result for the repository.
         https://cloud.google.com/python/docs/reference/dataform/latest/google.cloud.dataform_v1.types.ListCompilationResultsRequest
         """
@@ -105,7 +105,7 @@ class DataformRepositoryResource:
         )
         return None
 
-    def query_compilation_result(self) -> List[Any]:
+    def query_compilation_result(self) -> list[Any]:
         """Query a compilation result by ID. Returns the compilation result actions."""
 
         compilation_result_name = self.get_latest_compilation_result_name()
@@ -175,15 +175,66 @@ class DataformRepositoryResource:
         return response  # pyright: ignore[reportReturnType]
 
     def create_workflow_invocation(
-        self, compilation_result_name: str
+        self,
+        compilation_result_name: str,
+        included_targets: list[str | dict] | None = None,
+        included_tags: list[str] | None = None,
+        transitive_dependencies_included: bool = True,
+        transitive_dependents_included: bool = False,
+        fully_refresh_incremental_tables_enabled: bool = False,
+        service_account: str | None = None,
     ) -> dataform_v1.WorkflowInvocation:
-        """Create a workflow invocation. Returns the workflow invocation object."""
+        """Create a workflow invocation. Returns the workflow invocation object.
+
+        Args:
+            compilation_result_name: The compilation result to use for the invocation.
+            included_targets: List of targets to include (selective execution).
+                Each target can be either:
+                - A string (just the name, database/schema will be empty)
+                - A dict with keys: database, schema, name
+            included_tags: List of tags to filter targets by.
+            transitive_dependencies_included: Include upstream dependencies of selected targets.
+            transitive_dependents_included: Include downstream dependents of selected targets.
+            fully_refresh_incremental_tables_enabled: Force full refresh of incremental tables.
+            service_account: Service account email to run the workflow as. If not set,
+                uses the repository's default service account (requires impersonation permission).
+        """
+        workflow_invocation = dataform_v1.WorkflowInvocation(
+            compilation_result=compilation_result_name,
+        )
+
+        # Build invocation config if any options are specified
+        if included_targets or included_tags or service_account:
+            invocation_config = dataform_v1.InvocationConfig(
+                transitive_dependencies_included=transitive_dependencies_included,
+                transitive_dependents_included=transitive_dependents_included,
+                fully_refresh_incremental_tables_enabled=fully_refresh_incremental_tables_enabled,
+            )
+            if included_targets:
+                targets = []
+                for target in included_targets:
+                    if isinstance(target, dict):
+                        # Only pass non-None values to avoid protobuf serialization issues
+                        target_kwargs = {}
+                        if target.get("database"):
+                            target_kwargs["database"] = target["database"]
+                        if target.get("schema"):
+                            target_kwargs["schema"] = target["schema"]
+                        if target.get("name"):
+                            target_kwargs["name"] = target["name"]
+                        targets.append(dataform_v1.Target(**target_kwargs))
+                    else:
+                        targets.append(dataform_v1.Target(name=target))
+                invocation_config.included_targets = targets
+            if included_tags:
+                invocation_config.included_tags = included_tags
+            if service_account:
+                invocation_config.service_account = service_account
+            workflow_invocation.invocation_config = invocation_config
 
         request = dataform_v1.CreateWorkflowInvocationRequest(
             parent=f"projects/{self.project_id}/locations/{self.location}/repositories/{self.repository_id}",
-            workflow_invocation=dataform_v1.WorkflowInvocation(
-                compilation_result=compilation_result_name,
-            ),
+            workflow_invocation=workflow_invocation,
         )
 
         response = self.client.create_workflow_invocation(request=request)
@@ -208,7 +259,7 @@ class DataformRepositoryResource:
     def load_dataform_assets(
         self,
         fresh_policy_lag_minutes: float = 1440,
-    ) -> List[dg.AssetSpec]:
+    ) -> list[dg.AssetSpec]:
         logger = dg.get_dagster_logger()
         logger.info("Starting to load Dataform assets")
 
@@ -254,7 +305,7 @@ class DataformRepositoryResource:
 
     def load_dataform_asset_check_specs(
         self,
-    ) -> List[dg.AssetChecksDefinition]:
+    ) -> list[dg.AssetChecksDefinition]:
         logger = dg.get_dagster_logger()
         logger.info("Starting to load Dataform asset check specs")
 

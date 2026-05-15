@@ -2,7 +2,7 @@
 name = "dagster-apprise"
 description = "Get notified when your Dagster runs succeed, fail, or change status across 70+ services including Slack, Discord, Pushover, Telegram, and more."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "dagster>=1.8.0",
     "apprise>=1.6.0",

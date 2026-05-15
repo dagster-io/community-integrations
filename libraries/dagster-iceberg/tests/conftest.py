@@ -1,14 +1,22 @@
 import datetime as dt
+import logging
+import os
 import random
 import shutil
 import subprocess
 from collections.abc import Iterator
+from time import sleep
 
 import psycopg2
 import pyarrow as pa
 import pytest
 from dagster._utils import file_relative_path
+from dotenv import load_dotenv
 from pyiceberg.catalog import Catalog, load_catalog
+
+load_dotenv()
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 COMPOSE_DIR = file_relative_path(__file__, "docker")
 
@@ -22,27 +30,36 @@ WAREHOUSE_DIR = "warehouse"
 
 
 @pytest.fixture(scope="session", autouse=True)
-def compose(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+def _compose(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
     # Determine the warehouse path temporary directory pytest will make:
     # https://github.com/pytest-dev/pytest/blob/b48e23d/src/_pytest/tmpdir.py#L67
     warehouse_path = str(
         tmp_path_factory.getbasetemp().joinpath(WAREHOUSE_DIR).resolve()
     )
 
-    subprocess.run(
-        ["docker", "compose", "up", "--build", "--wait"],
-        cwd=COMPOSE_DIR,
-        check=True,
-        env={"WAREHOUSE_PATH": warehouse_path},
-    )
-    subprocess.run(["sleep", "10"])
+    try:
+        subprocess.run(
+            ["docker", "compose", "up", "--build", "--wait", "--no-recreate"],
+            cwd=COMPOSE_DIR,
+            check=True,
+            capture_output=True,
+            text=True,
+            env={"WAREHOUSE_PATH": warehouse_path, **os.environ},
+        )
+    except subprocess.CalledProcessError as e:
+        logger.error("Docker compose up failed with return code %s", e.returncode)
+        logger.error("STDOUT:\n%s", e.stdout)
+        logger.error("STDERR:\n%s", e.stderr)
+        raise
+    sleep(5)
     yield
-    subprocess.run(
-        ["docker", "compose", "down", "--remove-orphans", "--volumes"],
-        cwd=COMPOSE_DIR,
-        check=True,
-        env={"WAREHOUSE_PATH": warehouse_path},
-    )
+    if os.getenv("TEST_NO_TEARDOWN") is None:
+        subprocess.run(
+            ["docker", "compose", "down", "--remove-orphans", "--volumes"],
+            cwd=COMPOSE_DIR,
+            check=True,
+            env={"WAREHOUSE_PATH": warehouse_path, **os.environ},
+        )
 
 
 @pytest.fixture(scope="session")
@@ -66,7 +83,7 @@ def postgres_uri() -> str:
 # NB: we truncate all iceberg tables before each test
 #  that way, we don't have to worry about side effects
 @pytest.fixture(autouse=True)
-def clean_iceberg_tables(postgres_connection: psycopg2.extensions.connection):
+def _clean_iceberg_tables(postgres_connection: psycopg2.extensions.connection):
     with postgres_connection.cursor() as cur:
         cur.execute(
             "SELECT tablename FROM pg_catalog.pg_tables WHERE tablename LIKE 'iceberg%';",

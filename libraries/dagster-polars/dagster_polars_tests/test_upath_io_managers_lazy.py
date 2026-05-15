@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from typing import Optional
 
 import polars as pl
 import polars.testing as pl_testing
@@ -79,9 +78,10 @@ def test_polars_upath_io_manager_type_annotations(
     ) -> None:
         for _df in upstream_partitioned.values():
             assert isinstance(_df, pl.LazyFrame), type(_df)
-        assert set(upstream_partitioned.keys()) == {"a", "b"}, (
-            upstream_partitioned.keys()
-        )
+        assert set(upstream_partitioned.keys()) == {
+            "a",
+            "b",
+        }, upstream_partitioned.keys()
 
     for partition_key in ["a", "b"]:
         materialize(
@@ -136,7 +136,7 @@ def test_polars_upath_io_manager_input_optional_lazy(
         return df
 
     @asset(io_manager_def=manager)
-    def downstream(upstream: Optional[pl.LazyFrame]) -> pl.DataFrame:
+    def downstream(upstream: pl.LazyFrame | None) -> pl.DataFrame:
         assert upstream is not None
         return upstream.collect()
 
@@ -155,7 +155,7 @@ def test_polars_upath_io_manager_input_optional_lazy_e2e(
         return df
 
     @asset(io_manager_def=manager)
-    def downstream(upstream: Optional[pl.LazyFrame]) -> pl.LazyFrame:
+    def downstream(upstream: pl.LazyFrame | None) -> pl.LazyFrame:
         assert upstream is not None
         return upstream
 
@@ -234,7 +234,7 @@ def test_polars_upath_io_manager_input_optional_lazy_return_none(
         return df
 
     @asset
-    def downstream(upstream: Optional[pl.LazyFrame]):
+    def downstream(upstream: pl.LazyFrame | None):
         assert upstream is None
 
     materialize(
@@ -248,11 +248,11 @@ def test_polars_upath_io_manager_output_optional_lazy(
     manager, df = io_manager_and_lazy_df
 
     @asset(io_manager_def=manager)
-    def upstream() -> Optional[pl.LazyFrame]:
+    def upstream() -> pl.LazyFrame | None:
         return None
 
     @asset(io_manager_def=manager)
-    def downstream(upstream: Optional[pl.LazyFrame]) -> Optional[pl.LazyFrame]:
+    def downstream(upstream: pl.LazyFrame | None) -> pl.LazyFrame | None:
         assert upstream is None
         return upstream
 
@@ -340,7 +340,7 @@ def test_polars_upath_io_manager_input_dict_optional_lazy(
         io_manager_def=manager,
         partitions_def=StaticPartitionsDefinition(partition_keys),
     )
-    def upstream(context: AssetExecutionContext) -> Optional[pl.DataFrame]:
+    def upstream(context: AssetExecutionContext) -> pl.DataFrame | None:
         return (
             None
             if context.partition_key == "missing"

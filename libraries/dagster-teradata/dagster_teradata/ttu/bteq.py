@@ -3,7 +3,7 @@ import socket
 import subprocess
 import tempfile
 from contextlib import contextmanager
-from typing import Optional, List, Union, Literal, cast
+from typing import Literal, cast
 
 import paramiko
 from dagster import DagsterError
@@ -84,20 +84,20 @@ class Bteq:
 
     def bteq_operator(
         self,
-        sql: Optional[str] = None,
-        file_path: Optional[str] = None,
-        remote_host: Optional[str] = None,
-        remote_user: Optional[str] = None,
-        remote_password: Optional[str] = None,
-        ssh_key_path: Optional[str] = None,
+        sql: str | None = None,
+        file_path: str | None = None,
+        remote_host: str | None = None,
+        remote_user: str | None = None,
+        remote_password: str | None = None,
+        ssh_key_path: str | None = None,
         remote_port: int = 22,
         remote_working_dir: str = "/tmp",
-        bteq_script_encoding: Optional[str] = "utf-8",
-        bteq_session_encoding: Optional[str] = "ASCII",
-        bteq_quit_rc: Union[int, List[int]] = 0,
+        bteq_script_encoding: str | None = "utf-8",
+        bteq_session_encoding: str | None = "ASCII",
+        bteq_quit_rc: int | list[int] = 0,
         timeout: int | Literal[600] = 600,
         timeout_rc: int | None = None,
-        temp_file_read_encoding: Optional[str] = "UTF-8",
+        temp_file_read_encoding: str | None = "UTF-8",
     ) -> int | None:
         """
         Execute BTEQ commands either locally or remotely.
@@ -234,7 +234,7 @@ class Bteq:
         bteq_script: str,
         remote_working_dir: str | None,
         bteq_script_encoding: str | None,
-        timeout: Optional[int],  # or: timeout: int | None
+        timeout: int | None,  # or: timeout: int | None
         timeout_rc: int | None,
         bteq_session_encoding: str | None,
         bteq_quit_rc: int | list[int] | tuple[int, ...] | None,
@@ -301,7 +301,7 @@ class Bteq:
         bteq_script: str,
         remote_working_dir: str | None,
         bteq_script_encoding: str | None,
-        timeout: Optional[int],  # or: timeout: int | None
+        timeout: int | None,  # or: timeout: int | None
         timeout_rc: int | None,
         bteq_session_encoding: str | None,
         bteq_quit_rc: int | list[int] | tuple[int, ...] | None,
@@ -363,7 +363,7 @@ class Bteq:
         file_path: str,
         remote_working_dir: str | None,
         bteq_script_encoding: str | None,
-        timeout: Optional[int],  # or: timeout: int | None
+        timeout: int | None,  # or: timeout: int | None
         timeout_rc: int | None,
         bteq_quit_rc: int | list[int] | tuple[int, ...] | None,
         bteq_session_encoding: str | None,
@@ -505,7 +505,7 @@ class Bteq:
         self,
         bteq_script: str,
         bteq_script_encoding: str | None,
-        timeout: Optional[int],  # or: timeout: int | None
+        timeout: int | None,  # or: timeout: int | None
         timeout_rc: int | None,
         bteq_quit_rc: int | list[int] | tuple[int, ...] | None,
         bteq_session_encoding: str | None,
@@ -721,9 +721,9 @@ class Bteq:
     def _setup_ssh_connection(
         self,
         host: str,
-        user: Optional[str],
-        password: Optional[str],
-        key_path: Optional[str],
+        user: str | None,
+        password: str | None,
+        key_path: str | None,
         port: int,
     ) -> bool:
         """

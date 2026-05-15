@@ -1,5 +1,3 @@
-from typing import Optional
-
 import dagster as dg
 import patito as pt  # noqa: TID253
 import polars as pl
@@ -11,7 +9,7 @@ from dagster_polars.patito import get_patito_metadata, patito_model_to_dagster_t
 
 class TestingRecord(pt.Model):
     foo: str = pt.Field(unique=True, description="A `foo` column")
-    bar: Optional[int]
+    bar: int | None
 
 
 good_df = pl.DataFrame(
@@ -288,7 +286,7 @@ def test_io_manager_with_optional_type(
     @dg.asset(
         io_manager_def=manager,
     )
-    def good(config: MaybeReturnConfig) -> Optional[TestingRecord.DataFrame]:
+    def good(config: MaybeReturnConfig) -> TestingRecord.DataFrame | None:
         if config.return_value:
             return TestingRecord.DataFrame(good_df)
         else:
@@ -297,7 +295,7 @@ def test_io_manager_with_optional_type(
     @dg.asset(
         io_manager_def=manager,
     )
-    def bad(config: MaybeReturnConfig) -> Optional[TestingRecord.DataFrame]:
+    def bad(config: MaybeReturnConfig) -> TestingRecord.DataFrame | None:
         if config.return_value:
             return TestingRecord.DataFrame(bad_df)
         else:

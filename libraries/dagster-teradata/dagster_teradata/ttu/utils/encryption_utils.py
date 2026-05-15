@@ -6,7 +6,6 @@ import secrets
 import string
 import subprocess
 from datetime import datetime
-from typing import Optional
 
 from cryptography.fernet import Fernet
 from dagster import DagsterError
@@ -22,7 +21,7 @@ class SecureCredentialManager:
         key_file (str): Path to the file where the encryption key is stored.
     """
 
-    def __init__(self, key_file: Optional[str] = None):
+    def __init__(self, key_file: str | None = None):
         """
         Initialize the credential manager with an optional custom key file path.
 
@@ -299,7 +298,7 @@ def store_credentials(self, host: str, user: str, password: str) -> bool:
     creds = {}
     if os.path.exists(cred_file):
         try:
-            with open(cred_file, "r") as f:
+            with open(cred_file) as f:
                 creds = json.load(f)
         except Exception as e:
             self.log.error(f"Failed to read credentials: {e}")
@@ -323,7 +322,7 @@ def store_credentials(self, host: str, user: str, password: str) -> bool:
         return False
 
 
-def get_stored_credentials(self, host: str, user: str) -> Optional[dict]:
+def get_stored_credentials(self, host: str, user: str) -> dict | None:
     """
     Retrieve stored SSH credentials if they exist.
 
@@ -349,7 +348,7 @@ def get_stored_credentials(self, host: str, user: str) -> Optional[dict]:
 
     try:
         if os.path.exists(cred_file):
-            with open(cred_file, "r") as f:
+            with open(cred_file) as f:
                 return json.load(f).get(cred_key)
     except Exception as e:
         self.log.warning(f"Failed to read credentials: {e}")

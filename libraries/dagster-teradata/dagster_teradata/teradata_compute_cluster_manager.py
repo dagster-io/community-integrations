@@ -3,7 +3,6 @@ import re
 import time
 from enum import Enum
 from textwrap import dedent
-from typing import Optional
 
 import teradatasql
 from dagster import DagsterError
@@ -109,8 +108,8 @@ class TeradataComputeClusterManager:
         compute_profile_name: str,
         compute_group_name: str,
         query_strategy: str = "STANDARD",
-        compute_map: Optional[str] = None,
-        compute_attribute: Optional[str] = None,
+        compute_map: str | None = None,
+        compute_attribute: str | None = None,
         timeout: int = constants.CC_OPR_TIME_OUT,
     ):
         self.verify_compute_cluster(compute_profile_name)
@@ -300,8 +299,8 @@ class TeradataComputeClusterSync:
         connection,
         log,
         operation: str,
-        compute_profile_name: Optional[str] = None,
-        compute_group_name: Optional[str] = None,
+        compute_profile_name: str | None = None,
+        compute_group_name: str | None = None,
         poll_interval: float | None = None,
         timeout: int = constants.CC_OPR_TIME_OUT,
     ):

@@ -1,7 +1,7 @@
 import os
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import obstore as obs
 from dagster import _check as check
@@ -32,16 +32,16 @@ class BaseCloudStorageComputeLogManager(
 ):
     def __init__(
         self,
-        inst_data: Optional[ConfigurableClassData] = None,
+        inst_data: ConfigurableClassData | None = None,
     ):
         self._prefix: str
         self._local_manager: LocalComputeLogManager
         self._subscription_manager: PollingComputeLogSubscriptionManager
-        self._inst_data: Optional[ConfigurableClassData]
+        self._inst_data: ConfigurableClassData | None
         self._skip_empty_files: bool
-        self._upload_interval: Optional[int]
-        self._show_url_only: Optional[bool]
-        self._store: Union[S3Store, AzureStore, GCSStore]
+        self._upload_interval: int | None
+        self._show_url_only: bool | None
+        self._store: S3Store | AzureStore | GCSStore
 
     @property
     def inst_data(self):
@@ -58,7 +58,7 @@ class BaseCloudStorageComputeLogManager(
         return self._local_manager
 
     @property
-    def upload_interval(self) -> Optional[int]:
+    def upload_interval(self) -> int | None:
         return self._upload_interval if self._upload_interval else None
 
     def _clean_prefix(self, prefix):
@@ -80,8 +80,8 @@ class BaseCloudStorageComputeLogManager(
 
     def delete_logs(
         self,
-        log_key: Optional[Sequence[str]] = None,
-        prefix: Optional[Sequence[str]] = None,
+        log_key: Sequence[str] | None = None,
+        prefix: Sequence[str] | None = None,
     ):
         self.local_manager.delete_logs(log_key=log_key, prefix=prefix)
 
@@ -115,7 +115,7 @@ class BaseCloudStorageComputeLogManager(
 
     def download_url_for_type(  # type: ignore
         self, log_key: Sequence[str], io_type: ComputeIOType
-    ) -> Optional[str]:
+    ) -> str | None:
         if not self.is_capture_complete(log_key):
             return None
         from datetime import timedelta

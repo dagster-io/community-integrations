@@ -1,0 +1,33 @@
+[project]
+name = "dagster-async-executor"
+description = "Async Support for Dagster"
+readme = "README.md"
+requires-python = ">= 3.10"
+dependencies = [
+    "anyio>=4.12.0",
+    "dagster>=1.12.2",
+]
+dynamic = ["version"]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest",
+    "pyright>=1.1.386",
+    "pytest",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["dagster_async_executor*"]
+exclude = ["dagster_async_executor_tests*"]
+namespaces = false
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_async_executor.__version__"}
+
+[tool.ruff]
+target-version = "py310"

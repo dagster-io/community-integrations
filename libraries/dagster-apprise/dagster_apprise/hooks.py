@@ -2,7 +2,6 @@
 
 import logging
 from collections.abc import Iterable
-from typing import Optional
 
 import dagster as dg
 
@@ -67,10 +66,10 @@ def apprise_success_hook(context: dg.HookContext) -> None:
 
 def apprise_on_failure(
     *,
-    urls: Optional[Iterable[str]] = None,
-    config_file: Optional[str] = None,
-    base_url: Optional[str] = None,
-    webserver_base_url: Optional[str] = None,
+    urls: Iterable[str] | None = None,
+    config_file: str | None = None,
+    base_url: str | None = None,
+    webserver_base_url: str | None = None,
     title_prefix: str = "Dagster",
 ) -> dg.HookDefinition:
     """Decorator-style failure hook with inline Apprise configuration.
@@ -114,10 +113,10 @@ def apprise_on_failure(
 
 def apprise_on_success(
     *,
-    urls: Optional[Iterable[str]] = None,
-    config_file: Optional[str] = None,
-    base_url: Optional[str] = None,
-    webserver_base_url: Optional[str] = None,
+    urls: Iterable[str] | None = None,
+    config_file: str | None = None,
+    base_url: str | None = None,
+    webserver_base_url: str | None = None,
     title_prefix: str = "Dagster",
 ) -> dg.HookDefinition:
     """Decorator-style success hook with inline Apprise configuration.
@@ -170,15 +169,15 @@ def create_apprise_hooks() -> dict[str, dg.HookDefinition]:
 
 def make_apprise_on_run_failure_sensor(
     *,
-    urls: Optional[Iterable[str]] = None,
-    config_file: Optional[str] = None,
-    monitored_jobs: Optional[Iterable[str]] = None,
-    exclude_jobs: Optional[Iterable[str]] = None,
-    base_url: Optional[str] = None,
-    webserver_base_url: Optional[str] = None,
+    urls: Iterable[str] | None = None,
+    config_file: str | None = None,
+    monitored_jobs: Iterable[str] | None = None,
+    exclude_jobs: Iterable[str] | None = None,
+    base_url: str | None = None,
+    webserver_base_url: str | None = None,
     title_prefix: str = "Dagster",
     name: str = "apprise_on_run_failure",
-    description: Optional[str] = None,
+    description: str | None = None,
 ) -> dg.SensorDefinition:
     """Create a run-failure sensor that sends Apprise notifications.
 

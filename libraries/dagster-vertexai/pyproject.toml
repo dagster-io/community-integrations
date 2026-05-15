@@ -2,7 +2,7 @@
 name = "dagster-vertexai"
 description = "Dagster integration for Google Cloud Vertex AI"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "dagster>=1.11.9",
     "google-cloud-aiplatform>=1.55.0",

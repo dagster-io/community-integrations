@@ -1,5 +1,6 @@
 from contextlib import contextmanager
-from typing import Any, Dict, Optional, Generator, Union
+from typing import Any
+from collections.abc import Generator
 from pydantic import Field
 
 import weaviate
@@ -7,7 +8,7 @@ import weaviate
 from dagster import ConfigurableResource
 from dagster._utils.backoff import backoff
 
-from .config import LocalConfig, CloudConfig
+from dagster_weaviate.config import LocalConfig, CloudConfig, BaseWeaviateConfig
 
 
 class WeaviateResource(ConfigurableResource):
@@ -64,15 +65,14 @@ class WeaviateResource(ConfigurableResource):
             )
     """
 
-    connection_config: Union[LocalConfig, CloudConfig] = Field(
-        discriminator="provider",
+    connection_config: BaseWeaviateConfig = Field(
         description=(
             "Specifies whether to connect to a local (self-hosted) instance,"
             " or a Weaviate cloud instance. Use LocalConfig or CloudConfig, respectively"
         ),
     )
 
-    headers: Optional[Dict[str, str]] = Field(
+    headers: dict[str, str] | None = Field(
         description=(
             "Additional headers to include in the requests,"
             " e.g. API keys for Cloud vectorization"
@@ -87,7 +87,7 @@ class WeaviateResource(ConfigurableResource):
         default=False,
     )
 
-    auth_credentials: Dict[str, Any] = Field(
+    auth_credentials: dict[str, Any] = Field(
         description=(
             "A dictionary containing the credentials to use for authentication with your"
             " Weaviate instance. You may provide any of the following options:"
@@ -97,7 +97,7 @@ class WeaviateResource(ConfigurableResource):
         default={},
     )
 
-    def _weaviate_auth_credentials(self) -> Optional[weaviate.auth.AuthCredentials]:
+    def _weaviate_auth_credentials(self) -> weaviate.auth.AuthCredentials | None:
         """Converts the auth_credentials config dict from the user, to the Weaviate AuthCredentials
         class that can be passed to the WeaviateClient constructor."""
 
@@ -125,7 +125,7 @@ class WeaviateResource(ConfigurableResource):
 
     @contextmanager
     def get_client(self) -> Generator[weaviate.WeaviateClient, None, None]:
-        if self.connection_config.provider == "local":  # LocalConfig
+        if isinstance(self.connection_config, LocalConfig):  # LocalConfig
             conn = backoff(
                 fn=weaviate.connect_to_local,
                 retry_on=(weaviate.exceptions.WeaviateConnectionError,),
@@ -139,7 +139,7 @@ class WeaviateResource(ConfigurableResource):
                 },
                 max_retries=10,
             )
-        elif self.connection_config.provider == "cloud":  # CloudConfig
+        elif isinstance(self.connection_config, CloudConfig):  # CloudConfig
             conn = backoff(
                 fn=weaviate.connect_to_weaviate_cloud,
                 retry_on=(weaviate.exceptions.WeaviateConnectionError,),

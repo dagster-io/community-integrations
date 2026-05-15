@@ -1,0 +1,30 @@
+[project]
+name = "dagster-salesforce"
+description = "Dagster integration library for Salesforce"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dagster>=1.11.0",
+    "simple-salesforce>=1.12.9",
+]
+dynamic = ["version"]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest",
+    "pyright>=1.1.386",
+    "pytest-mock>=3.15.1",
+    "pytest-cov>=7.0.0",
+    "freezegun>=1.5.5",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_salesforce"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_salesforce.__version__"}

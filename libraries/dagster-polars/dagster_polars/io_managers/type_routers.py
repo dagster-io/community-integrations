@@ -1,13 +1,12 @@
 import importlib
 import importlib.util
-import sys
 from abc import abstractmethod
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
+    TypeAlias,
     TypeVar,
     Union,
     cast,
@@ -15,16 +14,9 @@ from typing import (
     get_origin,
 )
 
-from dagster._core.types.dagster_type import TypeHintInferredDagsterType
-
-if sys.version_info < (3, 10):
-    from typing_extensions import TypeAlias
-else:
-    from typing import TypeAlias
-
 import polars as pl
 from dagster import InputContext, OutputContext
-from dagster._core.types.dagster_type import DagsterType
+from dagster._core.types.dagster_type import DagsterType, TypeHintInferredDagsterType
 
 from dagster_polars.patito import HANDLES_DATA_VALIDATION_ATTRIBUTE
 
@@ -48,7 +40,7 @@ class BaseTypeRouter(Generic[T]):
     """
 
     def __init__(
-        self, context: Union[InputContext, OutputContext], dagster_type: DagsterType
+        self, context: InputContext | OutputContext, dagster_type: DagsterType
     ):
         self.context = context
         self.dagster_type = dagster_type
@@ -56,7 +48,7 @@ class BaseTypeRouter(Generic[T]):
 
     @staticmethod
     @abstractmethod
-    def match(context: Union[InputContext, OutputContext], typing_type: Any) -> bool:
+    def match(context: InputContext | OutputContext, typing_type: Any) -> bool:
         raise NotImplementedError
 
     @property
@@ -92,7 +84,7 @@ class TypeRouter(BaseTypeRouter, Generic[T]):
     """Handles default types."""
 
     @staticmethod
-    def match(context: Union[InputContext, OutputContext], typing_type: Any) -> bool:
+    def match(context: InputContext | OutputContext, typing_type: Any) -> bool:
         return typing_type in [
             Any,
             type(None),
@@ -108,7 +100,7 @@ class OptionalTypeRouter(BaseTypeRouter, Generic[T]):
     """Handles Optional type annotations with a noop if the object is None or missing in storage."""
 
     @staticmethod
-    def match(context: Union[InputContext, OutputContext], typing_type: Any) -> bool:
+    def match(context: InputContext | OutputContext, typing_type: Any) -> bool:
         return get_origin(typing_type) == Union and type(None) in get_args(typing_type)
 
     @property
@@ -142,7 +134,7 @@ class DictTypeRouter(BaseTypeRouter, Generic[T]):
     """Handles loading partitions as dictionaries of DataFrames."""
 
     @staticmethod
-    def match(context: Union[InputContext, OutputContext], typing_type: Any) -> bool:
+    def match(context: InputContext | OutputContext, typing_type: Any) -> bool:
         return get_origin(typing_type) in (dict, dict, Mapping)
 
     @property
@@ -158,7 +150,7 @@ class PolarsTypeRouter(BaseTypeRouter, Generic[T]):
     """Handles Polars DataFrames."""
 
     @staticmethod
-    def match(context: Union[InputContext, OutputContext], typing_type: Any) -> bool:
+    def match(context: InputContext | OutputContext, typing_type: Any) -> bool:
         return typing_type in [
             pl.DataFrame,
             pl.LazyFrame,
@@ -173,7 +165,7 @@ class PatitoTypeRouter(BaseTypeRouter, Generic[T]):
     """Handles Patito DataFrames. Performs validation on load and dump."""
 
     @staticmethod
-    def match(context: Union[InputContext, OutputContext], typing_type: Any) -> bool:
+    def match(context: InputContext | OutputContext, typing_type: Any) -> bool:
         import patito as pt
 
         return isinstance(typing_type, type) and (
@@ -247,7 +239,7 @@ TYPE_ROUTERS.append(PolarsTypeRouter)
 
 
 def resolve_type_router(
-    context: Union[InputContext, OutputContext], dagster_type_to_resolve: DagsterType
+    context: InputContext | OutputContext, dagster_type_to_resolve: DagsterType
 ) -> TypeRouter:
     """Finds the first matching TypeRouter for the given type."""
     # try each router class in order of increasing complexity

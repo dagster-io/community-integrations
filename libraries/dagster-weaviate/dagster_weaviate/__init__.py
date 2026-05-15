@@ -9,7 +9,7 @@ from dagster_weaviate.config import (
     CloudConfig as CloudConfig,
 )
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 DagsterLibraryRegistry.register(
     "dagster-weaviate", __version__, is_dagster_package=False

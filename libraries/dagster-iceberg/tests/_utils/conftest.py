@@ -10,6 +10,8 @@ from pyiceberg import transforms
 from pyiceberg import types as T
 from pyiceberg.catalog import Catalog
 
+from dagster_iceberg._utils.partitions import partition_field_name_for
+
 
 @pytest.fixture
 def time_window() -> TimeWindow:
@@ -119,7 +121,7 @@ def table_partitioned_update_identifier(
 
 
 @pytest.fixture(autouse=True)
-def create_table_in_catalog(
+def _create_table_in_catalog(
     catalog: Catalog,
     table_identifier: str,
     data_schema: pa.Schema,
@@ -128,7 +130,7 @@ def create_table_in_catalog(
 
 
 @pytest.fixture(autouse=True)
-def create_partitioned_table_in_catalog(
+def _create_partitioned_table_in_catalog(
     catalog: Catalog,
     table_partitioned_identifier: str,
     data_schema: pa.Schema,
@@ -138,20 +140,24 @@ def create_partitioned_table_in_catalog(
         schema=data_schema,
     )
     with partitioned_table.update_spec() as update:
+        hour_transform = transforms.HourTransform()
+        identity_transform = transforms.IdentityTransform()
         update.add_field(
             source_column_name="timestamp",
-            transform=transforms.HourTransform(),
-            partition_field_name="timestamp",
+            transform=hour_transform,
+            partition_field_name=partition_field_name_for("timestamp", hour_transform),
         )
         update.add_field(
             source_column_name="category",
-            transform=transforms.IdentityTransform(),
-            partition_field_name="category",
+            transform=identity_transform,
+            partition_field_name=partition_field_name_for(
+                "category", identity_transform
+            ),
         )
 
 
 @pytest.fixture(autouse=True)
-def create_partitioned_update_table_in_catalog(
+def _create_partitioned_update_table_in_catalog(
     catalog: Catalog,
     table_partitioned_update_identifier: str,
     data_schema: pa.Schema,
@@ -161,21 +167,25 @@ def create_partitioned_update_table_in_catalog(
         schema=data_schema,
     )
     with partitioned_update_table.update_spec() as update:
+        hour_transform = transforms.HourTransform()
+        identity_transform = transforms.IdentityTransform()
         update.add_field(
             source_column_name="timestamp",
-            transform=transforms.HourTransform(),
-            partition_field_name="timestamp",
+            transform=hour_transform,
+            partition_field_name=partition_field_name_for("timestamp", hour_transform),
         )
         update.add_field(
             source_column_name="category",
-            transform=transforms.IdentityTransform(),
-            partition_field_name="category",
+            transform=identity_transform,
+            partition_field_name=partition_field_name_for(
+                "category", identity_transform
+            ),
         )
 
 
 @pytest.fixture(autouse=True)
-def append_data_to_table(
-    create_table_in_catalog,
+def _append_data_to_table(
+    _create_table_in_catalog,
     catalog: Catalog,
     table_identifier: str,
     data: pa.Table,
@@ -184,8 +194,8 @@ def append_data_to_table(
 
 
 @pytest.fixture(autouse=True)
-def append_data_to_partitioned_table(
-    create_partitioned_table_in_catalog,
+def _append_data_to_partitioned_table(
+    _create_partitioned_table_in_catalog,
     catalog: Catalog,
     table_partitioned_identifier: str,
     data: pa.Table,
@@ -194,8 +204,8 @@ def append_data_to_partitioned_table(
 
 
 @pytest.fixture
-def append_data_to_partitioned_update_table(
-    create_partitioned_update_table_in_catalog,
+def _append_data_to_partitioned_update_table(
+    _create_partitioned_update_table_in_catalog,
     catalog: Catalog,
     table_partitioned_update_identifier: str,
     data: pa.Table,

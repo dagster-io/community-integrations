@@ -56,7 +56,7 @@ uv run pytest -v
 
 ## Code Quality Standards
 
-- **Python Version**: Default to Python 3.11
+- **Python Version**: Default to Python 3.10
 - **Package Management**: Use `uv` exclusively (never pip, poetry, or conda)
 - **Formatting**: Enforced with Ruff (`ruff format`)
 - **Linting**: Enforced with Ruff (`ruff check --fix`)

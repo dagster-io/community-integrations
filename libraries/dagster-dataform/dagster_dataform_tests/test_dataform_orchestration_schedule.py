@@ -77,3 +77,39 @@ def test_dataform_orchestration_schedule_tick_creates_run_request(mock_dataform_
     assert result is not None
     assert result.run_requests is not None
     assert len(result.run_requests) == 1
+
+
+@pytest.mark.parametrize(
+    "mock_dataform_client",
+    [
+        {
+            "git_commitish": "test-commitish",
+            "default_database": "test-database",
+            "default_schema": "test-schema",
+            "default_location": "us-central1",
+            "assertion_schema": "test-assertion-schema",
+        }
+    ],
+    indirect=True,
+)
+def test_dataform_orchestration_schedule_with_parameters(mock_dataform_client):
+    resource = DataformRepositoryResource(
+        project_id="test-project",
+        repository_id="test-repo",
+        location="us-central1",
+        environment="dev",
+        client=mock_dataform_client,
+    )
+
+    schedule = create_dataform_orchestration_schedule(
+        resource=resource,
+        cron_schedule="0 0 * * *",
+        git_commitish="dev",
+        included_targets=["target1"],
+        included_tags=["tag1"],
+    )
+
+    assert schedule is not None
+    assert isinstance(schedule, dg.ScheduleDefinition)
+    # Testing internal op config is complex without running it, but ensuring
+    # the schedule validates and creates successfully confirms the interface works.

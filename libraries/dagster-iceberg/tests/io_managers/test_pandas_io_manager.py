@@ -175,7 +175,7 @@ def test_iceberg_io_manager_with_daily_partitioned_assets(
 
     table = catalog.load_table(asset_daily_partitioned_table_identifier)
     assert len(table.spec().fields) == 1
-    assert table.spec().fields[0].name == "partition"
+    assert table.spec().fields[0].name == "part_partition"
 
     out_df = table.scan().to_arrow()
     assert out_df["partition"].to_pylist() == [
@@ -205,7 +205,7 @@ def test_iceberg_io_manager_with_hourly_partitioned_assets(
 
     table = catalog.load_table(asset_hourly_partitioned_table_identifier)
     assert len(table.spec().fields) == 1
-    assert table.spec().fields[0].name == "partition"
+    assert table.spec().fields[0].name == "part_partition"
 
     out_df = table.scan().to_arrow()
     assert out_df["partition"].to_pylist() == [
@@ -242,7 +242,10 @@ def test_iceberg_io_manager_with_multipartitioned_assets(
 
     table = catalog.load_table(asset_multi_partitioned_table_identifier)
     assert len(table.spec().fields) == 2
-    assert [f.name for f in table.spec().fields] == ["category_this", "date_this"]
+    assert [f.name for f in table.spec().fields] == [
+        "part_category_this",
+        "part_date_this",
+    ]
 
     out_df = table.scan().to_arrow()
     assert out_df["date_this"].to_pylist() == [

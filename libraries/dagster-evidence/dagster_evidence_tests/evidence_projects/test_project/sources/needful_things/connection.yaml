@@ -1,0 +1,4 @@
+name: needful_things
+type: duckdb
+options:
+  filename: data.duckdb

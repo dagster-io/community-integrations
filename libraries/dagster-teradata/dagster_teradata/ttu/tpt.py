@@ -6,7 +6,7 @@ on Teradata databases. It supports both local and remote execution via SSH.
 """
 
 import subprocess
-from typing import Optional, cast
+from typing import cast
 
 import paramiko
 from dagster import DagsterError
@@ -70,9 +70,9 @@ class DdlOperator:
     def _setup_ssh_connection(
         self,
         host: str,
-        user: Optional[str],
-        password: Optional[str],
-        key_path: Optional[str],
+        user: str | None,
+        password: str | None,
+        key_path: str | None,
         port: int,
     ) -> bool:
         """
@@ -131,13 +131,13 @@ class DdlOperator:
     def ddl_operator(
         self,
         ddl: list[str] = None,
-        error_list: Optional[str] = None,
+        error_list: str | None = None,
         remote_working_dir: str = "/tmp",
-        ddl_job_name: Optional[str] = None,
-        remote_host: Optional[str] = None,
-        remote_user: Optional[str] = None,
-        remote_password: Optional[str] = None,
-        ssh_key_path: Optional[str] = None,
+        ddl_job_name: str | None = None,
+        remote_host: str | None = None,
+        remote_user: str | None = None,
+        remote_password: str | None = None,
+        ssh_key_path: str | None = None,
         remote_port: int = 22,
     ) -> int | None:
         """Execute DDL operations on Teradata."""
@@ -293,9 +293,9 @@ class TdLoadOperator:
     def _setup_ssh_connection(
         self,
         host: str,
-        user: Optional[str],
-        password: Optional[str],
-        key_path: Optional[str],
+        user: str | None,
+        password: str | None,
+        key_path: str | None,
         port: int,
     ) -> bool:
         """
@@ -353,24 +353,24 @@ class TdLoadOperator:
 
     def tdload_operator(
         self,
-        source_table: Optional[str] = None,
-        select_stmt: Optional[str] = None,
-        insert_stmt: Optional[str] = None,
-        target_table: Optional[str] = None,
-        source_file_name: Optional[str] = None,
-        target_file_name: Optional[str] = None,
-        source_format: Optional[str] = None,
-        source_text_delimiter: Optional[str] = None,
-        target_format: Optional[str] = None,
-        target_text_delimiter: Optional[str] = None,
-        tdload_options: Optional[str] = None,
-        tdload_job_name: Optional[str] = None,
-        tdload_job_var_file: Optional[str] = None,
-        remote_working_dir: Optional[str] = None,
-        remote_host: Optional[str] = None,
-        remote_user: Optional[str] = None,
-        remote_password: Optional[str] = None,
-        ssh_key_path: Optional[str] = None,
+        source_table: str | None = None,
+        select_stmt: str | None = None,
+        insert_stmt: str | None = None,
+        target_table: str | None = None,
+        source_file_name: str | None = None,
+        target_file_name: str | None = None,
+        source_format: str | None = None,
+        source_text_delimiter: str | None = None,
+        target_format: str | None = None,
+        target_text_delimiter: str | None = None,
+        tdload_options: str | None = None,
+        tdload_job_name: str | None = None,
+        tdload_job_var_file: str | None = None,
+        remote_working_dir: str | None = None,
+        remote_host: str | None = None,
+        remote_user: str | None = None,
+        remote_password: str | None = None,
+        ssh_key_path: str | None = None,
         remote_port: int = 22,
     ) -> int | None:
         """Execute TPT load operation based on configuration."""

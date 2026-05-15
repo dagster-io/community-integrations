@@ -1,7 +1,7 @@
 import os
 import sys
 import subprocess
-from typing import Optional, Sequence
+from collections.abc import Sequence
 import dagster as dg
 from pydantic import Field
 
@@ -33,7 +33,7 @@ class EvidenceResource(dg.ConfigurableResource):
     """
 
     project_path: str = Field(..., description="The path to the Evidence.dev project")
-    deploy_command: Optional[str] = Field(
+    deploy_command: str | None = Field(
         None, description="Command to deploy the built assets"
     )
     executable: str = Field(
@@ -41,7 +41,7 @@ class EvidenceResource(dg.ConfigurableResource):
         description="The executable to use for commands (npm, yarn, etc.)",
     )
 
-    def _run_cmd(self, cmd: Sequence[str]):
+    def _run_cmd(self, cmd: Sequence[str]) -> None:
         """Run a command in the project directory.
 
         Args:
@@ -56,7 +56,7 @@ class EvidenceResource(dg.ConfigurableResource):
             cwd=self.project_path,
             check=True,
             capture_output=False,
-            env=os.environ,
+            env=dict(os.environ),
         )
 
     def build(self) -> None:

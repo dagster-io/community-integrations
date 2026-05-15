@@ -2,7 +2,7 @@
 name = "dagster-modal"
 description = "Dagster integration with Modal"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "dagster-pipes>=1.7.0",
     "dagster>=1.7.0",

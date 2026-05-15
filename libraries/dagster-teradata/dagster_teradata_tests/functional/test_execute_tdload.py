@@ -184,7 +184,7 @@ class TestTPTWorkflows:
             @op
             def verify_exported_file(context, export_result):
                 assert os.path.exists(TARGET_FILE)
-                with open(TARGET_FILE, "r") as f:
+                with open(TARGET_FILE) as f:
                     content = f.read()
                     assert "John|Doe|001|Engineering" in content
                     assert "Jane|Smith|002|Marketing" in content
@@ -280,7 +280,7 @@ class TestTPTWorkflows:
             @op
             def verify_select_export(context, export_result):
                 assert os.path.exists(TARGET_FILE)
-                with open(TARGET_FILE, "r") as f:
+                with open(TARGET_FILE) as f:
                     content = f.read()
                     assert "John,Doe" in content
                 return export_result
@@ -429,7 +429,7 @@ class TestTPTWorkflows:
             @op
             def step4_verify_results(context, previous_result):
                 assert os.path.exists(TARGET_FILE)
-                with open(TARGET_FILE, "r") as f:
+                with open(TARGET_FILE) as f:
                     lines = f.read().strip().split("\n")
                     assert len(lines) == 3  # Should have 3 data rows
                 return previous_result
@@ -493,7 +493,7 @@ class TestTPTWorkflows:
             @op
             def verify_final_output(context, export_result):
                 assert os.path.exists(TARGET_FILE)
-                with open(TARGET_FILE, "r") as f:
+                with open(TARGET_FILE) as f:
                     content = f.read()
                     assert "Engineering" in content
                     assert "Marketing" in content

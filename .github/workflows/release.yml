@@ -27,7 +27,7 @@ jobs:
           # Tag format: dagster_anthropic-0.1.2
           tag="${{ github.ref_name }}"
           package_name=$(echo "$tag" | sed 's/-[0-9].*//')
-          package_dir=$(echo "$package_name" | sed 's/_/-/')
+          package_dir=$(echo "$package_name" | sed 's/_/-/g')
 
           echo "name=$package_name" >> $GITHUB_OUTPUT
           echo "dir=./libraries/$package_dir" >> $GITHUB_OUTPUT

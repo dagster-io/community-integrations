@@ -1,0 +1,29 @@
+[project]
+name = "dagster-sharepoint"
+description = "Dagster integration for SharePoint document management using Microsoft Graph API"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dagster>=1.8.0",
+    "requests>=2.31.0",
+]
+dynamic = ["version"]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest",
+    "pyright>=1.1.386",
+    "responses>=0.25.0",
+    "pytest-cov>=7.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_sharepoint"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_sharepoint.__version__"}

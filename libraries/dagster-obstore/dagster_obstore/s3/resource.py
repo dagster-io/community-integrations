@@ -15,10 +15,10 @@ class S3ObjectStore(ConfigurableResource):
     secret_access_key: str = Field(
         description="S3 secret access key to use when creating the S3 Store."
     )
-    region: Optional[str] = Field(
+    region: str | None = Field(
         default=None, description="Specifies a custom region for the S3 Store."
     )
-    endpoint: Optional[str] = Field(
+    endpoint: str | None = Field(
         default=None, description="Specifies a custom endpoint for the S3 Store."
     )
     allow_http: bool = Field(

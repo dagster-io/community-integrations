@@ -67,6 +67,13 @@ my-code-location-1:
   name: my-cloud-run-job-1
   project_id: gcp_123
   region: us-central1
+
+# Multi-container support - which container to override on run
+my-code-location-1: 
+  name: my-cloud-run-job-1
+  project_id: gcp_123
+  region: us-central1
+  container_name: my-dagster-container-name
 ```
 
 Additional steps may be required for configuring IAM permissions, etc. In particular:

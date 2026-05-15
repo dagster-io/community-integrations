@@ -1,7 +1,7 @@
 import datetime
 import logging
 import time
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, cast
 from urllib.parse import urljoin
 
 import requests
@@ -52,8 +52,8 @@ class HexResource:
         self.api_base_url = base_url
 
     def make_request(
-        self, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, method: str, endpoint: str, data: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Creates and sends a request to the desired Hex API endpoint
 
         Args:
@@ -138,11 +138,11 @@ class HexResource:
 
     def get_all_projects(
         self,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         method = "GET"
         endpoint = "api/v1/projects"
         response = cast(
-            List[Dict[str, Any]],
+            list[dict[str, Any]],
             self.make_request(method=method, endpoint=endpoint, data=None),
         )
         return response
@@ -171,7 +171,7 @@ class HexResource:
     def get_project_details(
         self,
         project_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         try:
             project_details = self.get_project(project_id)
             return {
@@ -190,13 +190,13 @@ class HexResource:
     def run_project(
         self,
         project_id: str,
-        inputs: Optional[Dict[str, Any]] = None,
+        inputs: dict[str, Any] | None = None,
         update_cache: bool = False,  # Deprecated
         use_cached_sql: bool = True,
-        notifications: List[NotificationDetails] = [],
+        notifications: list[NotificationDetails] = [],
         dry_run: bool = False,
         update_published_results: bool = False,
-        view_id: Optional[str] = None,
+        view_id: str | None = None,
     ) -> RunResponse:
         """Trigger a run of the latest published version of a project.
 
@@ -237,7 +237,7 @@ class HexResource:
                 "the published app cache and `use_cached_sql=False` to refresh SQL query caches."
             )
 
-        data: Dict[str, Any] = {
+        data: dict[str, Any] = {
             "useCachedSqlResults": use_cached_sql,
             "dryRun": dry_run,
             "updatePublishedResults": update_published_results,
@@ -303,13 +303,13 @@ class HexResource:
     def run_and_poll(
         self,
         project_id: str,
-        inputs: Optional[dict],
-        notifications: List[NotificationDetails] = [],
+        inputs: dict | None,
+        notifications: list[NotificationDetails] = [],
         update_cache: bool = False,
         use_cached_sql: bool = True,
         kill_on_timeout: bool = True,
         poll_interval: float = DEFAULT_POLL_INTERVAL,
-        poll_timeout: Optional[float] = DEFAULT_POLL_TIMEOUT,
+        poll_timeout: float | None = DEFAULT_POLL_TIMEOUT,
     ) -> HexOutput:
         """Trigger a project and poll until complete
 

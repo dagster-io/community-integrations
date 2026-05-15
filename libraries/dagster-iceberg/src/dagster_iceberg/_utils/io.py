@@ -1,21 +1,18 @@
-import logging
-from collections.abc import Sequence
-from enum import Enum
-from typing import Final
+from __future__ import annotations
 
-import pyarrow as pa
-from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
+import logging
+from enum import Enum
+from typing import TYPE_CHECKING, Final
+
+from pydantic import BaseModel, ConfigDict
 from pyiceberg import __version__ as pyiceberg_version
 from pyiceberg import expressions as E
 from pyiceberg import table as iceberg_table
-from pyiceberg.catalog import Catalog
 from pyiceberg.exceptions import (
     CommitFailedException,
     NoSuchTableError,
     TableAlreadyExistsError,
 )
-from pyiceberg.partitioning import PartitionSpec
-from pyiceberg.schema import Schema
 
 from dagster_iceberg._utils.partitions import (
     DagsterPartitionToIcebergExpressionMapper,
@@ -26,15 +23,34 @@ from dagster_iceberg._utils.retries import IcebergOperationWithRetry
 from dagster_iceberg._utils.schema import update_table_schema
 from dagster_iceberg.version import __version__ as dagster_iceberg_version
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    import pyarrow as pa
+    from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
+    from pyiceberg.catalog import Catalog
+    from pyiceberg.partitioning import PartitionSpec
+    from pyiceberg.schema import Schema
+
 logger = logging.getLogger("dagster_iceberg._utils.io")
 
 
 class WriteMode(Enum):
     append = "append"
     overwrite = "overwrite"
+    upsert = "upsert"
+
+
+class UpsertOptions(BaseModel):
+    join_cols: list[str]
+    when_matched_update_all: bool = True
+    when_not_matched_insert_all: bool = True
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
 
 DEFAULT_WRITE_MODE: Final[WriteMode] = WriteMode.overwrite
+DEFAULT_PARTITION_FIELD_NAME_PREFIX: Final[str] = "part"
 
 
 def table_writer(
@@ -44,9 +60,11 @@ def table_writer(
     schema_update_mode: str,
     partition_spec_update_mode: str,
     dagster_run_id: str,
+    partition_field_name_prefix: str = DEFAULT_PARTITION_FIELD_NAME_PREFIX,
     dagster_partition_key: str | None = None,
     table_properties: dict[str, str] | None = None,
     write_mode: WriteMode = DEFAULT_WRITE_MODE,
+    upsert_options: UpsertOptions | None = None,
 ) -> None:
     """Writes data to an iceberg table
 
@@ -57,6 +75,14 @@ def table_writer(
         catalog (Catalog): PyIceberg catalogs supported by this library. See <https://py.iceberg.apache.org/configuration/#catalogs>.
         schema_update_mode (str): Whether to process schema updates on existing
             tables or error, value is either 'error' or 'update'
+        partition_spec_update_mode (str): Whether to process partition spec updates on existing
+            tables or error, value is either 'error' or 'update'
+        dagster_run_id (str): Dagster run ID
+        partition_field_name_prefix (str): Prefix to apply to the partition field names. This is required to avoid conflicts with schema field names when defining partitions using non-identity transforms in pyiceberg 0.10.0+. Defaults to 'part'.
+        dagster_partition_key (str | None): Dagster partition key
+        table_properties (dict[str, str] | None): Table properties
+        write_mode (WriteMode): Write mode to use, e.g. append, overwrite, upsert
+        upsert_options (UpsertOptions | None): Options to pass to pyiceberg's upsert operation, such as join columns and insert / update behavior
 
     Raises:
         ValueError: Raised when partition dimension metadata is not set on an
@@ -64,6 +90,7 @@ def table_writer(
         ValueError: Raised when schema update mode is set to 'error' and
             asset partition definitions on an existing table do not match
             the table partition spec.
+        ValueError: Raised when upsert_options are not provided when using upsert write mode
     """
     table_path = f"{table_slice.schema}.{table_slice.table}"
     base_properties = {
@@ -113,6 +140,7 @@ def table_writer(
                 table=table.refresh(),
                 table_slice=table_slice,
                 partition_spec_update_mode=partition_spec_update_mode,
+                partition_field_name_prefix=partition_field_name_prefix,
             )
         if table_properties is not None:
             update_table_properties(
@@ -135,6 +163,7 @@ def table_writer(
                 # When creating new tables with dagster partitions, we always update
                 # the partition spec
                 partition_spec_update_mode="update",
+                partition_field_name_prefix=partition_field_name_prefix,
             )
 
     row_filter: E.BooleanExpression
@@ -160,6 +189,16 @@ def table_writer(
             data=data,
             overwrite_filter=row_filter,
             snapshot_properties=snapshot_properties,
+        )
+    elif write_mode == WriteMode.upsert:
+        if upsert_options is None:
+            raise ValueError(
+                "upsert_options must be provided when using upsert write mode"
+            )
+        upsert_to_table(
+            table=table,
+            data=data,
+            upsert_options=upsert_options,
         )
     else:
         raise ValueError(f"Unexpected write mode: {write_mode}")
@@ -288,6 +327,29 @@ def append_to_table(
     )
 
 
+def upsert_to_table(
+    table: iceberg_table.Table,
+    data: pa.Table,
+    upsert_options: UpsertOptions,
+):
+    """Upserts data to an iceberg table and retries on failure
+
+    Args:
+        table (table.Table): Iceberg table
+        data (pa.Table): Data to upsert to the table
+        upsert_options (UpsertOptions): Upsert options with join columns and any overrides for upsert action conditions
+
+    Raises:
+        RetryError: Raised when the commit fails after the maximum number of retries
+    """
+    IcebergTableUpserterWithRetry(table=table).execute(
+        retries=3,
+        exception_types=CommitFailedException,
+        data=data,
+        upsert_options=upsert_options,
+    )
+
+
 class IcebergTableAppenderWithRetry(IcebergOperationWithRetry):
     def operation(
         self,
@@ -317,4 +379,25 @@ class IcebergTableOverwriterWithRetry(IcebergOperationWithRetry):
             snapshot_properties=(
                 snapshot_properties if snapshot_properties is not None else {}
             ),
+        )
+
+
+class IcebergTableUpserterWithRetry(IcebergOperationWithRetry):
+    def operation(
+        self,
+        data: pa.Table,
+        upsert_options: UpsertOptions,
+    ):
+        self.logger.debug(
+            "Upserting to table with join_cols=%s, when_matched_update_all=%s, when_not_matched_insert_all=%s",
+            upsert_options.join_cols,
+            upsert_options.when_matched_update_all,
+            upsert_options.when_not_matched_insert_all,
+        )
+
+        self.table.upsert(
+            df=data,
+            join_cols=upsert_options.join_cols,
+            when_matched_update_all=upsert_options.when_matched_update_all,
+            when_not_matched_insert_all=upsert_options.when_not_matched_insert_all,
         )

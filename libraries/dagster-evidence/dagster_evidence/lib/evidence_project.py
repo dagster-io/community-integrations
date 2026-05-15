@@ -12,7 +12,8 @@ from dagster.components.resolved.core_models import (
     ResolvedAssetSpec,
 )
 from dataclasses import dataclass
-from typing import Optional, Sequence
+from typing import Optional
+from collections.abc import Sequence
 import subprocess
 
 
@@ -33,14 +34,14 @@ class EvidenceProject(Component, Resolvable):
 
     project_path: str
     asset: ResolvedAssetSpec
-    asset_post_processors: Optional[Sequence[AssetPostProcessor]] = None
-    deploy_command: Optional[str] = None
+    asset_post_processors: Sequence[AssetPostProcessor] | None = None
+    deploy_command: str | None = None
     npm_executable: str = "npm"
 
     def build_defs(self, context: ComponentLoadContext) -> Definitions:
         project_path = os.path.abspath(context.path / self.project_path)
 
-        def _run_cmd(cmd: Sequence[str]):
+        def _run_cmd(cmd: Sequence[str]) -> None:
             print(
                 f"{project_path}$ {' '.join(cmd)}",
                 file=sys.stderr,
@@ -50,7 +51,7 @@ class EvidenceProject(Component, Resolvable):
                 cwd=project_path,
                 check=True,
                 capture_output=False,
-                env=os.environ,
+                env=dict(os.environ),
             )
 
         @multi_asset(specs=[self.asset])

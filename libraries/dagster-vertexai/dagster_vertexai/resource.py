@@ -2,7 +2,7 @@ import json
 from collections import defaultdict
 from contextlib import contextmanager
 from functools import wraps
-from typing import Generator, Optional, Union, Callable, Iterable
+from collections.abc import Generator, Callable, Iterable
 from weakref import WeakKeyDictionary
 
 import google.auth
@@ -30,11 +30,11 @@ context_to_counters = WeakKeyDictionary()
 
 
 def _add_to_asset_metadata(
-    context: AssetExecutionContext, usage_metadata: dict, output_name: Optional[str]
+    context: AssetExecutionContext, usage_metadata: dict, output_name: str | None
 ) -> None:
     """Adds and aggregates usage metadata to the current asset materialization."""
     if context not in context_to_counters:
-        context_to_counters[context] = defaultdict(lambda: 0)
+        context_to_counters[context] = defaultdict(int)
     counters = context_to_counters[context]
 
     for metadata_key, delta in usage_metadata.items():
@@ -43,16 +43,14 @@ def _add_to_asset_metadata(
 
 
 def _with_usage_metadata(
-    context: AssetExecutionContext, output_name: Optional[str], func: Callable
+    context: AssetExecutionContext, output_name: str | None, func: Callable
 ) -> Callable:
     """A wrapper for the `generate_content` method to handle both streaming and non-streaming
     responses, extracting and logging usage metadata correctly for each case.
     """
 
     @wraps(func)
-    def wrapper(
-        *args, **kwargs
-    ) -> Union[GenerationResponse, Iterable[GenerationResponse]]:
+    def wrapper(*args, **kwargs) -> GenerationResponse | Iterable[GenerationResponse]:
         is_streaming = kwargs.get("stream", False)
 
         if not is_streaming:
@@ -140,14 +138,14 @@ class VertexAIResource(ConfigurableResource):
         description="The Google Cloud location (e.g., 'us-central1')."
     )
 
-    google_credentials: Optional[str] = Field(
+    google_credentials: str | None = Field(
         default=None,
         description=(
             "A JSON string of Google Cloud service account credentials. If not provided, "
             "Application Default Credentials (ADC) will be used."
         ),
     )
-    api_endpoint: Optional[str] = Field(
+    api_endpoint: str | None = Field(
         default=None,
         description=(
             "The regional API endpoint for Vertex AI. If not set, the SDK will determine it "
@@ -166,7 +164,7 @@ class VertexAIResource(ConfigurableResource):
 
     def setup_for_execution(self, context: InitResourceContext) -> None:
         """Initializes the Vertex AI SDK and the generative model instance."""
-        creds: Optional[GoogleCredentials] = None
+        creds: GoogleCredentials | None = None
         if self.google_credentials:
             try:
                 creds_dict = json.loads(self.google_credentials)
@@ -188,7 +186,7 @@ class VertexAIResource(ConfigurableResource):
     @public
     @contextmanager
     def get_model(
-        self, context: Union[AssetExecutionContext, OpExecutionContext]
+        self, context: AssetExecutionContext | OpExecutionContext
     ) -> Generator[GenerativeModel, None, None]:
         """Yields a ``vertexai.generative_models.GenerativeModel`` for interacting with Vertex AI.
 
@@ -202,7 +200,7 @@ class VertexAIResource(ConfigurableResource):
             yield model
 
     def _wrap_for_usage_tracking(
-        self, context: AssetExecutionContext, output_name: Optional[str]
+        self, context: AssetExecutionContext, output_name: str | None
     ):
         """Patches the `generate_content` method on the model instance for the current context."""
         original_generate_content = self._generative_model.generate_content
@@ -230,8 +228,8 @@ class VertexAIResource(ConfigurableResource):
     @contextmanager
     def _get_model(
         self,
-        context: Union[AssetExecutionContext, OpExecutionContext],
-        asset_key: Optional[AssetKey] = None,
+        context: AssetExecutionContext | OpExecutionContext,
+        asset_key: AssetKey | None = None,
     ) -> Generator[GenerativeModel, None, None]:
         """Internal method to provide the model, applying usage tracking if in an asset context."""
         # Store original method to restore later
