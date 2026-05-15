@@ -38,9 +38,9 @@ def hf_dataset_asset(
     """
     Dagster asset decorator for Hugging Face datasets.
 
-    This decorator preserves Hugging Face dataset loading
-    semantics while exposing datasets as first-class
-    Dagster assets.
+    This decorator preserves Hugging Face dataset
+    loading semantics while exposing datasets as
+    first-class Dagster assets.
 
     Supported orchestration semantics:
     - metadata propagation
@@ -49,7 +49,9 @@ def hf_dataset_asset(
     - streaming datasets
     """
 
-    def decorator(fn: Callable[..., Any]) -> Any:
+    def decorator(
+        fn: Callable[..., Any],
+    ) -> Any:
         """
         Preserve the decorated function name
         as the Dagster asset key by default.
@@ -84,10 +86,14 @@ def hf_dataset_asset(
                 )
 
                 if partition.is_revision:
-                    resolved_revision = partition.value
+                    resolved_revision = (
+                        partition.value
+                    )
 
                 elif partition.is_config:
-                    resolved_config = partition.value
+                    resolved_config = (
+                        partition.value
+                    )
 
             dataset = huggingface.load_dataset(
                 path=path,
@@ -98,12 +104,22 @@ def hf_dataset_asset(
             )
 
             dataset_metadata = (
-                build_dataset_metadata(dataset)
+                build_dataset_metadata(
+                    dataset,
+                    path=path,
+                    revision=resolved_revision,
+                )
             )
 
             context.log.info(
-                f"Loaded Hugging Face "
+                "Loaded Hugging Face "
                 f"dataset: {path}"
+            )
+
+            context.log.info(
+                "Dataset metadata summary: "
+                f"type={dataset_metadata.get('dataset_type')}, "
+                f"streaming={dataset_metadata.get('streaming')}"
             )
 
             return Output(
@@ -112,8 +128,6 @@ def hf_dataset_asset(
                     "path": path,
                     "config": resolved_config,
                     "split": split,
-                    "revision": resolved_revision,
-                    "streaming": streaming,
                     "partition_key": (
                         context.partition_key
                         if context.has_partition_key

@@ -147,10 +147,17 @@ def hf_multi_asset(
                 ),
             ):
                 raise TypeError(
-                    "hf_multi_asset requires a "
+                    "hf_multi_asset expected "
                     "DatasetDict or "
-                    "IterableDatasetDict."
+                    "IterableDatasetDict, "
+                    f"but received: "
+                    f"{type(dataset).__name__}"
                 )
+
+            context.log.info(
+                "Loaded dataset splits: "
+                f"{list(dataset.keys())}"
+            )
 
             for split_name, split_dataset in dataset.items():
                 if (
@@ -162,7 +169,9 @@ def hf_multi_asset(
 
                 split_metadata = (
                     build_dataset_metadata(
-                        split_dataset
+                        split_dataset,
+                        path=path,
+                        revision=resolved_revision,
                     )
                 )
 
@@ -173,8 +182,6 @@ def hf_multi_asset(
                         "path": path,
                         "config": resolved_config,
                         "split": split_name,
-                        "revision": resolved_revision,
-                        "streaming": streaming,
                         "partition_key": (
                             context.partition_key
                             if context.has_partition_key

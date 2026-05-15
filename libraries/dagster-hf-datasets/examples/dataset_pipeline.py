@@ -32,7 +32,7 @@ def raw_glue_qqp():
     Load the raw GLUE QQP training split
     from the Hugging Face Hub.
     """
-    ...
+    pass
 
 
 @asset
