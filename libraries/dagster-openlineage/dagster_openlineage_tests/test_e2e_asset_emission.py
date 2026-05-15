@@ -1,6 +1,12 @@
 # Copyright 2018-2025 contributors to the OpenLineage project
 # SPDX-License-Identifier: Apache-2.0
 
+# pyright: reportAbstractUsage=false
+# OpenLineageEventLogStorage.__abstractmethods__ is cleared at runtime by the
+# setattr delegation loop in storage.py; pyright cannot see dynamic assignments
+# to __abstractmethods__ and reports every direct instantiation as abstract.
+# test_e2e_pipes.py carries the same suppression for the same reason.
+
 """End-to-end tests for v0.2 asset-centric OpenLineage emission.
 
 Exercises the full stack — real OpenLineageAdapter, real facet builders,
@@ -174,7 +180,9 @@ def test_planned_then_complete_emits_start_complete_pair():
     run_events = [e for e in transport.events if isinstance(e, RunEvent)]
     assert [e.eventType for e in run_events] == [RunState.START, RunState.COMPLETE]
     assert all(e.job.name == "orders" for e in run_events)
-    assert all(e.outputs[0].name == "orders" for e in run_events)
+    assert all(
+        e.outputs is not None and e.outputs[0].name == "orders" for e in run_events
+    )
 
 
 def test_materialization_schema_facet_on_output():
@@ -190,6 +198,7 @@ def test_materialization_schema_facet_on_output():
         )
     )
     event: RunEvent = transport.run_events_of_type(RunState.COMPLETE)[0]
+    assert event.outputs is not None
     output_facets = event.outputs[0].facets
     assert output_facets is not None
     assert "schema" in output_facets
@@ -228,6 +237,7 @@ def test_materialization_column_lineage_facet():
         )
     )
     event: RunEvent = transport.run_events_of_type(RunState.COMPLETE)[0]
+    assert event.outputs is not None
     output_facets = event.outputs[0].facets
     assert output_facets is not None
     assert "columnLineage" in output_facets
@@ -294,6 +304,7 @@ def test_datasource_facet_from_path_metadata():
         )
     )
     event: RunEvent = transport.run_events_of_type(RunState.COMPLETE)[0]
+    assert event.outputs is not None
     output_facets = event.outputs[0].facets
     assert output_facets is not None
     assert "dataSource" in output_facets
@@ -349,6 +360,7 @@ def test_real_asset_materialize_emits_start_and_complete():
     ]
     assert len(asset_starts) == 1
     assert len(asset_completes) == 1
+    assert asset_completes[0].outputs is not None
     assert asset_completes[0].outputs[0].name == "_e2e_orders"
 
 
