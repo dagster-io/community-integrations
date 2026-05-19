@@ -6,12 +6,11 @@ from typing import Generator
 
 import pytest
 from datasets import Dataset, DatasetDict
-from dagster import build_init_resource_context
 
 
-# -------------------------------------------------------------------
-# Temporary directories
-# -------------------------------------------------------------------
+# ============================================================
+# Temporary Directories
+# ============================================================
 
 
 @pytest.fixture
@@ -20,9 +19,9 @@ def temp_dir() -> Generator[Path, None, None]:
         yield Path(tmpdir)
 
 
-# -------------------------------------------------------------------
-# Tiny HF datasets
-# -------------------------------------------------------------------
+# ============================================================
+# Tiny HF Datasets
+# ============================================================
 
 
 @pytest.fixture
@@ -61,7 +60,10 @@ def tiny_dataset_with_metadata() -> Dataset:
 def tiny_dataset_dict() -> DatasetDict:
     train = Dataset.from_dict(
         {
-            "text": ["train1", "train2"],
+            "text": [
+                "train1",
+                "train2",
+            ],
             "label": [0, 1],
         }
     )
@@ -81,9 +83,9 @@ def tiny_dataset_dict() -> DatasetDict:
     )
 
 
-# -------------------------------------------------------------------
-# Empty / edge-case datasets
-# -------------------------------------------------------------------
+# ============================================================
+# Edge-Case Datasets
+# ============================================================
 
 
 @pytest.fixture
@@ -109,39 +111,32 @@ def nested_dataset() -> Dataset:
     )
 
 
-# -------------------------------------------------------------------
-# Mock HF resource config
-# -------------------------------------------------------------------
+# ============================================================
+# Common Metadata
+# ============================================================
+
+
+@pytest.fixture
+def sample_metadata() -> dict:
+    return {
+        "description": ("Test dataset"),
+        "license": "apache-2.0",
+        "tags": [
+            "test",
+            "unit",
+        ],
+        "task_categories": ["text-classification"],
+    }
+
+
+# ============================================================
+# HF Resource Config
+# ============================================================
 
 
 @pytest.fixture
 def hf_resource_config() -> dict:
     return {
         "token": "fake-token",
-        "repo_id": "test-user/test-dataset",
-    }
-
-
-# -------------------------------------------------------------------
-# Dagster resource context
-# -------------------------------------------------------------------
-
-
-@pytest.fixture
-def dagster_resource_context():
-    return build_init_resource_context()
-
-
-# -------------------------------------------------------------------
-# Common metadata fixture
-# -------------------------------------------------------------------
-
-
-@pytest.fixture
-def sample_metadata() -> dict:
-    return {
-        "description": "Test dataset",
-        "license": "apache-2.0",
-        "tags": ["test", "unit"],
-        "task_categories": ["text-classification"],
+        "repo_id": ("test-user/test-dataset"),
     }

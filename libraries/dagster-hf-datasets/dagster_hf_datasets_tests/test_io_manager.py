@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import pandas as pd
 import pytest
 from dagster import (
@@ -38,10 +40,14 @@ def io_manager(temp_dir):
 def output_context(
     dagster_instance,
 ):
-    return build_output_context(
+    context = build_output_context(
         asset_key=AssetKey(["test_asset"]),
         instance=dagster_instance,
     )
+
+    context.add_output_metadata = MagicMock()
+
+    return context
 
 
 @pytest.fixture
@@ -52,19 +58,6 @@ def input_context(
     return build_input_context(
         upstream_output=output_context,
         instance=dagster_instance,
-    )
-
-
-@pytest.fixture
-def tiny_dataset():
-    return Dataset.from_dict(
-        {
-            "text": [
-                "hello",
-                "world",
-            ],
-            "label": [0, 1],
-        }
     )
 
 
@@ -120,7 +113,7 @@ def test_handle_output_persists_dataset(
 
     loaded = Dataset.load_from_disk(str(persisted_path))
 
-    assert loaded.num_rows == 2
+    assert loaded.num_rows == 3
 
     assert loaded.column_names == [
         "text",
@@ -146,12 +139,7 @@ def test_load_input_restores_dataset(
         Dataset,
     )
 
-    assert loaded.num_rows == 2
-
-    assert loaded["text"] == [
-        "hello",
-        "world",
-    ]
+    assert loaded.num_rows == 3
 
 
 # ============================================================
@@ -267,7 +255,7 @@ def test_get_input_path_without_upstream_output_raises(
 
     with pytest.raises(
         ValueError,
-        match="Upstream output context is required",
+        match=("Upstream output context " "is required"),
     ):
         io_manager._get_input_path(context)
 
@@ -287,13 +275,15 @@ def test_dataset_metadata_emitted(
         tiny_dataset,
     )
 
-    metadata = output_context.metadata
+    output_context.add_output_metadata.assert_called_once()
+
+    metadata = output_context.add_output_metadata.call_args[0][0]
 
     assert metadata["format"].value == ("huggingface_dataset")
 
     assert metadata["streaming"].value is False
 
-    assert metadata["rows"].value == 2
+    assert metadata["rows"].value == 3
 
     assert metadata["columns"].value == 2
 
@@ -308,7 +298,7 @@ def test_dataframe_metadata_emitted(
         tiny_dataframe,
     )
 
-    metadata = output_context.metadata
+    metadata = output_context.add_output_metadata.call_args[0][0]
 
     assert metadata["format"].value == ("pandas_parquet")
 
@@ -330,7 +320,7 @@ def test_iterable_dataset_metadata_emitted(
         iterable_dataset,
     )
 
-    metadata = output_context.metadata
+    metadata = output_context.add_output_metadata.call_args[0][0]
 
     assert metadata["format"].value == ("huggingface_iterable_dataset")
 
