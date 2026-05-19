@@ -14,6 +14,7 @@ dynamic = ["version"]
 dev-dependencies = [
     "ruff",
     "pytest",
+    "freezegun",
     "pyright>=1.1.386",
 ]
 

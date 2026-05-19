@@ -82,18 +82,13 @@ def describe_metadata() -> None:
         path="nyu-mll/glue",
     )
 
-    print(
-        "\n"
-        "Dataset Metadata\n"
-        "----------------\n"
-    )
+    print("\n" "Dataset Metadata\n" "----------------\n")
 
     for key, value in metadata.items():
         print(f"{key}: {value}")
 
 
 if __name__ == "__main__":
-
     describe_metadata()
 
     result = materialize(
@@ -104,12 +99,7 @@ if __name__ == "__main__":
     )
 
     if result.success:
-        print(
-            "\nSuccessfully materialized "
-            "GLUE QQP training dataset asset."
-        )
+        print("\nSuccessfully materialized " "GLUE QQP training dataset asset.")
 
     else:
-        raise RuntimeError(
-            "Dagster asset materialization failed."
-        )
+        raise RuntimeError("Dagster asset materialization failed.")

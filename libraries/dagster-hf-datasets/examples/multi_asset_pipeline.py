@@ -61,18 +61,14 @@ def sampled_c4() -> Dataset:
         )
     )
 
-    dataset = Dataset.from_list(
-        sampled_rows
-    )
+    dataset = Dataset.from_list(sampled_rows)
 
     metadata = build_dataset_metadata(
         dataset,
         path="allenai/c4",
     )
 
-    print(
-        "\nStreaming Runtime Metadata:\n"
-    )
+    print("\nStreaming Runtime Metadata:\n")
 
     for key, value in metadata.items():
         print(f"{key}: {value}")
@@ -91,7 +87,6 @@ def filtered_c4(
     def valid_example(
         example: dict,
     ) -> bool:
-
         text = example.get(
             "text",
             "",
@@ -99,9 +94,7 @@ def filtered_c4(
 
         return len(text.split()) >= 50
 
-    return sampled_c4.filter(
-        valid_example
-    )
+    return sampled_c4.filter(valid_example)
 
 
 @asset
@@ -116,12 +109,7 @@ def normalized_c4(
     def normalize(
         example: dict,
     ) -> dict:
-
-        text = (
-            example["text"]
-            .strip()
-            .replace("\n", " ")
-        )
+        text = example["text"].strip().replace("\n", " ")
 
         return {
             "text": text,
@@ -132,9 +120,7 @@ def normalized_c4(
             ),
         }
 
-    return filtered_c4.map(
-        normalize
-    )
+    return filtered_c4.map(normalize)
 
 
 @asset
@@ -147,10 +133,7 @@ def publish_golden_c4(
     """
 
     publisher = HFDatasetPublisher(
-        repo_id=(
-            "AINovice2005/"
-            "golden-c4-demo-v2"
-        ),
+        repo_id=("AINovice2005/" "golden-c4-demo-v2"),
         private=False,
     )
 
@@ -159,8 +142,7 @@ def publish_golden_c4(
         source_dataset="allenai/c4",
         source_revision="main",
         description=(
-            "Processed streaming C4 dataset "
-            "with deterministic preprocessing."
+            "Processed streaming C4 dataset " "with deterministic preprocessing."
         ),
         processing_steps=[
             "Streaming ingestion",
@@ -169,18 +151,12 @@ def publish_golden_c4(
             "Normalized text formatting",
         ],
         metadata={
-            "pipeline": (
-                "golden_c4_pipeline"
-            ),
-            "processing_mode": (
-                "runtime_streaming"
-            ),
+            "pipeline": ("golden_c4_pipeline"),
+            "processing_mode": ("runtime_streaming"),
         },
     )
 
-    print(
-        "\nDataset published successfully."
-    )
+    print("\nDataset published successfully.")
 
     print(f"Hub URL: {hub_url}")
 
@@ -212,11 +188,7 @@ defs = Definitions(
 
 
 if __name__ == "__main__":
-
-    print(
-        "\n=== Runtime-Only Streaming "
-        "C4 Pipeline ===\n"
-    )
+    print("\n=== Runtime-Only Streaming " "C4 Pipeline ===\n")
 
     print(
         "Pipeline semantics:\n"
@@ -241,11 +213,7 @@ if __name__ == "__main__":
     print("\n=== Pipeline Result ===\n")
 
     if result.success:
-        print(
-            "Pipeline completed successfully."
-        )
+        print("Pipeline completed successfully.")
 
     else:
-        print(
-            "Pipeline execution failed."
-        )
+        print("Pipeline execution failed.")

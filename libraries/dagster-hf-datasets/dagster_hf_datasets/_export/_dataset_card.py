@@ -70,9 +70,7 @@ class DatasetCardBuilder:
         self.source_dataset = source_dataset
         self.source_revision = source_revision
         self.description = description
-        self.processing_steps = (
-            processing_steps or []
-        )
+        self.processing_steps = processing_steps or []
         self.metadata = metadata or {}
 
     def build(self) -> str:
@@ -81,37 +79,21 @@ class DatasetCardBuilder:
         dataset card.
         """
 
-        generated_at = (
-            datetime.now(UTC).isoformat()
-        )
+        generated_at = datetime.now(UTC).isoformat()
 
-        yaml_frontmatter = (
-            self._build_yaml_frontmatter()
-        )
+        yaml_frontmatter = self._build_yaml_frontmatter()
 
-        dataset_summary = (
-            self._build_dataset_summary()
-        )
+        dataset_summary = self._build_dataset_summary()
 
-        pipeline_semantics = (
-            self._build_pipeline_semantics()
-        )
+        pipeline_semantics = self._build_pipeline_semantics()
 
-        processing_section = (
-            self._build_processing_steps()
-        )
+        processing_section = self._build_processing_steps()
 
-        metadata_section = (
-            self._build_metadata_section()
-        )
+        metadata_section = self._build_metadata_section()
 
-        reproducibility_section = (
-            self._build_reproducibility_section()
-        )
+        reproducibility_section = self._build_reproducibility_section()
 
-        usage_section = (
-            self._build_usage_section()
-        )
+        usage_section = self._build_usage_section()
 
         return f"""---
 {yaml_frontmatter}
@@ -176,20 +158,14 @@ class DatasetCardBuilder:
             "source_streaming",
             False,
         ):
-            tags.append(
-                "streaming-ingestion"
-            )
+            tags.append("streaming-ingestion")
 
-        pipeline = self.metadata.get(
-            "pipeline"
-        )
+        pipeline = self.metadata.get("pipeline")
 
         if pipeline:
             tags.append(str(pipeline))
 
-        tag_lines = "\n".join(
-            f"- {tag}" for tag in tags
-        )
+        tag_lines = "\n".join(f"- {tag}" for tag in tags)
 
         return f"""language:
 - en
@@ -214,50 +190,33 @@ generated_by:
         lines: list[str] = []
 
         for key in self.SUMMARY_KEYS:
-
             value = self.metadata.get(key)
 
             if value is None:
                 continue
 
             if key == "features":
-                lines.append(
-                    "- Features:"
-                )
+                lines.append("- Features:")
 
                 if isinstance(value, list):
-                    lines.extend(
-                        f"  - `{feature}`"
-                        for feature in value
-                    )
+                    lines.extend(f"  - `{feature}`" for feature in value)
 
                 elif isinstance(
                     value,
                     dict,
                 ):
-                    for split, features in (
-                        value.items()
-                    ):
-                        lines.append(
-                            f"  - {split}:"
-                        )
+                    for split, features in value.items():
+                        lines.append(f"  - {split}:")
 
                         for feature in features:
-                            lines.append(
-                                f"    - `{feature}`"
-                            )
+                            lines.append(f"    - `{feature}`")
 
                 continue
 
-            lines.append(
-                f"- {self._format_key(key)}: "
-                f"`{value}`"
-            )
+            lines.append(f"- {self._format_key(key)}: " f"`{value}`")
 
         if not lines:
-            return (
-                "- No dataset summary available."
-            )
+            return "- No dataset summary available."
 
         return "\n".join(lines)
 
@@ -270,11 +229,7 @@ generated_by:
 
         lines: list[str] = []
 
-        source_streaming = (
-            self.metadata.get(
-                "source_streaming"
-            )
-        )
+        source_streaming = self.metadata.get("source_streaming")
 
         if source_streaming is not None:
             lines.append(
@@ -282,46 +237,23 @@ generated_by:
                 f"`{'streaming' if source_streaming else 'materialized'}`"
             )
 
-        execution_mode = (
-            self.metadata.get(
-                "execution_mode"
-            )
-        )
+        execution_mode = self.metadata.get("execution_mode")
 
         if execution_mode:
-            lines.append(
-                "- Execution Mode: "
-                f"`{execution_mode}`"
-            )
+            lines.append("- Execution Mode: " f"`{execution_mode}`")
 
-        dataset_type = (
-            self.metadata.get(
-                "dataset_type"
-            )
-        )
+        dataset_type = self.metadata.get("dataset_type")
 
         if dataset_type:
-            lines.append(
-                "- Materialized Artifact Type: "
-                f"`{dataset_type}`"
-            )
+            lines.append("- Materialized Artifact Type: " f"`{dataset_type}`")
 
-        pipeline_mode = (
-            self.metadata.get(
-                "pipeline_mode"
-            )
-        )
+        pipeline_mode = self.metadata.get("pipeline_mode")
 
         if pipeline_mode:
-            lines.append(
-                "- Pipeline Mode: "
-                f"`{pipeline_mode}`"
-            )
+            lines.append("- Pipeline Mode: " f"`{pipeline_mode}`")
 
         if not lines:
-            return (
-                "- No pipeline semantics available."
-            )
+            return "- No pipeline semantics available."
 
         return "\n".join(lines)
 
@@ -333,14 +265,9 @@ generated_by:
         """
 
         if not self.processing_steps:
-            return (
-                "- No processing steps recorded."
-            )
+            return "- No processing steps recorded."
 
-        return "\n".join(
-            f"- {step}"
-            for step in self.processing_steps
-        )
+        return "\n".join(f"- {step}" for step in self.processing_steps)
 
     def _build_reproducibility_section(
         self,
@@ -352,28 +279,19 @@ generated_by:
         lines: list[str] = []
 
         lines.append(
-            f"- Source Dataset Revision: "
-            f"`{self.source_revision or 'unknown'}`"
+            f"- Source Dataset Revision: " f"`{self.source_revision or 'unknown'}`"
         )
 
-        for key in (
-            self.REPRODUCIBILITY_KEYS
-        ):
-
+        for key in self.REPRODUCIBILITY_KEYS:
             value = self.metadata.get(key)
 
             if value is None:
                 continue
 
-            lines.append(
-                f"- {self._format_key(key)}: "
-                f"`{value}`"
-            )
+            lines.append(f"- {self._format_key(key)}: " f"`{value}`")
 
         if not lines:
-            return (
-                "- No reproducibility metadata."
-            )
+            return "- No reproducibility metadata."
 
         return "\n".join(lines)
 
@@ -385,9 +303,7 @@ generated_by:
         """
 
         if not self.metadata:
-            return (
-                "- No additional metadata."
-            )
+            return "- No additional metadata."
 
         sections = []
 
@@ -395,57 +311,35 @@ generated_by:
         pipeline_lines = []
         hub_lines = []
 
-        for key, value in (
-            self.metadata.items()
-        ):
-
+        for key, value in self.metadata.items():
             if key in self.SUMMARY_KEYS:
                 continue
 
-            if key in (
-                self.REPRODUCIBILITY_KEYS
-            ):
+            if key in (self.REPRODUCIBILITY_KEYS):
                 continue
 
-            rendered = (
-                self._render_metadata_line(
-                    key,
-                    value,
-                )
+            rendered = self._render_metadata_line(
+                key,
+                value,
             )
 
             if key in self.HUB_METADATA_KEYS:
                 hub_lines.append(rendered)
 
-            elif key in (
-                self.PIPELINE_METADATA_KEYS
-            ):
-                pipeline_lines.append(
-                    rendered
-                )
+            elif key in (self.PIPELINE_METADATA_KEYS):
+                pipeline_lines.append(rendered)
 
             else:
-                runtime_lines.append(
-                    rendered
-                )
+                runtime_lines.append(rendered)
 
         if runtime_lines:
-            sections.append(
-                "### Runtime Metadata\n\n"
-                + "\n".join(runtime_lines)
-            )
+            sections.append("### Runtime Metadata\n\n" + "\n".join(runtime_lines))
 
         if pipeline_lines:
-            sections.append(
-                "### Pipeline Metadata\n\n"
-                + "\n".join(pipeline_lines)
-            )
+            sections.append("### Pipeline Metadata\n\n" + "\n".join(pipeline_lines))
 
         if hub_lines:
-            sections.append(
-                "### Hub Metadata\n\n"
-                + "\n".join(hub_lines)
-            )
+            sections.append("### Hub Metadata\n\n" + "\n".join(hub_lines))
 
         return "\n\n".join(sections)
 
@@ -473,38 +367,19 @@ dataset = load_dataset(
         Render metadata values safely.
         """
 
-        formatted_key = (
-            self._format_key(key)
-        )
+        formatted_key = self._format_key(key)
 
         if isinstance(value, list):
+            rendered = "\n".join(f"  - `{item}`" for item in value)
 
-            rendered = "\n".join(
-                f"  - `{item}`"
-                for item in value
-            )
-
-            return (
-                f"- **{formatted_key}**:\n"
-                f"{rendered}"
-            )
+            return f"- **{formatted_key}**:\n" f"{rendered}"
 
         if isinstance(value, dict):
+            rendered = "\n".join(f"  - **{k}**: `{v}`" for k, v in value.items())
 
-            rendered = "\n".join(
-                f"  - **{k}**: `{v}`"
-                for k, v in value.items()
-            )
+            return f"- **{formatted_key}**:\n" f"{rendered}"
 
-            return (
-                f"- **{formatted_key}**:\n"
-                f"{rendered}"
-            )
-
-        return (
-            f"- **{formatted_key}**: "
-            f"`{value}`"
-        )
+        return f"- **{formatted_key}**: " f"`{value}`"
 
     @staticmethod
     def _format_key(
@@ -515,8 +390,4 @@ dataset = load_dataset(
         readable display names.
         """
 
-        return (
-            key.replace("_", " ")
-            .strip()
-            .title()
-        )
+        return key.replace("_", " ").strip().title()

@@ -13,12 +13,7 @@ from huggingface_hub import (
     HfApi,
 )
 
-type HFDatasetLike = (
-    Dataset
-    | DatasetDict
-    | IterableDataset
-    | IterableDatasetDict
-)
+type HFDatasetLike = Dataset | DatasetDict | IterableDataset | IterableDatasetDict
 
 api = HfApi()
 
@@ -82,10 +77,7 @@ def extract_num_rows(
         return dataset.num_rows
 
     if isinstance(dataset, DatasetDict):
-        return {
-            split: ds.num_rows
-            for split, ds in dataset.items()
-        }
+        return {split: ds.num_rows for split, ds in dataset.items()}
 
     return None
 
@@ -159,10 +151,7 @@ def extract_features(
             IterableDatasetDict,
         ),
     ):
-        return {
-            split: ds.features
-            for split, ds in dataset.items()
-        }
+        return {split: ds.features for split, ds in dataset.items()}
 
     return None
 
@@ -190,11 +179,7 @@ def extract_feature_names(
         return list(features.keys())
 
     return {
-        split: list(
-            split_features.keys()
-        )
-        for split, split_features
-        in features.items()
+        split: list(split_features.keys()) for split, split_features in features.items()
     }
 
 
@@ -222,10 +207,7 @@ def extract_fingerprint(
         return dataset._fingerprint
 
     if isinstance(dataset, DatasetDict):
-        return {
-            split: ds._fingerprint
-            for split, ds in dataset.items()
-        }
+        return {split: ds._fingerprint for split, ds in dataset.items()}
 
     return None
 
@@ -284,43 +266,35 @@ def extract_hub_metadata(
 
     metadata: dict[str, Any] = {}
 
-    metadata["hub_downloads"] = (
-        info.downloads
-    )
+    metadata["hub_downloads"] = info.downloads
 
-    metadata["hub_likes"] = (
-        info.likes
-    )
+    metadata["hub_likes"] = info.likes
 
-    metadata["hub_tags"] = (
-        info.tags
-    )
+    metadata["hub_tags"] = info.tags
 
-    metadata["hub_private"] = (
-        info.private
-    )
+    metadata["hub_private"] = info.private
 
-    metadata["hub_gated"] = (
-        info.gated
-    )
+    metadata["hub_gated"] = info.gated
 
-    if getattr(
-        info,
-        "dataset_size",
-        None,
-    ) is not None:
-        metadata[
-            "dataset_size_bytes"
-        ] = info.dataset_size
+    if (
+        getattr(
+            info,
+            "dataset_size",
+            None,
+        )
+        is not None
+    ):
+        metadata["dataset_size_bytes"] = info.dataset_size
 
-    if getattr(
-        info,
-        "download_size",
-        None,
-    ) is not None:
-        metadata[
-            "download_size_bytes"
-        ] = info.download_size
+    if (
+        getattr(
+            info,
+            "download_size",
+            None,
+        )
+        is not None
+    ):
+        metadata["download_size_bytes"] = info.download_size
 
     return metadata
 
@@ -357,46 +331,14 @@ def build_dataset_metadata(
     """
 
     metadata = {
-        "dataset_type": (
-            extract_dataset_type(
-                dataset
-            )
-        ),
-        "streaming": (
-            extract_is_streaming(
-                dataset
-            )
-        ),
-        "execution_mode": (
-            extract_execution_mode(
-                dataset
-            )
-        ),
-        "num_rows": (
-            extract_num_rows(
-                dataset
-            )
-        ),
-        "num_shards": (
-            extract_num_shards(
-                dataset
-            )
-        ),
-        "features": (
-            extract_feature_names(
-                dataset
-            )
-        ),
-        "fingerprint": (
-            extract_fingerprint(
-                dataset
-            )
-        ),
-        "revision": (
-            extract_revision(
-                dataset
-            )
-        ),
+        "dataset_type": (extract_dataset_type(dataset)),
+        "streaming": (extract_is_streaming(dataset)),
+        "execution_mode": (extract_execution_mode(dataset)),
+        "num_rows": (extract_num_rows(dataset)),
+        "num_shards": (extract_num_shards(dataset)),
+        "features": (extract_feature_names(dataset)),
+        "fingerprint": (extract_fingerprint(dataset)),
+        "revision": (extract_revision(dataset)),
     }
 
     if path is not None:

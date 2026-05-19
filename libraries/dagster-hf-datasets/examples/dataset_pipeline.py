@@ -79,9 +79,7 @@ def filtered_glue_qqp(
             and len(q2.split()) >= 5
         )
 
-    return deduplicated_glue_qqp.filter(
-        valid_example
-    )
+    return deduplicated_glue_qqp.filter(valid_example)
 
 
 @asset
@@ -95,16 +93,8 @@ def golden_glue_qqp(
 
     def normalize(example: dict) -> dict:
         return {
-            "question1": (
-                example["question1"]
-                .strip()
-                .lower()
-            ),
-            "question2": (
-                example["question2"]
-                .strip()
-                .lower()
-            ),
+            "question1": (example["question1"].strip().lower()),
+            "question2": (example["question2"].strip().lower()),
             "label": example["label"],
         }
 
@@ -120,19 +110,11 @@ def publish_golden_glue(
     to the Hugging Face Hub.
     """
 
-    print(
-        "\nPreparing dataset publication..."
-    )
-    print(
-        f"Dataset rows: "
-        f"{len(golden_glue_qqp)}"
-    )
+    print("\nPreparing dataset publication...")
+    print(f"Dataset rows: " f"{len(golden_glue_qqp)}")
 
     publisher = HFDatasetPublisher(
-        repo_id=(
-            "AINovice2005/"
-            "golden-glue-qqp"
-        ),
+        repo_id=("AINovice2005/" "golden-glue-qqp"),
         private=False,
     )
 
@@ -152,20 +134,13 @@ def publish_golden_glue(
             "Normalized text formatting",
         ],
         metadata={
-            "task": (
-                "duplicate-question-detection"
-            ),
+            "task": ("duplicate-question-detection"),
             "source_config": "qqp",
-            "pipeline": (
-                "golden_dataset_pipeline"
-            ),
+            "pipeline": ("golden_dataset_pipeline"),
         },
     )
 
-    print(
-        "\nDataset successfully pushed "
-        "to the Hugging Face Hub."
-    )
+    print("\nDataset successfully pushed " "to the Hugging Face Hub.")
     print(f"Hub URL: {hub_url}")
 
     return hub_url
@@ -194,10 +169,7 @@ defs = Definitions(
 
 
 if __name__ == "__main__":
-    print(
-        "\n=== Dagster Hugging Face "
-        "Golden Dataset Pipeline ===\n"
-    )
+    print("\n=== Dagster Hugging Face " "Golden Dataset Pipeline ===\n")
 
     print(
         "This example demonstrates:\n"
@@ -209,10 +181,7 @@ if __name__ == "__main__":
         "- Hugging Face Hub publishing\n"
     )
 
-    print(
-        "Make sure you are authenticated "
-        "with Hugging Face before running:\n"
-    )
+    print("Make sure you are authenticated " "with Hugging Face before running:\n")
 
     print("    hf auth login\n")
 
@@ -240,17 +209,10 @@ if __name__ == "__main__":
     print("\n=== Pipeline Result ===\n")
 
     if result.success:
-        print(
-            "Pipeline completed successfully."
-        )
+        print("Pipeline completed successfully.")
     else:
-        print(
-            "Pipeline execution failed."
-        )
+        print("Pipeline execution failed.")
 
-    print(
-        "\nYou can also visualize these "
-        "assets in the Dagster UI:\n"
-    )
+    print("\nYou can also visualize these " "assets in the Dagster UI:\n")
 
     print("    dagster dev\n")

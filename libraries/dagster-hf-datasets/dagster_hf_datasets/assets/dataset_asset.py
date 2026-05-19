@@ -79,21 +79,13 @@ def hf_dataset_asset(
             resolved_config = config
 
             if context.has_partition_key:
-                partition = (
-                    HFPartitionMapping.from_partition_key(
-                        context.partition_key
-                    )
-                )
+                partition = HFPartitionMapping.from_partition_key(context.partition_key)
 
                 if partition.is_revision:
-                    resolved_revision = (
-                        partition.value
-                    )
+                    resolved_revision = partition.value
 
                 elif partition.is_config:
-                    resolved_config = (
-                        partition.value
-                    )
+                    resolved_config = partition.value
 
             dataset = huggingface.load_dataset(
                 path=path,
@@ -103,18 +95,13 @@ def hf_dataset_asset(
                 streaming=streaming,
             )
 
-            dataset_metadata = (
-                build_dataset_metadata(
-                    dataset,
-                    path=path,
-                    revision=resolved_revision,
-                )
+            dataset_metadata = build_dataset_metadata(
+                dataset,
+                path=path,
+                revision=resolved_revision,
             )
 
-            context.log.info(
-                "Loaded Hugging Face "
-                f"dataset: {path}"
-            )
+            context.log.info("Loaded Hugging Face " f"dataset: {path}")
 
             context.log.info(
                 "Dataset metadata summary: "
@@ -129,9 +116,7 @@ def hf_dataset_asset(
                     "config": resolved_config,
                     "split": split,
                     "partition_key": (
-                        context.partition_key
-                        if context.has_partition_key
-                        else None
+                        context.partition_key if context.has_partition_key else None
                     ),
                     **dataset_metadata,
                 },
