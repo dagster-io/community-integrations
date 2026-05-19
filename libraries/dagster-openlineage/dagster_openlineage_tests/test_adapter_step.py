@@ -5,12 +5,20 @@ import time
 from unittest.mock import patch
 
 from openlineage.client.constants import DEFAULT_NAMESPACE_NAME
-from openlineage.client.facet import ParentRunFacet
-from openlineage.client.run import Job, Run, RunEvent, RunState
+from openlineage.client.event_v2 import Job, Run, RunEvent, RunState
+from openlineage.client.facet_v2 import parent_run as parent_run_facet
 from openlineage.client.uuid import generate_new_uuid
+
 from dagster_openlineage.adapter import OpenLineageAdapter
 
 from .conftest import PRODUCER
+
+
+def _expected_parent_facet(pipeline_run_id: str, pipeline_name: str):
+    return parent_run_facet.ParentRunFacet(
+        run=parent_run_facet.Run(runId=pipeline_run_id),
+        job=parent_run_facet.Job(namespace=DEFAULT_NAMESPACE_NAME, name=pipeline_name),
+    )
 
 
 @patch("dagster_openlineage.adapter.to_utc_iso_8601")
@@ -36,13 +44,7 @@ def test_start_pipeline(mock_client, mock_to_utc_iso_8601):
             run=Run(
                 runId=step_run_id,
                 facets={
-                    "parent": ParentRunFacet(
-                        run={"runId": pipeline_run_id},
-                        job={
-                            "namespace": DEFAULT_NAMESPACE_NAME,
-                            "name": pipeline_name,
-                        },
-                    )
+                    "parent": _expected_parent_facet(pipeline_run_id, pipeline_name)
                 },
             ),
             job=Job(
@@ -82,13 +84,7 @@ def test_complete_step(mock_client, mock_to_utc_iso_8601):
             run=Run(
                 runId=step_run_id,
                 facets={
-                    "parent": ParentRunFacet(
-                        run={"runId": pipeline_run_id},
-                        job={
-                            "namespace": DEFAULT_NAMESPACE_NAME,
-                            "name": pipeline_name,
-                        },
-                    )
+                    "parent": _expected_parent_facet(pipeline_run_id, pipeline_name)
                 },
             ),
             job=Job(
@@ -126,13 +122,7 @@ def test_fail_step(mock_client, mock_to_utc_iso_8601):
             run=Run(
                 runId=step_run_id,
                 facets={
-                    "parent": ParentRunFacet(
-                        run={"runId": pipeline_run_id},
-                        job={
-                            "namespace": DEFAULT_NAMESPACE_NAME,
-                            "name": pipeline_name,
-                        },
-                    )
+                    "parent": _expected_parent_facet(pipeline_run_id, pipeline_name)
                 },
             ),
             job=Job(

@@ -1,6 +1,10 @@
 # Copyright 2018-2025 contributors to the OpenLineage project
 # SPDX-License-Identifier: Apache-2.0
 
+# pyright: reportArgumentType=false
+# context.cursor is Optional[str] but every evaluate_tick call below writes
+# a concrete JSON string, so the None branch cannot reach from_json.
+
 import json
 import os
 from unittest.mock import patch
