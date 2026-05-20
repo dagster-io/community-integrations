@@ -309,7 +309,7 @@ def test_setup_for_execution_calls_offline_configuration():
     resource = HuggingFaceResource(offline=True)
 
     with patch.object(
-        resource,
+        HuggingFaceResource,
         "_configure_offline_mode",
     ) as mock_configure:
         resource.setup_for_execution(None)

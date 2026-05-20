@@ -134,15 +134,15 @@ def test_asset_output_metadata(
 
     metadata = result.metadata
 
-    assert metadata["path"] == "imdb"
+    assert metadata["path"].text == "imdb"
 
-    assert metadata["config"] == "plain_text"
+    assert metadata["config"].text == "plain_text"
 
-    assert metadata["split"] == "train"
+    assert metadata["split"].text == "train"
 
-    assert metadata["dataset_type"] == "Dataset"
+    assert metadata["dataset_type"].text == "Dataset"
 
-    assert metadata["num_rows"] == 2
+    assert metadata["num_rows"].value == 2
 
 
 # ============================================================
@@ -233,7 +233,7 @@ def test_partition_key_propagated_to_metadata(
         mock_hf_resource,
     )
 
-    assert result.metadata["partition_key"] == "revision:main"
+    assert result.metadata["partition_key"].text == "revision:main"
 
 
 # ============================================================

@@ -371,8 +371,8 @@ def test_output_metadata_contains_partition_key(
 
     metadata = outputs[0].metadata
 
-    assert metadata["partition_key"] == "revision:main"
+    assert metadata["partition_key"].text == "revision:main"
 
-    assert metadata["path"] == "imdb"
+    assert metadata["path"].text == "imdb"
 
-    assert metadata["split"] == "train"
+    assert metadata["split"].text == "train"
