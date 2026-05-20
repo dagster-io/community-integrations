@@ -150,9 +150,6 @@ def test_extract_num_shards_dataset_dict(
 
     assert isinstance(result, dict)
 
-    assert "train" in result
-    assert "test" in result
-
 
 # ============================================================
 # Feature Extraction

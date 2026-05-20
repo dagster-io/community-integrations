@@ -7,9 +7,6 @@ from dagster import (
     build_input_context,
     build_output_context,
 )
-from dagster._core.test_utils import (
-    instance_for_test,
-)
 from datasets import (
     Dataset,
     IterableDataset,
@@ -26,23 +23,14 @@ from dagster_hf_datasets.io_manager._io_manager import (
 
 
 @pytest.fixture
-def dagster_instance():
-    with instance_for_test() as instance:
-        yield instance
-
-
-@pytest.fixture
 def io_manager(temp_dir):
     return HFParquetIOManager(base_dir=str(temp_dir))
 
 
 @pytest.fixture
-def output_context(
-    dagster_instance,
-):
+def output_context():
     context = build_output_context(
         asset_key=AssetKey(["test_asset"]),
-        instance=dagster_instance,
     )
 
     context.add_output_metadata = MagicMock()
@@ -51,13 +39,9 @@ def output_context(
 
 
 @pytest.fixture
-def input_context(
-    output_context,
-    dagster_instance,
-):
+def input_context(output_context):
     return build_input_context(
         upstream_output=output_context,
-        instance=dagster_instance,
     )
 
 

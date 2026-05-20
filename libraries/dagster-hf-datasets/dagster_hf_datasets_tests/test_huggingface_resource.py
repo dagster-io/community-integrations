@@ -212,6 +212,8 @@ def test_load_dataset_forwards_kwargs(
 
     mock_load_dataset.assert_called_once()
 
+    assert mock_load_dataset.call_args is not None
+
     kwargs = mock_load_dataset.call_args.kwargs
 
     assert kwargs["trust_remote_code"] is True
@@ -259,6 +261,8 @@ def test_get_features_dataset_dict(
 ):
     result = HuggingFaceResource.get_features(tiny_dataset_dict)
 
+    assert isinstance(result, dict)
+
     assert result["train"] == tiny_dataset_dict["train"].features
 
 
@@ -282,6 +286,8 @@ def test_get_fingerprint_dataset_dict(
     tiny_dataset_dict,
 ):
     result = HuggingFaceResource.get_fingerprint(tiny_dataset_dict)
+
+    assert isinstance(result, dict)
 
     assert "train" in result
     assert "test" in result
