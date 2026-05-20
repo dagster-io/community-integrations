@@ -48,22 +48,30 @@ def get_event_log_records(
     last_storage_id: int,
     record_filter_limit: int,
 ) -> Iterable[EventLogRecord]:
-    """Returns a list of Dagster event log records in ascending order
-    from the instance's event log storage.
+    """Returns a list of Dagster event log records in ascending storage_id order.
+
+    Each event type is queried separately with ``record_filter_limit`` to bound
+    per-type fetch size. The merged results are then sorted by ``storage_id``
+    (monotonically increasing, guaranteed consistent with the cursor) and
+    capped at ``record_filter_limit`` total so the sensor never processes more
+    than that many records per tick regardless of how many event types are
+    in the filter set.
+
     :param instance: active instance to get records from
-    :param event_type: event type to filter by
+    :param event_type: event type(s) to filter by
     :param last_storage_id: storage id to use as after cursor filter
-    :param record_filter_limit: maximum number of event logs to retrieve
-    :return: list of Dagster event log records
+    :param record_filter_limit: per-type fetch cap and total result cap (0 = unlimited)
+    :return: list of Dagster event log records ordered by storage_id
     """
-    event_type_set = event_type if isinstance(event_type, set) else set([event_type])
+    event_type_set = event_type if isinstance(event_type, set) else {event_type}
     event_records: list[EventLogRecord] = []
     for item in event_type_set:
         event_records += instance.get_event_records(
             EventRecordsFilter(event_type=item, after_cursor=last_storage_id),
             limit=record_filter_limit,
         )
-    return sorted(event_records, key=lambda record: record.event_log_entry.timestamp)
+    merged = sorted(event_records, key=lambda record: record.storage_id)
+    return merged[:record_filter_limit] if record_filter_limit else merged
 
 
 def get_repository_name(
