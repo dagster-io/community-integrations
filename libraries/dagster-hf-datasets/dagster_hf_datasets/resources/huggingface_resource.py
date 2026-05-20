@@ -36,7 +36,7 @@ class HuggingFaceResource(ConfigurableResource):
 
     token: str | None = Field(
         default=None,
-        description=("Optional Hugging Face access token."),
+        description="Optional Hugging Face access token.",
     )
 
     token_path: str | None = Field(
@@ -51,16 +51,18 @@ class HuggingFaceResource(ConfigurableResource):
 
     offline: bool = Field(
         default=False,
-        description=("Enable Hugging Face offline mode."),
+        description="Enable Hugging Face offline mode.",
     )
 
     def setup_for_execution(
         self,
-        _: Any,
+        context: Any,
     ) -> None:
         """
         Configure Hugging Face execution environment.
         """
+        del context
+
         self._configure_offline_mode()
 
     def load_dataset(
@@ -82,15 +84,20 @@ class HuggingFaceResource(ConfigurableResource):
             path:
                 Dataset repository path or local
                 dataset script.
+
             config:
                 Dataset configuration name.
+
             split:
                 Dataset split.
+
             revision:
                 Dataset revision, tag, branch,
                 or commit hash.
+
             streaming:
                 Enable streaming mode.
+
             **kwargs:
                 Additional keyword arguments
                 forwarded directly to
@@ -101,15 +108,36 @@ class HuggingFaceResource(ConfigurableResource):
         """
         resolved_token = self._resolve_token()
 
-        return load_dataset(
-            path=path,
-            name=config,
-            split=split,
-            revision=revision,
-            streaming=streaming,
-            token=resolved_token,
-            cache_dir=self.cache_dir,
+        common_kwargs = {
+            "path": path,
+            "name": config,
+            "revision": revision,
+            "token": resolved_token,
+            "cache_dir": self.cache_dir,
             **kwargs,
+        }
+
+        if streaming:
+            if split is None:
+                return load_dataset(
+                    streaming=True,
+                    **common_kwargs,
+                )
+
+            return load_dataset(
+                split=split,
+                streaming=True,
+                **common_kwargs,
+            )
+
+        if split is None:
+            return load_dataset(
+                **common_kwargs,
+            )
+
+        return load_dataset(
+            split=split,
+            **common_kwargs,
         )
 
     @staticmethod
@@ -126,7 +154,7 @@ class HuggingFaceResource(ConfigurableResource):
             return dataset.num_rows
 
         if isinstance(dataset, DatasetDict):
-            return {split: ds.num_rows for split, ds in dataset.items()}
+            return {str(split): ds.num_rows for split, ds in dataset.items()}
 
         return None
 
@@ -153,7 +181,15 @@ class HuggingFaceResource(ConfigurableResource):
                 IterableDatasetDict,
             ),
         ):
-            return {split: ds.features for split, ds in dataset.items()}
+            feature_mapping: dict[str, Features] = {}
+
+            for split, ds in dataset.items():
+                features = ds.features
+
+                if features is not None:
+                    feature_mapping[str(split)] = features
+
+            return feature_mapping
 
         return None
 
@@ -168,21 +204,28 @@ class HuggingFaceResource(ConfigurableResource):
         fingerprints.
         """
         if isinstance(dataset, Dataset):
-            return getattr(
+            fingerprint = getattr(
                 dataset,
                 "_fingerprint",
                 None,
             )
 
+            return str(fingerprint) if fingerprint is not None else None
+
         if isinstance(dataset, DatasetDict):
-            return {
-                split: getattr(
+            fingerprint_mapping: dict[str, str] = {}
+
+            for split, ds in dataset.items():
+                fingerprint = getattr(
                     ds,
                     "_fingerprint",
                     None,
                 )
-                for split, ds in dataset.items()
-            }
+
+                if fingerprint is not None:
+                    fingerprint_mapping[str(split)] = str(fingerprint)
+
+            return fingerprint_mapping
 
         return None
 
@@ -193,13 +236,25 @@ class HuggingFaceResource(ConfigurableResource):
         """
         Attempt to extract dataset revision/version.
         """
-        try:
-            return dataset.info.version.version
-        except (
-            AttributeError,
-            TypeError,
-        ):
+        info = getattr(
+            dataset,
+            "info",
+            None,
+        )
+
+        if info is None:
             return None
+
+        version = getattr(
+            info,
+            "version",
+            None,
+        )
+
+        if version is None:
+            return None
+
+        return str(version)
 
     def _resolve_token(
         self,
@@ -219,7 +274,9 @@ class HuggingFaceResource(ConfigurableResource):
             token_file = Path(self.token_path)
 
             if token_file.exists():
-                return token_file.read_text(encoding="utf-8").strip()
+                return token_file.read_text(
+                    encoding="utf-8",
+                ).strip()
 
         return os.getenv("HF_TOKEN")
 

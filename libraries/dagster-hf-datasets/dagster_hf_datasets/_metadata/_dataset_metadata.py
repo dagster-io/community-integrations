@@ -77,7 +77,7 @@ def extract_num_rows(
         return dataset.num_rows
 
     if isinstance(dataset, DatasetDict):
-        return {split: ds.num_rows for split, ds in dataset.items()}
+        return {str(split): ds.num_rows for split, ds in dataset.items()}
 
     return None
 
@@ -96,11 +96,13 @@ def extract_num_shards(
             IterableDataset,
         ),
     ):
-        return getattr(
+        num_shards = getattr(
             dataset,
             "num_shards",
             None,
         )
+
+        return int(num_shards) if num_shards is not None else None
 
     if isinstance(
         dataset,
@@ -109,14 +111,19 @@ def extract_num_shards(
             IterableDatasetDict,
         ),
     ):
-        return {
-            split: getattr(
+        shard_mapping: dict[str, int] = {}
+
+        for split, ds in dataset.items():
+            num_shards = getattr(
                 ds,
                 "num_shards",
                 None,
             )
-            for split, ds in dataset.items()
-        }
+
+            if num_shards is not None:
+                shard_mapping[str(split)] = int(num_shards)
+
+        return shard_mapping
 
     return None
 
@@ -151,7 +158,15 @@ def extract_features(
             IterableDatasetDict,
         ),
     ):
-        return {split: ds.features for split, ds in dataset.items()}
+        feature_mapping: dict[str, Features] = {}
+
+        for split, ds in dataset.items():
+            features = ds.features
+
+            if features is not None:
+                feature_mapping[str(split)] = features
+
+        return feature_mapping
 
     return None
 
@@ -207,7 +222,7 @@ def extract_fingerprint(
         return dataset._fingerprint
 
     if isinstance(dataset, DatasetDict):
-        return {split: ds._fingerprint for split, ds in dataset.items()}
+        return {str(split): ds._fingerprint for split, ds in dataset.items()}
 
     return None
 
@@ -227,11 +242,25 @@ def extract_revision(
         Revision/version string
         if available.
     """
-    try:
-        return dataset.info.version.version
+    info = getattr(
+        dataset,
+        "info",
+        None,
+    )
 
-    except AttributeError:
+    if info is None:
         return None
+
+    version = getattr(
+        info,
+        "version",
+        None,
+    )
+
+    if version is None:
+        return None
+
+    return str(version)
 
 
 def extract_hub_metadata(
@@ -276,25 +305,23 @@ def extract_hub_metadata(
 
     metadata["hub_gated"] = info.gated
 
-    if (
-        getattr(
-            info,
-            "dataset_size",
-            None,
-        )
-        is not None
-    ):
-        metadata["dataset_size_bytes"] = info.dataset_size
+    dataset_size = getattr(
+        info,
+        "dataset_size",
+        None,
+    )
 
-    if (
-        getattr(
-            info,
-            "download_size",
-            None,
-        )
-        is not None
-    ):
-        metadata["download_size_bytes"] = info.download_size
+    if dataset_size is not None:
+        metadata["dataset_size_bytes"] = dataset_size
+
+    download_size = getattr(
+        info,
+        "download_size",
+        None,
+    )
+
+    if download_size is not None:
+        metadata["download_size_bytes"] = download_size
 
     return metadata
 
@@ -331,14 +358,14 @@ def build_dataset_metadata(
     """
 
     metadata = {
-        "dataset_type": (extract_dataset_type(dataset)),
-        "streaming": (extract_is_streaming(dataset)),
-        "execution_mode": (extract_execution_mode(dataset)),
-        "num_rows": (extract_num_rows(dataset)),
-        "num_shards": (extract_num_shards(dataset)),
-        "features": (extract_feature_names(dataset)),
-        "fingerprint": (extract_fingerprint(dataset)),
-        "revision": (extract_revision(dataset)),
+        "dataset_type": extract_dataset_type(dataset),
+        "streaming": extract_is_streaming(dataset),
+        "execution_mode": extract_execution_mode(dataset),
+        "num_rows": extract_num_rows(dataset),
+        "num_shards": extract_num_shards(dataset),
+        "features": extract_feature_names(dataset),
+        "fingerprint": extract_fingerprint(dataset),
+        "revision": extract_revision(dataset),
     }
 
     if path is not None:
