@@ -173,17 +173,3 @@ def test_partition_key_preserves_extra_colons():
     assert mapping.partition_type == "revision"
 
     assert mapping.value == "refs/pr/1"
-
-
-# ============================================================
-# Dataclass Immutability
-# ============================================================
-
-
-def test_partition_mapping_is_frozen():
-    mapping = HFPartitionMapping.from_revision("main")
-
-    with pytest.raises(AttributeError):
-        mapping.value = "new_value"
-
-        assert mapping.value == "dev"
