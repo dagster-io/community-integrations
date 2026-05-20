@@ -184,4 +184,8 @@ def test_partition_mapping_is_frozen():
     mapping = HFPartitionMapping.from_revision("main")
 
     with pytest.raises(AttributeError):
-        mapping.value = "dev"
+        object.__setattr__(
+            mapping,
+            "value",
+            "dev",
+        )

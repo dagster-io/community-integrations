@@ -249,9 +249,8 @@ def test_load_input_missing_artifact_raises(
 
 def test_get_input_path_without_upstream_output_raises(
     io_manager,
-    dagster_instance,
 ):
-    context = build_input_context(instance=dagster_instance)
+    context = build_input_context()
 
     with pytest.raises(
         ValueError,
@@ -279,7 +278,7 @@ def test_dataset_metadata_emitted(
 
     metadata = output_context.add_output_metadata.call_args[0][0]
 
-    assert metadata["format"].value == ("huggingface_dataset")
+    assert metadata["format"].value == "huggingface_dataset"
 
     assert metadata["streaming"].value is False
 
@@ -300,7 +299,7 @@ def test_dataframe_metadata_emitted(
 
     metadata = output_context.add_output_metadata.call_args[0][0]
 
-    assert metadata["format"].value == ("pandas_parquet")
+    assert metadata["format"].value == "pandas_parquet"
 
     assert metadata["streaming"].value is False
 
@@ -313,7 +312,9 @@ def test_iterable_dataset_metadata_emitted(
     io_manager,
     output_context,
 ):
-    iterable_dataset = IterableDataset.from_generator(lambda: iter([{"x": 1}]))
+    iterable_dataset = IterableDataset.from_generator(
+        lambda: iter([{"x": 1}])
+    )
 
     io_manager.handle_output(
         output_context,
@@ -322,6 +323,6 @@ def test_iterable_dataset_metadata_emitted(
 
     metadata = output_context.add_output_metadata.call_args[0][0]
 
-    assert metadata["format"].value == ("huggingface_iterable_dataset")
+    assert metadata["format"].value == "huggingface_iterable_dataset"
 
     assert metadata["streaming"].value is True

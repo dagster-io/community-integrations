@@ -114,6 +114,8 @@ def test_extract_num_rows_dataset_dict(
 ):
     result = extract_num_rows(tiny_dataset_dict)
 
+    assert isinstance(result, dict)
+
     assert result == {
         "train": 2,
         "test": 1,
@@ -146,6 +148,8 @@ def test_extract_num_shards_dataset_dict(
 ):
     result = extract_num_shards(tiny_dataset_dict)
 
+    assert isinstance(result, dict)
+
     assert "train" in result
     assert "test" in result
 
@@ -160,13 +164,15 @@ def test_extract_features_dataset(
 ):
     result = extract_features(tiny_dataset)
 
-    assert result == (tiny_dataset.features)
+    assert result == tiny_dataset.features
 
 
 def test_extract_features_dataset_dict(
     tiny_dataset_dict,
 ):
     result = extract_features(tiny_dataset_dict)
+
+    assert isinstance(result, dict)
 
     assert result["train"] == tiny_dataset_dict["train"].features
 
@@ -191,6 +197,8 @@ def test_extract_feature_names_dataset_dict(
     tiny_dataset_dict,
 ):
     result = extract_feature_names(tiny_dataset_dict)
+
+    assert isinstance(result, dict)
 
     assert result == {
         "train": [
@@ -224,6 +232,8 @@ def test_extract_fingerprint_dataset_dict(
     tiny_dataset_dict,
 ):
     result = extract_fingerprint(tiny_dataset_dict)
+
+    assert isinstance(result, dict)
 
     assert "train" in result
     assert "test" in result
