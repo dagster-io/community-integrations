@@ -312,9 +312,7 @@ def test_iterable_dataset_metadata_emitted(
     io_manager,
     output_context,
 ):
-    iterable_dataset = IterableDataset.from_generator(
-        lambda: iter([{"x": 1}])
-    )
+    iterable_dataset = IterableDataset.from_generator(lambda: iter([{"x": 1}]))
 
     io_manager.handle_output(
         output_context,
