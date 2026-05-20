@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from dagster import build_op_context
@@ -226,14 +226,21 @@ def test_multi_asset_respects_selected_outputs(
     def my_asset():
         pass
 
-    context = build_op_context(selected_output_names={"train"})
+    context = build_op_context()
 
-    outputs = list(
-        my_asset(
-            context,
-            mock_hf_resource,
+    with patch.object(
+        type(context),
+        "selected_output_names",
+        new_callable=PropertyMock,
+    ) as mock_selected_outputs:
+        mock_selected_outputs.return_value = {"train"}
+
+        outputs = list(
+            my_asset(
+                context,
+                mock_hf_resource,
+            )
         )
-    )
 
     assert len(outputs) == 1
 

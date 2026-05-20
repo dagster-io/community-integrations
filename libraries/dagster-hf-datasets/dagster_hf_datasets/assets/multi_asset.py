@@ -152,11 +152,27 @@ def hf_multi_asset(
 
             context.log.info("Loaded dataset splits: " f"{list(dataset.keys())}")
 
+            # Dagster direct invocation contexts created via
+            # build_op_context() may expose
+            # selected_output_names without a backing
+            # step execution context.
+            #
+            # In those cases, default to materializing
+            # all declared outputs.
+            try:
+                selected_outputs = context.selected_output_names
+            except AttributeError:
+                selected_outputs = None
+
+            # Only yield outputs declared in outs=
+            # to preserve Dagster multi-asset invariants.
+            declared_outputs = set(split_outputs.keys())
+
             for split_name, split_dataset in dataset.items():
-                if (
-                    context.selected_output_names
-                    and split_name not in context.selected_output_names
-                ):
+                if split_name not in declared_outputs:
+                    continue
+
+                if selected_outputs is not None and split_name not in selected_outputs:
                     continue
 
                 split_metadata = build_dataset_metadata(
@@ -179,7 +195,7 @@ def hf_multi_asset(
                     },
                 )
 
-            context.log.info(f"Loaded Hugging Face " f"DatasetDict: {path}")
+            context.log.info(f"Loaded Hugging Face DatasetDict: {path}")
 
         return _multi_asset
 
