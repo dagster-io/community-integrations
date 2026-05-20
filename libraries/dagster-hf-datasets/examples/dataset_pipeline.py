@@ -1,3 +1,22 @@
+"""
+Data Processing Pipeline
+
+This example demonstrates a complete end-to-end data processing pipeline that ingests
+a Hugging Face dataset, applies multiple transformation stages, and publishes the
+processed result back to the Hugging Face Hub.
+
+Pipeline Stages:
+1. raw_glue_qqp: Load raw GLUE QQP training data
+2. deduplicated_glue_qqp: Remove duplicate question pairs
+3. filtered_glue_qqp: Remove malformed and short examples
+4. golden_glue_qqp: Normalize text and produce curated dataset
+5. publish_golden_glue: Push processed data to Hugging Face Hub
+
+This example is ideal for building production-ready data curation pipelines where
+you need to track transformations, ensure data quality, and maintain full lineage.
+Remember to authenticate with Hugging Face via `hf auth login` before running.
+"""
+
 from datasets import Dataset
 
 from dagster import (

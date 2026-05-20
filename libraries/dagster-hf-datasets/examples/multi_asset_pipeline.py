@@ -1,3 +1,21 @@
+"""
+Streaming Runtime Pipeline Example
+
+This example shows how to process very large datasets using Hugging Face's streaming.
+Streaming lets you work with data that doesn’t fit in memory by using IterableDatasets.
+These datasets are only temporary and not saved. When you convert them into a regular
+Dataset, Dagster stores it through the IO manager. Downstream assets then use this
+saved Dataset.
+
+Pipeline Stages:
+1. sampled_c4: Stream C4 dataset and deterministically sample rows
+2. filtered_c4: Remove short/malformed text examples
+3. normalized_c4: Standardize text formatting and enrich with metadata
+4. publish_golden_c4: Publish curated dataset to Hugging Face Hub
+
+It is necessary to authenticate with Hugging Face via `hf auth login` before running.
+"""
+
 from __future__ import annotations
 
 from itertools import islice

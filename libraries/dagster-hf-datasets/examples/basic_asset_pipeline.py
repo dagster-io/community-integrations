@@ -1,3 +1,18 @@
+"""
+Basic Asset Pipeline Example
+
+This example demonstrates the core workflow for integrating Hugging Face datasets
+with Dagster using the dagster-hf-datasets package.
+
+Pipeline Stages:
+1. Define a Hugging Face resource with caching configuration
+2. Create a Parquet IO Manager for persistent data storage
+3. Declare a dataset asset that automatically materializes the data
+4. Materialize the asset and inspect the resulting metadata
+
+Make sure you have the Hugging Face CLI installed and authenticated before running this example.
+"""
+
 from __future__ import annotations
 
 from datasets import (
