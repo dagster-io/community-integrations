@@ -10,18 +10,16 @@
 
 ## Overview
 
-Dagster-HF-Datasets helps you use Hugging Face datasets as Dagster assets.
+Dagster-HF-Datasets integrates Hugging Face datasets with Dagster for building reproducible, observable data pipelines. Load datasets directly as Dagster assets, apply transformations, and publish results back to the Hub.
 
-It provides:
+### Features
 
-- dataset assets for Hugging Face datasets
-- streaming dataset support
-- parquet-backed persistence
-- metadata enrichment
-- multi-asset dataset pipelines
-- Hugging Face Hub publishing utilities
-
-The library is designed for building reproducible dataset pipelines with Dagster and Hugging Face.
+- **Hugging Face dataset assets** — Load any HF dataset as a Dagster asset with automatic metadata.
+- **Streaming support** — Efficiently handle large datasets with runtime-only streaming mode.
+- **Parquet persistence** — Auto-save datasets to disk for caching and versioning.
+- **Metadata & lineage** — Rich metadata for observability and data lineage tracking.
+- **Multi-asset pipelines** — Create split-aware assets from datasets with multiple splits.
+- **Hub publishing** — Push processed datasets back to the Hugging Face Hub with dataset cards.
 
 ---
 
@@ -43,112 +41,51 @@ pip install -e .
 
 ---
 
-## Quickstart
-
-You can refer
-
----
-
-## Main APIs
-
-
-### `HuggingFaceResource`
-
-Resource for loading datasets from the Hugging Face Hub.
-
-### `hf_dataset_asset`
-
-Create a Dagster asset from a Hugging Face dataset.
-
-### `hf_multi_asset`
-
-Create split-aware multi-assets for HF datasets with multiple splits.
-
----
-
-## Features
-
-- Hugging Face dataset assets
-- streaming dataset ingestion
-- metadata extraction
-- parquet persistence
-- runtime-only streaming support
-- dataset publishing utilities
-- lineage-aware dataset pipelines
-
----
-
 ## Examples
 
-### Golden Dataset Pipeline
+### Basic Asset Pipeline
 
-Dataset cleaning and preprocessing pipeline with:
+Get started with a simple example of materializing a Hugging Face dataset as a Dagster asset:
 
-- filtering
-- normalization
-- deduplication
-- Hugging Face Hub publishing
+See [examples/basic_asset_pipeline.py](https://github.com/dagster/community-integrations/blob/main/libraries/dagster-hf-datasets/examples/basic_asset_pipeline.py)
 
-Example file:
-
-```text
-examples/golden_dataset_pipeline.py
-```
+- Dataset materialization with `hf_dataset_asset`
+- Parquet persistence via `HFParquetIOManager`
+- Automatic metadata enrichment
+- Hugging Face Hub observability
 
 ---
 
-### Runtime Streaming Pipeline
+### Multi-Asset Streaming Pipeline
 
-Streaming dataset pipeline demonstrating:
+Process large datasets efficiently with runtime-only streaming ingestion:
 
-- runtime-only ingestion
-- streaming preprocessing
-- Dataset materialization
-- downstream parquet persistence
+See [examples/multi_asset_pipeline.py](https://github.com/dagster/community-integrations/blob/main/libraries/dagster-hf-datasets/examples/multi_asset_pipeline.py)
 
-Example file:
-
-```text
-examples/runtime_streaming_pipeline.py
-```
+- Streaming dataset loading with `load_dataset(..., streaming=True)`
+- Deterministic sampling of IterableDatasets
+- Metadata extraction from streaming sources
+- Conversion to persistent materialized artifacts
 
 ---
 
-### Multi-Asset Dataset Pipeline
+### Complete Dataset Pipeline
 
-Multi-split dataset orchestration example with:
+Build production-grade data pipelines with dataset cleaning, transformation and publishing:
 
-- split-aware assets
-- metadata enrichment
-- Hugging Face Hub metadata
-- Dagster lineage tracking
+See [examples/multi_asset_pipeline.py](https://github.com/dagster/community-integrations/blob/main/libraries/dagster-hf-datasets/examples/dataset_pipeline.py)
 
-
-Example file:
-
-```text
-examples/multi_asset_pipeline.py
-```
+- Deduplication and filtering of raw data
+- Text normalization and formatting
+- Multi-step lineage-aware transformations
+- Hugging Face Hub dataset publishing
 
 ---
 
 ## Documentation
 
-### API Documentation
-
-Placeholder link:
-
-```text
-docs/api/
-```
-
-### Usage
-
-Placeholder link:
-
-```text
-docs/guides/
-```
+- **[Usage Guide](https://github.com/dagster/community-integrations/blob/main/libraries/dagster-hf-datasets/docs/Usage.md)** — Quick start, configuration, publishing datasets to Hugging Face Hub, and metadata/lineage tracking
+- **[API Reference](https://github.com/dagster/community-integrations/blob/main/libraries/dagster-hf-datasets/docs/API.md)** — Complete API documentation for `HuggingFaceResource`, asset decorators, and the IO manager
 
 ---
 
