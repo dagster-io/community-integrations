@@ -193,8 +193,8 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
     # ``ClassVar`` so pydantic stops treating ``extension`` as a model field
     # and the parent's annotation (``Optional[str]`` on ``UPathIOManager``) is
     # not reported as shadowed on every import. The parent declares
-    # ``extension`` as an instance var, hence the pyright override silencer.
-    extension: ClassVar[Optional[str]] = ".delta"  # pyright: ignore[reportIncompatibleVariableOverride]
+    # ``extension`` as an instance var, hence the ty override silencer.
+    extension: ClassVar[Optional[str]] = ".delta"  # ty: ignore[invalid-attribute-override]
     mode: DeltaWriteMode = DeltaWriteMode.overwrite.value  # type: ignore
     schema_mode: DeltaSchemaMode | None = None
     version: int | None = None

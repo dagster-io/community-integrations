@@ -130,8 +130,8 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
     # ``ClassVar`` so pydantic stops treating ``extension`` as a model field
     # and the parent's annotation (``Optional[str]`` on ``UPathIOManager``) is
     # not reported as shadowed on every import. The parent declares
-    # ``extension`` as an instance var, hence the pyright override silencer.
-    extension: ClassVar[Optional[str]] = ".parquet"  # pyright: ignore[reportIncompatibleVariableOverride]
+    # ``extension`` as an instance var, hence the ty override silencer.
+    extension: ClassVar[Optional[str]] = ".parquet"  # ty: ignore[invalid-attribute-override]
 
     def sink_df_to_path(
         self,
