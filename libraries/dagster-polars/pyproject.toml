@@ -18,7 +18,7 @@ dependencies = [
     "polars>=1.0.0",
     "pyarrow>=8.0.0",
     "typing-extensions>=4.7.0",
-    "universal-pathlib>=0.1.4",
+    "universal-pathlib>=0.1.4,<0.3",
 ]
 dynamic = ["version"]
 
