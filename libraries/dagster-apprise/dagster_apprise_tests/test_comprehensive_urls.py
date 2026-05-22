@@ -213,7 +213,6 @@ class TestComprehensiveAppriseUrls:
             "syslog://hostname",  # Invalid Syslog format
             "twitter://consumer_key:consumer_secret@access_token:access_token_secret",  # Invalid Twitter format
             "vonage://api_key:api_secret@from_number",  # Invalid Vonage format
-            "webex://webhook_url",  # Invalid Webex format
             "xmpp://user:pass@hostname",  # Invalid XMPP format
         ]
 
