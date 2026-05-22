@@ -672,17 +672,20 @@ def test_existing_table_partition_names_unchanged(
         schema=iceberg_table_schema,
     )
 
-    # Manually add a partition field with old-style naming (same as column name)
+    # Manually add an identity partition field with old-style naming (same as column name).
+    # PyIceberg no longer allows transformed partition field names to conflict with
+    # schema column names, but identity partitions using the source column name are still
+    # valid legacy specs.
     with table.update_spec() as update:
         update.add_field(
-            source_column_name="timestamp",
-            transform=transforms.HourTransform(),
-            partition_field_name="timestamp",  # Old style: same as column name
+            source_column_name="category",
+            transform=transforms.IdentityTransform(),
+            partition_field_name="category",  # Old style: same as column name
         )
 
     table.refresh()
     original_field_name = table.spec().fields[0].name
-    assert original_field_name == "timestamp"
+    assert original_field_name == "category"
 
     # Now run update with no actual changes (same partition dimensions)
     table_slice = TableSlice(
@@ -690,8 +693,8 @@ def test_existing_table_partition_names_unchanged(
         schema=namespace,
         partition_dimensions=[
             TablePartitionDimension(
-                "timestamp",
-                TimeWindow(dt.datetime(2023, 1, 1), dt.datetime(2023, 1, 1, 1)),
+                "category",
+                ["A"],
             ),
         ],
     )
@@ -709,7 +712,7 @@ def test_existing_table_partition_names_unchanged(
     assert len(table.spec().fields) == 1
     assert (
         table.spec().fields[0].name == original_field_name
-    )  # Should still be "timestamp"
+    )  # Should still be "category"
 
 
 def test_partition_field_naming_avoids_column_conflicts(
