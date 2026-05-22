@@ -135,7 +135,7 @@ def test_vertexai_wrapper_with_asset():
     mat = mats[0]
 
     assert mat.metadata["vertexai.calls"].value == 1
-    # Fixed: Cast to int to satisfy pyright
+    # Fixed: Cast to int to satisfy ty
     prompt_tokens = mat.metadata["vertexai.prompt_token_count"].value
     candidates_tokens = mat.metadata["vertexai.candidates_token_count"].value
     total_tokens = mat.metadata["vertexai.total_token_count"].value

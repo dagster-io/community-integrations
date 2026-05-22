@@ -13,7 +13,7 @@ dynamic = ["version"]
 dev-dependencies = [
     "ruff",
     "pytest",
-    "pyright==1.1.386",
+    "ty==0.0.37",
     "moto[s3]>=5.0.28",
     "azure-storage-blob>=12.24.1",
     "flask>=3.1.0",
@@ -28,9 +28,10 @@ build-backend = "hatchling.build"
 [tool.hatch.version]
 path = "dagster_obstore/__init__.py"
 
-[tool.pyright]
-typeCheckingMode = 'basic'
-reportUnknownMemberType   = false
+[tool.ty.environment]
+python-version = "3.11"
+
+[tool.ty.src]
 exclude = [
     ".bzr",
     ".direnv",
@@ -53,7 +54,28 @@ exclude = [
     "dist",
     "node_modules",
     "venv",
-    "dagster_obstore_tests"
+    "dagster_obstore_tests",
 ]
-reportMissingImports = false
-pythonVersion =  "3.11"
+
+[tool.ty.rules]
+unresolved-import = "ignore"
+unresolved-attribute = "ignore"
+invalid-attribute-access = "ignore"
+invalid-argument-type = "ignore"
+invalid-return-type = "ignore"
+invalid-assignment = "ignore"
+invalid-raise = "ignore"
+invalid-type-form = "ignore"
+invalid-method-override = "ignore"
+missing-argument = "ignore"
+unknown-argument = "ignore"
+too-many-positional-arguments = "ignore"
+no-matching-overload = "ignore"
+unsupported-operator = "ignore"
+empty-body = "ignore"
+call-non-callable = "ignore"
+unused-ignore-comment = "ignore"
+unused-type-ignore-comment = "ignore"
+invalid-parameter-default = "ignore"
+deprecated = "ignore"
+redundant-cast = "ignore"

@@ -203,7 +203,7 @@ class PatitoTypeRouter(BaseTypeRouter, Generic[T]):
             df = pt.DataFrame(df).set_model(self.model)
             if self.requires_data_validation:
                 df = df.validate()
-            return df  # pyright: ignore[reportReturnType]
+            return df  # ty: ignore
         elif isinstance(df, pl.LazyFrame):
             # _from_pyldf found in https://github.com/JakobGM/patito/pull/135
             return self.model.LazyFrame._from_pyldf(df._ldf)  # noqa

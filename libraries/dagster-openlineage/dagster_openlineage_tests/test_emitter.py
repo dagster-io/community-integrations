@@ -1,9 +1,9 @@
 # Copyright 2018-2025 contributors to the OpenLineage project
 # SPDX-License-Identifier: Apache-2.0
 
-# pyright: reportAttributeAccessIssue=false
+# ty: ignore
 # Transport.config / .url exist on HttpTransport subclass but not on the
-# abstract Transport base pyright resolves OpenLineageClient.transport to.
+# abstract Transport base ty resolves OpenLineageClient.transport to.
 
 import os
 from unittest.mock import MagicMock, patch

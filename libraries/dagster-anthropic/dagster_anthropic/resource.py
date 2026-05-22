@@ -19,9 +19,9 @@ from dagster import (
 )
 
 if version.parse(__version__) >= version.parse("1.10.0"):
-    from dagster._annotations import preview  # pyright: ignore[reportAttributeAccessIssue]
+    from dagster._annotations import preview  # ty: ignore
 else:
-    from dagster._annotations import experimental as preview  # pyright: ignore[reportAttributeAccessIssue]
+    from dagster._annotations import experimental as preview  # ty: ignore
 
 from anthropic import Anthropic
 
@@ -203,8 +203,8 @@ class AnthropicResource(ConfigurableResource):
     ):
         self._client.messages.create = with_usage_metadata(
             context, output_name, func=self._client.messages.create
-        )  # pyright: ignore
-        # We skip pyright on this line - it complains about the fact that the Anthropic.message.create
+        )  # ty: ignore
+        # We skip ty on this line - it complains about the fact that the Anthropic.message.create
         # (just like OpenAI.chat.copmletions.create), has multiple possible return values
         #  (depending on the boolean stream parameter)
 

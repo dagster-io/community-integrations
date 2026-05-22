@@ -12,10 +12,10 @@ ruff:
 	uv run ruff format
 
 check:
-	uv run pyright
+	uv run ty check
 
 quality:
 	uv run ruff check
 	uv run ruff format --check
-	uv run pyright
+	uv run ty check
 	uv run pytest

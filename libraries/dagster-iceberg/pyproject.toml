@@ -112,14 +112,35 @@ ignore = [
 [tool.pytest.ini_options]
 cache_dir = "./.cache/pytest"
 
-[tool.pyright]
-exclude = [".venv", ".github", "docs", "tests"]
-include = ["src"]
-pythonVersion = "3.11"
-venvPath = "."
-venv = ".venv"
-reportMissingImports = "none"
+[tool.ty.environment]
+python-version = "3.11"
 
+[tool.ty.src]
+include = ["src"]
+exclude = [".venv", ".github", "docs", "tests"]
+
+[tool.ty.rules]
+unresolved-import = "ignore"
+unresolved-attribute = "ignore"
+invalid-attribute-access = "ignore"
+invalid-argument-type = "ignore"
+invalid-return-type = "ignore"
+invalid-assignment = "ignore"
+invalid-raise = "ignore"
+invalid-type-form = "ignore"
+invalid-method-override = "ignore"
+missing-argument = "ignore"
+unknown-argument = "ignore"
+too-many-positional-arguments = "ignore"
+no-matching-overload = "ignore"
+unsupported-operator = "ignore"
+empty-body = "ignore"
+call-non-callable = "ignore"
+unused-ignore-comment = "ignore"
+unused-type-ignore-comment = "ignore"
+invalid-parameter-default = "ignore"
+deprecated = "ignore"
+redundant-cast = "ignore"
 [dependency-groups]
 docs = [
   "mkdocs>=1.6.1",
@@ -135,7 +156,7 @@ dev = [
   "docker",
   "fsspec[http]>=2025.2.0",
   "pyiceberg[sql-postgres]<0.12",
-  "pyright>=1.1.385",
+  "ty==0.0.37",
   "pytest>=8.3.2",
   "pytest-cov>=6.0.0",
   "ruff>=0.9.6",

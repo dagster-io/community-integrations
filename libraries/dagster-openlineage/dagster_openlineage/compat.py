@@ -35,7 +35,7 @@ def get_job_origin(run: Any) -> Any:
     origin = getattr(run, "remote_job_origin", None)
     if origin is not None:
         return origin
-    return getattr(run, "external_job_origin", None)  # pyright: ignore[reportAttributeAccessIssue]
+    return getattr(run, "external_job_origin", None)  # ty: ignore
 
 
 def get_repository_origin(origin: Any) -> Any:
@@ -48,7 +48,7 @@ def get_repository_origin(origin: Any) -> Any:
         return None
     if hasattr(origin, "repository_origin"):
         return getattr(origin, "repository_origin", None)
-    return getattr(origin, "external_repository_origin", None)  # pyright: ignore[reportAttributeAccessIssue]
+    return getattr(origin, "external_repository_origin", None)  # ty: ignore
 
 
 __all__ = [

@@ -12,7 +12,7 @@ ruff:
 	uv run ruff format
 
 check:
-	uv run pyright
+	uv run ty check
 
 docs:
 	uv run mkdocs serve
