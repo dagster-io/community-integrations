@@ -152,6 +152,9 @@ dev = [
   "dagit>=1.8.8",
   "dagster>=1.10.5",
   "dagster-polars[patito]>=0.26.1",
+  # dagster-polars releases before the universal-pathlib 0.3 compatibility fix
+  # still read UPath._kwargs via Dagster's UPathIOManager in the kitchen-sink tests.
+  "universal-pathlib<0.3",
   "dagster-pyspark>=0.26.1",
   "docker",
   "fsspec[http]>=2025.2.0",
@@ -160,4 +163,7 @@ dev = [
   "pytest>=8.3.2",
   "pytest-cov>=6.0.0",
   "ruff>=0.9.6",
+  "setuptools",
+  "pandas>=2.0.0",
+  "grpcio-status",
 ]
