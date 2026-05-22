@@ -12,4 +12,4 @@ ruff:
 	uv run ruff format
 
 check:
-	uv run ty check
+	uv run pyright
