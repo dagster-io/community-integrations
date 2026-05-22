@@ -3,6 +3,7 @@ import uuid
 from collections.abc import Generator
 
 import pytest
+from docker.errors import DockerException
 from elasticsearch import Elasticsearch
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
@@ -29,14 +30,17 @@ def es_url() -> Generator[str, None, None]:
         yield override
         return
 
-    container = (
-        DockerContainer(ES_IMAGE)
-        .with_env("discovery.type", "single-node")
-        .with_env("xpack.security.enabled", "false")
-        .with_env("ES_JAVA_OPTS", "-Xms512m -Xmx512m")
-        .with_exposed_ports(ES_PORT)
-    )
-    container.start()
+    try:
+        container = (
+            DockerContainer(ES_IMAGE)
+            .with_env("discovery.type", "single-node")
+            .with_env("xpack.security.enabled", "false")
+            .with_env("ES_JAVA_OPTS", "-Xms512m -Xmx512m")
+            .with_exposed_ports(ES_PORT)
+        )
+        container.start()
+    except DockerException as exc:
+        pytest.skip(f"Docker unavailable for Elasticsearch integration tests: {exc}")
     try:
         wait_for_logs(container, "started")
         host = container.get_container_host_ip()
