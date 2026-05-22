@@ -34,6 +34,44 @@ VERTEX_AI_RESOURCE_CONFIG = {
 # --- Tests ---
 
 
+class FakeCountTokensResponse:
+    total_tokens = 1
+
+
+class FakeUsageMetadata:
+    candidates_token_count = 2
+    prompt_token_count = 3
+    total_token_count = 5
+
+
+class FakeGenerationResponse:
+    text = "mocked Vertex AI response"
+    usage_metadata = FakeUsageMetadata()
+
+
+class FakeGenerativeModel:
+    def __init__(self, model_name: str):
+        self.model_name = model_name
+
+    def generate_content(self, *args, **kwargs):
+        return FakeGenerationResponse()
+
+    def count_tokens(self, *args, **kwargs):
+        return FakeCountTokensResponse()
+
+
+@pytest.fixture(autouse=True)
+def mock_vertexai(monkeypatch):
+    """Avoid live Vertex AI calls and ADC requirements in unit tests."""
+
+    monkeypatch.setattr(
+        "dagster_vertexai.resource.vertexai.init", lambda **kwargs: None
+    )
+    monkeypatch.setattr(
+        "dagster_vertexai.resource.GenerativeModel", FakeGenerativeModel
+    )
+
+
 def test_resource_initialization():
     """Tests that the resource can be initialized without errors."""
     try:
