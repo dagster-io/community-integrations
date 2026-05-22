@@ -21,6 +21,6 @@ __all__ = [
     "HostsConfig",
     "build_indexed_asset_check",
 ]
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 DagsterLibraryRegistry.register("dagster-elasticsearch", __version__, is_dagster_package=False)
