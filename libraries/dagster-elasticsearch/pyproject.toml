@@ -5,9 +5,11 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "dagster>=1.13.0",
-    # CI runs against an Elasticsearch 8 server; elasticsearch-py refuses
-    # cross-major clients (e.g. v9 client + v8 server).
-    "elasticsearch>=8.10,<9",
+    # Loose pin: Elasticsearch 8, 9, and 10 use the same bulk + alias APIs
+    # we exercise. Pin a specific major in your own project to match your
+    # server. elasticsearch-py refuses cross-major (e.g. v9 client + v8
+    # server).
+    "elasticsearch>=8.10,<11",
 ]
 dynamic = ["version"]
 

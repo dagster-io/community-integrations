@@ -1,15 +1,35 @@
 import os
+import time
 import uuid
 from collections.abc import Generator
 
 import pytest
 from docker.errors import DockerException
 from elasticsearch import Elasticsearch
+from elasticsearch.exceptions import ConnectionError as ESConnectionError
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 
 ES_IMAGE = os.environ.get("ES_TEST_IMAGE", "docker.elastic.co/elasticsearch/elasticsearch:9.1.3")
 ES_PORT = 9200
+
+
+def _wait_for_elasticsearch(url: str, timeout: float = 60.0) -> None:
+    deadline = time.monotonic() + timeout
+    last_error: Exception | None = None
+
+    while time.monotonic() < deadline:
+        client = Elasticsearch(hosts=[url], verify_certs=False)
+        try:
+            client.info()
+            return
+        except ESConnectionError as exc:
+            last_error = exc
+            time.sleep(1)
+        finally:
+            client.close()
+
+    raise TimeoutError(f"Elasticsearch did not become ready at {url}") from last_error
 
 
 @pytest.fixture(scope="session")
@@ -45,7 +65,9 @@ def es_url() -> Generator[str, None, None]:
         wait_for_logs(container, "started")
         host = container.get_container_host_ip()
         port = container.get_exposed_port(ES_PORT)
-        yield f"http://{host}:{port}"
+        url = f"http://{host}:{port}"
+        _wait_for_elasticsearch(url)
+        yield url
     finally:
         container.stop()
 
