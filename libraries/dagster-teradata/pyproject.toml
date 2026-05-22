@@ -38,6 +38,9 @@ packages = [
 [tool.setuptools.dynamic]
 version = {attr = "dagster_teradata.__version__"}
 
+[tool.pytest.ini_options]
+addopts = "--ignore=dagster_teradata_tests/functional/"
+
 [tool.ty.rules]
 unresolved-import = "ignore"
 invalid-argument-type = "ignore"
