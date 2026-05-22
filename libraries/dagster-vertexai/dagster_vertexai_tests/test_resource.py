@@ -64,8 +64,12 @@ class FakeGenerativeModel:
 def mock_vertexai(monkeypatch):
     """Avoid live Vertex AI calls and ADC requirements in unit tests."""
 
-    monkeypatch.setattr("dagster_vertexai.resource.vertexai.init", lambda **kwargs: None)
-    monkeypatch.setattr("dagster_vertexai.resource.GenerativeModel", FakeGenerativeModel)
+    monkeypatch.setattr(
+        "dagster_vertexai.resource.vertexai.init", lambda **kwargs: None
+    )
+    monkeypatch.setattr(
+        "dagster_vertexai.resource.GenerativeModel", FakeGenerativeModel
+    )
 
 
 def test_resource_initialization():
