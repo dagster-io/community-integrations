@@ -637,7 +637,6 @@ daft = [
     { name = "getdaft" },
 ]
 pandas = [
-    { name = "grpcio-status" },
     { name = "pandas" },
 ]
 polars = [
@@ -675,7 +674,6 @@ docs = [
 requires-dist = [
     { name = "dagster", specifier = ">=1.8.2" },
     { name = "getdaft", marker = "extra == 'daft'", specifier = ">=0.3.0" },
-    { name = "grpcio-status", marker = "extra == 'pandas'" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.0.0" },
     { name = "pendulum", specifier = ">=3.0.0" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=1.0.0" },
