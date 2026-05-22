@@ -337,5 +337,9 @@ def test_external_compute_log_manager(mock_s3_bucket):
         assert len(captured_log_entries) == 1
         entry = captured_log_entries[0]
         # in dagster-obstore we don't add external urls
-        assert entry.dagster_event.logs_captured_data.external_stdout_url is None  # ty: ignore
-        assert entry.dagster_event.logs_captured_data.external_stderr_url is None  # ty: ignore
+        assert (
+            entry.dagster_event.logs_captured_data.external_stdout_url is None
+        )  # ty: ignore
+        assert (
+            entry.dagster_event.logs_captured_data.external_stderr_url is None
+        )  # ty: ignore
