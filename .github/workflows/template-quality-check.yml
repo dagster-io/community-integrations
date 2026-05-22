@@ -36,7 +36,7 @@ jobs:
 
       - name: Type check
         working-directory: ${{ inputs.working_directory }}
-        run: uv run ty check
+        run: uv run ty check .
 
       - name: Test
         working-directory: ${{ inputs.working_directory }}
