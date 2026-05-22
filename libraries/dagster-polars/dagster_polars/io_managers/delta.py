@@ -5,7 +5,14 @@ from pprint import pformat
 from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 import polars as pl
-from dagster import InputContext, MetadataValue, MultiPartitionKey, OutputContext
+from dagster import (
+    InputContext,
+    MetadataValue,
+    MultiPartitionKey,
+    MultiPartitionsDefinition,
+    OutputContext,
+    TimeWindowPartitionsDefinition,
+)
 from dagster._core.errors import DagsterInvariantViolationError
 from dagster._core.storage.upath_io_manager import is_dict_type
 from packaging.version import parse as parse_version
@@ -484,7 +491,18 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
                 f"Invalid context type: {type(context)}"
             )
 
-        def key_to_predicate(key):
+        def key_to_predicate(key: str, dim: str | None = None) -> str:
+            partitions_def = context.asset_partitions_def
+            if dim is not None and isinstance(
+                partitions_def, MultiPartitionsDefinition
+            ):
+                dim_partitions_def = partitions_def.get_partitions_def_for_dimension(
+                    dim
+                )
+                if isinstance(dim_partitions_def, TimeWindowPartitionsDefinition):
+                    return f"DATE '{key}'"
+            elif isinstance(partitions_def, TimeWindowPartitionsDefinition):
+                return f"DATE '{key}'"
             return f"'{key}'"
 
         if partition_by is None or not context.has_asset_partitions:
@@ -502,7 +520,7 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
 
             predicate = " AND ".join(
                 [
-                    f"{partition_by[dim]} in ({', '.join(map(key_to_predicate, keys))})"
+                    f"{partition_by[dim]} in ({', '.join(key_to_predicate(key, dim) for key in keys)})"
                     for dim, keys in all_keys_by_dim.items()
                 ]
             )
@@ -514,7 +532,7 @@ class PolarsDeltaIOManager(BasePolarsUPathIOManager):
             )
 
             if len(context.asset_partition_keys) == 1:
-                predicate = f"{partition_by} = '{context.asset_partition_keys[0]}'"
+                predicate = f"{partition_by} = {key_to_predicate(context.asset_partition_keys[0])}"
             else:
                 predicate = f"{partition_by} in ({', '.join(map(key_to_predicate, context.asset_partition_keys))})"
 
