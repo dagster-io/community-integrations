@@ -25,7 +25,7 @@ from dagster._core.events import (
     AssetMaterializationPlannedData,
     StepMaterializationData,
 )
-from dagster.core.test_utils import instance_for_test
+from dagster._core.test_utils import instance_for_test
 
 from dagster_openlineage.compat import DagsterEventType
 from dagster_openlineage.cursor import OpenLineageCursor
@@ -90,7 +90,7 @@ def test_sensor_with_complete_job_run_and_repository(
             temp_dir=temp_dir,
             overrides={  # to avoid run-sharded event log storage warning
                 "event_log_storage": {
-                    "module": "dagster.core.storage.event_log",
+                    "module": "dagster._core.storage.event_log",
                     "class": "ConsolidatedSqliteEventLogStorage",
                     "config": {"base_dir": temp_dir},
                 },
@@ -513,7 +513,7 @@ def test_sensor_auto_disables_asset_events_when_ol_wrapper_is_active(
                 "class": "OpenLineageEventLogStorage",
                 "config": {
                     "wrapped": {
-                        "module": "dagster.core.storage.event_log",
+                        "module": "dagster._core.storage.event_log",
                         "class": "ConsolidatedSqliteEventLogStorage",
                         "config": {"base_dir": temp_dir},
                     },

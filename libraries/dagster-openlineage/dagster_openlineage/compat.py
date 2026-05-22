@@ -14,11 +14,17 @@ PIPELINE_EVENTS = getattr(dagster, "PIPELINE_EVENTS", None)
 STEP_EVENTS = getattr(dagster, "STEP_EVENTS", None)
 
 if PIPELINE_EVENTS is None or STEP_EVENTS is None:
-    _core_events_spec = importlib.util.find_spec("dagster.core.events")
-    if _core_events_spec is not None:
-        _core_events_module = importlib.import_module("dagster.core.events")
-        PIPELINE_EVENTS = getattr(_core_events_module, "PIPELINE_EVENTS", set())
-        STEP_EVENTS = getattr(_core_events_module, "STEP_EVENTS", set())
+    for _core_events_module_name in ("dagster._core.events", "dagster.core.events"):
+        try:
+            _core_events_spec = importlib.util.find_spec(_core_events_module_name)
+        except ModuleNotFoundError:
+            _core_events_spec = None
+
+        if _core_events_spec is not None:
+            _core_events_module = importlib.import_module(_core_events_module_name)
+            PIPELINE_EVENTS = getattr(_core_events_module, "PIPELINE_EVENTS", set())
+            STEP_EVENTS = getattr(_core_events_module, "STEP_EVENTS", set())
+            break
     else:
         PIPELINE_EVENTS = set()
         STEP_EVENTS = set()

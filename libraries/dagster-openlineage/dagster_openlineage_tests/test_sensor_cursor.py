@@ -14,7 +14,7 @@ from dagster_openlineage.cursor import OpenLineageCursor, RunningPipeline, Runni
 
 from dagster_openlineage.compat import DagsterEventType, SensorDefinition
 from dagster import build_sensor_context
-from dagster.core.test_utils import instance_for_test
+from dagster._core.test_utils import instance_for_test
 
 from .conftest import make_test_event_log_record
 
