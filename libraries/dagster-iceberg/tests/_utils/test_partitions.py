@@ -2,7 +2,7 @@ import datetime as dt
 from unittest import mock
 
 import pytest
-from dagster._core.definitions.time_window_partitions import TimeWindow
+from dagster._core.definitions.partitions.definition.time_window import TimeWindow
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
 from pyiceberg import expressions as E
 from pyiceberg import partitioning as iceberg_partitioning

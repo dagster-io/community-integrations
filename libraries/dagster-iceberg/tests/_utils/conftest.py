@@ -2,7 +2,7 @@ import datetime as dt
 
 import pyarrow as pa
 import pytest
-from dagster._core.definitions.time_window_partitions import TimeWindow
+from dagster._core.definitions.partitions.definition.time_window import TimeWindow
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
 from pyiceberg import schema as iceberg_schema
 from pyiceberg import table as iceberg_table
