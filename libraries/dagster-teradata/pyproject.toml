@@ -10,8 +10,8 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff",
     "pytest",
     "ty==0.0.37",
@@ -40,26 +40,3 @@ version = {attr = "dagster_teradata.__version__"}
 
 [tool.pytest.ini_options]
 addopts = "--ignore=dagster_teradata_tests/functional/"
-
-[tool.ty.rules]
-unresolved-import = "ignore"
-invalid-argument-type = "ignore"
-invalid-return-type = "ignore"
-call-non-callable = "ignore"
-missing-argument = "ignore"
-unknown-argument = "ignore"
-too-many-positional-arguments = "ignore"
-unresolved-attribute = "ignore"
-invalid-attribute-access = "ignore"
-invalid-assignment = "ignore"
-invalid-raise = "ignore"
-invalid-type-form = "ignore"
-invalid-method-override = "ignore"
-no-matching-overload = "ignore"
-unsupported-operator = "ignore"
-empty-body = "ignore"
-unused-ignore-comment = "ignore"
-unused-type-ignore-comment = "ignore"
-invalid-parameter-default = "ignore"
-deprecated = "ignore"
-redundant-cast = "ignore"

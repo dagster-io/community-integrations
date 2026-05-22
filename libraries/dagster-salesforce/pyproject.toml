@@ -9,8 +9,8 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff",
     "pytest",
     "ty==0.0.37",
@@ -28,26 +28,3 @@ packages = ["dagster_salesforce"]
 
 [tool.setuptools.dynamic]
 version = {attr = "dagster_salesforce.__version__"}
-
-[tool.ty.rules]
-unresolved-import = "ignore"
-unresolved-attribute = "ignore"
-invalid-attribute-access = "ignore"
-invalid-argument-type = "ignore"
-invalid-return-type = "ignore"
-invalid-assignment = "ignore"
-invalid-raise = "ignore"
-invalid-type-form = "ignore"
-invalid-method-override = "ignore"
-missing-argument = "ignore"
-unknown-argument = "ignore"
-too-many-positional-arguments = "ignore"
-no-matching-overload = "ignore"
-unsupported-operator = "ignore"
-empty-body = "ignore"
-call-non-callable = "ignore"
-unused-ignore-comment = "ignore"
-unused-type-ignore-comment = "ignore"
-invalid-parameter-default = "ignore"
-deprecated = "ignore"
-redundant-cast = "ignore"

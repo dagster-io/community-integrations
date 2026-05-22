@@ -9,8 +9,8 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff",
     "pytest",
     "ty==0.0.37",
