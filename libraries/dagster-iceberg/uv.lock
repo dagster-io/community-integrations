@@ -637,6 +637,7 @@ daft = [
     { name = "getdaft" },
 ]
 pandas = [
+    { name = "grpcio-status" },
     { name = "pandas" },
 ]
 polars = [
@@ -654,10 +655,13 @@ dev = [
     { name = "dagster-pyspark" },
     { name = "docker" },
     { name = "fsspec", extra = ["http"] },
+    { name = "grpcio-status" },
+    { name = "pandas" },
     { name = "pyiceberg", extra = ["sql-postgres"] },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
+    { name = "setuptools" },
     { name = "ty" },
 ]
 docs = [
@@ -671,6 +675,7 @@ docs = [
 requires-dist = [
     { name = "dagster", specifier = ">=1.8.2" },
     { name = "getdaft", marker = "extra == 'daft'", specifier = ">=0.3.0" },
+    { name = "grpcio-status", marker = "extra == 'pandas'" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.0.0" },
     { name = "pendulum", specifier = ">=3.0.0" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=1.0.0" },
@@ -689,10 +694,13 @@ dev = [
     { name = "dagster-pyspark", specifier = ">=0.26.1" },
     { name = "docker" },
     { name = "fsspec", extras = ["http"], specifier = ">=2025.2.0" },
+    { name = "grpcio-status" },
+    { name = "pandas", specifier = ">=2.0.0" },
     { name = "pyiceberg", extras = ["sql-postgres"], specifier = "<0.12" },
     { name = "pytest", specifier = ">=8.3.2" },
     { name = "pytest-cov", specifier = ">=6.0.0" },
     { name = "ruff", specifier = ">=0.9.6" },
+    { name = "setuptools" },
     { name = "ty", specifier = "==0.0.37" },
 ]
 docs = [
@@ -2957,6 +2965,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/6b/8c/b1e1666aef7fc6555094d73ae6cd981701781ae85b97ceefc0eebd0b4668/ruff-0.15.13-py3-none-win32.whl", hash = "sha256:4044f94208b3b05ba0fc4a4abd0558cf4d6459bd18325eead7fd8cc66f909b41", size = 10721455, upload-time = "2026-05-14T13:44:35.697Z" },
     { url = "https://files.pythonhosted.org/packages/ab/a6/870a3e8a50590bb92be184ad928c2922f088b00d9dc5c5ec7b924ee08c22/ruff-0.15.13-py3-none-win_amd64.whl", hash = "sha256:7064884d442b7d477b4e7473d12da7f08851d2b1982763c5d3f388a19468a1a4", size = 11900409, upload-time = "2026-05-14T13:44:30.389Z" },
     { url = "https://files.pythonhosted.org/packages/9b/36/9c015cd052fca743dae8cb2aeb16b551444787467db42ceab0fc968865af/ruff-0.15.13-py3-none-win_arm64.whl", hash = "sha256:2471da9bd1068c8c064b5fd9c0c4b6dddffd6369cb1cd68b29993b1709ff1b21", size = 11179336, upload-time = "2026-05-14T13:44:33.026Z" },
+]
+
+[[package]]
+name = "setuptools"
+version = "82.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/4f/db/cfac1baf10650ab4d1c111714410d2fbb77ac5a616db26775db562c8fab2/setuptools-82.0.1.tar.gz", hash = "sha256:7d872682c5d01cfde07da7bccc7b65469d3dca203318515ada1de5eda35efbf9", size = 1152316, upload-time = "2026-03-09T12:47:17.221Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9d/76/f789f7a86709c6b087c5a2f52f911838cad707cc613162401badc665acfe/setuptools-82.0.1-py3-none-any.whl", hash = "sha256:a59e362652f08dcd477c78bb6e7bd9d80a7995bc73ce773050228a348ce2e5bb", size = 1006223, upload-time = "2026-03-09T12:47:15.026Z" },
 ]
 
 [[package]]

@@ -38,6 +38,7 @@ daft = [
 ]
 pandas = [
   "pandas>=2.0.0",
+  "grpcio-status",
 ]
 polars = [
   "polars>=1.0.0",
@@ -160,4 +161,7 @@ dev = [
   "pytest>=8.3.2",
   "pytest-cov>=6.0.0",
   "ruff>=0.9.6",
+  "setuptools",
+  "pandas>=2.0.0",
+  "grpcio-status",
 ]
