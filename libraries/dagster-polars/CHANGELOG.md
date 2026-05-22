@@ -4,6 +4,7 @@
 
 ### Fixes
 
+- The `extension` overrides on `PolarsParquetIOManager` and `PolarsDeltaIOManager` are now declared as `ClassVar[Optional[str]]`, which stops pydantic from treating them as model fields. Previously every import surfaced a `UserWarning: Field name "extension" in "PolarsParquetIOManager" shadows an attribute in parent "BasePolarsUPathIOManager"` (and the same for the delta manager) — that warning is now gone. Includes a regression test asserting no shadow warning is emitted on import.
 - Partitioned assets/outputs now log `dagster/partition_row_count` metadata instead of `dagster/row_count`. See https://docs.dagster.io/guides/build/assets/metadata-and-tags for more details. 
 
 ## Added
