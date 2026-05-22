@@ -9,6 +9,6 @@ from dagster_chroma.config import (
     HttpConfig as HttpConfig,
 )
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 DagsterLibraryRegistry.register("dagster-chroma", __version__, is_dagster_package=False)
