@@ -176,9 +176,17 @@ def test_cloud_resource():
     Makes sure the url and headers (incl' authorization) of the request made by Weaviate are the same as
     specified in the Resource config.
     """
-    with mock.patch.object(
-        httpx.AsyncClient, "send", autospec=True, side_effect=mock_httpx_async_send_method
-    ), mock.patch.object(httpx.Client, "send", autospec=True, side_effect=mock_httpx_send_method):
+    with (
+        mock.patch.object(
+            httpx.AsyncClient,
+            "send",
+            autospec=True,
+            side_effect=mock_httpx_async_send_method,
+        ),
+        mock.patch.object(
+            httpx.Client, "send", autospec=True, side_effect=mock_httpx_send_method
+        ),
+    ):
 
         @asset
         def query_cloud_weaviate_asset(weaviate_cloud: WeaviateResource):
