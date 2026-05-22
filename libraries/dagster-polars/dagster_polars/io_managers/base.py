@@ -210,7 +210,7 @@ class BasePolarsUPathIOManager(ConfigurableIOManager, UPathIOManager):
             if context.dagster_type.typing_type is not None and issubclass(
                 context.dagster_type.typing_type, pt.DataFrame
             ):
-                return get_patito_metadata(context.dagster_type.typing_type.model)  # pyright: ignore[reportGeneralTypeIssues]
+                return get_patito_metadata(context.dagster_type.typing_type.model)  # ty: ignore
         except (ImportError, TypeError):
             return {}
 

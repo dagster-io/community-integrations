@@ -313,7 +313,9 @@ class SFTPResource(dg.ConfigurableResource):
             and exc.reason == "No matches found"
         ):
             if hasattr(exc, "srcpath"):
-                logger.warning(f"No files found matching pattern: {exc.srcpath}")  # pyright: ignore[reportAttributeAccessIssue]
+                logger.warning(
+                    f"No files found matching pattern: {exc.srcpath}"
+                )  # ty: ignore
             else:
                 logger.warning("No files found matching pattern")
             return

@@ -8,4 +8,4 @@ To run pytest tests, execute `make test`.
 
 ## Linting
 
-To run ruff and pyright, execute `make lint`
+To run ruff and ty, execute `make lint`

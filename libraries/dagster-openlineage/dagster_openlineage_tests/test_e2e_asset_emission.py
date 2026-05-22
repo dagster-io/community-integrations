@@ -1,9 +1,9 @@
 # Copyright 2018-2025 contributors to the OpenLineage project
 # SPDX-License-Identifier: Apache-2.0
 
-# pyright: reportAbstractUsage=false
+# ty: ignore
 # OpenLineageEventLogStorage.__abstractmethods__ is cleared at runtime by the
-# setattr delegation loop in storage.py; pyright cannot see dynamic assignments
+# setattr delegation loop in storage.py; ty cannot see dynamic assignments
 # to __abstractmethods__ and reports every direct instantiation as abstract.
 # test_e2e_pipes.py carries the same suppression for the same reason.
 

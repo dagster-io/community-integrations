@@ -15,7 +15,7 @@ from dagster_openlineage.compat import (
     get_repository_origin,
 )  # noqa: F401
 
-# Type hints for Pyright
+# Type hints for ty
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:

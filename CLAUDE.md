@@ -30,7 +30,7 @@ make test     # or: uv run pytest
 make ruff     # Runs: uv run ruff check --fix && uv run ruff format
 
 # Type checking
-make check    # Runs: uv run pyright
+make check    # Runs: uv run ty check
 ```
 
 ### Running Individual Tests
@@ -60,7 +60,7 @@ uv run pytest -v
 - **Package Management**: Use `uv` exclusively (never pip, poetry, or conda)
 - **Formatting**: Enforced with Ruff (`ruff format`)
 - **Linting**: Enforced with Ruff (`ruff check --fix`)
-- **Type Checking**: Required with Pyright (`pyright`)
+- **Type Checking**: Required with ty (`ty check`)
 - **Testing**: Required with pytest
 
 ## Release Process

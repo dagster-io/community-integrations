@@ -11,7 +11,7 @@ from dagster_iceberg import handler as _handler
 from dagster_iceberg import io_manager as _io_manager
 from dagster_iceberg._utils import DagsterPartitionToIcebergExpressionMapper, preview
 
-ArrowTypes = Union[pa.Table, pa.RecordBatchReader]  # noqa: UP007, avoid Pyright failure
+ArrowTypes = Union[pa.Table, pa.RecordBatchReader]  # noqa: UP007, avoid ty failure
 
 
 class _PyArrowIcebergTypeHandler(_handler.IcebergBaseTypeHandler[ArrowTypes]):

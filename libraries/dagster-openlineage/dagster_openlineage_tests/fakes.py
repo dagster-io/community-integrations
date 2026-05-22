@@ -23,7 +23,7 @@ class FakeOpenLineageTransport(Transport):
     def __init__(self) -> None:
         self.events: List[Any] = []
 
-    def emit(self, event: Any) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def emit(self, event: Any) -> None:  # ty: ignore
         self.events.append(event)
 
     # Helpers -----------------------------------------------------------------

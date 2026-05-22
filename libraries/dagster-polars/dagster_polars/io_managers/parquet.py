@@ -127,7 +127,7 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
 
     """
 
-    extension: str = ".parquet"  # pyright: ignore[reportIncompatibleVariableOverride]
+    extension: str = ".parquet"  # ty: ignore
 
     def sink_df_to_path(
         self,

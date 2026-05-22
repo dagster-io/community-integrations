@@ -33,12 +33,12 @@ _has_sensor = hasattr(dagster, "sensor")
 if _has_sensor_context and _has_skip_reason and _has_sensor:
     from dagster import SensorEvaluationContext, SkipReason, sensor
 else:
-    from dagster._core.definitions.run_request import (  # pyright: ignore[reportMissingImports]
+    from dagster._core.definitions.run_request import (  # ty: ignore
         SkipReason,
     )
-    from dagster._core.definitions.sensor_definition import (  # pyright: ignore[reportMissingImports, reportAttributeAccessIssue]
-        SensorEvaluationContext,  # pyright: ignore[reportAttributeAccessIssue]
-        sensor,  # pyright: ignore[reportAttributeAccessIssue]
+    from dagster._core.definitions.sensor_definition import (  # ty: ignore
+        SensorEvaluationContext,  # ty: ignore
+        sensor,  # ty: ignore
     )
 
 _ADAPTER = OpenLineageAdapter()
@@ -112,7 +112,7 @@ def openlineage_sensor(
             "not spec-defined)."
         )
 
-    @sensor(  # pyright: ignore[reportCallIssue]
+    @sensor(  # ty: ignore
         name=name,
         minimum_interval_seconds=minimum_interval_seconds,
         description=description,
@@ -238,7 +238,7 @@ def openlineage_sensor(
         log.info(msg)
         yield SkipReason(msg)
 
-    return _openlineage_sensor  # pyright: ignore[reportReturnType]
+    return _openlineage_sensor  # ty: ignore
 
 
 def _handle_pipeline_event(
