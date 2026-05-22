@@ -214,7 +214,9 @@ async def _trigger_hook(
         try:
             with user_code_error_boundary(
                 HookExecutionError,
-                lambda: f"Error occurred during the execution of hook_fn triggered for {op_label}",
+                lambda: (
+                    f"Error occurred during the execution of hook_fn triggered for {op_label}"
+                ),
                 log_manager=hook_context.log,
             ):
                 if inspect.iscoroutinefunction(hook_def.hook_fn):
