@@ -5,6 +5,7 @@
 ### Fixes
 
 - The `extension` overrides on `PolarsParquetIOManager` and `PolarsDeltaIOManager` are now declared as `ClassVar[Optional[str]]`, which stops pydantic from treating them as model fields. Previously every import surfaced a `UserWarning: Field name "extension" in "PolarsParquetIOManager" shadows an attribute in parent "BasePolarsUPathIOManager"` (and the same for the delta manager) — that warning is now gone. Includes a regression test asserting no shadow warning is emitted on import.
+- Fixed `PolarsParquetIOManager` reads and writes failing on S3 when fsspec-style `storage_options` (`key`, `secret`, `client_kwargs`) were passed to the IO manager. Polars uses `object_store` under the hood, which expects different key names (`aws_access_key_id`, `aws_secret_access_key`, etc.). The IO manager now translates fsspec keys to their `object_store` equivalents on every read and write, and drops unknown keys against an allowlist so typos surface as missing config rather than opaque Rust errors. Applies on `polars >= 1.17`; older versions keep the previous fsspec passthrough. Closes [#257](https://github.com/dagster-io/community-integrations/issues/257).
 - Partitioned assets/outputs now log `dagster/partition_row_count` metadata instead of `dagster/row_count`. See https://docs.dagster.io/guides/build/assets/metadata-and-tags for more details. 
 
 ## Added
