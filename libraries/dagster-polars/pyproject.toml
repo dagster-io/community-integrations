@@ -23,7 +23,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-deltalake = ["deltalake>=0.25.0"]
+deltalake = ["deltalake>=0.25.0,<1.6"]
 gcp = ["dagster-gcp>=0.19.5"]
 patito = [
     "patito>=0.8.3",
