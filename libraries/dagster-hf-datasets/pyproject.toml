@@ -15,7 +15,7 @@ dev-dependencies = [
     "ruff",
     "pytest",
     "freezegun",
-    "pyright>=1.1.386",
+    "ty==0.0.37",
 ]
 
 [build-system]
