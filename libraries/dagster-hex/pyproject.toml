@@ -9,11 +9,11 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest",
     "pytest-mock",
-    "pyright",
+    "ty==0.0.37",
     "requests-mock",
     "ruff",
     "types-requests",

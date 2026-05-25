@@ -63,10 +63,10 @@ def test_resource(
     @asset
     def read_table(pyiceberg_table: IcebergTableResource):
         table_ = pyiceberg_table.load().scan().to_arrow()
-        assert (
-            table_.schema.to_string()
-            == "timestamp: timestamp[us]\ncategory: large_string\nvalue: double"
-        )
+        assert table_.schema.names == ["timestamp", "category", "value"]
+        assert str(table_.schema.field("timestamp").type) == "timestamp[us]"
+        assert str(table_.schema.field("category").type) in {"string", "large_string"}
+        assert str(table_.schema.field("value").type) == "double"
         assert table_.shape == (1440, 3)
 
     materialize(

@@ -150,7 +150,7 @@ def test_handle_output_invalid_write_mode():
         run_id=run_id,
     )
     handler = MockTypeHandler()
-    with pytest.raises(ValueError, match="^Invalid write mode.*"):
+    with pytest.raises(ValueError, match=r"^Invalid write mode.*"):
         handler.handle_output(
             context=context,
             table_slice=table_slice,
@@ -419,7 +419,7 @@ def test_handle_output_upsert_missing_options(
     )
 
     handler = MockTypeHandler()
-    with pytest.raises(ValueError, match=".*upsert_options.*"):
+    with pytest.raises(ValueError, match=r".*upsert_options.*"):
         handler.handle_output(
             context=context,
             table_slice=table_slice,

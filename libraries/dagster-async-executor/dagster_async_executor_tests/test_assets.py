@@ -21,7 +21,7 @@ async def further_downstream_asset(downstream_asset):
     return downstream_asset + 1
 
 
-@dg.asset_check(asset=further_downstream_asset)  # pyright: ignore[reportArgumentType]
+@dg.asset_check(asset=further_downstream_asset)  # ty: ignore
 async def further_downstream_asset_check():
     await anyio.sleep(0.01)
     return dg.AssetCheckResult(passed=True)

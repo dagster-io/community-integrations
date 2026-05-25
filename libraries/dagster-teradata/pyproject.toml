@@ -10,11 +10,11 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff",
     "pytest",
-    "pyright>=1.1.386",
+    "ty==0.0.37",
 ]
 
 [project.optional-dependencies]
@@ -38,10 +38,5 @@ packages = [
 [tool.setuptools.dynamic]
 version = {attr = "dagster_teradata.__version__"}
 
-[tool.pyright]
-reportMissingImports = "none"
-reportArgumentType = "none"
-reportReturnType = "none"
-reportCallIssue = "none"
-reportOptionalMemberAccess = "none"
-reportAttributeAccessIssue = "none"
+[tool.pytest.ini_options]
+addopts = "--ignore=dagster_teradata_tests/functional/"

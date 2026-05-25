@@ -77,7 +77,7 @@ def test_async_performance_basic(
             dg.build_reconstructable_job(
                 reconstructor_module_name=__name__,
                 reconstructor_function_name="simple_fanout_job_def",
-                reconstructable_args=(num_fanouts, sleep_seconds),  # pyright: ignore[reportArgumentType]
+                reconstructable_args=(num_fanouts, sleep_seconds),  # ty: ignore
                 reconstructable_kwargs={},
             ),
             instance=instance,

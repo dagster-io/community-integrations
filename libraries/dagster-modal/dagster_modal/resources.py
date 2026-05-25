@@ -1,4 +1,4 @@
-# pyright: reportIncompatibleMethodOverride=false
+# ty: ignore
 
 from pathlib import Path
 from collections.abc import Mapping

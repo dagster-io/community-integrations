@@ -21,12 +21,12 @@ test = [
     "pytest-mock",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff",
     "pytest",
     "pytest-mock",
-    "pyright>=1.1.386",
+    "ty==0.0.37",
     "gitpython>=3.1.0",
     "sqlglot>=26.0.0",
     "duckdb>=0.10.0",

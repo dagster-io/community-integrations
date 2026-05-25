@@ -14,11 +14,17 @@ PIPELINE_EVENTS = getattr(dagster, "PIPELINE_EVENTS", None)
 STEP_EVENTS = getattr(dagster, "STEP_EVENTS", None)
 
 if PIPELINE_EVENTS is None or STEP_EVENTS is None:
-    _core_events_spec = importlib.util.find_spec("dagster.core.events")
-    if _core_events_spec is not None:
-        _core_events_module = importlib.import_module("dagster.core.events")
-        PIPELINE_EVENTS = getattr(_core_events_module, "PIPELINE_EVENTS", set())
-        STEP_EVENTS = getattr(_core_events_module, "STEP_EVENTS", set())
+    for _core_events_module_name in ("dagster._core.events", "dagster.core.events"):
+        try:
+            _core_events_spec = importlib.util.find_spec(_core_events_module_name)
+        except ModuleNotFoundError:
+            _core_events_spec = None
+
+        if _core_events_spec is not None:
+            _core_events_module = importlib.import_module(_core_events_module_name)
+            PIPELINE_EVENTS = getattr(_core_events_module, "PIPELINE_EVENTS", set())
+            STEP_EVENTS = getattr(_core_events_module, "STEP_EVENTS", set())
+            break
     else:
         PIPELINE_EVENTS = set()
         STEP_EVENTS = set()
@@ -35,7 +41,7 @@ def get_job_origin(run: Any) -> Any:
     origin = getattr(run, "remote_job_origin", None)
     if origin is not None:
         return origin
-    return getattr(run, "external_job_origin", None)  # pyright: ignore[reportAttributeAccessIssue]
+    return getattr(run, "external_job_origin", None)  # ty: ignore
 
 
 def get_repository_origin(origin: Any) -> Any:
@@ -48,7 +54,7 @@ def get_repository_origin(origin: Any) -> Any:
         return None
     if hasattr(origin, "repository_origin"):
         return getattr(origin, "repository_origin", None)
-    return getattr(origin, "external_repository_origin", None)  # pyright: ignore[reportAttributeAccessIssue]
+    return getattr(origin, "external_repository_origin", None)  # ty: ignore
 
 
 __all__ = [

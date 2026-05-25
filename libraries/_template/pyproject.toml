@@ -8,12 +8,14 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff",
     "pytest",
-    "pyright>=1.1.386",
+    "ty==0.0.37",
 ]
+
+# ty configuration is inherited from the repository root pyproject.toml.
 
 [build-system]
 requires = ["setuptools>=42"]

@@ -17,6 +17,29 @@ from dagster_iceberg._utils import DagsterPartitionToPolarsSqlPredicateMapper, p
 PolarsTypes = Union[pl.LazyFrame, pl.DataFrame]  # noqa: UP007, avoid `autodoc` failure
 
 
+def _get_polars_storage_options(table: ibt.Table) -> dict[str, str] | None:
+    """Translate common PyIceberg S3 catalog options to Polars object-store options."""
+    properties = getattr(table.io, "properties", {})
+    storage_options: dict[str, str] = {}
+    option_mapping = {
+        "s3.access-key-id": "aws_access_key_id",
+        "s3.secret-access-key": "aws_secret_access_key",
+        "s3.session-token": "aws_session_token",
+        "s3.endpoint": "aws_endpoint_url",
+        "s3.region": "aws_region",
+    }
+    for pyiceberg_key, polars_key in option_mapping.items():
+        value = properties.get(pyiceberg_key)
+        if value is not None:
+            storage_options[polars_key] = str(value)
+
+    if "aws_endpoint_url" in storage_options:
+        storage_options.setdefault("aws_allow_http", "true")
+        storage_options.setdefault("aws_region", "us-east-1")
+
+    return storage_options or None
+
+
 class _PolarsIcebergTypeHandler(_handler.IcebergBaseTypeHandler[PolarsTypes]):
     """Type handler that converts data between Iceberg tables and Polars DataFrames"""
 
@@ -38,7 +61,10 @@ class _PolarsIcebergTypeHandler(_handler.IcebergBaseTypeHandler[PolarsTypes]):
             ).partition_dimensions_to_filters()
             row_filter = " AND ".join(expressions)
 
-        pdf = pl.scan_iceberg(source=table)
+        pdf = pl.scan_iceberg(
+            source=table,
+            storage_options=_get_polars_storage_options(table),
+        )
 
         stmt = f"SELECT {selected_fields} FROM self"
         if row_filter is not None:

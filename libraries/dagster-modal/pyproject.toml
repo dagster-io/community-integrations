@@ -10,11 +10,11 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff>=0.6.8",
     "pytest",
-    "pyright>=1.1.386",
+    "ty==0.0.37",
 ]
 
 [build-system]

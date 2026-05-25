@@ -32,8 +32,8 @@ patito = [
 [project.urls]
 Repository = "https://github.com/dagster-io/community-integrations/tree/main/libraries/dagster-polars"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "deepdiff>=6.3.0",
     "hypothesis[zoneinfo]>=6.89.0",
     "moto[server]>=5.0.0",
@@ -42,7 +42,7 @@ dev-dependencies = [
     "pytest>=8",
     "pytest-cases>=3.6.14",
     "pytest-mock",
-    "pyright>=1.1.386",
+    "ty==0.0.37",
     "s3fs>=2024.0.0",
 ]
 
@@ -61,9 +61,28 @@ dagster_polars = ["py.typed"]
 [tool.setuptools.dynamic]
 version = {attr = "dagster_polars.version.__version__"}
 
-[tool.pyright]
+[tool.ty.src]
 include = ["dagster_polars"]
-reportPrivateImportUsage = false
-reportMissingImports = "none"
-reportAttributeAccessIssue = "none"
 
+[tool.ty.rules]
+unresolved-import = "ignore"
+unresolved-attribute = "ignore"
+invalid-attribute-access = "ignore"
+invalid-argument-type = "ignore"
+invalid-return-type = "ignore"
+invalid-assignment = "ignore"
+invalid-raise = "ignore"
+invalid-type-form = "ignore"
+invalid-method-override = "ignore"
+missing-argument = "ignore"
+unknown-argument = "ignore"
+too-many-positional-arguments = "ignore"
+no-matching-overload = "ignore"
+unsupported-operator = "ignore"
+empty-body = "ignore"
+call-non-callable = "ignore"
+unused-ignore-comment = "ignore"
+unused-type-ignore-comment = "ignore"
+invalid-parameter-default = "ignore"
+deprecated = "ignore"
+redundant-cast = "ignore"

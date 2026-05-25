@@ -1,7 +1,7 @@
-[project]    
-name = "dagster-openlineage"    
-description = "Dagster integration for OpenLineage"    
-readme = "README.md"  
+[project]
+name = "dagster-openlineage"
+description = "Dagster integration for OpenLineage"
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "dagster>=1.11.6",
@@ -11,35 +11,25 @@ dependencies = [
     "pyyaml",
 ]
 
-dynamic = ["version"]  
-    
-[tool.uv]  
-dev-dependencies = [  
-    "ruff",  
-    "pytest",  
-    "pyright>=1.1.386",  
-]  
-  
-[build-system]  
-requires = ["setuptools>=42"]  
-build-backend = "setuptools.build_meta"  
-  
-[tool.setuptools]  
-packages = ["dagster_openlineage"]  
-  
+dynamic = ["version"]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "pytest",
+    "ty==0.0.37",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_openlineage"]
+
 [tool.setuptools.dynamic]
 version = { attr = "dagster_openlineage.version.__version__" }
-  
-[project.entry-points]  
-"dagster_dg.library" = { dagster_openlineage = "dagster_openlineage" }  
-"dagster_dg.plugin" = { dagster_openlineage = "dagster_openlineage" }  
-  
-[tool.pyright]
-# Silences kept narrow and bounded to v0.2-touched files:
-#  * reportMissingImports: dagster._core.definitions.* fallbacks used only
-#    when the public API isn't available on older pins (still within the
-#    1.11.6 floor window for some paths).
-#  * reportPrivateImportUsage: dagster re-exports event data classes from
-#    dagster._core.events where public paths do not exist.
-reportMissingImports = "none"
-reportPrivateImportUsage = "none"
+
+[project.entry-points]
+"dagster_dg.library" = { dagster_openlineage = "dagster_openlineage" }
+"dagster_dg.plugin" = { dagster_openlineage = "dagster_openlineage" }

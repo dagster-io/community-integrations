@@ -40,7 +40,7 @@ def invoke_materialize(
 def test_polars():
     with instance_for_test() as instance:
         result = invoke_materialize("*reloaded_nyc_taxi_data")
-        assert "RUN_SUCCESS" in result.output
+        assert result.exit_code == 0
         for asset_key in [
             AssetKey("combined_nyc_taxi_data"),
             AssetKey("reloaded_nyc_taxi_data"),
@@ -54,7 +54,7 @@ def test_polars_static_partitioned():
             result = invoke_materialize(
                 "*reloaded_static_partitioned_nyc_taxi_data", partition=partition
             )
-            assert "RUN_SUCCESS" in result.output
+            assert result.exit_code == 0
 
         for asset_key in [
             AssetKey("static_partitioned_nyc_taxi_data"),
@@ -72,7 +72,7 @@ def test_polars_multi_partitioned():
             result = invoke_materialize(
                 "*reloaded_multi_partitioned_nyc_taxi_data", partition=partition
             )
-            assert "RUN_SUCCESS" in result.output
+            assert result.exit_code == 0
 
         for asset_key in [
             AssetKey("multi_partitioned_nyc_taxi_data"),
@@ -95,7 +95,7 @@ def test_polars_daily_partitioned():
             result = invoke_materialize(
                 "multi_partitioned_nyc_taxi_data", partition=partition
             )
-            assert "RUN_SUCCESS" in result.output
+            assert result.exit_code == 0
 
         for partition in ["2015-01-01", "2015-01-02"]:
             result = invoke_materialize(
@@ -103,7 +103,7 @@ def test_polars_daily_partitioned():
                 "reloaded_daily_partitioned_nyc_taxi_data",
                 partition=partition,
             )
-            assert "RUN_SUCCESS" in result.output
+            assert result.exit_code == 0
 
         for asset_key in [
             AssetKey("daily_partitioned_nyc_taxi_data"),
@@ -118,7 +118,7 @@ def test_polars_daily_partitioned():
 def test_spark():
     with instance_for_test() as instance:
         result = invoke_materialize("*reloaded_nyc_taxi_data_spark")
-        assert "RUN_SUCCESS" in result.output
+        assert result.exit_code == 0
         for asset_key in [
             AssetKey("combined_nyc_taxi_data_spark"),
             AssetKey("reloaded_nyc_taxi_data_spark"),
@@ -132,7 +132,7 @@ def test_spark_static_partitioned():
             result = invoke_materialize(
                 "*reloaded_static_partitioned_nyc_taxi_data_spark", partition=partition
             )
-            assert "RUN_SUCCESS" in result.output
+            assert result.exit_code == 0
 
         for asset_key in [
             AssetKey("static_partitioned_nyc_taxi_data_spark"),
@@ -150,7 +150,7 @@ def test_spark_multi_partitioned():
             result = invoke_materialize(
                 "*reloaded_multi_partitioned_nyc_taxi_data_spark", partition=partition
             )
-            assert "RUN_SUCCESS" in result.output
+            assert result.exit_code == 0
 
         for asset_key in [
             AssetKey("multi_partitioned_nyc_taxi_data_spark"),
@@ -173,7 +173,7 @@ def test_spark_daily_partitioned():
             result = invoke_materialize(
                 "multi_partitioned_nyc_taxi_data", partition=partition
             )
-            assert "RUN_SUCCESS" in result.output
+            assert result.exit_code == 0
 
         for partition in ["2015-01-01", "2015-01-02"]:
             result = invoke_materialize(
@@ -182,7 +182,7 @@ def test_spark_daily_partitioned():
                 "reloaded_daily_partitioned_nyc_taxi_data_spark",
                 partition=partition,
             )
-            assert "RUN_SUCCESS" in result.output
+            assert result.exit_code == 0
 
         for asset_key in [
             AssetKey("daily_partitioned_nyc_taxi_data_spark"),

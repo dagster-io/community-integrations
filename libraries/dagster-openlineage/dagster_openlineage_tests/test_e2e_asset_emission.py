@@ -1,9 +1,9 @@
 # Copyright 2018-2025 contributors to the OpenLineage project
 # SPDX-License-Identifier: Apache-2.0
 
-# pyright: reportAbstractUsage=false
+# ty: ignore
 # OpenLineageEventLogStorage.__abstractmethods__ is cleared at runtime by the
-# setattr delegation loop in storage.py; pyright cannot see dynamic assignments
+# setattr delegation loop in storage.py; ty cannot see dynamic assignments
 # to __abstractmethods__ and reports every direct instantiation as abstract.
 # test_e2e_pipes.py carries the same suppression for the same reason.
 
@@ -51,7 +51,7 @@ from dagster._core.events import (
 from dagster._core.execution.plan.objects import StepFailureData
 from dagster._core.instance import DagsterInstance
 from dagster._core.storage.event_log import InMemoryEventLogStorage
-from dagster.core.test_utils import instance_for_test
+from dagster._core.test_utils import instance_for_test
 from openlineage.client import OpenLineageClient
 from openlineage.client.event_v2 import DatasetEvent, RunEvent, RunState
 from openlineage.client.generated.schema_dataset import SchemaDatasetFacet
@@ -385,7 +385,7 @@ def test_sensor_emits_asset_ol_events_from_real_execution():
             temp_dir=temp_dir,
             overrides={
                 "event_log_storage": {
-                    "module": "dagster.core.storage.event_log",
+                    "module": "dagster._core.storage.event_log",
                     "class": "ConsolidatedSqliteEventLogStorage",
                     "config": {"base_dir": temp_dir},
                 },

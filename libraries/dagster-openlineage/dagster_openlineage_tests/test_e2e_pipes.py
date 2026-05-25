@@ -1,9 +1,9 @@
 # Copyright 2018-2025 contributors to the OpenLineage project
 # SPDX-License-Identifier: Apache-2.0
 
-# pyright: reportAbstractUsage=false, reportOptionalSubscript=false
+# ty: ignore
 # Auto-delegation (class-body setattr loop) satisfies EventLogStorage's
-# abstractmethods at runtime; pyright can't see that.
+# abstractmethods at runtime; ty can't see that.
 
 """End-to-end Pipes-style runless asset event (SC-9).
 

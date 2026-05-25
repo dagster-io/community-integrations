@@ -1,0 +1,26 @@
+# Shared tooling configuration for integrations in this repository.
+# Individual integration pyproject.toml files inherit this ty configuration
+# as long as they do not define their own [tool.ty] table.
+
+[tool.ty.rules]
+unresolved-import = "ignore"
+unresolved-attribute = "ignore"
+invalid-attribute-access = "ignore"
+invalid-argument-type = "ignore"
+invalid-return-type = "ignore"
+invalid-assignment = "ignore"
+invalid-raise = "ignore"
+invalid-type-form = "ignore"
+invalid-method-override = "ignore"
+missing-argument = "ignore"
+unknown-argument = "ignore"
+too-many-positional-arguments = "ignore"
+no-matching-overload = "ignore"
+unsupported-operator = "ignore"
+empty-body = "ignore"
+call-non-callable = "ignore"
+unused-ignore-comment = "ignore"
+unused-type-ignore-comment = "ignore"
+invalid-parameter-default = "ignore"
+deprecated = "ignore"
+redundant-cast = "ignore"

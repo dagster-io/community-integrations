@@ -9,10 +9,10 @@ dependencies = [
     "dagster>=1.8.9",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "dagster-webserver>=1.8.9",
-    "pyright>=1.1.383",
+    "ty==0.0.37",
     "pytest>=8.3.3",
     "ruff>=0.6.8",
     "dagster-pipes-tests",

@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Any, Optional, cast
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 import polars as pl
 import pyarrow.dataset as ds
@@ -39,19 +40,143 @@ def get_pyarrow_dataset(path: "UPath", context: InputContext) -> ds.Dataset:
     return dataset
 
 
-def scan_parquet(path: "UPath", context: InputContext) -> pl.LazyFrame:
+# fsspec exposes S3 credentials with different key names than the
+# ``object_store`` Rust crate that Polars uses under the hood. Without a
+# remap, Polars reads from S3 with empty credentials and fails with
+# "Generic S3 error: Missing bucket name" or similar. See
+# https://github.com/dagster-io/community-integrations/issues/257.
+
+# Top-level fsspec → object_store key map.
+_FSSPEC_TO_OBJECT_STORE = {
+    "key": "aws_access_key_id",
+    "secret": "aws_secret_access_key",
+    "token": "aws_session_token",
+}
+
+# boto3-style keys nested inside fsspec ``client_kwargs`` → object_store keys.
+# We only translate the unambiguous ones. ``verify`` (TLS verification) is
+# deliberately not mapped: object_store distinguishes ``aws_allow_http``
+# (plain HTTP) from ``allow_invalid_certificates`` (TLS without cert checks),
+# whereas boto3 ``verify`` overloads bool / path-to-CA-bundle. Users who
+# need TLS tweaks can set the object_store key directly via storage_options.
+_CLIENT_KWARGS_TO_OBJECT_STORE = {
+    "region_name": "aws_region",
+    "endpoint_url": "aws_endpoint_url",
+    "aws_access_key_id": "aws_access_key_id",
+    "aws_secret_access_key": "aws_secret_access_key",
+    "aws_session_token": "aws_session_token",
+}
+
+# fsspec-only keys with no ``object_store`` equivalent. Drop on remap.
+_FSSPEC_DROP = frozenset(
+    {
+        "client_options",
+        "config_kwargs",
+        "s3_additional_kwargs",
+        "default_block_size",
+        "default_cache_type",
+        "version_aware",
+        "anon",
+        "use_listings_cache",
+        "listings_expiry_time",
+        "max_paths",
+        "skip_instance_cache",
+        "asynchronous",
+        "loop",
+    }
+)
+
+# object_store S3 keys we recognise and pass through unchanged. Everything
+# else (not in ``_FSSPEC_TO_OBJECT_STORE``, not in ``_FSSPEC_DROP``) is
+# treated as unknown and silently dropped to avoid forwarding a typo into
+# the Rust binding (which surfaces unknown keys as opaque errors).
+#
+# Scope deliberately limited to AWS-prefixed S3 keys. The unprefixed
+# ``allow_invalid_certificates`` and ``allow_http`` are HTTP-client level
+# settings object_store accepts irrespective of backend, so they are also
+# included. Users targeting non-AWS object_store backends can still pass
+# whatever keys they need by extending storage_options once this list grows.
+_OBJECT_STORE_PASSTHROUGH = frozenset(
+    {
+        # AWS S3 specifics
+        "aws_access_key_id",
+        "aws_secret_access_key",
+        "aws_session_token",
+        "aws_region",
+        "aws_endpoint_url",
+        "aws_allow_http",
+        "aws_virtual_hosted_style_request",
+        "aws_skip_signature",
+        "aws_unsigned_payload",
+        "aws_checksum_algorithm",
+        "aws_server_side_encryption",
+        "aws_sse_kms_key_id",
+        "aws_sse_customer_key_base64",
+        "aws_metadata_endpoint",
+        "aws_container_credentials_relative_uri",
+        "aws_imdsv1_fallback",
+        "aws_request_payer",
+        "aws_s3_express",
+        "aws_disable_tagging",
+        "aws_copy_if_not_exists",
+        "aws_conditional_put",
+        # HTTP-client / TLS toggles (backend-agnostic)
+        "allow_http",
+        "allow_invalid_certificates",
+    }
+)
+
+
+def _remap_fsspec_storage_options(
+    opts: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Translate fsspec-style storage_options into ``object_store`` keys.
+
+    Polars's ``scan_parquet`` / ``sink_parquet`` use Rust ``object_store`` and
+    expect keys like ``aws_access_key_id``. ``UPath.storage_options`` is
+    fsspec-shaped (``key``, ``secret``, ``client_kwargs``). Translate the
+    common subset, recurse into ``client_kwargs``, drop fsspec-only keys,
+    pass known ``object_store`` keys through unchanged. Unknown keys are
+    silently dropped to avoid forwarding typos into the Rust binding (which
+    surfaces them as opaque errors).
+    """
+    if not opts:
+        return None
+    out: dict[str, Any] = {}
+    for k, v in opts.items():
+        if k in _FSSPEC_TO_OBJECT_STORE:
+            out[_FSSPEC_TO_OBJECT_STORE[k]] = v
+        elif k == "client_kwargs" and isinstance(v, Mapping):
+            for ck, cv in v.items():
+                target = _CLIENT_KWARGS_TO_OBJECT_STORE.get(ck)
+                if target is not None:
+                    out[target] = cv
+        elif k in _FSSPEC_DROP:
+            continue
+        elif k in _OBJECT_STORE_PASSTHROUGH:
+            out[k] = v
+        # else: unknown key, drop silently to avoid handing a typo to
+        # object_store, which would raise an unhelpful Rust-side error.
+    return out or None
+
+
+def scan_parquet(
+    path: "UPath",
+    context: InputContext,
+    storage_options: Mapping[str, Any] | None = None,
+) -> pl.LazyFrame:
     """Scan a parquet file and return a lazy frame (uses polars native reader).
 
     :param path:
     :param context:
+    :param storage_options: Storage options from the IO manager. May be
+        fsspec-shaped (``key``, ``secret``, ``client_kwargs``) or already
+        ``object_store``-shaped. Both are passed through
+        :func:`_remap_fsspec_storage_options` before reaching Polars. When
+        supplied, takes precedence over ``path.storage_options``.
     :return:
     """
     context_metadata = context.definition_metadata or {}
-
-    storage_options = cast(
-        Optional[dict[str, Any]],
-        (path.storage_options if hasattr(path, "storage_options") else None),
-    )
 
     kwargs = dict(
         n_rows=context_metadata.get("n_rows", None),
@@ -66,17 +191,38 @@ def scan_parquet(path: "UPath", context: InputContext) -> pl.LazyFrame:
     kwargs["row_index_name"] = context_metadata.get("row_index_name", None)
     kwargs["row_index_offset"] = context_metadata.get("row_index_offset", 0)
 
-    # gh issue [dagster-io/dagster#28633]()
-    INCOMPATIBLE_FSSPEC_KEYS = ["client_options"]
-    pl_storage_options = (
-        None
-        if storage_options is None
-        else {
-            k: v
-            for k, v in storage_options.items()
-            if k not in INCOMPATIBLE_FSSPEC_KEYS
-        }
-    )
+    # On Polars >= 1.17 ``object_store`` is the cloud backend; remap fsspec
+    # keys so credentials reach the reader. Older Polars used a different
+    # backend (no remap helped), so keep the legacy fsspec passthrough for
+    # backwards compatibility. See issue #257.
+    if Version(pl.__version__) >= Version("1.17.0"):
+        # ``self.storage_options`` (passed in via ``storage_options``) and
+        # ``path.storage_options`` are both fsspec-shaped because they come
+        # from the same UPath kwargs. Remap unconditionally. Already-
+        # ``object_store``-shaped keys pass through unchanged.
+        path_options = cast(
+            Optional[Mapping[str, Any]],
+            (path.storage_options if hasattr(path, "storage_options") else None),
+        )
+        pl_storage_options = _remap_fsspec_storage_options(
+            storage_options or path_options
+        )
+    else:
+        legacy_options = cast(
+            Optional[Mapping[str, Any]],
+            (path.storage_options if hasattr(path, "storage_options") else None),
+        )
+        # gh issue [dagster-io/dagster#28633]()
+        INCOMPATIBLE_FSSPEC_KEYS = ["client_options"]
+        pl_storage_options = (
+            None
+            if legacy_options is None
+            else {
+                k: v
+                for k, v in legacy_options.items()
+                if k not in INCOMPATIBLE_FSSPEC_KEYS
+            }
+        )
 
     return pl.scan_parquet(str(path), storage_options=pl_storage_options, **kwargs)  # type: ignore
 
@@ -127,7 +273,11 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
 
     """
 
-    extension: str = ".parquet"  # pyright: ignore[reportIncompatibleVariableOverride]
+    # ``ClassVar`` so pydantic stops treating ``extension`` as a model field
+    # and the parent's annotation (``Optional[str]`` on ``UPathIOManager``) is
+    # not reported as shadowed on every import. The parent declares
+    # ``extension`` as an instance var, hence the ty override silencer.
+    extension: ClassVar[Optional[str]] = ".parquet"  # ty: ignore[invalid-attribute-override]
 
     def sink_df_to_path(
         self,
@@ -149,7 +299,7 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
                 compression_level=compression_level,
                 statistics=statistics,
                 row_group_size=row_group_size,
-                storage_options=self.storage_options,
+                storage_options=_remap_fsspec_storage_options(self.storage_options),
             )
         else:
             context.log.warning(
@@ -202,7 +352,9 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
                 row_group_size=row_group_size,
             )
             if Version(pl.__version__) >= Version("1.17.0"):
-                kwargs["storage_options"] = self.storage_options
+                kwargs["storage_options"] = _remap_fsspec_storage_options(
+                    self.storage_options
+                )
             df.write_parquet(str(path), **kwargs)  # type: ignore
 
     def scan_df_from_path(
@@ -211,4 +363,4 @@ class PolarsParquetIOManager(BasePolarsUPathIOManager):
         context: InputContext,
         partition_key: str | None = None,
     ) -> pl.LazyFrame:
-        return scan_parquet(path, context)
+        return scan_parquet(path, context, storage_options=self.storage_options)

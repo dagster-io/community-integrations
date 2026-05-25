@@ -22,7 +22,7 @@
 
 - Adapter imports migrated from `openlineage.client.facet` + `openlineage.client.run` to `openlineage.client.facet_v2` + `event_v2`.
 - Emission routed through a new `OpenLineageEmitter` that disables HTTP transport retries (defeats the default `total=5 × backoff=0.3` stack, which would multiply the 2s per-event timeout ~7.5×) and rate-limits error logs per exception class.
-- Pyright strict pass on v0.2-touched files. Remaining targeted `# pyright: ignore[...]` pragmas carry justifying comments.
+- ty strict pass on v0.2-touched files. Remaining targeted `# ty: ignore` pragmas carry justifying comments.
 
 ### Known limitations
 

@@ -15,7 +15,7 @@ dynamic = ["version"]
 dev = [
   "ruff",
   "pytest",
-  "pyright>=1.1.405",
+  "ty==0.0.37",
 ]
 
 [build-system]
