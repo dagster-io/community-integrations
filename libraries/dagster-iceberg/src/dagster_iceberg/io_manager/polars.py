@@ -1,14 +1,17 @@
 from collections.abc import Sequence
-from typing import Union
+from typing import Literal, Union
 
 try:
     import polars as pl
 except ImportError as e:
     raise ImportError("Please install dagster-iceberg with the 'polars' extra.") from e
 import pyarrow as pa
+from dagster import InputContext
 from dagster._annotations import public
 from dagster._core.storage.db_io_manager import DbTypeHandler, TableSlice
+from pydantic import Field
 from pyiceberg import table as ibt
+from pyiceberg.catalog import Catalog
 
 from dagster_iceberg import handler as _handler
 from dagster_iceberg import io_manager as _io_manager
@@ -48,6 +51,7 @@ class _PolarsIcebergTypeHandler(_handler.IcebergBaseTypeHandler[PolarsTypes]):
         table: ibt.Table,
         table_slice: TableSlice,
         target_type: type[PolarsTypes],
+        reader_override: Literal["native", "pyiceberg"] | None = None,
     ) -> PolarsTypes:
         selected_fields: str = (
             ",".join(table_slice.columns) if table_slice.columns is not None else "*"
@@ -64,12 +68,30 @@ class _PolarsIcebergTypeHandler(_handler.IcebergBaseTypeHandler[PolarsTypes]):
         pdf = pl.scan_iceberg(
             source=table,
             storage_options=_get_polars_storage_options(table),
+            reader_override=reader_override,
         )
 
         stmt = f"SELECT {selected_fields} FROM self"
         if row_filter is not None:
             stmt += f"\nWHERE {row_filter}"
         return pdf.sql(stmt) if target_type == pl.LazyFrame else pdf.sql(stmt).collect()
+
+    def load_input(
+        self,
+        context: InputContext,
+        table_slice: TableSlice,
+        connection: Catalog,
+    ) -> PolarsTypes:
+        """Loads the input as a Polars frame, respecting the configured ``reader_override``."""
+        reader_override: Literal["native", "pyiceberg"] | None = None
+        if context.resource_config:
+            reader_override = context.resource_config.get("reader_override")
+        return self.to_data_frame(
+            table=connection.load_table(f"{table_slice.schema}.{table_slice.table}"),
+            table_slice=table_slice,
+            target_type=context.dagster_type.typing_type,
+            reader_override=reader_override,
+        )
 
     def to_arrow(self, obj: PolarsTypes) -> pa.Table:
         if isinstance(obj, pl.LazyFrame):
@@ -154,6 +176,19 @@ class PolarsIcebergIOManager(_io_manager.IcebergIOManager):
                 ...
 
     """
+
+    reader_override: Literal["native", "pyiceberg"] | None = Field(
+        default=None,
+        description=(
+            "Override the Polars Iceberg reader implementation used by "
+            "``polars.scan_iceberg``. When set to ``'pyiceberg'``, Polars delegates "
+            "all I/O to the PyIceberg library instead of its native Rust reader. "
+            "Use this on deployments (e.g. Kubernetes) where the native reader "
+            "leaves a deadlocked thread open after reading from S3, which prevents "
+            "the Dagster run from finalising. When ``None`` (the default), Polars "
+            "selects the best reader automatically."
+        ),
+    )
 
     @staticmethod
     def type_handlers() -> Sequence[DbTypeHandler]:

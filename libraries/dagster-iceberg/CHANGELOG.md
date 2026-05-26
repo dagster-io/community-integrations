@@ -4,6 +4,7 @@
 
 ### Added
 
+- `PolarsIcebergIOManager.reader_override` — configurable option (`'native'` | `'pyiceberg'` | `None`) that maps directly to the `reader_override` parameter of `polars.scan_iceberg`. Setting this to `'pyiceberg'` delegates all reads to the PyIceberg library instead of the Polars native Rust reader. This fixes a bug where the native reader leaves a deadlocked background thread open after reading from S3, preventing Kubernetes Dagster runs from finalising and reporting success.
 - `S3TablesCatalogConfig` — typed `IcebergCatalogConfig` subclass for AWS S3 Tables. Derives the Glue REST endpoint URL, SigV4 properties, and warehouse string from a `region` plus `table_bucket_arn` so users don't have to remember the format. User-supplied `properties` keys override the derived defaults.
 - Spark I/O manager.
 - Support for append mode in Iceberg I/O manager. Write mode options can be set via asset definition metadata using the `write_mode` key, or at runtime via output metadata with the same key. Runtime output metadata setting overrides asset definition metadata setting.
