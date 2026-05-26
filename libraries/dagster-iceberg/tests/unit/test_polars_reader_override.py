@@ -62,14 +62,14 @@ def test_reader_override_rejects_invalid_value() -> None:
 
     from dagster_iceberg.io_manager.polars import PolarsIcebergIOManager
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError, match="reader_override must be one of"):
         PolarsIcebergIOManager(
             name="test",
             config=IcebergCatalogConfig(
                 properties={"uri": "sqlite:///test.db", "warehouse": "file:///tmp/wh"}
             ),
             namespace="default",
-            reader_override="rust",  # type: ignore[arg-type]
+            reader_override="rust",
         )
 
 
