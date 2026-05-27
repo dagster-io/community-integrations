@@ -1,0 +1,29 @@
+[project]
+name = "dagster_hf_datasets"
+description = "Dagster Integration with HF Datasets"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dagster>=1.8.0",
+    "huggingface_hub>=1.0.0",
+    "datasets>=4.8.0"
+]
+dynamic = ["version"]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest",
+    "freezegun",
+    "ty==0.0.37",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_hf_datasets"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_hf_datasets.__version__"}
