@@ -75,9 +75,13 @@ fi
 sed -i '' 's/__version__ = "[^"]*"/__version__ = "'"$VERSION"'"/' "${version_file}"
 
 git add "${version_file}"
-git diff --staged
-git commit -m "Release $PACKAGE $VERSION"
-git push
+if git diff --staged --quiet; then
+  echo "Version is already ${VERSION}; skipping release commit"
+else
+  git diff --staged
+  git commit -m "Release $PACKAGE $VERSION"
+  git push
+fi
 
 RELEASE_TAG="${PACKAGE//-/_}-${VERSION}"
 

@@ -10,8 +10,8 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff",
     "pytest",
     "freezegun",
@@ -22,8 +22,9 @@ dev-dependencies = [
 requires = ["setuptools>=42"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["dagster_hf_datasets"]
+[tool.setuptools.packages.find]
+include = ["dagster_hf_datasets*"]
+exclude = ["dagster_hf_datasets_tests*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "dagster_hf_datasets.__version__"}
