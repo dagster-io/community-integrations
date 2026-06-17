@@ -44,7 +44,10 @@ jobs:
       # -rw-r--r--@ 2.0K Oct 23 14:06 dagster_modal-0.1.2-py3-none-any.whl
       # -rw-r--r--@ 1.6K Oct 23 14:06 dagster_modal-0.1.2.tar.gz
       - name: Validate release version
-        run: python .github/validate-release-version.py ${{ inputs.working_directory }}/dist ${{ github.ref_name }}
+        run: python .github/validate-release-version.py "$WORKING_DIRECTORY/dist" "$REF_NAME"
+        env:
+          WORKING_DIRECTORY: ${{ inputs.working_directory }}
+          REF_NAME: ${{ github.ref_name }}
 
       - name: Publish
         working-directory: ${{ inputs.working_directory }}
