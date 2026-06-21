@@ -9,7 +9,6 @@ from dagster_hf_datasets import (
     HuggingFaceResource,
     hf_dataset_asset,
     hf_multi_asset,
-    HFParquetIOManager,  # Also available from dagster_hf_datasets.io_manager
 )
 ```
 

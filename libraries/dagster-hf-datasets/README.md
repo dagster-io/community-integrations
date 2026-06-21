@@ -2,7 +2,7 @@
 
 <p align="center">
   <img
-    src="docs/assets/dagster_readme_logo.jpg"
+    src="https://raw.githubusercontent.com/dagster-io/community-integrations/main/libraries/dagster-hf-datasets/docs/assets/dagster_readme_logo.jpg"
     alt="Dagster-HF-Datasets Logo"
     width="500"
   />
@@ -32,7 +32,7 @@ pip install dagster-hf-datasets
 ## Development Install:
 
 ```bash
-git clone https://github.com/dagster-io/dagster.git
+git clone https://github.com/dagster-io/community-integrations.git
 
 cd libraries/dagster-hf-datasets
 
@@ -47,7 +47,7 @@ pip install -e .
 
 Get started with a simple example of materializing a Hugging Face dataset as a Dagster asset:
 
-See [examples/basic_asset_pipeline.py](https://github.com/dagster/community-integrations/blob/main/libraries/dagster-hf-datasets/examples/basic_asset_pipeline.py)
+See [examples/basic_asset_pipeline.py](https://github.com/dagster-io/community-integrations/blob/main/libraries/dagster-hf-datasets/examples/basic_asset_pipeline.py)
 
 - Dataset materialization with `hf_dataset_asset`
 - Parquet persistence via `HFParquetIOManager`
@@ -60,7 +60,7 @@ See [examples/basic_asset_pipeline.py](https://github.com/dagster/community-inte
 
 Process large datasets efficiently with runtime-only streaming ingestion:
 
-See [examples/multi_asset_pipeline.py](https://github.com/dagster/community-integrations/blob/main/libraries/dagster-hf-datasets/examples/multi_asset_pipeline.py)
+See [examples/multi_asset_pipeline.py](https://github.com/dagster-io/community-integrations/blob/main/libraries/dagster-hf-datasets/examples/multi_asset_pipeline.py)
 
 - Streaming dataset loading with `load_dataset(..., streaming=True)`
 - Deterministic sampling of IterableDatasets
@@ -73,7 +73,7 @@ See [examples/multi_asset_pipeline.py](https://github.com/dagster/community-inte
 
 Build production-grade data pipelines with dataset cleaning, transformation and publishing:
 
-See [examples/multi_asset_pipeline.py](https://github.com/dagster/community-integrations/blob/main/libraries/dagster-hf-datasets/examples/dataset_pipeline.py)
+See [examples/multi_asset_pipeline.py](https://github.com/dagster-io/community-integrations/blob/main/libraries/dagster-hf-datasets/examples/dataset_pipeline.py)
 
 - Deduplication and filtering of raw data
 - Text normalization and formatting
@@ -84,8 +84,18 @@ See [examples/multi_asset_pipeline.py](https://github.com/dagster/community-inte
 
 ## Documentation
 
-- **[Usage Guide](https://github.com/dagster/community-integrations/blob/main/libraries/dagster-hf-datasets/docs/Usage.md)** — Quick start, configuration, publishing datasets to Hugging Face Hub, and metadata/lineage tracking
-- **[API Reference](https://github.com/dagster/community-integrations/blob/main/libraries/dagster-hf-datasets/docs/API.md)** — Complete API documentation for `HuggingFaceResource`, asset decorators, and the IO manager
+- [Usage Guide](https://github.com/dagster-io/community-integrations/blob/main/libraries/dagster-hf-datasets/docs/Usage.md) — Quick start, configuration, publishing datasets to Hugging Face Hub, and metadata/lineage tracking
+- [API Reference](https://github.com/dagster-io/community-integrations/blob/main/libraries/dagster-hf-datasets/docs/API.md) — Complete API documentation for `HuggingFaceResource`, asset decorators, and the IO manager
+
+---
+
+## Resources
+
+- [Release Article](https://huggingface.co/blog/AINovice2005/dagster-hf-datasets) — Deep dive into the motivation, architecture, runtime lifecycle and patterns behind `dagster-hf-datasets`.
+
+- [Official Dagster Documentation](https://docs.dagster.io/integrations/libraries/hf-datasets) — Installation instructions, features and end-to-end usage guide.
+
+- [Examples on Hugging Face](https://huggingface.co/buckets/the-hf-stack/dagster-hf-datasets-examples) — Explore 10+ curated example pipelines.
 
 ---
 

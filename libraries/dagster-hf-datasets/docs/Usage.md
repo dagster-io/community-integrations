@@ -67,7 +67,7 @@ publisher = HFDatasetPublisher(
 
 ## Examples
 
-See [examples](libraries/dagster-hf-datasets/examples) for complete working pipelines and multi-asset patterns.
+See [dagster-hf-datasets-examples](https://huggingface.co/buckets/the-hf-stack/dagster-hf-datasets-examples) for complete working pipelines and multi-asset patterns.
 
 ### Publishing a Dataset
 
