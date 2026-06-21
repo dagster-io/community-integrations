@@ -47,7 +47,7 @@ classifiers = [
 Documentation = "https://docs.dagster.io/integrations/libraries/hf-datasets"
 GitHub = "https://github.com/dagster-io/community-integrations/tree/main/libraries/dagster-hf-datasets"
 Examples = "https://huggingface.co/buckets/the-hf-stack/dagster-hf-datasets-examples"
-Release Article = "https://huggingface.co/blog/AINovice2005/dagster-hf-datasets"
+"Release Article" = "https://huggingface.co/blog/AINovice2005/dagster-hf-datasets"
 
 [dependency-groups]
 dev = [
