@@ -13,8 +13,8 @@ dynamic = ["version"]
 dev = [
     "ruff",
     "pytest",
+    "pytest-timeout",
     "ty==0.0.37",
-    "pytest",
 ]
 
 [build-system]
