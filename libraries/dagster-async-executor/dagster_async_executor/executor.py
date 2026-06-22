@@ -238,10 +238,20 @@ class AsyncExecutor(Executor):
                             send_stream.clone(),
                         )
 
-                    try:
+                    # When the only remaining work is parked in ActiveExecution
+                    # (a step in _waiting_to_retry under a delayed RetryPolicy, or
+                    # a pending concurrency claim), no worker is alive to emit an
+                    # event, so receive() would block forever while is_complete
+                    # stays False. Bound the wait by sleep_interval() and re-poll,
+                    # mirroring stock executors' sleep_til_ready() behavior, so the
+                    # retry-ready step gets promoted by get_steps_to_execute().
+                    sleep_interval = active.sleep_interval()
+                    with anyio.move_on_after(
+                        sleep_interval if sleep_interval > 0 else None
+                    ) as scope:
                         event = await recv_stream.receive()
-                    except anyio.EndOfStream:
-                        raise
+                    if scope.cancelled_caught:
+                        continue
 
                     yield event
                     active.handle_event(event)
