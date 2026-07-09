@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Generic, TypeVar, cast
 from dagster._core.definitions import TimeWindow
 from pyiceberg import expressions as E
 from pyiceberg import types as T
+from pyiceberg.expressions.literals import literal
 from pyiceberg.transforms import IdentityTransform
 
 from dagster_iceberg._utils.retries import IcebergOperationWithRetry
@@ -191,7 +192,10 @@ class DagsterPartitionToIcebergExpressionMapper(
         partition_expr: str,
         partition_filters: Sequence[str],
     ) -> E.BooleanExpression | E.LiteralPredicate[str]:
-        predicates = [E.EqualTo(partition_expr, p) for p in partition_filters]
+        predicates = [
+            E.EqualTo(term=E.Reference(name=partition_expr), value=literal(p))
+            for p in partition_filters
+        ]
         if len(predicates) > 1:
             return E.Or(*predicates)
         return predicates[0]
@@ -204,8 +208,14 @@ class DagsterPartitionToIcebergExpressionMapper(
     ) -> E.BooleanExpression:
         return E.And(
             *[
-                E.GreaterThanOrEqual(partition_expr, start_dt.isoformat()),
-                E.LessThan(partition_expr, end_dt.isoformat()),
+                E.GreaterThanOrEqual(
+                    term=E.Reference(name=partition_expr),
+                    value=literal(start_dt.isoformat()),
+                ),
+                E.LessThan(
+                    term=E.Reference(name=partition_expr),
+                    value=literal(end_dt.isoformat()),
+                ),
             ],
         )
 

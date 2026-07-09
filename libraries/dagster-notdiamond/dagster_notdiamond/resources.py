@@ -19,9 +19,9 @@ from notdiamond import NotDiamond
 from pydantic import Field, PrivateAttr
 
 if version.parse(__version__) >= version.parse("1.10.0"):
-    from dagster._annotations import preview  # pyright: ignore[reportAttributeAccessIssue]
+    from dagster._annotations import preview  # ty: ignore
 else:
-    from dagster._annotations import experimental as preview  # pyright: ignore[reportAttributeAccessIssue]
+    from dagster._annotations import experimental as preview  # ty: ignore
 
 
 class ApiEndpointClassesEnum(Enum):

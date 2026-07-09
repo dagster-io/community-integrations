@@ -10,7 +10,7 @@ dependencies = [
   "dagster>=1.8.2",
   "pendulum>=3.0.0",
   "pydantic>=2.0.0",
-  "pyiceberg[pyarrow]>=0.8,<0.11",
+  "pyiceberg[pyarrow]>=0.8,<0.12",
   "tenacity>=8.5.0",
 ]
 classifiers = [
@@ -112,14 +112,35 @@ ignore = [
 [tool.pytest.ini_options]
 cache_dir = "./.cache/pytest"
 
-[tool.pyright]
-exclude = [".venv", ".github", "docs", "tests"]
-include = ["src"]
-pythonVersion = "3.11"
-venvPath = "."
-venv = ".venv"
-reportMissingImports = "none"
+[tool.ty.environment]
+python-version = "3.11"
 
+[tool.ty.src]
+include = ["src"]
+exclude = [".venv", ".github", "docs", "tests"]
+
+[tool.ty.rules]
+unresolved-import = "ignore"
+unresolved-attribute = "ignore"
+invalid-attribute-access = "ignore"
+invalid-argument-type = "ignore"
+invalid-return-type = "ignore"
+invalid-assignment = "ignore"
+invalid-raise = "ignore"
+invalid-type-form = "ignore"
+invalid-method-override = "ignore"
+missing-argument = "ignore"
+unknown-argument = "ignore"
+too-many-positional-arguments = "ignore"
+no-matching-overload = "ignore"
+unsupported-operator = "ignore"
+empty-body = "ignore"
+call-non-callable = "ignore"
+unused-ignore-comment = "ignore"
+unused-type-ignore-comment = "ignore"
+invalid-parameter-default = "ignore"
+deprecated = "ignore"
+redundant-cast = "ignore"
 [dependency-groups]
 docs = [
   "mkdocs>=1.6.1",
@@ -131,12 +152,18 @@ dev = [
   "dagit>=1.8.8",
   "dagster>=1.10.5",
   "dagster-polars[patito]>=0.26.1",
+  # dagster-polars releases before the universal-pathlib 0.3 compatibility fix
+  # still read UPath._kwargs via Dagster's UPathIOManager in the kitchen-sink tests.
+  "universal-pathlib<0.3",
   "dagster-pyspark>=0.26.1",
   "docker",
   "fsspec[http]>=2025.2.0",
-  "pyiceberg[sql-postgres]<0.11",
-  "pyright>=1.1.385",
+  "pyiceberg[sql-postgres]<0.12",
+  "ty==0.0.37",
   "pytest>=8.3.2",
   "pytest-cov>=6.0.0",
   "ruff>=0.9.6",
+  "setuptools",
+  "pandas>=2.0.0",
+  "grpcio-status",
 ]

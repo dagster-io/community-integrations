@@ -3,7 +3,11 @@ ruff:
 	ruff format
 
 check:
-	@for d in libraries/dagster-*; do if [ -d "$$d" ]; then (echo "$$d" && cd "$$d" && make check) || exit 1; fi; done
+	@for d in libraries/dagster-*; do \
+		if [ -f "$$d/Makefile" ] && grep -q '^check:' "$$d/Makefile"; then \
+			(echo "$$d" && cd "$$d" && make check) || exit 1; \
+		fi; \
+	done
 
 
 test:

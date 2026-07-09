@@ -10,7 +10,7 @@ from dagster._core.storage.dagster_run import DagsterRun
 from dagster._core.test_utils import in_process_test_workspace, instance_for_test
 from dagster._core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster._core.workspace.context import WorkspaceRequestContext
-from dagster._core.remote_representation import RemoteJob
+from dagster._core.remote_representation.external import RemoteJob
 
 
 from dagster_contrib_gcp_tests.cloud_run_tests import repo

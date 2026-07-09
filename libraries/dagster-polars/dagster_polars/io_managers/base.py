@@ -85,6 +85,21 @@ class BasePolarsUPathIOManager(ConfigurableIOManager, UPathIOManager):
             else UPath(check.not_none(context.instance).storage_directory())
         )
 
+    @property
+    def storage_options(self) -> dict[str, Any]:
+        """Return UPath storage options across universal-pathlib versions.
+
+        Dagster's ``UPathIOManager`` currently reads the private ``_kwargs``
+        attribute, which was removed in universal-pathlib 0.3. Prefer the
+        public ``storage_options`` attribute when present and fall back to the
+        legacy private attribute for universal-pathlib 0.2.
+        """
+        if hasattr(self._base_path, "storage_options"):
+            return dict(self._base_path.storage_options or {})
+        if hasattr(self._base_path, "_kwargs"):
+            return self._base_path._kwargs.copy()  # noqa: SLF001
+        return {}
+
     @abstractmethod
     def write_df_to_path(
         self,
@@ -210,7 +225,7 @@ class BasePolarsUPathIOManager(ConfigurableIOManager, UPathIOManager):
             if context.dagster_type.typing_type is not None and issubclass(
                 context.dagster_type.typing_type, pt.DataFrame
             ):
-                return get_patito_metadata(context.dagster_type.typing_type.model)  # pyright: ignore[reportGeneralTypeIssues]
+                return get_patito_metadata(context.dagster_type.typing_type.model)  # ty: ignore
         except (ImportError, TypeError):
             return {}
 

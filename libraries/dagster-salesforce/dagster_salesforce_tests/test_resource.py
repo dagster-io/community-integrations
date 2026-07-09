@@ -1,4 +1,4 @@
-# pyright: reportAttributeAccessIssue=false, reportFunctionMemberAccess=false
+# ty: ignore
 """
 Test suite for SalesforceResource using pytest-mock.
 

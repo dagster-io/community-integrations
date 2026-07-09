@@ -1,0 +1,68 @@
+[project]
+name = "dagster-hf-datasets"
+description = "Dagster Integration with HF Datasets"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dagster>=1.8.0",
+    "huggingface_hub>=1.0.0",
+    "datasets>=4.8.0"
+]
+dynamic = ["version"]
+
+authors = [
+  { name = "Parag Ekbote" }
+]
+
+license = "Apache-2.0"
+
+keywords = [
+  "dagster",
+  "huggingface",
+  "datasets",
+  "etl",
+  "data-pipelines",
+  "mlops"
+]
+
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Information Technology",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: OS Independent",
+  "Topic :: Database",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Utilities",
+]
+
+[project.urls]
+Documentation = "https://docs.dagster.io/integrations/libraries/hf-datasets"
+GitHub = "https://github.com/dagster-io/community-integrations/tree/main/libraries/dagster-hf-datasets"
+Examples = "https://huggingface.co/buckets/the-hf-stack/dagster-hf-datasets-examples"
+"Release Article" = "https://huggingface.co/blog/AINovice2005/dagster-hf-datasets"
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "pytest",
+    "freezegun",
+    "ty==0.0.37",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["dagster_hf_datasets*"]
+exclude = ["dagster_hf_datasets_tests*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_hf_datasets.__version__"}

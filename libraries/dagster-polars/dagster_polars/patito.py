@@ -32,7 +32,7 @@ def get_patito_metadata(model: type["pt.Model"]) -> dict[str, MetadataValue]:
                 type=str(schema_dtypes[col]),
                 description=properties.get("description"),
                 constraints=TableColumnConstraints(
-                    unique=column_infos[col].unique  # pyright: ignore reportArgumentType
+                    unique=column_infos[col].unique  # ty: ignore reportArgumentType
                     if column_infos[col].unique is not None
                     else False,
                     nullable="anyOf" in properties,
@@ -91,7 +91,7 @@ def patito_model_to_dagster_type(
     """
     type_check_fn = _patito_model_to_type_check_fn(model)
 
-    model_title = model.__pydantic_core_schema__["config"]["title"]  # pyright: ignore[reportGeneralTypeIssues,reportTypedDictNotRequiredAccess]
+    model_title = model.__pydantic_core_schema__["config"]["title"]  # ty: ignore
 
     dagster_type = DagsterType(
         type_check_fn=type_check_fn,

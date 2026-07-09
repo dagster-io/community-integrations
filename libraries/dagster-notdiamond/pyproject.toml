@@ -9,13 +9,13 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "dagster-openai",
     "ruff",
     "pytest",
     "dagster-webserver",
-    "pyright>=1.1.386",
+    "ty==0.0.37",
 ]
 
 [build-system]

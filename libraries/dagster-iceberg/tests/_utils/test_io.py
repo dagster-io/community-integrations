@@ -1,11 +1,10 @@
 import datetime as dt
-import pathlib as plb
 from uuid import uuid4
 
 import pyarrow as pa
 import pyarrow.compute as pc
 import pytest
-from dagster._core.definitions.time_window_partitions import TimeWindow
+from dagster._core.definitions.partitions.definition.time_window import TimeWindow
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
 from pyiceberg import expressions as E
 from pyiceberg.catalog import Catalog
@@ -285,7 +284,6 @@ def test_table_writer_multi_partitioned_update(
 
 def test_table_writer_multi_partitioned_update_partition_spec_change(
     namespace: str,
-    warehouse_path: str,
     catalog: Catalog,
     data: pa.Table,
 ):
@@ -334,23 +332,13 @@ def test_table_writer_multi_partitioned_update_partition_spec_change(
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
     )
-    path_to_dwh = (
-        plb.Path(warehouse_path)
-        / f"{namespace}.db"
-        / table_
-        / "data"
-        / "part_timestamp=2023-01-01-00"
-    )
-    categories = sorted([p.name for p in path_to_dwh.glob("*") if p.is_dir()])
-    assert categories == [
-        "part_category=A",
-        "part_category=B",
-        "part_category=C",
+    table = catalog.load_table(identifier_)
+    assert [field.name for field in table.spec().fields] == [
+        "part_timestamp",
+        "part_category",
     ]
-    assert (
-        len(catalog.load_table(identifier_).scan().to_arrow().to_pydict()["value"])
-        == 1440
-    )
+    assert set(table.scan().to_arrow().to_pydict()["category"]) == {"A", "B", "C"}
+    assert len(table.scan().to_arrow().to_pydict()["value"]) == 1440
 
 
 def test_table_writer_multi_partitioned_update_partition_spec_error(

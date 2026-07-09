@@ -1,6 +1,10 @@
 # Copyright 2018-2025 contributors to the OpenLineage project
 # SPDX-License-Identifier: Apache-2.0
 
+# ty: ignore
+# Transport.url exists on HttpTransport subclass but not on the abstract
+# Transport base ty resolves OpenLineageClient.transport to.
+
 import os
 
 from dagster_openlineage.adapter import OpenLineageAdapter

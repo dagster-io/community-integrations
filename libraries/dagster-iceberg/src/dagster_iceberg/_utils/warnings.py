@@ -5,11 +5,11 @@ from packaging import version
 def preview(wrapped=None):
     if version.parse(__version__) >= version.parse("1.10.0"):
         from dagster._annotations import (
-            preview as decorator,  # pyright: ignore[reportAttributeAccessIssue]
+            preview as decorator,  # ty: ignore
         )
     else:
         from dagster._annotations import (
-            experimental as decorator,  # pyright: ignore[reportAttributeAccessIssue]
+            experimental as decorator,  # ty: ignore
         )
 
     if wrapped is not None:

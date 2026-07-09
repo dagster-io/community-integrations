@@ -148,7 +148,7 @@ class DataformRepositoryResource:
 
         self.logger.info(f"Found response: {response}")
 
-        return response  # pyright: ignore[reportReturnType]
+        return response  # ty: ignore
 
     def query_workflow_invocation(
         self, name: str
@@ -157,7 +157,7 @@ class DataformRepositoryResource:
 
         if not name:
             self.logger.error("No workflow invocation name available")
-            return []  # pyright: ignore[reportReturnType]
+            return []  # ty: ignore
 
         self.logger.info(f"Querying workflow invocation: {name}")
 
@@ -172,7 +172,7 @@ class DataformRepositoryResource:
         # self.logger.info(f"Found {len(response)} workflow invocation actions")
 
         # Handle the response
-        return response  # pyright: ignore[reportReturnType]
+        return response  # ty: ignore
 
     def create_workflow_invocation(
         self,

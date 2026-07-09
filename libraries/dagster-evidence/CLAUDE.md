@@ -13,8 +13,8 @@ make install   # Install dependencies (uv sync)
 make build     # Build package (uv build)
 make test      # Run all tests (uv run pytest)
 make ruff      # Format and lint (ruff check --fix && ruff format)
-make check     # Type checking (uv run pyright)
-make quality   # Run all checks (ruff, format, pyright, pytest)
+make check     # Type checking (uv run ty check)
+make quality   # Run all checks (ruff, format, ty, pytest)
 
 # Run specific tests
 uv run pytest dagster_evidence_tests/test_component.py

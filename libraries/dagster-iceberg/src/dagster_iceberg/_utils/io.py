@@ -118,6 +118,14 @@ def table_writer(
             )
         partition_dimensions = table_slice.partition_dimensions
     logger.debug("Partition dimensions: %s", partition_dimensions)
+    if partition_dimensions is not None:
+        for partition_dimension in partition_dimensions:
+            if partition_dimension.partition_expr not in data.schema.names:
+                raise ValueError(
+                    f"Could not find field '{partition_dimension.partition_expr}' "
+                    "in data schema. Partition columns must be present in the data."
+                )
+
     if table_exists(catalog, table_path):
         logger.debug("Updating existing table")
         table = catalog.load_table(table_path)

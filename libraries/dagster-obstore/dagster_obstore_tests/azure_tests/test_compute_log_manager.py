@@ -75,9 +75,9 @@ def test_compute_log_manager(
 
             # Capture API
             log_data = manager.get_log_data(log_key)
-            stdout = log_data.stdout.decode("utf-8")  # pyright: ignore[reportOptionalMemberAccess]
+            stdout = log_data.stdout.decode("utf-8")  # ty: ignore
             assert stdout == HELLO_WORLD + SEPARATOR
-            stderr = log_data.stderr.decode("utf-8")  # pyright: ignore[reportOptionalMemberAccess]
+            stderr = log_data.stderr.decode("utf-8")  # ty: ignore
             for expected in EXPECTED_LOGS:
                 assert expected in stderr
 
@@ -102,9 +102,9 @@ def test_compute_log_manager(
 
             # Capture API
             log_data = manager.get_log_data(log_key)
-            stdout = log_data.stdout.decode("utf-8")  # pyright: ignore[reportOptionalMemberAccess]
+            stdout = log_data.stdout.decode("utf-8")  # ty: ignore
             assert stdout == HELLO_WORLD + SEPARATOR
-            stderr = log_data.stderr.decode("utf-8")  # pyright: ignore[reportOptionalMemberAccess]
+            stderr = log_data.stderr.decode("utf-8")  # ty: ignore
             for expected in EXPECTED_LOGS:
                 assert expected in stderr
 
@@ -138,9 +138,9 @@ compute_logs:
             f.write(dagster_yaml.encode("utf-8"))
 
         instance = DagsterInstance.from_config(tempdir)
-    assert instance.compute_log_manager._storage_account == storage_account  # noqa: SLF001  # pyright: ignore[reportAttributeAccessIssue]
-    assert instance.compute_log_manager._container == container  # noqa: SLF001  # pyright: ignore[reportAttributeAccessIssue]
-    assert instance.compute_log_manager._prefix == prefix  # noqa: SLF001  # pyright: ignore[reportAttributeAccessIssue]
+    assert instance.compute_log_manager._storage_account == storage_account  # noqa: SLF001  # ty: ignore
+    assert instance.compute_log_manager._container == container  # noqa: SLF001  # ty: ignore
+    assert instance.compute_log_manager._prefix == prefix  # noqa: SLF001  # ty: ignore
 
 
 def test_prefix_filter(
@@ -158,7 +158,7 @@ def test_prefix_filter(
         )
         log_key = ["arbitrary", "log", "key"]
         with manager.open_log_stream(log_key, ComputeIOType.STDERR) as write_stream:
-            write_stream.write("hello hello")  # pyright: ignore[reportOptionalMemberAccess]
+            write_stream.write("hello hello")  # ty: ignore
 
         logs = (
             obs.get(azure_store, "foo/bar/storage/arbitrary/log/key.err")
@@ -189,7 +189,7 @@ def test_get_log_keys_for_log_key_prefix(
         def write_log_file(file_id: int, io_type: ComputeIOType):
             full_log_key = [*log_key_prefix, f"{file_id}"]
             with manager.open_log_stream(full_log_key, io_type) as f:
-                f.write("foo")  # pyright: ignore[reportOptionalMemberAccess]
+                f.write("foo")  # ty: ignore
 
     log_keys = manager.get_log_keys_for_log_key_prefix(
         log_key_prefix, io_type=ComputeIOType.STDERR
@@ -202,7 +202,7 @@ def test_get_log_keys_for_log_key_prefix(
     log_keys = manager.get_log_keys_for_log_key_prefix(
         log_key_prefix, io_type=ComputeIOType.STDERR
     )
-    assert sorted(log_keys) == [  # pyright: ignore[reportArgumentType]
+    assert sorted(log_keys) == [  # ty: ignore
         [*log_key_prefix, "0"],
         [*log_key_prefix, "1"],
         [*log_key_prefix, "2"],
@@ -214,7 +214,7 @@ def test_get_log_keys_for_log_key_prefix(
 
     log_key = [*log_key_prefix, "4"]
     with manager.local_manager.open_log_stream(log_key, ComputeIOType.STDOUT) as f:
-        f.write("foo")  # pyright: ignore[reportOptionalMemberAccess]
+        f.write("foo")  # ty: ignore
     blob_key = manager._blob_key(log_key, ComputeIOType.STDOUT)  # noqa: SLF001
     with open(
         manager.local_manager.get_captured_local_path(
@@ -227,7 +227,7 @@ def test_get_log_keys_for_log_key_prefix(
     log_keys = manager.get_log_keys_for_log_key_prefix(
         log_key_prefix, io_type=ComputeIOType.STDERR
     )
-    assert sorted(log_keys) == [  # pyright: ignore[reportArgumentType]
+    assert sorted(log_keys) == [  # ty: ignore
         [*log_key_prefix, "0"],
         [*log_key_prefix, "1"],
         [*log_key_prefix, "2"],
@@ -256,6 +256,6 @@ compute_logs:
             f.write(dagster_yaml.encode("utf-8"))
 
         instance = DagsterInstance.from_config(tempdir)
-    assert instance.compute_log_manager._storage_account == storage_account  # noqa: SLF001  # pyright: ignore[reportAttributeAccessIssue]
-    assert instance.compute_log_manager._container == container  # noqa: SLF001  # pyright: ignore[reportAttributeAccessIssue]
-    assert instance.compute_log_manager._prefix == prefix  # noqa: SLF001  # pyright: ignore[reportAttributeAccessIssue]
+    assert instance.compute_log_manager._storage_account == storage_account  # noqa: SLF001  # ty: ignore
+    assert instance.compute_log_manager._container == container  # noqa: SLF001  # ty: ignore
+    assert instance.compute_log_manager._prefix == prefix  # noqa: SLF001  # ty: ignore

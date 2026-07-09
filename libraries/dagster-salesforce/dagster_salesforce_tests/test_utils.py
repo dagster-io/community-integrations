@@ -1,4 +1,4 @@
-# pyright: reportAttributeAccessIssue=false
+# ty: ignore
 """
 Test suite for utility functions in dagster_salesforce.utils.
 

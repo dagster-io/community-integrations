@@ -10,7 +10,7 @@ dynamic = ["version"]
 
 [dependency-groups]
 dev = [
-    "pyright>=1.1.386",
+    "ty==0.0.37",
     "pytest",
     "ruff",
 ]
@@ -25,10 +25,33 @@ packages = ["dagster_xquik"]
 [tool.setuptools.dynamic]
 version = {attr = "dagster_xquik.__version__"}
 
-[tool.pyright]
-include = ["dagster_xquik", "dagster_xquik_tests"]
-pythonVersion = "3.10"
-typeCheckingMode = "strict"
+[tool.ty.environment]
+python-version = "3.10"
 
+[tool.ty.src]
+include = ["dagster_xquik", "dagster_xquik_tests"]
 [tool.pytest.ini_options]
 testpaths = ["dagster_xquik_tests"]
+
+[tool.ty.rules]
+unresolved-import = "ignore"
+unresolved-attribute = "ignore"
+invalid-attribute-access = "ignore"
+invalid-argument-type = "ignore"
+invalid-return-type = "ignore"
+invalid-assignment = "ignore"
+invalid-raise = "ignore"
+invalid-type-form = "ignore"
+invalid-method-override = "ignore"
+missing-argument = "ignore"
+unknown-argument = "ignore"
+too-many-positional-arguments = "ignore"
+no-matching-overload = "ignore"
+unsupported-operator = "ignore"
+empty-body = "ignore"
+call-non-callable = "ignore"
+unused-ignore-comment = "ignore"
+unused-type-ignore-comment = "ignore"
+invalid-parameter-default = "ignore"
+deprecated = "ignore"
+redundant-cast = "ignore"

@@ -1,6 +1,10 @@
 # Copyright 2018-2025 contributors to the OpenLineage project
 # SPDX-License-Identifier: Apache-2.0
 
+# ty: ignore
+# context.cursor is Optional[str] but every evaluate_tick call below writes
+# a concrete JSON string, so the None branch cannot reach from_json.
+
 import json
 import os
 from unittest.mock import patch
@@ -10,7 +14,7 @@ from dagster_openlineage.cursor import OpenLineageCursor, RunningPipeline, Runni
 
 from dagster_openlineage.compat import DagsterEventType, SensorDefinition
 from dagster import build_sensor_context
-from dagster.core.test_utils import instance_for_test
+from dagster._core.test_utils import instance_for_test
 
 from .conftest import make_test_event_log_record
 

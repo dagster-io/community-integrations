@@ -85,7 +85,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         command_args = args.get_command_args()
 
         operation = self.create_execution(current_code_location, command_args)
-        execution_id = operation.metadata.name.split("/")[-1]  # pyright: ignore
+        execution_id = operation.metadata.name.split("/")[-1]  # ty: ignore
 
         instance: DagsterInstance = self._instance
         instance.report_engine_event(
@@ -232,7 +232,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         container_overrides = [RunJobRequest.Overrides.ContainerOverride(**overrides)]
 
         request.overrides.container_overrides.extend(container_overrides)
-        request.overrides.timeout = f"{self.run_timeout}s"  # pyright: ignore
+        request.overrides.timeout = f"{self.run_timeout}s"  # ty: ignore
 
         @tenacity.retry(
             wait=tenacity.wait_fixed(self.run_job_retry_wait),

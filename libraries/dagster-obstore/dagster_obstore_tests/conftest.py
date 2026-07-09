@@ -1,3 +1,9 @@
+from collections.abc import Iterator
+from pathlib import Path
+import socket
+import subprocess
+import time
+
 import boto3
 import pytest
 from azure.core.exceptions import ResourceExistsError
@@ -30,15 +36,61 @@ def azurite_credentials(monkeypatch):
     )
 
 
+def _is_port_open(port: int) -> bool:
+    try:
+        with socket.create_connection(("localhost", port), timeout=0.5):
+            return True
+    except OSError:
+        return False
+
+
+def _wait_for_ports(ports: tuple[int, ...], timeout: float = 30) -> None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if all(_is_port_open(port) for port in ports):
+            return
+        time.sleep(0.5)
+    raise RuntimeError(
+        f"Timed out waiting for test object storage services on ports {ports}"
+    )
+
+
+@pytest.fixture(scope="session")
+def start_object_storage_services() -> Iterator[None]:
+    ports = (10000, 3000)
+    if all(_is_port_open(port) for port in ports):
+        yield
+        return
+
+    compose_file = Path(__file__).parents[1] / "docker-compose.yml"
+    project_name = "dagster-obstore-tests"
+    subprocess.run(
+        ["docker", "compose", "-p", project_name, "-f", str(compose_file), "up", "-d"],
+        check=True,
+    )
+    try:
+        _wait_for_ports(ports)
+        yield
+    finally:
+        subprocess.run(
+            [
+                "docker",
+                "compose",
+                "-p",
+                project_name,
+                "-f",
+                str(compose_file),
+                "down",
+                "--volumes",
+            ],
+            check=False,
+        )
+
+
 @pytest.fixture(scope="module")
-def start_azurite_server():
+def start_azurite_server(start_object_storage_services):
     account_name = "devstoreaccount1"
     azure_storage_account_key = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
-
-    # docker_process = subprocess.Popen(
-    #     ["podman-compose", "up", "--replace"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    # )
-    # time.sleep(5)
 
     container_name = "dagster"
     try:
@@ -50,9 +102,6 @@ def start_azurite_server():
         pass
 
     yield container_name
-
-    # docker_process.send_signal(signal.SIGINT)
-    # docker_process.wait()
 
 
 @pytest.fixture
@@ -71,7 +120,7 @@ def azure_store(container) -> AzureStore:
 
 
 @pytest.fixture
-def mock_s3_resource():
+def mock_s3_resource(start_object_storage_services):
     return boto3.resource(
         "s3",
         region_name="us-east-1",
