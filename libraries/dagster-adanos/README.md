@@ -44,6 +44,21 @@ defs = Definitions(
 )
 ```
 
+Async assets can keep HTTP setup and teardown on their execution event loop by
+using the resource's async context manager:
+
+```python
+@asset(compute_kind="adanos")
+async def crypto_sentiment(adanos: AdanosResource) -> list[dict]:
+    async with adanos.get_async_client() as client:
+        results = await client.crypto.trending_async(
+            from_="2026-07-01",
+            to="2026-07-07",
+            limit=10,
+        )
+    return [item.to_dict() for item in results]
+```
+
 Use explicit inclusive UTC `from_` and `to` dates for reproducible assets and
 backfills. The legacy `days` shorthand is deprecated by the API and is not used
 in these examples.

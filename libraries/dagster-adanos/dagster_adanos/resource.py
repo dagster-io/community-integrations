@@ -1,4 +1,5 @@
-import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from adanos import AdanosClient
 from dagster import ConfigurableResource, InitResourceContext
@@ -40,13 +41,26 @@ class AdanosResource(ConfigurableResource):
             base_url=self.base_url,
             timeout=self.timeout,
         )
+        self._client.__enter__()
 
     def teardown_after_execution(self, _context: InitResourceContext) -> None:
         self._client.close()
-        asyncio.run(self._client.aclose())
 
     @public
     def get_client(self) -> AdanosClient:
         """Return the configured Adanos SDK client for this Dagster run."""
 
         return self._client
+
+    @public
+    @asynccontextmanager
+    async def get_async_client(self) -> AsyncIterator[AdanosClient]:
+        """Yield an async SDK client managed on the caller's event loop."""
+
+        client = AdanosClient(
+            api_key=self.api_key,
+            base_url=self.base_url,
+            timeout=self.timeout,
+        )
+        async with client:
+            yield client
