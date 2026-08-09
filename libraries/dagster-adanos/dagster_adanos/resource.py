@@ -1,3 +1,5 @@
+import asyncio
+
 from adanos import AdanosClient
 from dagster import ConfigurableResource, InitResourceContext
 from dagster._annotations import public
@@ -41,6 +43,7 @@ class AdanosResource(ConfigurableResource):
 
     def teardown_after_execution(self, _context: InitResourceContext) -> None:
         self._client.close()
+        asyncio.run(self._client.aclose())
 
     @public
     def get_client(self) -> AdanosClient:

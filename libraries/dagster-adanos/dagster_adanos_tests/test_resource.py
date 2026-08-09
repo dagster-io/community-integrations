@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from dagster import EnvVar, asset, materialize_to_memory
 from dagster._core.execution.context.init import build_init_resource_context
@@ -8,6 +8,7 @@ from dagster_adanos import AdanosResource
 
 @patch("dagster_adanos.resource.AdanosClient")
 def test_resource_configures_and_closes_client(mock_client: MagicMock) -> None:
+    mock_client.return_value.aclose = AsyncMock()
     resource = AdanosResource(
         api_key="sk_live_test",
         base_url="https://sentiment.example.test",
@@ -26,10 +27,12 @@ def test_resource_configures_and_closes_client(mock_client: MagicMock) -> None:
 
     resource.teardown_after_execution(context)
     mock_client.return_value.close.assert_called_once_with()
+    mock_client.return_value.aclose.assert_awaited_once_with()
 
 
 @patch("dagster_adanos.resource.AdanosClient")
 def test_resource_is_available_to_assets(mock_client: MagicMock) -> None:
+    mock_client.return_value.aclose = AsyncMock()
     mock_client.return_value.reddit.trending.return_value = []
 
     @asset
@@ -52,6 +55,7 @@ def test_resource_is_available_to_assets(mock_client: MagicMock) -> None:
         limit=10,
     )
     mock_client.return_value.close.assert_called_once_with()
+    mock_client.return_value.aclose.assert_awaited_once_with()
 
 
 def test_resource_accepts_env_var() -> None:
