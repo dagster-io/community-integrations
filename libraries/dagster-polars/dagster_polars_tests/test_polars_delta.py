@@ -17,6 +17,7 @@ from dagster import (
     OutputContext,
     RunConfig,
     StaticPartitionsDefinition,
+    TimeWindowPartitionsDefinition,
     asset,
     materialize,
 )
@@ -339,6 +340,100 @@ def test_polars_delta_native_partitioning(
     )
 
 
+def test_polars_delta_native_partitioning_time_window_string_column(
+    polars_delta_io_manager: PolarsDeltaIOManager,
+    df_for_delta: pl.DataFrame,
+):
+    """Regression test for #330.
+
+    A ``TimeWindowPartitionsDefinition`` (yearly) whose key is stored in a
+    string column must produce a string predicate (``year = '2025'``) rather
+    than a ``DATE '2025'`` literal, which fails with ``Cannot cast string
+    '2025' to value of Date32 type``.
+    """
+    manager = polars_delta_io_manager
+    df = df_for_delta
+
+    partitions_def = TimeWindowPartitionsDefinition(
+        start="2024",
+        fmt="%Y",
+        cron_schedule="@yearly",
+        end_offset=1,
+    )
+
+    @asset(
+        io_manager_def=manager,
+        partitions_def=partitions_def,
+        metadata={"partition_by": "year"},
+    )
+    def upstream_partitioned(context: OpExecutionContext) -> pl.DataFrame:
+        return df.with_columns(pl.lit(context.partition_key).alias("year"))
+
+    @asset(io_manager_def=manager, partitions_def=partitions_def)
+    def downstream_partitioned(
+        context: AssetExecutionContext, upstream_partitioned: pl.DataFrame
+    ) -> None:
+        years = upstream_partitioned["year"].unique().to_list()
+        assert years == [context.partition_key]
+
+    for partition_key in ["2024", "2025"]:
+        result = materialize(
+            [upstream_partitioned, downstream_partitioned],
+            partition_key=partition_key,
+        )
+        saved_path = get_saved_path(result, "upstream_partitioned")
+        assert saved_path.endswith("upstream_partitioned.delta"), saved_path
+        assert DeltaTable(saved_path).metadata().partition_columns == ["year"]
+
+
+def test_polars_delta_native_partitioning_datetime_column_predicate(
+    polars_delta_io_manager: PolarsDeltaIOManager,
+    df_for_delta: pl.DataFrame,
+):
+    """The overwrite predicate must work for a ``Datetime`` partition column.
+
+    In ``0.27.12`` the predicate emitted a ``DATE '...'`` literal, which fails
+    to compare against a ``Datetime`` column (`Invalid comparison operation:
+    Timestamp <= ...`). A plain string literal is coerced by DataFusion to the
+    column's timestamp type, so overwriting one partition leaves the others
+    intact.
+
+    Note: this exercises the write/overwrite predicate path only. Reading back a
+    *single* partition of a ``Datetime``-partitioned table is a separate,
+    pre-existing delta-rs limitation (the partition value cannot be parsed as
+    ``timestamp_ntz``), so the table is read back in full here rather than via a
+    partitioned downstream asset.
+    """
+    manager = polars_delta_io_manager
+    df = df_for_delta
+
+    partitions_def = DailyPartitionsDefinition(start_date=datetime(2024, 1, 1))
+
+    @asset(
+        io_manager_def=manager,
+        partitions_def=partitions_def,
+        metadata={"partition_by": "ts"},
+    )
+    def upstream_partitioned(context: OpExecutionContext) -> pl.DataFrame:
+        return df.with_columns(
+            pl.lit(context.partition_key)
+            .str.strptime(pl.Datetime, "%Y-%m-%d")
+            .alias("ts")
+        )
+
+    saved_path = None
+    for partition_key in ["2024-01-01", "2024-01-02"]:
+        result = materialize([upstream_partitioned], partition_key=partition_key)
+        saved_path = get_saved_path(result, "upstream_partitioned")
+
+    assert saved_path is not None
+    assert DeltaTable(saved_path).metadata().partition_columns == ["ts"]
+
+    # Both partition writes succeeded and neither predicate clobbered the other.
+    written = pl.read_delta(saved_path)["ts"].unique().sort().to_list()
+    assert written == [datetime(2024, 1, 1), datetime(2024, 1, 2)]
+
+
 def test_polars_delta_native_multi_partitions(
     polars_delta_io_manager: PolarsDeltaIOManager,
     df_for_delta: pl.DataFrame,
@@ -501,19 +596,19 @@ def test_polars_delta_io_manager_schema_mode_set(dagster_instance: DagsterInstan
             "col_name",
             ["a", "b"],
             [("col_name", "in", ["a", "b"])],
-            "col_name in ('a', 'b')",
+            "col_name = 'a' OR col_name = 'b'",
         ),
         (
             {"col_name": "mapped_col"},
             [{"col_name": "a"}],
             [("mapped_col", "in", ["a"])],
-            "mapped_col in ('a')",
+            "(mapped_col = 'a')",
         ),
         (
             {"col_name": "mapped_col"},
             [{"col_name": "a"}, {"col_name": "b"}],
             [("mapped_col", "in", ["a", "b"])],
-            "mapped_col in ('a', 'b')",
+            "(mapped_col = 'a' OR mapped_col = 'b')",
         ),
         (None, [], [], None),
     ],
