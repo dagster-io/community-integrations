@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.11
+
+### Updated
+
+- (pull/342) Added `cloud_run_job_executor`, a Dagster `Executor` that launches each step of a run as its own Cloud Run Job execution.
+
 ## 0.0.9
 
 ### Updated
