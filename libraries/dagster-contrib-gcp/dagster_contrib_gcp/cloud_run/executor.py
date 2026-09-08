@@ -49,7 +49,9 @@ class CloudRunStepHandler(StepHandler):
         self._job_name = job_name
         self._container_name = container_name
         self._step_timeout = step_timeout
-        self._executions_by_step: dict[tuple[str, int], str] = {} # Maps (step_key, attempt_count) -> execution_name
+        self._executions_by_step: dict[
+            tuple[str, int], str
+        ] = {}  # Maps (step_key, attempt_count) -> execution_name
 
     @property
     def name(self) -> str:

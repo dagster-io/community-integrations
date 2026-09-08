@@ -328,7 +328,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
             return CheckRunHealthResult(
                 WorkerStatus.UNKNOWN, msg="Unable to fetch execution status"
             )
-        
+
         if status == ExecutionStatus.RUNNING:
             return CheckRunHealthResult(WorkerStatus.RUNNING)
         elif status == ExecutionStatus.FAILED:
