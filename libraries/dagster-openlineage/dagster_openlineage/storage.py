@@ -29,6 +29,7 @@ import inspect
 import logging
 import threading
 from collections import OrderedDict
+from fnmatch import fnmatch
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Set
 
 import yaml
@@ -93,11 +94,15 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
         namespace_template: Optional[str] = None,
         timeout: float = DEFAULT_TIMEOUT_SECONDS,
         strict_assertion_mapping: bool = False,
+        exclude_asset_keys: Optional[Iterable[str]] = None,
         adapter: Optional[OpenLineageAdapter] = None,
         inst_data: Optional[ConfigurableClassData] = None,
     ) -> None:
         self._wrapped = wrapped
         self._inst_data = inst_data
+        # Assets whose materializations/checks are not emitted as OpenLineage,
+        # matched against AssetKey.to_user_string(). See _is_excluded.
+        self._excluded_keys: Set[str] = set(exclude_asset_keys or [])
         self._adapter = adapter or OpenLineageAdapter(
             namespace=namespace,
             namespace_template=namespace_template,
@@ -140,6 +145,10 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
             "strict_assertion_mapping": Field(
                 bool, is_required=False, default_value=False
             ),
+            # Glob patterns (fnmatch: *, ?, [seq]) matched against
+            # AssetKey.to_user_string(); a plain string is an exact match. Assets
+            # matching any pattern are not emitted as OpenLineage. See _is_excluded.
+            "exclude_asset_keys": Field([str], is_required=False, default_value=[]),
         }
 
     @classmethod
@@ -163,6 +172,7 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
             strict_assertion_mapping=config_value.get(
                 "strict_assertion_mapping", False
             ),
+            exclude_asset_keys=config_value.get("exclude_asset_keys", []),
             inst_data=inst_data,
         )
 
@@ -203,6 +213,12 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
         run_id = event.run_id
         ts = event.timestamp
         run_tags = _run_tags_for(self._wrapped, run_id)
+
+        # Skip opted-out assets before any handling (including failure-synthesis
+        # tracking), so an excluded asset is entirely invisible to OpenLineage.
+        excluded_key = _asset_key_of(de, etype)
+        if excluded_key is not None and self._is_excluded(excluded_key):
+            return
 
         if etype == DagsterEventType.ASSET_MATERIALIZATION_PLANNED:
             data = de.event_specific_data
@@ -345,6 +361,35 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
                 run_tags=run_tags,
             )
 
+    def _is_excluded(self, asset_key: AssetKey) -> bool:
+        """Whether an asset's events should be suppressed from OpenLineage.
+
+        Each configured entry is a glob pattern (fnmatch: ``*``, ``?``,
+        ``[seq]``) matched against ``AssetKey.to_user_string()``; a plain string
+        with no wildcards is an exact match. Use this when another connector is
+        the better source of an asset's lineage.
+        """
+        key = asset_key.to_user_string()
+        return any(fnmatch(key, pattern) for pattern in self._excluded_keys)
+
+
+def _asset_key_of(de: Any, etype: "DagsterEventType") -> Optional[AssetKey]:
+    # Resolve the AssetKey for asset-scoped event types (None for run-level
+    # events). Extraction differs per event type, mirroring _dispatch.
+    data = de.event_specific_data
+    if etype == DagsterEventType.ASSET_MATERIALIZATION:
+        return data.materialization.asset_key
+    if etype == DagsterEventType.ASSET_OBSERVATION:
+        return data.asset_observation.asset_key
+    if etype in (
+        DagsterEventType.ASSET_MATERIALIZATION_PLANNED,
+        DagsterEventType.ASSET_FAILED_TO_MATERIALIZE,
+        DagsterEventType.ASSET_CHECK_EVALUATION_PLANNED,
+        DagsterEventType.ASSET_CHECK_EVALUATION,
+    ):
+        return getattr(data, "asset_key", None)
+    return None
+
 
 def _format_error_message(error: Any) -> Optional[str]:
     if error is None:
@@ -406,4 +451,4 @@ OpenLineageEventLogStorage.__abstractmethods__ = frozenset()
 __all__ = ["OpenLineageEventLogStorage"]
 
 # Quiet unused-import noise for static checkers.
-_ = (Iterable, List)
+_ = (List,)
