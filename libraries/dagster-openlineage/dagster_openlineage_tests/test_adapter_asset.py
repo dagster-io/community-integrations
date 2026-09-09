@@ -254,3 +254,45 @@ def test_check_job_name_does_not_collide_with_asset_named_checks():
     # Output job name is {asset}__checks. Collision is structural (suffix) but
     # the job name still differs from the bare asset.
     assert event.job.name == "__checks__checks"
+
+
+def test_asset_materialization_derives_input_datasets_from_column_lineage():
+    adapter, client = _make_adapter()
+    metadata = {
+        "dagster/column_lineage": TableColumnLineage(
+            deps_by_column={
+                "out_a": [TableColumnDep(asset_key=AssetKey("raw"), column_name="a")],
+                "out_b": [TableColumnDep(asset_key=AssetKey("ref"), column_name="b")],
+            }
+        )
+    }
+    adapter.asset_materialization(
+        AssetKey(["orders"]), run_id=_rid(), timestamp=time.time(), metadata=metadata
+    )
+    event: RunEvent = client.emit.call_args.args[0]
+    assert sorted(ds.name for ds in event.inputs) == ["raw", "ref"]
+
+
+def test_asset_materialization_unions_upstream_and_column_lineage_inputs():
+    adapter, client = _make_adapter()
+    metadata = {
+        "dagster/column_lineage": TableColumnLineage(
+            deps_by_column={
+                "out": [
+                    TableColumnDep(asset_key=AssetKey("raw"), column_name="a"),
+                    TableColumnDep(asset_key=AssetKey("raw"), column_name="b"),
+                ]
+            }
+        )
+    }
+    adapter.asset_materialization(
+        AssetKey(["orders"]),
+        run_id=_rid(),
+        timestamp=time.time(),
+        upstream_asset_keys=[AssetKey(["raw"]), AssetKey(["ref"])],
+        metadata=metadata,
+    )
+    event: RunEvent = client.emit.call_args.args[0]
+    # "raw" comes from the explicit upstream keys and from two lineage columns;
+    # it is deduplicated to a single input, explicit keys kept first.
+    assert [ds.name for ds in event.inputs] == ["raw", "ref"]
