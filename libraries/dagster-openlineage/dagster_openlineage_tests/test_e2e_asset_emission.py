@@ -180,9 +180,10 @@ def test_planned_then_complete_emits_start_complete_pair():
     run_events = [e for e in transport.events if isinstance(e, RunEvent)]
     assert [e.eventType for e in run_events] == [RunState.START, RunState.COMPLETE]
     assert all(e.job.name == "orders" for e in run_events)
-    assert all(
-        e.outputs is not None and e.outputs[0].name == "orders" for e in run_events
-    )
+    start, complete = run_events
+    # START carries no datasets; COMPLETE carries the output.
+    assert not start.outputs
+    assert complete.outputs is not None and complete.outputs[0].name == "orders"
 
 
 def test_materialization_schema_facet_on_output():

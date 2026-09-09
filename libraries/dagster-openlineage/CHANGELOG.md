@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- **Asset run-start no longer emits a placeholder output.** `ASSET_MATERIALIZATION_PLANNED` now emits a pure run-start with no inputs or outputs; the `COMPLETE` event still carries the inputs, outputs, and facets. This avoids a spurious output-only edge (an output with no input side) in backends that build lineage from every event.
+
 ## 0.2.0
 
 ### Breaking
