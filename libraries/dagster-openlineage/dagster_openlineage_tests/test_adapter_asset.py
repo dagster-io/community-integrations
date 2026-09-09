@@ -254,3 +254,41 @@ def test_check_job_name_does_not_collide_with_asset_named_checks():
     # Output job name is {asset}__checks. Collision is structural (suffix) but
     # the job name still differs from the bare asset.
     assert event.job.name == "__checks__checks"
+
+
+def test_job_namespace_decouples_job_from_dataset_namespace():
+    adapter, client = _make_adapter(
+        namespace="postgres://db:5432", job_namespace="dagster://local"
+    )
+    adapter.asset_materialization(
+        AssetKey(["db.orders"]),
+        run_id=_rid(),
+        timestamp=time.time(),
+        upstream_asset_keys=[AssetKey(["db.raw"])],
+    )
+    event: RunEvent = client.emit.call_args.args[0]
+    assert event.job.namespace == "dagster://local"
+    assert event.outputs[0].namespace == "postgres://db:5432"
+    assert event.inputs[0].namespace == "postgres://db:5432"
+
+
+def test_job_namespace_reads_openlineage_job_namespace_env(monkeypatch):
+    monkeypatch.setenv("OPENLINEAGE_JOB_NAMESPACE", "dagster://local")
+    adapter, client = _make_adapter(namespace="postgres://db:5432")
+    adapter.asset_materialization(
+        AssetKey(["orders"]), run_id=_rid(), timestamp=time.time()
+    )
+    event: RunEvent = client.emit.call_args.args[0]
+    assert event.job.namespace == "dagster://local"
+    assert event.outputs[0].namespace == "postgres://db:5432"
+
+
+def test_job_namespace_falls_back_to_dataset_namespace_when_unset(monkeypatch):
+    monkeypatch.delenv("OPENLINEAGE_JOB_NAMESPACE", raising=False)
+    adapter, client = _make_adapter(namespace="prod")
+    adapter.asset_materialization(
+        AssetKey(["orders"]), run_id=_rid(), timestamp=time.time()
+    )
+    event: RunEvent = client.emit.call_args.args[0]
+    assert event.job.namespace == "prod"
+    assert event.outputs[0].namespace == "prod"

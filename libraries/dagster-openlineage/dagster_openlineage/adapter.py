@@ -63,21 +63,39 @@ log = logging.getLogger(__name__)
 class OpenLineageAdapter:
     """Adapter translating Dagster events to OpenLineage emissions.
 
-    Construction accepts optional namespace/template and strictness knobs; the
-    v0.1 pipeline/step surface keeps its default arguments unchanged so
+    The v0.1 pipeline/step surface keeps its default arguments unchanged so
     existing callers work without modification.
+
+    Args:
+        namespace: Namespace for emitted datasets, and for jobs when
+            ``job_namespace`` is unset. Defaults to the ``OPENLINEAGE_NAMESPACE``
+            environment variable, then to ``"default"``.
+        job_namespace: Namespace for the run/job, independent of the dataset
+            namespace. Defaults to the ``OPENLINEAGE_JOB_NAMESPACE`` environment
+            variable, then falls back to the dataset namespace.
+            ``namespace_template`` does not apply to it.
+        namespace_template: Optional template resolved per run from run tags,
+            e.g. ``"{namespace}/{tag:tenant}"``.
+        timeout: Emit timeout in seconds for the default emitter; ignored when
+            ``emitter`` is supplied.
+        strict_assertion_mapping: When True, a WARN-severity asset check maps to
+            a failed OpenLineage assertion instead of a passing one.
+        emitter: Pre-built emitter to use; one is created from ``timeout`` when
+            omitted.
     """
 
     def __init__(
         self,
         *,
         namespace: Optional[str] = None,
+        job_namespace: Optional[str] = None,
         namespace_template: Optional[str] = None,
         timeout: float = DEFAULT_TIMEOUT_SECONDS,
         strict_assertion_mapping: bool = False,
         emitter: Optional[OpenLineageEmitter] = None,
     ) -> None:
         self._namespace = namespace or _DEFAULT_NAMESPACE_NAME
+        self._job_namespace = job_namespace or os.getenv("OPENLINEAGE_JOB_NAMESPACE")
         self._parsed_template: Optional[ParsedTemplate] = (
             parse_namespace_template(namespace_template) if namespace_template else None
         )
@@ -147,7 +165,13 @@ class OpenLineageAdapter:
         timestamp: float,
         repository_name: Optional[str],
     ):
-        namespace = repository_name if repository_name else self._namespace
+        # An explicit repository_name (v0.1) still takes precedence; otherwise
+        # use the job namespace, which itself falls back to the default namespace.
+        namespace = (
+            repository_name
+            if repository_name
+            else self._job_namespace_for(self._namespace)
+        )
         self._emit(
             RunEvent(
                 eventType=event_type,
@@ -229,7 +253,13 @@ class OpenLineageAdapter:
         step_key: str,
         repository_name: Optional[str],
     ):
-        namespace = repository_name if repository_name else self._namespace
+        # An explicit repository_name (v0.1) still takes precedence; otherwise
+        # use the job namespace, which itself falls back to the default namespace.
+        namespace = (
+            repository_name
+            if repository_name
+            else self._job_namespace_for(self._namespace)
+        )
         self._emit(
             RunEvent(
                 eventType=event_type,
@@ -261,13 +291,14 @@ class OpenLineageAdapter:
         run_tags: Optional[Mapping[str, str]] = None,
     ) -> None:
         namespace = self._resolve_namespace(run_tags)
+        job_namespace = self._job_namespace_for(namespace)
         self._emit(
             RunEvent(
                 eventType=RunState.START,
                 eventTime=to_utc_iso_8601(timestamp),
-                run=self._build_run(namespace=namespace, run_id=run_id),
+                run=self._build_run(namespace=job_namespace, run_id=run_id),
                 job=self._build_job(
-                    namespace=namespace, job_name=asset_key.to_user_string()
+                    namespace=job_namespace, job_name=asset_key.to_user_string()
                 ),
                 producer=_PRODUCER,
                 outputs=[
@@ -290,6 +321,7 @@ class OpenLineageAdapter:
         run_tags: Optional[Mapping[str, str]] = None,
     ) -> None:
         namespace = self._resolve_namespace(run_tags)
+        job_namespace = self._job_namespace_for(namespace)
         output_facets = self._build_asset_output_facets(metadata, namespace)
         run_facets = self._build_asset_run_facets(partition_key)
 
@@ -303,10 +335,10 @@ class OpenLineageAdapter:
                 eventType=RunState.COMPLETE,
                 eventTime=to_utc_iso_8601(timestamp),
                 run=self._build_run(
-                    namespace=namespace, run_id=run_id, run_facets=run_facets
+                    namespace=job_namespace, run_id=run_id, run_facets=run_facets
                 ),
                 job=self._build_job(
-                    namespace=namespace, job_name=asset_key.to_user_string()
+                    namespace=job_namespace, job_name=asset_key.to_user_string()
                 ),
                 producer=_PRODUCER,
                 inputs=inputs,
@@ -332,6 +364,7 @@ class OpenLineageAdapter:
         run_tags: Optional[Mapping[str, str]] = None,
     ) -> None:
         namespace = self._resolve_namespace(run_tags)
+        job_namespace = self._job_namespace_for(namespace)
         run_facets = self._build_asset_run_facets(partition_key)
         if error_message:
             run_facets["errorMessage"] = build_error_message_facet(
@@ -342,10 +375,10 @@ class OpenLineageAdapter:
                 eventType=RunState.FAIL,
                 eventTime=to_utc_iso_8601(timestamp),
                 run=self._build_run(
-                    namespace=namespace, run_id=run_id, run_facets=run_facets
+                    namespace=job_namespace, run_id=run_id, run_facets=run_facets
                 ),
                 job=self._build_job(
-                    namespace=namespace, job_name=asset_key.to_user_string()
+                    namespace=job_namespace, job_name=asset_key.to_user_string()
                 ),
                 producer=_PRODUCER,
                 outputs=[
@@ -413,13 +446,14 @@ class OpenLineageAdapter:
             return
         del check_name  # surfaced via Assertion entries on completion
         namespace = self._resolve_namespace(run_tags)
+        job_namespace = self._job_namespace_for(namespace)
         job_name = f"{asset_key.to_user_string()}__checks"
         self._emit(
             RunEvent(
                 eventType=RunState.START,
                 eventTime=to_utc_iso_8601(timestamp),
-                run=self._build_run(namespace=namespace, run_id=run_id),
-                job=self._build_job(namespace=namespace, job_name=job_name),
+                run=self._build_run(namespace=job_namespace, run_id=run_id),
+                job=self._build_job(namespace=job_namespace, job_name=job_name),
                 producer=_PRODUCER,
                 inputs=[
                     InputDataset(namespace=namespace, name="/".join(asset_key.path))
@@ -437,6 +471,7 @@ class OpenLineageAdapter:
         run_tags: Optional[Mapping[str, str]] = None,
     ) -> None:
         namespace = self._resolve_namespace(run_tags)
+        job_namespace = self._job_namespace_for(namespace)
         job_name = f"{asset_key.to_user_string()}__checks"
         quality_facet = build_data_quality_assertions_facet(
             evaluations, strict_assertion_mapping=self._strict_assertion_mapping
@@ -449,7 +484,7 @@ class OpenLineageAdapter:
             inputFacets={"dataQualityAssertions": quality_facet},
         )
         run = self._build_run(
-            namespace=namespace,
+            namespace=job_namespace,
             run_id=run_id,
             run_facets={**custom_run_facet},
         )
@@ -458,7 +493,7 @@ class OpenLineageAdapter:
                 eventType=RunState.COMPLETE,
                 eventTime=to_utc_iso_8601(timestamp),
                 run=run,
-                job=self._build_job(namespace=namespace, job_name=job_name),
+                job=self._build_job(namespace=job_namespace, job_name=job_name),
                 producer=_PRODUCER,
                 inputs=[input_ds],
             )
@@ -475,6 +510,11 @@ class OpenLineageAdapter:
             self._parsed_template, self._namespace, run_tags or {}
         )
         return resolved or self._namespace
+
+    def _job_namespace_for(self, dataset_namespace: str) -> str:
+        # Fall back to the dataset namespace when no job namespace is configured,
+        # so callers that never set one keep the original single-namespace behavior.
+        return self._job_namespace or dataset_namespace
 
     def _build_asset_output_facets(
         self, metadata: Optional[Mapping[str, Any]], namespace: str
