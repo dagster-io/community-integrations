@@ -10,7 +10,7 @@ from dagster._utils import file_relative_path
 MAKEFILE_DIR = file_relative_path(__file__, "../")
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="module", autouse=True)
 def _catalog():
     subprocess.run(["make", "catalog"], cwd=MAKEFILE_DIR, check=True)
     subprocess.run(["sleep", "10"])
