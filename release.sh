@@ -74,7 +74,81 @@ fi
 
 sed -i '' 's/__version__ = "[^"]*"/__version__ = "'"$VERSION"'"/' "${version_file}"
 
-git add "${version_file}"
+# The sed above changes nothing if the file has no `__version__` assignment
+# to rewrite, which would otherwise release a version the package never
+# declares.
+if ! grep -q "__version__ = \"${VERSION}\"" "${version_file}"; then
+  echo "ERROR: ${version_file} does not declare __version__ = \"${VERSION}\" after the version bump"
+  echo "Check that the file contains a literal '__version__ = \"X.X.X\"' assignment."
+  exit 1
+fi
+
+# Keep the library's CHANGELOG in step with the release, so the two can't drift
+# apart. It handles three cases.
+#   - When "## [Unreleased]" exists, promote it to this version, dated today,
+#     and start a fresh empty [Unreleased] section above it.
+#   - When there is no CHANGELOG at all, create one and warn.
+#   - When the CHANGELOG has no [Unreleased] section, add a dated heading for
+#     this version and warn.
+# If the changelog already has an entry for this version, the file is left
+# untouched, so running the same release twice changes nothing.
+changelog_file="libraries/${PACKAGE}/CHANGELOG.md"
+release_date=$(date +%Y-%m-%d)
+
+if [ ! -f "$changelog_file" ]; then
+  cat > "$changelog_file" <<EOF
+# Changelog
+
+All notable changes to this integration will be documented in this file.
+
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+## [Unreleased]
+
+## [${VERSION}] - ${release_date}
+
+- See the git history for the changes in this release.
+EOF
+  echo "WARNING: ${PACKAGE} had no CHANGELOG.md; created one with an entry for ${VERSION}"
+elif grep -q "^## \[\{0,1\}${VERSION}\]\{0,1\}\( \|$\)" "$changelog_file"; then
+  echo "CHANGELOG already documents ${VERSION}; leaving it unchanged"
+elif grep -q '^## \[Unreleased\]' "$changelog_file"; then
+  awk -v ver="$VERSION" -v date="$release_date" '
+    !promoted && /^## \[Unreleased\]/ {
+      print "## [Unreleased]"
+      print ""
+      print "## [" ver "] - " date
+      promoted = 1
+      next
+    }
+    { print }
+  ' "$changelog_file" > "${changelog_file}.tmp" && mv "${changelog_file}.tmp" "$changelog_file"
+  echo "Promoted [Unreleased] to [${VERSION}] in ${changelog_file}"
+else
+  # No [Unreleased] to promote. Insert a dated heading above the newest existing
+  # version section, or at the end of the file if there are none.
+  awk -v ver="$VERSION" -v date="$release_date" '
+    !inserted && /^## / {
+      print "## [" ver "] - " date
+      print ""
+      print "- See the git history for the changes in this release."
+      print ""
+      inserted = 1
+    }
+    { print }
+    END {
+      if (!inserted) {
+        print ""
+        print "## [" ver "] - " date
+        print ""
+        print "- See the git history for the changes in this release."
+      }
+    }
+  ' "$changelog_file" > "${changelog_file}.tmp" && mv "${changelog_file}.tmp" "$changelog_file"
+  echo "WARNING: ${changelog_file} has no [Unreleased] section; added a bare entry for ${VERSION}"
+fi
+
+git add "${version_file}" "${changelog_file}"
 if git diff --staged --quiet; then
   echo "Version is already ${VERSION}; skipping release commit"
 else

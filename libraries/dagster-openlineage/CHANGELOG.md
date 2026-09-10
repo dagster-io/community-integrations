@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+## [0.2.1] - 2026-05-22
+
+- Update dagster-openlineage lockfile (#313)
+- Standardize shared ty configuration (#295)
+- Migrate type checking to ty (#291)
+
 ## 0.2.0
 
 ### Breaking

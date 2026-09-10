@@ -14,6 +14,10 @@
 - `BaseConnectionConfig.to_client_kwargs` is now a declared abstract method, so missing implementations show up under `mypy`.
 - Loosened the `elasticsearch` client pin to `>=8.10,<11`. The integration only uses bulk and alias APIs that haven't changed across Elasticsearch 8, 9, and 10. Pin a specific major in your own project to match your server (the client refuses cross-major). Test fixtures honour the `ES_TEST_IMAGE` env var so a single test run can target any supported major.
 
+## [0.0.2] - 2026-05-22
+
+- Update dagster-elasticsearch lockfile (#306)
+
 ## [0.0.1]
 
 ### Added
