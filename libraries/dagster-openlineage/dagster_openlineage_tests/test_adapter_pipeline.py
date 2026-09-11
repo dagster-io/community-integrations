@@ -10,7 +10,7 @@ from openlineage.client.uuid import generate_new_uuid
 
 from dagster_openlineage.adapter import OpenLineageAdapter
 
-from .conftest import PRODUCER
+from .conftest import DEFAULT_JOB_FACETS, PRODUCER
 
 
 @patch("dagster_openlineage.adapter.to_utc_iso_8601")
@@ -32,7 +32,11 @@ def test_start_pipeline_run(mock_client_emit, mock_to_utc_iso_8601):
             eventType=RunState.START,
             eventTime=event_time,
             run=Run(runId=pipeline_run_id, facets={}),
-            job=Job(namespace=DEFAULT_NAMESPACE_NAME, name=pipeline_name, facets={}),
+            job=Job(
+                namespace=DEFAULT_NAMESPACE_NAME,
+                name=pipeline_name,
+                facets=DEFAULT_JOB_FACETS,
+            ),
             producer=PRODUCER,
             inputs=[],
             outputs=[],
@@ -59,7 +63,11 @@ def test_complete_pipeline_run(mock_client_emit, mock_to_utc_iso_8601):
             eventType=RunState.COMPLETE,
             eventTime=event_time,
             run=Run(runId=pipeline_run_id, facets={}),
-            job=Job(namespace=DEFAULT_NAMESPACE_NAME, name=pipeline_name, facets={}),
+            job=Job(
+                namespace=DEFAULT_NAMESPACE_NAME,
+                name=pipeline_name,
+                facets=DEFAULT_JOB_FACETS,
+            ),
             producer=PRODUCER,
             inputs=[],
             outputs=[],
@@ -86,7 +94,11 @@ def test_fail_pipeline_run(mock_client_emit, mock_to_utc_iso_8601):
             eventType=RunState.FAIL,
             eventTime=event_time,
             run=Run(runId=pipeline_run_id, facets={}),
-            job=Job(namespace=DEFAULT_NAMESPACE_NAME, name=pipeline_name, facets={}),
+            job=Job(
+                namespace=DEFAULT_NAMESPACE_NAME,
+                name=pipeline_name,
+                facets=DEFAULT_JOB_FACETS,
+            ),
             producer=PRODUCER,
             inputs=[],
             outputs=[],
@@ -113,7 +125,11 @@ def test_cancel_pipeline_run(mock_client_emit, mock_to_utc_iso_8601):
             eventType=RunState.ABORT,
             eventTime=event_time,
             run=Run(runId=pipeline_run_id, facets={}),
-            job=Job(namespace=DEFAULT_NAMESPACE_NAME, name=pipeline_name, facets={}),
+            job=Job(
+                namespace=DEFAULT_NAMESPACE_NAME,
+                name=pipeline_name,
+                facets=DEFAULT_JOB_FACETS,
+            ),
             producer=PRODUCER,
             inputs=[],
             outputs=[],

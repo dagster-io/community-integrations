@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Features
+
+- **Job type + ownership facets.** Every emitted job carries a `jobType` facet (`integration=DAGSTER`, `processingType=BATCH`), so lineage backends can attribute the pipeline to Dagster rather than a generic fallback. Jobs also carry an optional `ownership` facet: **asset jobs use the asset's own Dagster `owners`** (`team:<team>` / email, passed through per asset), and any job with no per-asset owners — pipeline/step events, or assets that declare none — falls back to a **default team** configured via the `OPENLINEAGE_TEAM` env var or the `team=` adapter argument. No per-asset owners and no default team means no ownership facet.
+
 ## 0.2.0
 
 ### Breaking
