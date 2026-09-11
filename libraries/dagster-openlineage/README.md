@@ -9,6 +9,7 @@ Asset-centric OpenLineage emission for Dagster. Emits schema, column-lineage, da
 - **Data quality assertions** placed on `InputDataset` (spec-conformant)
 - **Partition → nominal time** heuristic (ISO date or date-hour)
 - **Multi-tenant namespaces** via string templates (`{namespace}`, `{tag:KEY}`)
+- **Job type + ownership facets** — `jobType` (integration `DAGSTER`) on every job; `ownership` from each asset's native Dagster `owners`, with a configurable default team fallback
 - **Bounded emit** — synchronous, 2s default timeout, retries disabled, failures swallowed
 - **Pipeline / step events** preserved (v0.1 surface unchanged)
 
@@ -69,20 +70,34 @@ Set `OPENLINEAGE_URL` (and optionally `OPENLINEAGE_API_KEY`) in the environment 
 Add `openlineage_sensor(include_asset_events=True)` to your `Definitions`. v0.2 keeps `include_asset_events=False` as the default (v0.1 parity); v0.3 will flip it.
 
 ```python
-from dagster import Definitions
+from dagster import DefaultSensorStatus, Definitions
 from dagster_openlineage import openlineage_sensor
 
 defs = Definitions(
     assets=[...],
-    sensors=[openlineage_sensor(include_asset_events=True)],
+    sensors=[
+        openlineage_sensor(
+            include_asset_events=True,
+            # optional:
+            # exclude_asset_keys=["*dbt*"],       # keep matching assets out of OL (fnmatch globs)
+            # emit_pipeline_step_events=False,    # asset-only emission (mirror the storage wrapper)
+            # default_status=DefaultSensorStatus.RUNNING,
+        )
+    ],
 )
 ```
+
+Unlike the storage wrapper, the sensor can read each asset's native Dagster `owners`
+(`@asset(owners=["team:analytics"])`) from the asset graph and emit them as the ownership facet —
+the wrapper only sees the runtime event, which carries no owners. So **per-asset ownership is
+sensor-only**; under the wrapper every job gets the single default team.
 
 Environment variables go on the process that runs the Dagster daemon:
 
 - `OPENLINEAGE_URL` (required)
 - `OPENLINEAGE_API_KEY` (optional)
 - `OPENLINEAGE_NAMESPACE` (optional, default `dagster`)
+- `OPENLINEAGE_TEAM` (optional — default team for jobs without per-asset owners)
 
 ## Namespace templates
 
@@ -102,6 +117,23 @@ Example:
 # Run tags            -> resolved namespace
 {"tenant": "acme"}    -> "dagster/acme"
 {}                    -> "dagster"          # tag unresolved, trailing slash stripped
+```
+
+## Job facets
+
+Every job the adapter emits carries a `jobType` facet with `integration=DAGSTER` and
+`processingType=BATCH` (a Dagster asset run is bounded). Lineage backends use the integration to
+attribute the pipeline to Dagster rather than a generic fallback.
+
+Jobs also carry an `ownership` facet. **Asset jobs use the asset's own Dagster `owners`** —
+`@asset(owners=["team:analytics", "you@example.com"])` — passed through per asset, so different
+assets can be owned by different teams. Any job with no per-asset owners (pipeline/step events, or
+assets that declare none) falls back to a **default team**, set via the `OPENLINEAGE_TEAM`
+environment variable or the `team=` adapter argument. No per-asset owners and no default team → no
+ownership facet.
+
+```bash
+export OPENLINEAGE_TEAM=my-default-team   # fallback for jobs without per-asset owners
 ```
 
 ## Emit path

@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
-from typing import Any, Dict, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 import dagster
-from dagster import AssetKey
+from dagster import AssetKey, DefaultSensorStatus
 
 from dagster_openlineage.adapter import OpenLineageAdapter
 from dagster_openlineage.compat import (
@@ -21,6 +21,8 @@ from dagster_openlineage.cursor import (
     RunningStep,
 )
 from dagster_openlineage.utils import (
+    asset_key_matches_globs,
+    asset_key_of_event_data,
     get_event_log_records,
     get_repository_name,
     make_step_run_id,
@@ -86,6 +88,9 @@ def openlineage_sensor(
     record_filter_limit: Optional[int] = 30,
     after_storage_id: Optional[int] = 0,
     include_asset_events: bool = False,
+    exclude_asset_keys: Optional[Iterable[str]] = None,
+    emit_pipeline_step_events: bool = True,
+    default_status: DefaultSensorStatus = DefaultSensorStatus.STOPPED,
 ) -> SensorDefinition:
     """Build the OpenLineage sensor.
 
@@ -95,8 +100,23 @@ def openlineage_sensor(
     the opt-in switch per the v0.2 plan; a one-shot WARN at sensor
     construction reminds operators to configure at most one mechanism.
 
+    ``exclude_asset_keys`` is a list of fnmatch glob patterns matched against
+    ``AssetKey.to_user_string()``; matching assets are skipped entirely (no OL
+    events, no failure-synthesis tracking). Same semantics as the storage
+    wrapper's ``exclude_asset_keys`` — useful when a dedicated connector owns an
+    asset's lineage better than OpenLineage does.
+
+    ``emit_pipeline_step_events`` (default ``True``, preserving v0.1 behaviour)
+    controls whether pipeline/step run events are emitted as OL events. Set it to
+    ``False`` for asset-only emission that mirrors the storage wrapper's footprint
+    (which never emitted pipeline/step events): run-termination events are still
+    observed to drive failure-synthesis, but no pipeline/step OL events are sent.
+    Pair with ``include_asset_events=True``.
+
     v0.3 will flip the default to ``True``.
     """
+    _excluded_keys: Set[str] = set(exclude_asset_keys or [])
+
     if concerned_event_types is None:
         filter_set = set(PIPELINE_EVENTS) | set(STEP_EVENTS)
         if include_asset_events:
@@ -116,6 +136,7 @@ def openlineage_sensor(
         name=name,
         minimum_interval_seconds=minimum_interval_seconds,
         description=description,
+        default_status=default_status,
     )
     def _openlineage_sensor(context: SensorEvaluationContext):
         # Runtime duplicate-mechanism guard: if OpenLineageEventLogStorage is
@@ -140,6 +161,32 @@ def openlineage_sensor(
                     _process_asset = False
             except Exception:
                 pass  # cannot determine storage type; proceed as configured
+
+        # Resolve the asset graph once per tick to read each asset's declared `owners`.
+        # Only the sensor can do this — the event stream carries no owners. Falls back to
+        # the adapter's default team when the graph or an asset's owners are unavailable.
+        _asset_graph = None
+        if _process_asset:
+            try:
+                _repo_def = getattr(context, "repository_def", None)
+                _asset_graph = getattr(_repo_def, "asset_graph", None)
+            except Exception:
+                _asset_graph = None
+            if _asset_graph is None:
+                log.warning(
+                    "openlineage_sensor: no repository asset graph on the sensor "
+                    "context; asset owners fall back to the default team."
+                )
+
+        def _owners_for(asset_key: AssetKey) -> Optional[List[str]]:
+            if _asset_graph is None:
+                return None
+            try:
+                node = _asset_graph.get(asset_key)
+            except Exception:
+                return None
+            owners = list(getattr(node, "owners", []) or []) if node is not None else []
+            return owners or None
 
         ol_cursor = (
             OpenLineageCursor.from_json(context.cursor)
@@ -182,6 +229,8 @@ def openlineage_sensor(
                             pipeline_run_id,
                             timestamp,
                             entry,
+                            excluded=_excluded_keys,
+                            owner_resolver=_owners_for,
                         )
                     elif dagster_event_type in PIPELINE_EVENTS:
                         # Drain synthesis BEFORE the pipeline handler so the
@@ -196,16 +245,25 @@ def openlineage_sensor(
                                 pipeline_run_id,
                                 timestamp,
                                 terminal=False,
+                                owner_resolver=_owners_for,
                             )
-                        _handle_pipeline_event(
-                            running_pipelines,
-                            dagster_event_type,
-                            pipeline_name or "",
-                            pipeline_run_id,
-                            timestamp,
-                            repository_name,
-                        )
+                        # synthesis (drain above) still runs; only the pipeline OL
+                        # event is suppressed in asset-only mode
+                        if emit_pipeline_step_events:
+                            _handle_pipeline_event(
+                                running_pipelines,
+                                dagster_event_type,
+                                pipeline_name or "",
+                                pipeline_run_id,
+                                timestamp,
+                                repository_name,
+                            )
                     elif dagster_event_type in STEP_EVENTS:
+                        if not emit_pipeline_step_events:
+                            # asset-only mode: skip step OL events (asset events are
+                            # handled by the first branch above)
+                            last_storage_id = record.storage_id
+                            continue
                         if pipeline_name is None or step_key is None:
                             # Step events should always carry both; skip
                             # defensively when Dagster surfaces unexpected
@@ -331,9 +389,31 @@ def _handle_asset_event(
     pipeline_run_id: str,
     timestamp: float,
     entry: Any,
+    *,
+    excluded: Optional[Set[str]] = None,
+    owner_resolver: Optional[Callable[[AssetKey], Optional[List[str]]]] = None,
 ):
     dagster_event = entry.get_dagster_event()
     data = dagster_event.event_specific_data
+
+    # Exclusion first: an excluded asset is entirely invisible to OL — no event and,
+    # crucially, no failure-synthesis tracking below. Matches the wrapper's ordering.
+    asset_key = asset_key_of_event_data(data, dagster_event_type)
+    if (
+        asset_key is not None
+        and excluded
+        and asset_key_matches_globs(asset_key, excluded)
+    ):
+        return
+
+    # per-asset owners for the job's ownership facet; None → adapter default team.
+    # (observations emit a DatasetEvent with no job, so owners don't apply there)
+    owners = (
+        owner_resolver(asset_key)
+        if owner_resolver is not None and asset_key is not None
+        else None
+    )
+
     # LRU: delete-then-reinsert so this run moves to the most-recently-used
     # position. setdefault would leave existing keys at their original slot.
     running_pipeline = running_pipelines.pop(pipeline_run_id, None) or RunningPipeline()
@@ -341,13 +421,13 @@ def _handle_asset_event(
     planned_paths: Set[Tuple[str, ...]] = running_pipeline.planned_asset_paths
 
     if dagster_event_type == DagsterEventType.ASSET_MATERIALIZATION_PLANNED:
-        asset_key = data.asset_key
         planned_paths.add(tuple(asset_key.path))
-        _ADAPTER.asset_materialization_planned(asset_key, pipeline_run_id, timestamp)
+        _ADAPTER.asset_materialization_planned(
+            asset_key, pipeline_run_id, timestamp, owners=owners
+        )
 
     elif dagster_event_type == DagsterEventType.ASSET_MATERIALIZATION:
         mat = data.materialization
-        asset_key = mat.asset_key
         planned_paths.discard(tuple(asset_key.path))
         _ADAPTER.asset_materialization(
             asset_key,
@@ -355,16 +435,17 @@ def _handle_asset_event(
             timestamp,
             metadata=mat.metadata,
             partition_key=mat.partition,
+            owners=owners,
         )
 
     elif dagster_event_type == DagsterEventType.ASSET_FAILED_TO_MATERIALIZE:
-        asset_key = data.asset_key
         planned_paths.discard(tuple(asset_key.path))
         _ADAPTER.asset_failed_to_materialize(
             asset_key,
             pipeline_run_id,
             timestamp,
             partition_key=data.partition,
+            owners=owners,
         )
 
     elif dagster_event_type == DagsterEventType.ASSET_OBSERVATION:
@@ -379,19 +460,21 @@ def _handle_asset_event(
 
     elif dagster_event_type == DagsterEventType.ASSET_CHECK_EVALUATION_PLANNED:
         _ADAPTER.asset_check_evaluation_planned(
-            data.asset_key,
+            asset_key,
             check_name=data.check_name,
             run_id=pipeline_run_id,
             timestamp=timestamp,
             standalone=True,
+            owners=owners,
         )
 
     elif dagster_event_type == DagsterEventType.ASSET_CHECK_EVALUATION:
         _ADAPTER.asset_check_evaluation(
-            data.asset_key,
+            asset_key,
             [data],
             run_id=pipeline_run_id,
             timestamp=timestamp,
+            owners=owners,
         )
 
 
@@ -401,17 +484,21 @@ def _drain_planned_as_failures(
     timestamp: float,
     *,
     terminal: bool,
+    owner_resolver: Optional[Callable[[AssetKey], Optional[List[str]]]] = None,
 ) -> None:
     running_pipeline = running_pipelines.get(pipeline_run_id)
     if running_pipeline is None:
         return
     remaining = running_pipeline.planned_asset_paths
     for path in list(remaining):
+        asset_key = AssetKey(list(path))
+        owners = owner_resolver(asset_key) if owner_resolver is not None else None
         _ADAPTER.asset_failed_to_materialize(
-            AssetKey(list(path)),
+            asset_key,
             pipeline_run_id,
             timestamp,
             error_message="asset planned for run, run ended before materialization",
+            owners=owners,
         )
     running_pipeline.planned_asset_paths = set()
     if terminal:
