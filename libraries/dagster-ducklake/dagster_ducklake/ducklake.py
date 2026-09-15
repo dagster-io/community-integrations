@@ -56,7 +56,7 @@ class SqliteConfig(BaseMetadataBackend):
 
     def get_ducklake_sql_parts(self, alias: str) -> tuple[str, str]:
         """For file-based backends, no credential secret is needed."""
-        return "", f"METADATA_PATH '{self.path}'"
+        return "", f"METADATA_PATH 'sqlite:{self.path}'"
 
 
 class DuckDBConfig(BaseMetadataBackend):

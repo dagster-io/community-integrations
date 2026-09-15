@@ -44,7 +44,7 @@ class TestSqliteConfig:
         secret_sql, metadata_sql = config.get_ducklake_sql_parts("test_alias")
 
         assert secret_sql == ""
-        assert metadata_sql == "METADATA_PATH '/tmp/metadata.sqlite'"
+        assert metadata_sql == "METADATA_PATH 'sqlite:/tmp/metadata.sqlite'"
 
 
 class TestPostgresConfig:
