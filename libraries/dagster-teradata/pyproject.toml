@@ -2,7 +2,7 @@
 name = "dagster-teradata"
 description = "<insert description here>"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "dagster>=1.8.0",
     "teradatasql",
@@ -15,10 +15,14 @@ dev = [
     "ruff",
     "pytest",
     "ty==0.0.37",
+    "pandas",
 ]
 
 [project.optional-dependencies]
 azure = ["dagster-azure"]
+pandas = ["pandas"]
+polars = ["polars>=1.0.0"]
+pyspark = ["pyspark>=3.4,<4"]
 aws = [
   "boto3",
   "dagster-aws",
