@@ -1,0 +1,2 @@
+# Left behind by test_tpt_utils when its POSIX-permission test fails (e.g. on Windows).
+temp_permission_file.txt
