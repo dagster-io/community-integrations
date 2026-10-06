@@ -34,7 +34,7 @@ jobs:
 
       - name: Type check
         working-directory: ./libraries/dagster-teradata
-        run: uv run pyright
+        run: uv run ty check .
 
       - name: Pytest
         working-directory: ./libraries/dagster-teradata
