@@ -22,7 +22,7 @@ from dagster_teradata.io_manager import (
     build_teradata_io_manager as build_teradata_io_manager,
 )
 
-__version__ = "0.0.8"
+__version__ = "0.1.0"
 
 # pandas, polars and pyspark are optional dependencies, so their type handlers are
 # exposed lazily: importing dagster_teradata must not require any of them.
