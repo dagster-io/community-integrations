@@ -123,6 +123,7 @@ _OBJECT_STORE_PASSTHROUGH = frozenset(
         # HTTP-client / TLS toggles (backend-agnostic)
         "allow_http",
         "allow_invalid_certificates",
+        "max_retries",
     }
 )
 
@@ -182,12 +183,15 @@ def scan_parquet(
         n_rows=context_metadata.get("n_rows", None),
         cache=context_metadata.get("cache", True),
         parallel=context_metadata.get("parallel", "auto"),
-        rechunk=context_metadata.get("rechunk", True),
         low_memory=context_metadata.get("low_memory", False),
         use_statistics=context_metadata.get("use_statistics", True),
         hive_partitioning=context_metadata.get("hive_partitioning", True),
-        retries=context_metadata.get("retries", 0),
     )
+    polars_2 = Version(pl.__version__) >= Version("2.0.0")
+    retries = context_metadata.get("retries", 0)
+    if not polars_2:
+        kwargs["rechunk"] = context_metadata.get("rechunk", True)
+        kwargs["retries"] = retries
     kwargs["row_index_name"] = context_metadata.get("row_index_name", None)
     kwargs["row_index_offset"] = context_metadata.get("row_index_offset", 0)
 
@@ -223,6 +227,10 @@ def scan_parquet(
                 if k not in INCOMPATIBLE_FSSPEC_KEYS
             }
         )
+
+    # Polars 2.0 removed ``retries``. An explicit ``max_retries`` storage option wins.
+    if polars_2 and retries:
+        pl_storage_options = {"max_retries": retries, **(pl_storage_options or {})}
 
     return pl.scan_parquet(str(path), storage_options=pl_storage_options, **kwargs)  # type: ignore
 
