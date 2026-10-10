@@ -163,3 +163,21 @@ make test
 make ruff
 make check
 ```
+
+### Optional Redis driver integration tests
+
+The SQLite tests run by default. To also exercise the Redis ADBC driver, build or
+install its shared library and point the tests at a Redis instance with Search
+support. Each test creates a unique schema and drops it afterward.
+
+```sh
+REDIS_ADBC_DRIVER=/absolute/path/to/libadbc_driver_redis.so \
+REDIS_ADBC_URI=redis://localhost:6379/0 \
+uv run pytest -q
+```
+
+On macOS the driver library ends in `.dylib`. Without both variables, Redis tests
+are skipped. These tests exercise DataFrame/Arrow round trips, selected columns,
+repeated partition writes, multipartitions, staging cleanup, and the driver's
+actual autocommit behavior, including the absence of rollback after a failed
+partition append.

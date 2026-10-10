@@ -30,10 +30,30 @@ def manager(tmp_path: Path) -> ADBCIOManager:
 
 
 def read(manager: ADBCIOManager, sql: str) -> pa.Table:
-    resource = ADBCResource(driver=manager.driver, uri=manager.uri)
+    resource = ADBCResource(
+        **{field: getattr(manager, field) for field in ADBCResource.model_fields}
+    )
     with resource.get_connection() as connection, connection.cursor() as cursor:
         cursor.execute(sql)
         return cursor.fetch_arrow_table()
+
+
+def staging_tables(manager: ADBCIOManager) -> list[str]:
+    resource = ADBCResource(
+        **{field: getattr(manager, field) for field in ADBCResource.model_fields}
+    )
+    names = []
+    with resource.get_connection() as connection:
+        with connection.adbc_get_objects(
+            depth="tables",
+            db_schema_filter=manager.schema_,
+        ) as reader:
+            for catalog in reader.read_all().to_pylist():
+                for schema in catalog["catalog_db_schemas"] or []:
+                    for table in schema["db_schema_tables"] or []:
+                        if table["table_name"].startswith("__dagster_staging_"):
+                            names.append(table["table_name"])
+    return names
 
 
 @pytest.mark.parametrize("frame_type", [pa.Table, pd.DataFrame, pl.DataFrame])
@@ -56,12 +76,7 @@ def test_round_trip_and_columns(manager: ADBCIOManager, frame_type: type) -> Non
     for _ in range(2):
         assert materialize([upstream, downstream], resources={"io_manager": manager}).success
     assert read(manager, 'SELECT * FROM "upstream"').to_pydict() == values
-    assert (
-        read(
-            manager, "SELECT name FROM sqlite_master WHERE name LIKE '__dagster_staging_%'"
-        ).num_rows
-        == 0
-    )
+    assert staging_tables(manager) == []
 
 
 @pytest.mark.parametrize("time_partition", [False, True])
@@ -141,12 +156,7 @@ def test_failed_staging_preserves_output(
         with pytest.raises(RuntimeError, match="failed staging"):
             io_manager.handle_output(context, pa.table({"value": [2]}))
     assert read(manager, 'SELECT * FROM "table""name"').to_pydict() == {"value": [1]}
-    assert (
-        read(
-            manager, "SELECT name FROM sqlite_master WHERE name LIKE '__dagster_staging_%'"
-        ).num_rows
-        == 0
-    )
+    assert staging_tables(manager) == []
 
 
 @pytest.mark.parametrize("autocommit", [False, True])
@@ -168,12 +178,7 @@ def test_swap_failure_and_autocommit_cleanup(
     with build_output_context(name="data") as context:
         with pytest.raises(RuntimeError, match="rename failed"):
             io_manager.handle_output(context, pa.table({"value": [2]}))
-    assert (
-        read(
-            manager, "SELECT name FROM sqlite_master WHERE name LIKE '__dagster_staging_%'"
-        ).num_rows
-        == 0
-    )
+    assert staging_tables(manager) == []
     if not autocommit:
         assert read(manager, 'SELECT * FROM "data"').to_pydict() == {"value": [1]}
 
