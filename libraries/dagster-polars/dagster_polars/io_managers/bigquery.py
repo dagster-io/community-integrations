@@ -79,7 +79,9 @@ class PolarsBigQueryTypeHandler(DbTypeHandler[pl.DataFrame]):
         # therefore, it's better to use load_table_from_uri with GCS,
         # but this requires the remote filesystem to be available in this code
         job = connection.load_table_from_dataframe(
-            dataframe=obj.to_pandas(),
+            # date_as_object=True keeps pl.Date columns as datetime.date objects, so BigQuery
+            # infers DATE instead of TIMESTAMP (pandas would otherwise cast them to datetime64)
+            dataframe=obj.to_pandas(date_as_object=True),
             destination=f"{table_slice.schema}.{table_slice.table}",
             project=table_slice.database,
             location=context.resource_config.get("location")
