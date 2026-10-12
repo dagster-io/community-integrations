@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Fixes
+
+- Fixed `PolarsBigQueryIOManager` writing `pl.Date` columns to BigQuery as `TIMESTAMP`. They are now written as `DATE`. Includes a regression test. Closes [#253](https://github.com/dagster-io/community-integrations/issues/253).
+
 ## 0.27.13
 
 ### Fixes
