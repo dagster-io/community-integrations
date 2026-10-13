@@ -628,7 +628,7 @@ dependencies = [
     { name = "dagster" },
     { name = "pendulum" },
     { name = "pydantic" },
-    { name = "pyiceberg", extra = ["pyarrow"] },
+    { name = "pyiceberg", extra = ["pyarrow", "pyiceberg-core"] },
     { name = "tenacity" },
 ]
 
@@ -679,7 +679,7 @@ requires-dist = [
     { name = "pendulum", specifier = ">=3.0.0" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=1.0.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
-    { name = "pyiceberg", extras = ["pyarrow"], specifier = ">=0.8,<0.13" },
+    { name = "pyiceberg", extras = ["pyarrow", "pyiceberg-core"], specifier = ">=0.8,<0.13" },
     { name = "pyspark", extras = ["connect"], marker = "extra == 'spark'", specifier = "~=3.4" },
     { name = "tenacity", specifier = ">=8.5.0" },
 ]
@@ -2589,9 +2589,25 @@ wheels = [
 pyarrow = [
     { name = "pyarrow" },
 ]
+pyiceberg-core = [
+    { name = "pyiceberg-core" },
+]
 sql-postgres = [
     { name = "psycopg2-binary" },
     { name = "sqlalchemy" },
+]
+
+[[package]]
+name = "pyiceberg-core"
+version = "0.10.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/64/0a/fa73e70a8af2c600fa8089a009c9be99587f4f62a1dd674acbb15f5dab91/pyiceberg_core-0.10.1.tar.gz", hash = "sha256:c5e600728071032a4027c4c36680e4806c98f443057a26523532a2f830db4c89", size = 883913, upload-time = "2026-08-01T18:34:38.955Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b6/8e/a22c7b1798023bc2a2bcdbe12930d06509be034ad7ec448cfdf5308fe3a7/pyiceberg_core-0.10.1-cp310-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:5ae7490fa3d03d32eab6e15116ddbeb0899cb3ba8af9332e302f2f3ca8e7667c", size = 24865938, upload-time = "2026-08-01T18:34:23.329Z" },
+    { url = "https://files.pythonhosted.org/packages/3c/5a/f97796aff09011e0d91f6e8d2715933159547b36711c00f55c179214a4d2/pyiceberg_core-0.10.1-cp310-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:bb6e7188243e1cf34d3897d6642078b3cc170935bb1955bc1c5096dd32f6719a", size = 11696981, upload-time = "2026-08-01T18:34:26.734Z" },
+    { url = "https://files.pythonhosted.org/packages/76/72/7a259abb1b3bfee4216c9e307c6b5f96850a45bd88b4be58a46143dfc051/pyiceberg_core-0.10.1-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:413bb2e699d1957c98302c1bce5a0bf36fc5acf11797c48de5c08067df7b27b4", size = 14046735, upload-time = "2026-08-01T18:34:29.802Z" },
+    { url = "https://files.pythonhosted.org/packages/82/a1/b4ffa500ea9681ebb1db173b4bd6c0bfdd8707e7ac6d5b7c0a9a49ddfa2f/pyiceberg_core-0.10.1-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:a8974a5c93282455ed023e28f5291bb899b91731631d93f0ccf0411ad32efb71", size = 14502489, upload-time = "2026-08-01T18:34:32.808Z" },
+    { url = "https://files.pythonhosted.org/packages/1a/c1/f0fdd495b8312b295726135c16a84e3b63a0e21977af465401a8d6f10925/pyiceberg_core-0.10.1-cp310-abi3-win_amd64.whl", hash = "sha256:884969c030be824d5ce7998d96215741d0e34351cbe995df6a156947b1eb7472", size = 13293439, upload-time = "2026-08-01T18:34:36.634Z" },
 ]
 
 [[package]]
