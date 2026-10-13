@@ -1,0 +1,2 @@
+# temporary Dagster instances that `dagster asset materialize` creates without DAGSTER_HOME
+.tmp_dagster_home_*/

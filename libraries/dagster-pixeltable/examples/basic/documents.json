@@ -1,0 +1,5 @@
+[
+  {"source_id": "doc-1", "body": "Dagster schedules the job.", "page_count": 1},
+  {"source_id": "doc-2", "body": "Pixeltable stores the rows and computes derived columns.", "page_count": 2},
+  {"source_id": "doc-3", "body": "Replaying a source_id updates its row.", "page_count": 3}
+]
