@@ -109,7 +109,6 @@ public class PipesContextImpl implements PipesContext {
         if (this.closed) {
             throw new DagsterPipesException("Cannot send message after pipes context is closed.");
         }
-        System.out.println(PipesUtils.makeMessage(method, params));
         this.messageChannel.writeMessage(PipesUtils.makeMessage(method, params));
     }
 
@@ -282,7 +281,6 @@ public class PipesContextImpl implements PipesContext {
                 "Asset keys: " + actualAssetKey + " has already been materialized, cannot report additional data."
             );
         }
-        System.out.println("writing message...");
         this.writeMessage(
             Method.REPORT_ASSET_MATERIALIZATION,
             this.createMap(actualAssetKey, dataVersion, pipesMetadata)
@@ -320,10 +318,8 @@ public class PipesContextImpl implements PipesContext {
         final Map<String, PipesMetadata> pipesMetadata,
         final String assetKey
     ) throws DagsterPipesException {
-        System.out.println("was: " + checkName + " " + passed + " " + assetKey);
         assertNotNull(checkName, Method.REPORT_ASSET_CHECK, "checkName");
         final String actualAssetKey = resolveOptionallyPassedAssetKey(assetKey, Method.REPORT_ASSET_CHECK);
-        System.out.println("resolved:" + actualAssetKey);
         this.writeMessage(
             Method.REPORT_ASSET_CHECK,
             this.createMap(actualAssetKey, checkName, passed, severity, pipesMetadata)
