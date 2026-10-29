@@ -7,6 +7,7 @@ from dagster import (
 from dagster._core.launcher import WorkerStatus
 from dagster._core.workspace.context import BaseWorkspaceRequestContext
 from dagster_contrib_gcp.cloud_run import run_launcher
+from google.api_core.exceptions import ServiceUnavailable
 from google.cloud.run_v2 import (
     CancelExecutionRequest,
     GetExecutionRequest,
@@ -192,3 +193,40 @@ def test_check_run_worker_health(
         request.name
         == "projects/test_project/locations/test_region/jobs/test_job_name/executions/test_execution_id"
     )
+
+
+def test_check_run_worker_health_retries_transient_errors(
+    instance: DagsterInstance,
+    run: DagsterRun,
+    workspace: BaseWorkspaceRequestContext,
+    mock_jobs_client,
+    mock_executions_client,
+    executions,
+):
+    instance.launch_run(run.run_id, workspace)
+    run = check.not_none(instance.get_run_by_id(run.run_id))
+
+    mock_executions_client.get_execution.side_effect = [
+        ServiceUnavailable("transient"),
+        executions["test_execution_id"],
+    ]
+    result = instance.run_launcher.check_run_worker_health(run)
+    assert result.status == WorkerStatus.RUNNING
+    assert mock_executions_client.get_execution.call_count == 2
+
+
+def test_check_run_worker_health_unknown_when_errors_persist(
+    instance: DagsterInstance,
+    run: DagsterRun,
+    workspace: BaseWorkspaceRequestContext,
+    mock_jobs_client,
+    mock_executions_client,
+):
+    instance.launch_run(run.run_id, workspace)
+    run = check.not_none(instance.get_run_by_id(run.run_id))
+
+    mock_executions_client.get_execution.side_effect = ServiceUnavailable("down")
+    result = instance.run_launcher.check_run_worker_health(run)
+    assert result.status == WorkerStatus.UNKNOWN
+    assert result.msg == "Unable to fetch execution status"
+    assert mock_executions_client.get_execution.call_count > 1

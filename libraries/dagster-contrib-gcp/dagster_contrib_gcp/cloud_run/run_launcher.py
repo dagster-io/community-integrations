@@ -38,6 +38,7 @@ if TYPE_CHECKING:
 
 ENV_KEY = "env"
 SECRETS_KEY = "secret_name"
+DEFAULT_GET_EXECUTION_RETRY = {"wait": 5, "timeout": 15}
 
 
 class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
@@ -51,6 +52,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         run_job_retry: "dict[str, int]",
         run_timeout: int,
         inst_data: ConfigurableClassData | None = None,
+        get_execution_retry: "dict[str, int] | None" = None,
     ):
         self._inst_data = inst_data
         self.project = project
@@ -59,6 +61,9 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
 
         self.run_job_retry_wait = run_job_retry["wait"]
         self.run_job_retry_timeout = run_job_retry["timeout"]
+        get_execution_retry = get_execution_retry or DEFAULT_GET_EXECUTION_RETRY
+        self.get_execution_retry_wait = get_execution_retry["wait"]
+        self.get_execution_retry_timeout = get_execution_retry["timeout"]
         self.run_timeout = run_timeout
 
         self.jobs_client = run_v2.JobsClient()
@@ -332,6 +337,29 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
                     "Admin API quota is quite low, which makes retries more likely."
                 ),
             ),
+            "get_execution_retry": Field(
+                {
+                    "wait": Field(
+                        int,
+                        is_required=False,
+                        default_value=DEFAULT_GET_EXECUTION_RETRY["wait"],
+                        description="Number of seconds to wait between retries",
+                    ),
+                    "timeout": Field(
+                        int,
+                        is_required=False,
+                        default_value=DEFAULT_GET_EXECUTION_RETRY["timeout"],
+                        description="Number of seconds to wait before timing out",
+                    ),
+                },
+                is_required=False,
+                default_value=DEFAULT_GET_EXECUTION_RETRY,
+                description=(
+                    "Retry configuration for execution status requests made by run worker "
+                    "health checks. Keep it well under the run monitoring poll interval, "
+                    "since the daemon checks runs sequentially."
+                ),
+            ),
             "run_timeout": Field(
                 int,
                 is_required=False,
@@ -363,7 +391,17 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
                 f"/executions/{execution_id}"
             )
             request = run_v2.GetExecutionRequest(name=fully_qualified_execution_name)
-            execution = self.executions_client.get_execution(request=request)
+
+            @tenacity.retry(
+                wait=tenacity.wait_fixed(self.get_execution_retry_wait),
+                stop=tenacity.stop_after_delay(self.get_execution_retry_timeout),
+                retry=tenacity.retry_if_exception_type((ServerError, Conflict)),
+                reraise=True,
+            )
+            def get_execution_with_retries(request: run_v2.GetExecutionRequest):
+                return self.executions_client.get_execution(request=request)
+
+            execution = get_execution_with_retries(request)
             if execution.reconciling:
                 return CheckRunHealthResult(WorkerStatus.RUNNING)
             elif execution.failed_count > 0 or execution.cancelled_count > 0:
