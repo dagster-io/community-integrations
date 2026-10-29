@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Updated
+
+- Added retries on execution status requests in `check_run_worker_health`, configurable with the `get_execution_retry` field, so a transient Cloud Run API error no longer fails the run
+
 ## 0.0.9
 
 ### Updated
