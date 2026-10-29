@@ -187,11 +187,15 @@ def scan_parquet(
         use_statistics=context_metadata.get("use_statistics", True),
         hive_partitioning=context_metadata.get("hive_partitioning", True),
     )
-    polars_2 = Version(pl.__version__) >= Version("2.0.0")
-    retries = context_metadata.get("retries", 0)
-    if not polars_2:
+    # Polars 2.0 removed ``rechunk``. ``retries`` was deprecated in 1.37.1 in
+    # favour of ``storage_options["max_retries"]`` and removed in 2.0.
+    polars_version = Version(pl.__version__)
+    retries_via_storage_options = polars_version >= Version("1.37.1")
+    retries = context_metadata.get("retries")
+    if polars_version < Version("2.0.0"):
         kwargs["rechunk"] = context_metadata.get("rechunk", True)
-        kwargs["retries"] = retries
+    if not retries_via_storage_options:
+        kwargs["retries"] = 0 if retries is None else retries
     kwargs["row_index_name"] = context_metadata.get("row_index_name", None)
     kwargs["row_index_offset"] = context_metadata.get("row_index_offset", 0)
 
@@ -228,8 +232,8 @@ def scan_parquet(
             }
         )
 
-    # Polars 2.0 removed ``retries``. An explicit ``max_retries`` storage option wins.
-    if polars_2 and retries:
+    # An explicit ``max_retries`` storage option wins over ``retries`` metadata.
+    if retries_via_storage_options and retries is not None:
         pl_storage_options = {"max_retries": retries, **(pl_storage_options or {})}
 
     return pl.scan_parquet(str(path), storage_options=pl_storage_options, **kwargs)  # type: ignore

@@ -25,10 +25,42 @@ def _scan_kwargs(
 def test_polars_1_passes_rechunk_and_retries(
     mocker: pytest_mock.MockerFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    kwargs = _scan_kwargs(mocker, monkeypatch, "1.40.1", {"retries": 3})
+    kwargs = _scan_kwargs(mocker, monkeypatch, "1.36.0", {"retries": 3})
     assert kwargs["rechunk"] is True
     assert kwargs["retries"] == 3
     assert kwargs["storage_options"] is None
+
+
+def test_polars_1_defaults_retries_to_zero(
+    mocker: pytest_mock.MockerFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    kwargs = _scan_kwargs(mocker, monkeypatch, "1.36.0", {})
+    assert kwargs["retries"] == 0
+
+
+def test_polars_1_37_forwards_retries_to_storage_options(
+    mocker: pytest_mock.MockerFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # ``retries`` is deprecated from 1.37.1, and passing it overwrites any
+    # ``max_retries`` in storage_options.
+    kwargs = _scan_kwargs(mocker, monkeypatch, "1.40.1", {"retries": 3})
+    assert kwargs["rechunk"] is True
+    assert "retries" not in kwargs
+    assert kwargs["storage_options"] == {"max_retries": 3}
+
+
+def test_polars_1_37_storage_options_max_retries_wins(
+    mocker: pytest_mock.MockerFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    kwargs = _scan_kwargs(
+        mocker,
+        monkeypatch,
+        "1.40.1",
+        {"retries": 3},
+        storage_options={"max_retries": 5},
+    )
+    assert "retries" not in kwargs
+    assert kwargs["storage_options"] == {"max_retries": 5}
 
 
 def test_polars_2_omits_removed_arguments(
@@ -51,6 +83,13 @@ def test_polars_2_forwards_retries_to_storage_options(
         storage_options={"key": "k"},
     )
     assert kwargs["storage_options"] == {"max_retries": 3, "aws_access_key_id": "k"}
+
+
+def test_polars_2_forwards_explicit_zero_retries(
+    mocker: pytest_mock.MockerFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    kwargs = _scan_kwargs(mocker, monkeypatch, "2.0.0", {"retries": 0})
+    assert kwargs["storage_options"] == {"max_retries": 0}
 
 
 def test_polars_2_storage_options_max_retries_wins(
