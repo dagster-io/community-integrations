@@ -17,8 +17,8 @@
 
 services:
   spark-iceberg:
-    image: python-integration
-    container_name: pyiceberg-spark
+    image: kitchen-sink-spark
+    container_name: kitchen-sink-spark
     build: .
     networks:
       iceberg_net:
