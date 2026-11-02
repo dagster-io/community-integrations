@@ -1,0 +1,45 @@
+[project]
+name = "dagster-nebius"
+description = "Dagster Pipes for Nebius Serverless GPU Jobs and existing Endpoints"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+dependencies = [
+    "dagster>=1.13.21,<1.14",
+    "nebius>=0.6.10,<0.7",
+    "boto3>=1.43.91,<2",
+    "httpx>=0.28.1,<0.29",
+]
+dynamic = ["version"]
+
+[dependency-groups]
+dev = ["ruff", "pytest", "pyright", "ty==0.0.37", "moto[s3,server]>=5.2.3,<6"]
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_nebius"]
+
+[tool.setuptools.package-data]
+dagster_nebius = ["py.typed"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_nebius.__version__"}
+
+[tool.pytest.ini_options]
+testpaths = ["dagster_nebius_tests"]
+markers = ["live: opt-in tests that create billable Nebius resources"]
+
+[tool.pyright]
+include = ["dagster_nebius"]
+pythonVersion = "3.10"
+typeCheckingMode = "basic"
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
