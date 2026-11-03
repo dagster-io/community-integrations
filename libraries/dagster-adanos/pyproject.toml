@@ -1,0 +1,34 @@
+[project]
+name = "dagster-adanos"
+description = "Dagster integration for the Adanos Market Sentiment API"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "adanos>=2.7.0,<3",
+    "dagster>=1.8.0",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://adanos.org/"
+Documentation = "https://api.adanos.org/docs"
+Repository = "https://github.com/dagster-io/community-integrations/tree/main/libraries/dagster-adanos"
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "pytest",
+    "ty==0.0.37",
+]
+
+# ty configuration is inherited from the repository root pyproject.toml.
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_adanos"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_adanos.__version__"}
