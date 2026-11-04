@@ -20,6 +20,7 @@
 
 ### Fixes
 
+- A `pl.LazyFrame` returned inside `MaterializeResult(value=...)` is now sunk with `sink_df_to_path`. The output has no usable type annotation, so it was routed to the eager `write_df_to_path` and failed with `AttributeError: 'LazyFrame' object has no attribute 'write_parquet'`.
 - The `extension` overrides on `PolarsParquetIOManager` and `PolarsDeltaIOManager` are now declared as `ClassVar[Optional[str]]`, which stops pydantic from treating them as model fields. Previously every import surfaced a `UserWarning: Field name "extension" in "PolarsParquetIOManager" shadows an attribute in parent "BasePolarsUPathIOManager"` (and the same for the delta manager) — that warning is now gone. Includes a regression test asserting no shadow warning is emitted on import.
 - `PolarsParquetIOManager.write_df_to_path` now passes `storage_options` to Polars `write_parquet` for cloud storage writes (requires Polars >= 1.17.0).
 - `PolarsParquetIOManager.sink_df_to_path` now uses Polars native `sink_parquet` with `storage_options` (requires Polars >= 1.17.0, falls back to collecting for older versions).
