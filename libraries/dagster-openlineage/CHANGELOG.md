@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Features
+
+- **Table-level inputs from column lineage.** Asset materialization events now derive input datasets from `dagster/column_lineage` metadata, so backends that build lineage from a `RunEvent`'s inputs/outputs form the upstream edge instead of seeing only the output side.
+
 ## 0.2.0
 
 ### Breaking
