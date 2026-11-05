@@ -2,11 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from datetime import datetime, timezone
+from fnmatch import fnmatch
 from typing import Iterable, Optional, Set, Union
 
 from openlineage.client.uuid import generate_new_uuid
 
-from dagster import DagsterInstance, EventLogRecord, EventRecordsFilter
+from dagster import AssetKey, DagsterInstance, EventLogRecord, EventRecordsFilter
 from dagster_openlineage.compat import (
     SensorDefinition,  # noqa: F401
     DagsterEventType,
@@ -32,6 +33,37 @@ def to_utc_iso_8601(timestamp: float) -> str:
     return datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime(
         NOMINAL_TIME_FORMAT
     )
+
+
+def asset_key_matches_globs(asset_key: AssetKey, patterns: Iterable[str]) -> bool:
+    """True if the asset key's user string matches any fnmatch glob pattern.
+
+    Shared by the wrapper and the sensor so both apply ``exclude_asset_keys``
+    identically. Each pattern is fnmatch (``*``, ``?``, ``[seq]``); a plain string with
+    no wildcards is an exact match.
+    """
+    key = asset_key.to_user_string()
+    return any(fnmatch(key, pattern) for pattern in patterns)
+
+
+def asset_key_of_event_data(
+    data: "Any", etype: "DagsterEventType"
+) -> Optional[AssetKey]:
+    """Resolve the AssetKey for an asset-scoped event's ``event_specific_data``
+    (None for run-level events). Extraction differs per event type. Shared by both
+    mechanisms so exclusion/owner resolution key off the same asset key."""
+    if etype == DagsterEventType.ASSET_MATERIALIZATION:
+        return data.materialization.asset_key
+    if etype == DagsterEventType.ASSET_OBSERVATION:
+        return data.asset_observation.asset_key
+    if etype in (
+        DagsterEventType.ASSET_MATERIALIZATION_PLANNED,
+        DagsterEventType.ASSET_FAILED_TO_MATERIALIZE,
+        DagsterEventType.ASSET_CHECK_EVALUATION_PLANNED,
+        DagsterEventType.ASSET_CHECK_EVALUATION,
+    ):
+        return getattr(data, "asset_key", None)
+    return None
 
 
 def make_step_run_id() -> str:
