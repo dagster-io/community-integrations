@@ -35,7 +35,7 @@ def _make_adapter(**kwargs) -> tuple[OpenLineageAdapter, MagicMock]:
     return adapter, client
 
 
-def test_asset_materialization_planned_emits_run_start():
+def test_asset_materialization_planned_emits_run_start_without_datasets():
     adapter, client = _make_adapter()
     adapter.asset_materialization_planned(
         AssetKey(["orders"]), run_id=_rid(), timestamp=time.time()
@@ -45,8 +45,9 @@ def test_asset_materialization_planned_emits_run_start():
     assert isinstance(event, RunEvent)
     assert event.eventType == RunState.START
     assert event.job.name == "orders"
-    assert len(event.outputs) == 1
-    assert event.outputs[0].name == "orders"
+    # START is a pure run-start signal; inputs and outputs arrive on COMPLETE.
+    assert not event.inputs
+    assert not event.outputs
 
 
 def test_asset_materialization_emits_schema_facet():
