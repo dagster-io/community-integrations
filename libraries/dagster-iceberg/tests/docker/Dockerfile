@@ -15,8 +15,21 @@
 
 FROM python:3.9-bullseye
 
-RUN apt-get -qq update && \
-    apt-get -qq install -y --no-install-recommends \
+# Debian bullseye is end-of-life and mid-archival. Its .deb files have been
+# withdrawn from deb.debian.org, and bullseye-security has not appeared on
+# archive.debian.org yet. Both suites have to stay in play. Security ships
+# newer builds than main (libcurl4 u16 vs u13, openjdk-11 11.0.32 vs 11.0.24),
+# and this base image already has the security ones installed, so main alone
+# leaves apt unable to satisfy them. snapshot.debian.org still serves both at
+# a fixed date, which pins the image to one consistent set. Snapshot Release
+# files are expired by definition, hence Check-Valid-Until.
+RUN printf '%s\n' \
+      'deb http://snapshot.debian.org/archive/debian/20260901T000000Z bullseye main' \
+      'deb http://snapshot.debian.org/archive/debian-security/20260901T000000Z bullseye-security main' \
+      > /etc/apt/sources.list && \
+    rm -f /etc/apt/sources.list.d/*.list && \
+    apt-get -o Acquire::Check-Valid-Until=false -qq update && \
+    apt-get -q install -y --no-install-recommends \
       sudo \
       curl \
       vim \
