@@ -403,3 +403,61 @@ def test_check_evaluation_planned_embedded_when_materialization_planned():
         and c.args[0].job.name.endswith("__checks")
     ]
     assert start_events == []
+
+
+# ---------------------------------------------------------------------------
+# exclude_asset_keys
+# ---------------------------------------------------------------------------
+
+
+def _make_wrapper_with_exclusions(
+    patterns: list[str],
+) -> tuple[OpenLineageEventLogStorage, MagicMock]:
+    client = MagicMock()
+    adapter = OpenLineageAdapter(emitter=OpenLineageEmitter(client=client))
+    wrapper = OpenLineageEventLogStorage(
+        wrapped=InMemoryEventLogStorage(),
+        exclude_asset_keys=patterns,
+        adapter=adapter,
+    )
+    return wrapper, client
+
+
+def test_excluded_asset_exact_match_is_not_emitted():
+    wrapper, client = _make_wrapper_with_exclusions(["orders"])
+    wrapper.store_event(_materialization_event(_rid(), AssetKey(["orders"])))
+    # Storage still wrote the event; only OL emission is suppressed.
+    client.emit.assert_not_called()
+
+
+def test_excluded_asset_glob_is_not_emitted_but_others_are():
+    wrapper, client = _make_wrapper_with_exclusions(["*dbt*"])
+    wrapper.store_event(_materialization_event(_rid(), AssetKey(["stg_orders_dbt"])))
+    client.emit.assert_not_called()
+    wrapper.store_event(_materialization_event(_rid(), AssetKey(["orders"])))
+    assert client.emit.call_count == 1
+
+
+def test_excluded_asset_is_not_tracked_for_failure_synthesis():
+    wrapper, client = _make_wrapper_with_exclusions(["orders"])
+    run_id = _rid()
+    wrapper.store_event(_planned_event(run_id, AssetKey(["orders"])))
+    wrapper.store_event(_step_failure_event(run_id))
+    # The excluded asset was gated before tracking, so no FAIL is synthesized.
+    client.emit.assert_not_called()
+    assert run_id not in wrapper._planned_assets
+
+
+def test_exclude_asset_keys_passed_through_from_config_value():
+    wrapper = OpenLineageEventLogStorage.from_config_value(
+        inst_data=None,
+        config_value={
+            "wrapped": {
+                "module": "dagster._core.storage.event_log.in_memory",
+                "class": "InMemoryEventLogStorage",
+                "config": {},
+            },
+            "exclude_asset_keys": ["*dbt*", "orders"],
+        },
+    )
+    assert wrapper._excluded_keys == {"*dbt*", "orders"}
