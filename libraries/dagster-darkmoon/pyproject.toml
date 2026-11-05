@@ -1,0 +1,29 @@
+[project]
+name = "dagster-darkmoon"
+description = "Dagster resource and asset checks for Darkmoon, an autonomous AI penetration testing platform."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dagster>=1.8.0",
+]
+dynamic = ["version"]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "pytest",
+    "ty==0.0.37",
+]
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_darkmoon"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_darkmoon.__version__"}
+
+[tool.pytest.ini_options]
+testpaths = ["dagster_darkmoon_tests"]
