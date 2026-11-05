@@ -4,6 +4,7 @@
 import time
 from typing import Optional
 
+from openlineage.client.facet_v2 import job_type_job
 from openlineage.client.uuid import generate_new_uuid
 
 from dagster import (
@@ -22,6 +23,14 @@ PRODUCER = (
     f"https://github.com/OpenLineage/OpenLineage/tree/"
     f"{OPENLINEAGE_DAGSTER_VERSION}/integration/dagster"
 )
+
+# every job the adapter emits carries a jobType facet (integration=DAGSTER, BATCH); with no
+# team configured there is no ownership facet.
+DEFAULT_JOB_FACETS = {
+    "jobType": job_type_job.JobTypeJobFacet(
+        processingType="BATCH", integration="DAGSTER", jobType="JOB"
+    )
+}
 
 
 def make_pipeline_run_with_external_pipeline_origin(
