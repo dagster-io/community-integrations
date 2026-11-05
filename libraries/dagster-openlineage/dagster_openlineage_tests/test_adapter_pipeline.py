@@ -119,3 +119,29 @@ def test_cancel_pipeline_run(mock_client_emit, mock_to_utc_iso_8601):
             outputs=[],
         )
     )
+
+
+@patch("dagster_openlineage.adapter.to_utc_iso_8601")
+@patch("dagster_openlineage.adapter.OpenLineageClient.emit")
+def test_pipeline_run_uses_job_namespace(mock_client_emit, mock_to_utc_iso_8601):
+    mock_to_utc_iso_8601.return_value = "2022-01-01T00:00:00.000000Z"
+    adapter = OpenLineageAdapter(
+        namespace="postgres://db:5432", job_namespace="dagster://local"
+    )
+    adapter.start_pipeline("a_pipeline", str(generate_new_uuid()), time.time())
+    event = mock_client_emit.call_args.args[0]
+    assert event.job.namespace == "dagster://local"
+
+
+@patch("dagster_openlineage.adapter.to_utc_iso_8601")
+@patch("dagster_openlineage.adapter.OpenLineageClient.emit")
+def test_pipeline_run_repository_name_overrides_job_namespace(
+    mock_client_emit, mock_to_utc_iso_8601
+):
+    mock_to_utc_iso_8601.return_value = "2022-01-01T00:00:00.000000Z"
+    adapter = OpenLineageAdapter(job_namespace="dagster://local")
+    adapter.start_pipeline(
+        "a_pipeline", str(generate_new_uuid()), time.time(), repository_name="my_repo"
+    )
+    event = mock_client_emit.call_args.args[0]
+    assert event.job.namespace == "my_repo"
