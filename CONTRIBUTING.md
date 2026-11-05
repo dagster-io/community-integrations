@@ -63,6 +63,19 @@ Packages are to be named `dagster-<name>` where `<name>` is the name of the tool
 6. Include tests for your integration to ensure reliability.
 7. Create GitHub Actions workflows using the templates located at `.github/workflows/template-*`.
 
+## Maintaining a changelog
+
+Each integration maintains its own `libraries/dagster-<name>/CHANGELOG.md`. New integrations copied from `_template` include one by default.
+
+Follow the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format:
+
+- Add user-facing changes under `## [Unreleased]` as part of the pull request that introduces them.
+- Group entries under `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, or `Security`, and omit empty groups.
+- Write entries from a user's perspective and include the pull request or issue number when useful.
+- When releasing, rename `Unreleased` to the version and release date in `YYYY-MM-DD` format, then add a new empty `Unreleased` section above it.
+
+Documentation, test-only, and internal maintenance changes do not need an entry; write `N/A` in the pull request's changelog section and briefly explain why.
+
 ## Running GitHub Actions workflows locally
 
 You can replicate most of the GitHub Actions workflows locally using [`act`](https://nektosact.com/). This provides a smoother development experience than pushing to GitHub and waiting for GitHub Actions to run on each commit.
@@ -76,7 +89,7 @@ You can replicate most of the GitHub Actions workflows locally using [`act`](htt
    act -W .github/workflows/quality-check-dagster-anthropic.yml
    ```
 
-> [!NOTE]  
+> [!NOTE]
 > To run a workflow that uses `testcontainers`, use the following [workaround](https://github.com/nektos/act/issues/501#issuecomment-2344539500):
 >
 > ```sh
