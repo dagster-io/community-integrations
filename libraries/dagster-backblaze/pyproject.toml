@@ -1,0 +1,32 @@
+[project]
+name = "dagster-backblaze"
+description = "Dagster integration for Backblaze B2 (S3-compatible) object storage."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dagster>=1.8.0",
+    "dagster-aws>=0.24.0",
+    "boto3>=1.28",
+    "botocore>=1.31",
+]
+dynamic = ["version"]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "pytest",
+    "ty==0.0.37",
+    "moto[s3]>=5.0",
+]
+
+# ty configuration is inherited from the repository root pyproject.toml.
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_backblaze", "dagster_backblaze.b2"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_backblaze.__version__"}
