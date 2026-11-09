@@ -101,6 +101,13 @@ def test_nanosecond_times_and_timestamps_are_written_in_microseconds():
                 [dt.datetime(2024, 1, 1, 12)], dtype=pl.Datetime("ns", "UTC")
             ),
             "nested": [{"time": dt.time(1, 2), "times": [dt.time(3, 4)]}],
+            "array": pl.Series([[dt.time(5, 6)]], dtype=pl.Array(pl.Time, 1)),
+            "map": pl.from_arrow(
+                pa.array(
+                    [[("k", dt.time(7, 8))]],
+                    type=pa.map_(pa.string(), pa.time64("ns")),
+                )
+            ),
         }
     )
 
@@ -112,6 +119,8 @@ def test_nanosecond_times_and_timestamps_are_written_in_microseconds():
     nested = schema.field("nested").type
     assert nested.field("time").type == pa.time64("us")
     assert nested.field("times").type.value_type == pa.time64("us")
+    assert schema.field("array").type.value_type == pa.time64("us")
+    assert schema.field("map").type.item_type == pa.time64("us")
 
 
 def test_empty_dataframe_is_skipped():

@@ -2,11 +2,14 @@
 
 ### Changed
 
-- `PolarsBigQueryIOManager` now writes DataFrames to BigQuery as Parquet built from the DataFrame's Arrow data (`load_table_from_file`), following the [Polars BigQuery guide](https://docs.pola.rs/user-guide/io/bigquery/#write), instead of converting them to pandas first. This changes the BigQuery type of some columns. **Breaking:** appending (`WRITE_APPEND`) to a table created by an earlier version fails with `Provided Schema does not match Table` for these columns, until the table is recreated or the columns are cast to the old types:
+- `PolarsBigQueryIOManager` now writes DataFrames to BigQuery as Parquet files:
+  - The DataFrame's Arrow data is written to an in-memory Parquet file and loaded with `load_table_from_file`, following the [Polars BigQuery guide](https://docs.pola.rs/user-guide/io/bigquery/#write), instead of being converted to pandas first.
+  - **Breaking:** the BigQuery type of some columns changes. Appending (`WRITE_APPEND`) to a table created by an earlier version fails with `Provided Schema does not match Table` for these columns, until the table is recreated or the columns are cast to the old types.
   - `pl.Date` columns are written as `DATE` instead of `TIMESTAMP`. Closes [#253](https://github.com/dagster-io/community-integrations/issues/253).
   - Integer columns that contain nulls are written as `INTEGER` instead of `FLOAT`.
   - `pl.Datetime("ns")` columns are written as `TIMESTAMP`, like `pl.Datetime("us")`, instead of `DATETIME`, or `INTEGER` when the DataFrame also had a column pandas could not map, such as a categorical or a struct.
-  - All other types are unchanged. Nanosecond times and timestamps are written in microseconds, the precision of BigQuery's `TIME` and `TIMESTAMP`.
+  - `pl.Map` columns can be written. They are loaded as BigQuery's representation of a Parquet map, a `RECORD` with a repeated `key_value` field of `key` and `value`.
+  - Nanosecond times and timestamps, also inside structs, lists, arrays and maps, are written in microseconds, the precision of BigQuery's `TIME` and `TIMESTAMP`. All other types are unchanged.
 
 ## 0.27.13
 

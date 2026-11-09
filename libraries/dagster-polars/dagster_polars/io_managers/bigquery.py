@@ -19,7 +19,7 @@ except ImportError as e:
 
 
 def _bigquery_arrow_type(dtype: pa.DataType) -> pa.DataType:
-    """Replaces nanosecond times and timestamps with microsecond ones, also inside structs and lists."""
+    """Replaces nanosecond times and timestamps with microsecond ones, also inside nested types."""
     if pa.types.is_time64(dtype) and dtype.unit == "ns":
         return pa.time64("us")
     if pa.types.is_timestamp(dtype) and dtype.unit == "ns":
@@ -27,6 +27,17 @@ def _bigquery_arrow_type(dtype: pa.DataType) -> pa.DataType:
     if pa.types.is_struct(dtype):
         return pa.struct(
             [field.with_type(_bigquery_arrow_type(field.type)) for field in dtype]
+        )
+    if pa.types.is_map(dtype):
+        return pa.map_(
+            _bigquery_arrow_type(dtype.key_type),
+            _bigquery_arrow_type(dtype.item_type),
+            keys_sorted=dtype.keys_sorted,
+        )
+    if pa.types.is_fixed_size_list(dtype):
+        return pa.list_(
+            dtype.value_field.with_type(_bigquery_arrow_type(dtype.value_type)),
+            dtype.list_size,
         )
     if pa.types.is_large_list(dtype):
         return pa.large_list(
