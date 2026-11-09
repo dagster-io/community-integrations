@@ -50,10 +50,30 @@ def _bigquery_arrow_type(dtype: pa.DataType) -> pa.DataType:
     return dtype
 
 
-def _bigquery_arrow_schema(schema: pa.Schema) -> pa.Schema:
-    return pa.schema(
-        [field.with_type(_bigquery_arrow_type(field.type)) for field in schema],
-        metadata=schema.metadata,
+def _to_bigquery_arrow_table(table: pa.Table) -> pa.Table:
+    """Converts nanosecond times and timestamps to microseconds, the precision BigQuery stores.
+
+    BigQuery reads nanosecond Parquet times and timestamps as INTEGER, or stores wrong times.
+    Raises instead of truncating when a value has digits below a microsecond.
+    """
+    fields, columns, lossy = [], [], []
+    for field, column in zip(table.schema, table.columns):
+        bigquery_type = _bigquery_arrow_type(field.type)
+        try:
+            columns.append(column.cast(bigquery_type, safe=True))
+        except pa.ArrowInvalid:
+            lossy.append(field.name)
+        fields.append(field.with_type(bigquery_type))
+    if lossy:
+        raise ValueError(
+            "BigQuery stores times and timestamps with microsecond precision, and these "
+            f"columns have values with nanoseconds that would be lost: {lossy}. Round or "
+            "truncate them to microseconds before writing, for example with "
+            '`pl.col(name).dt.cast_time_unit("us")` for a datetime or '
+            "`pl.col(name).cast(pl.Int64) // 1_000 * 1_000` cast back to `pl.Time` for a time."
+        )
+    return pa.Table.from_arrays(
+        columns, schema=pa.schema(fields, metadata=table.schema.metadata)
     )
 
 
@@ -124,13 +144,9 @@ class PolarsBigQueryTypeHandler(DbTypeHandler[pl.DataFrame]):
             write_disposition=context.definition_metadata.get("write_disposition"),
         )
 
-        table = obj.to_arrow()
+        table = _to_bigquery_arrow_table(obj.to_arrow())
         with io.BytesIO() as stream:
-            # BigQuery stores times and timestamps in microseconds and reads nanosecond
-            # Parquet times and timestamps as INTEGER, so they are written in microseconds
-            pq.write_table(
-                table.cast(_bigquery_arrow_schema(table.schema), safe=False), stream
-            )
+            pq.write_table(table, stream)
             stream.seek(0)
             job = connection.load_table_from_file(
                 stream,

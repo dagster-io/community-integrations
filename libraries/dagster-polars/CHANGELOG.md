@@ -9,7 +9,7 @@
   - Integer columns that contain nulls are written as `INTEGER` instead of `FLOAT`.
   - `pl.Datetime("ns")` columns are written as `TIMESTAMP`, like `pl.Datetime("us")`, instead of `DATETIME`, or `INTEGER` when the DataFrame also had a column pandas could not map, such as a categorical or a struct.
   - `pl.Map` columns can be written. They are loaded as BigQuery's representation of a Parquet map, a `RECORD` with a repeated `key_value` field of `key` and `value`.
-  - Nanosecond times and timestamps, also inside structs, lists, arrays and maps, are written in microseconds, the precision of BigQuery's `TIME` and `TIMESTAMP`. All other types are unchanged.
+  - Nanosecond times and timestamps, also inside structs, lists, arrays and maps, are written in microseconds, the precision of BigQuery's `TIME` and `TIMESTAMP`. A value with digits below a microsecond raises an error naming its columns instead of being truncated. All other types are unchanged.
 
 ## 0.27.13
 

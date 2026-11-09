@@ -123,6 +123,31 @@ def test_nanosecond_times_and_timestamps_are_written_in_microseconds():
     assert schema.field("map").type.item_type == pa.time64("us")
 
 
+def test_values_with_nanoseconds_raise_instead_of_losing_precision():
+    df = pl.DataFrame(
+        {
+            "time": pl.Series([45000123456789]).cast(pl.Time),
+            "moment_ns": pl.Series([1704110400123456789]).cast(pl.Datetime("ns")),
+            "nested": pl.struct(
+                pl.Series("t", [45000123456789]).cast(pl.Time), eager=True
+            ),
+            "fine": pl.Series([45000123456000]).cast(pl.Time),
+        }
+    )
+    connection = MagicMock(spec=bigquery.Client)
+    context = MagicMock()
+    context.definition_metadata = {}
+    table_slice = TableSlice(
+        table="my_table", schema="my_dataset", database="my_project", columns=None
+    )
+
+    with pytest.raises(ValueError, match="microsecond precision") as error:
+        PolarsBigQueryTypeHandler().handle_output(context, table_slice, df, connection)
+
+    assert "['time', 'moment_ns', 'nested']" in str(error.value)
+    connection.load_table_from_file.assert_not_called()
+
+
 def test_empty_dataframe_is_skipped():
     context = MagicMock()
     connection = MagicMock(spec=bigquery.Client)
