@@ -1,6 +1,9 @@
+import io
 from collections.abc import Sequence
 
 import polars as pl
+import pyarrow as pa
+import pyarrow.parquet as pq
 from dagster import InputContext, MetadataValue, OutputContext
 from dagster._core.storage.db_io_manager import DbTypeHandler, TableSlice
 
@@ -13,6 +16,34 @@ except ImportError as e:
     raise ImportError(
         "Install 'dagster-polars[gcp]' to use BigQuery functionality"
     ) from e
+
+
+def _bigquery_arrow_type(dtype: pa.DataType) -> pa.DataType:
+    """Replaces nanosecond times and timestamps with microsecond ones, also inside structs and lists."""
+    if pa.types.is_time64(dtype) and dtype.unit == "ns":
+        return pa.time64("us")
+    if pa.types.is_timestamp(dtype) and dtype.unit == "ns":
+        return pa.timestamp("us", tz=dtype.tz)
+    if pa.types.is_struct(dtype):
+        return pa.struct(
+            [field.with_type(_bigquery_arrow_type(field.type)) for field in dtype]
+        )
+    if pa.types.is_large_list(dtype):
+        return pa.large_list(
+            dtype.value_field.with_type(_bigquery_arrow_type(dtype.value_type))
+        )
+    if pa.types.is_list(dtype):
+        return pa.list_(
+            dtype.value_field.with_type(_bigquery_arrow_type(dtype.value_type))
+        )
+    return dtype
+
+
+def _bigquery_arrow_schema(schema: pa.Schema) -> pa.Schema:
+    return pa.schema(
+        [field.with_type(_bigquery_arrow_type(field.type)) for field in schema],
+        metadata=schema.metadata,
+    )
 
 
 class PolarsBigQueryTypeHandler(DbTypeHandler[pl.DataFrame]):
@@ -70,28 +101,38 @@ class PolarsBigQueryTypeHandler(DbTypeHandler[pl.DataFrame]):
         assert obj is not None
         assert isinstance(connection, bigquery.Client)
         assert context.definition_metadata is not None
+        # Write Parquet from the Arrow data and load it, as in the Polars BigQuery guide:
+        # https://docs.pola.rs/user-guide/io/bigquery/#write
+        # This keeps the Polars types (for example pl.Date as DATE) instead of going through pandas.
+        parquet_options = bigquery.ParquetOptions()
+        # load list columns as REPEATED fields instead of records with a "list" field
+        parquet_options.enable_list_inference = True
         job_config = bigquery.LoadJobConfig(
-            write_disposition=context.definition_metadata.get("write_disposition")
+            source_format=bigquery.SourceFormat.PARQUET,
+            parquet_options=parquet_options,
+            write_disposition=context.definition_metadata.get("write_disposition"),
         )
 
-        # FIXME: load_table_from_dataframe writes the dataframe to a temporary parquet file
-        # and then calls load_table_from_file. This can cause problems in cloud environments
-        # therefore, it's better to use load_table_from_uri with GCS,
-        # but this requires the remote filesystem to be available in this code
-        job = connection.load_table_from_dataframe(
-            # date_as_object=True keeps pl.Date columns as datetime.date objects, so BigQuery
-            # infers DATE instead of TIMESTAMP (pandas would otherwise cast them to datetime64)
-            dataframe=obj.to_pandas(date_as_object=True),
-            destination=f"{table_slice.schema}.{table_slice.table}",
-            project=table_slice.database,
-            location=context.resource_config.get("location")
-            if context.resource_config
-            else None,  # type: ignore
-            timeout=context.resource_config.get("timeout")
-            if context.resource_config
-            else None,  # type: ignore
-            job_config=job_config,
-        )
+        table = obj.to_arrow()
+        with io.BytesIO() as stream:
+            # BigQuery stores times and timestamps in microseconds and reads nanosecond
+            # Parquet times and timestamps as INTEGER, so they are written in microseconds
+            pq.write_table(
+                table.cast(_bigquery_arrow_schema(table.schema), safe=False), stream
+            )
+            stream.seek(0)
+            job = connection.load_table_from_file(
+                stream,
+                destination=f"{table_slice.schema}.{table_slice.table}",
+                project=table_slice.database,
+                location=context.resource_config.get("location")
+                if context.resource_config
+                else None,  # type: ignore
+                timeout=context.resource_config.get("timeout")
+                if context.resource_config
+                else None,  # type: ignore
+                job_config=job_config,
+            )
         job.result()
 
         context.add_output_metadata(get_polars_metadata(context=context, df=obj))
