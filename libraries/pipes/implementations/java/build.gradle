@@ -45,6 +45,10 @@ mavenPublishing {
     }
 }
 
+dependencyLocking {
+    lockAllConfigurations()
+}
+
 repositories {
     mavenCentral()
     gradlePluginPortal()
@@ -59,6 +63,18 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
     testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
     implementation group: 'software.amazon.awssdk', name: 's3', version: '2.57.10'
+
+    constraints {
+        checkstyle('com.google.guava:guava:33.7.2-jre') {
+            because 'GHSA-xxph-c9ww-hj94, GHSA-7g45-4rm6-3mm3, and GHSA-5mg8-w23w-74h3 affect the version checkstyle 8.29 pulls in'
+        }
+        checkstyle('commons-beanutils:commons-beanutils:1.11.0') {
+            because 'GHSA-wxr5-93ph-8wr9 affects the version checkstyle 8.29 pulls in'
+        }
+        pmd('org.apache.commons:commons-lang3:3.18.0') {
+            because 'GHSA-j288-q9x7-2f5v affects the version PMD 6.48.0 pulls in'
+        }
+    }
 }
 
 test {
