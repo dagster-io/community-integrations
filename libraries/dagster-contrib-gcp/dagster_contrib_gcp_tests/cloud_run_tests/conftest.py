@@ -45,6 +45,7 @@ def instance(
             "region": "test_region",
             "job_name_by_code_location": {IN_PROCESS_NAME: "test_job_name"},
             "run_job_retry": {"wait": 1, "timeout": 60},
+            "get_execution_retry": {"wait": 1, "timeout": 2},
             "run_timeout": 7200,
         }
     ) as dagster_instance:
