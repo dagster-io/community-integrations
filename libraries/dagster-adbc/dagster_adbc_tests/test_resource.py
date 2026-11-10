@@ -1,21 +1,11 @@
-import subprocess
-from typing import Any, Generator
-
+import adbc_driver_sqlite
 import pyarrow as pa
-import pytest
 
 from dagster_adbc import ADBCResource
 
 
-@pytest.fixture(autouse=True)
-def sqlite_adbc_driver() -> Generator[None, Any, None]:
-    subprocess.run(["dbc", "install", "sqlite"])
-    yield
-    subprocess.run(["dbc", "uninstall", "sqlite"])
-
-
 def test_connection() -> None:
-    resource = ADBCResource(driver="sqlite", uri=":memory:")
+    resource = ADBCResource(driver=adbc_driver_sqlite._driver_path(), uri=":memory:")
     with resource.get_connection() as connection, connection.cursor() as cursor:
         cursor.execute("SELECT 1 AS value")
         table = cursor.fetch_arrow_table()

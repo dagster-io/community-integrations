@@ -16,6 +16,9 @@ dev = [
     "ty==0.0.37",
     "pytest>=9.0.3",
     "ruff>=0.15.9",
+    "adbc-driver-sqlite>=1.12.0",
+    "pandas>=2.3.3",
+    "polars>=2.0.0",
 ]
 
 [build-system]
