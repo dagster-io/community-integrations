@@ -46,6 +46,12 @@ defs = Definitions(
 )
 ```
 
+## Redis
+
+For driver installation, a runnable `ADBCResource` asset, the separately maintained
+Redis IO manager, and autocommit/deployment limits, see the
+[Redis integration guide](redis.md).
+
 ## Development
 
 The `Makefile` provides the tools required to test and lint your local installation.
