@@ -82,3 +82,56 @@ Additional steps may be required for configuring IAM permissions, etc. In partic
 - Ensure that the Cloud Run run worker jobs have the necessary permissions to execute your Dagster runs
 See the [Cloud Run documentation](https://cloud.google.com/run/docs) for more information.
 
+#### Cloud Run job executor
+
+Adds support for launching each **step** of a run as its own Cloud Run Job execution, instead of
+running all of a run's steps inside the single run worker container. It composes with the
+`CloudRunRunLauncher` above: the run launcher launches the run worker as one Cloud Run execution,
+and (only for jobs that select this executor) the run worker then launches each of its steps as
+further Cloud Run executions on the **same** Cloud Run Job resource (same image; only the
+container args differ: `execute_step` vs `execute_run`).
+
+This is most useful for jobs that fan out into many batches via `DynamicOut`/mapped ops - each
+mapped step invocation gets its own Cloud Run execution, and the executor's `max_concurrent`
+config caps how many run concurrently, so a large backlog doesn't spawn hundreds of executions
+at once.
+
+```python
+from dagster import DynamicOut, DynamicOutput, job, op
+from dagster_contrib_gcp.cloud_run import cloud_run_job_executor
+
+
+@op(out=DynamicOut(int))
+def split(context):
+    for i, batch in enumerate(get_batches()):
+        yield DynamicOutput(batch, mapping_key=str(i))
+
+
+@op
+def process_batch(context, batch):
+    ...
+
+
+@job(executor_def=cloud_run_job_executor)
+def my_job():
+    split().map(process_batch)
+```
+
+Configure it with run config:
+
+```yaml
+execution:
+  config:
+    project:
+      env: GOOGLE_CLOUD_PROJECT
+    region:
+      env: GOOGLE_CLOUD_REGION
+    job_name: my-cloud-run-job-1
+    # Optional
+    container_name: my-dagster-container-name
+    max_concurrent: 4
+    step_timeout: 3600
+    run_job_retry:
+      wait: 10
+      timeout: 300
+```

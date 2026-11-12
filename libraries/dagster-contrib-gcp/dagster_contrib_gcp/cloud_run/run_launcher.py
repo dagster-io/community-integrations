@@ -1,9 +1,8 @@
 import traceback
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Union
 from collections.abc import Mapping, Sequence
 import os
 
-import tenacity
 from dagster import (
     DagsterInstance,
     Field,
@@ -21,23 +20,19 @@ from dagster._core.launcher.base import (
 from dagster._core.storage.dagster_run import DagsterRun
 from dagster._grpc.types import ExecuteRunArgs
 from dagster._serdes import ConfigurableClass, ConfigurableClassData
-from google.api_core.exceptions import Conflict, ResourceExhausted, ServerError
-from google.api_core.operation import Operation
-from google.cloud import run_v2
-from google.cloud.run_v2 import RunJobRequest
-from google.cloud.run_v2.types import k8s_min
-from google.cloud.secretmanager_v1 import (
-    AccessSecretVersionRequest,
-    SecretManagerServiceClient,
-)
+from google.api_core.exceptions import Conflict, ServerError
 
 from typing_extensions import Self
 
+from dagster_contrib_gcp.cloud_run.job_client import (
+    ENV_KEY,
+    SECRETS_KEY,
+    CloudRunJobClient,
+    ExecutionStatus,
+)
+
 if TYPE_CHECKING:
     from dagster._config.config_schema import UserConfigSchema
-
-ENV_KEY = "env"
-SECRETS_KEY = "secret_name"
 
 
 class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
@@ -61,8 +56,10 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         self.run_job_retry_timeout = run_job_retry["timeout"]
         self.run_timeout = run_timeout
 
-        self.jobs_client = run_v2.JobsClient()
-        self.executions_client = run_v2.ExecutionsClient()
+        self._job_client = CloudRunJobClient(
+            run_job_retry_wait=self.run_job_retry_wait,
+            run_job_retry_timeout=self.run_job_retry_timeout,
+        )
 
     def launch_run(self, context: LaunchRunContext) -> None:
         remote_job_origin = check.not_none(context.dagster_run.remote_job_origin)
@@ -153,10 +150,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         return self.get_container_name_for_code_location_or_default(job)
 
     def resolve_secret(self, secret_name: str) -> Any:
-        client = SecretManagerServiceClient()
-        latest = AccessSecretVersionRequest(name=secret_name)
-        response = client.access_secret_version(latest)
-        return response.payload.data.decode("UTF-8")
+        return self._job_client.resolve_secret(secret_name)
 
     def env_override_for_code_location(
         self, code_location_name: str
@@ -206,45 +200,13 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
         job_name = self.fully_qualified_job_name(code_location_name)
         job_env = self.env_override_for_code_location(code_location_name)
         container_name = self.specific_container_name(code_location_name)
-        return self.execute_job(
-            job_name, args=args, env=job_env, container_name=container_name
+        return self._job_client.execute_job(
+            job_name,
+            args=args,
+            env=job_env,
+            container_name=container_name,
+            timeout_seconds=self.run_timeout,
         )
-
-    def execute_job(
-        self,
-        fully_qualified_job_name: str,
-        args: Sequence[str] | None = None,
-        env: Optional["dict[str, str]"] = None,
-        container_name: str | None = None,
-    ) -> Operation:
-        request = RunJobRequest(name=fully_qualified_job_name)
-
-        overrides = {}
-        if args:
-            overrides["args"] = args
-        if env:
-            overrides["env"] = [
-                k8s_min.EnvVar(name=name, value=value) for name, value in env.items()
-            ]
-        if container_name:
-            overrides["name"] = container_name
-
-        container_overrides = [RunJobRequest.Overrides.ContainerOverride(**overrides)]
-
-        request.overrides.container_overrides.extend(container_overrides)
-        request.overrides.timeout = f"{self.run_timeout}s"  # ty: ignore
-
-        @tenacity.retry(
-            wait=tenacity.wait_fixed(self.run_job_retry_wait),
-            stop=tenacity.stop_after_delay(self.run_job_retry_timeout),
-            retry=tenacity.retry_if_exception_type(ResourceExhausted),
-        )
-        def run_job_with_retries_when_quota_exceeded(request: RunJobRequest):
-            operation = self.jobs_client.run_job(request)
-            return operation
-
-        operation = run_job_with_retries_when_quota_exceeded(request)
-        return operation
 
     def terminate(self, run_id: str) -> bool:
         instance: DagsterInstance = self._instance
@@ -266,10 +228,7 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
                 f"{self.fully_qualified_job_name(remote_job_origin.location_name)}"
                 f"/executions/{execution_id}"
             )
-            request = run_v2.CancelExecutionRequest(
-                name=fully_qualified_execution_name,
-            )
-            self.executions_client.cancel_execution(request=request)
+            self._job_client.cancel_execution(fully_qualified_execution_name)
         except (ServerError, Conflict):
             self._instance.report_engine_event(
                 message=f"Failed to terminate Cloud Run execution: {execution_id}. Error:\n{traceback.format_exc()}",
@@ -362,19 +321,21 @@ class CloudRunRunLauncher(RunLauncher, ConfigurableClass):
                 f"{self.fully_qualified_job_name(remote_job_origin.location_name)}"
                 f"/executions/{execution_id}"
             )
-            request = run_v2.GetExecutionRequest(name=fully_qualified_execution_name)
-            execution = self.executions_client.get_execution(request=request)
-            if execution.reconciling:
-                return CheckRunHealthResult(WorkerStatus.RUNNING)
-            elif execution.failed_count > 0 or execution.cancelled_count > 0:
-                return CheckRunHealthResult(WorkerStatus.FAILED)
-            elif execution.succeeded_count > 0:
-                return CheckRunHealthResult(WorkerStatus.SUCCESS)
-            else:
-                return CheckRunHealthResult(
-                    WorkerStatus.UNKNOWN, msg="Unable to determine execution status"
-                )
+            status = self._job_client.get_execution_status(
+                fully_qualified_execution_name
+            )
         except (ServerError, Conflict):
             return CheckRunHealthResult(
                 WorkerStatus.UNKNOWN, msg="Unable to fetch execution status"
+            )
+
+        if status == ExecutionStatus.RUNNING:
+            return CheckRunHealthResult(WorkerStatus.RUNNING)
+        elif status == ExecutionStatus.FAILED:
+            return CheckRunHealthResult(WorkerStatus.FAILED)
+        elif status == ExecutionStatus.SUCCESS:
+            return CheckRunHealthResult(WorkerStatus.SUCCESS)
+        else:
+            return CheckRunHealthResult(
+                WorkerStatus.UNKNOWN, msg="Unable to determine execution status"
             )
