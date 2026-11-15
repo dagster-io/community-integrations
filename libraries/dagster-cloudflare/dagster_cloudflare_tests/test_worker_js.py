@@ -12,6 +12,7 @@ def test_worker_unit_tests():
     tests = sorted(str(p) for p in (WORKER / "test").glob("*.test.js"))
     result = subprocess.run(
         ["node", "--test", *tests],
+        check=False,
         cwd=WORKER,
         capture_output=True,
         text=True,
