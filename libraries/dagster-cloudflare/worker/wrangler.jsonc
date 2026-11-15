@@ -19,7 +19,6 @@
     {
       "class_name": "RunContainer",
       "scheduling_policy": "durable_object",
-      "max_instances": 10,
       "images": {
         "default": {"dockerfile": "./Dockerfile", "build_context": "."}
       }

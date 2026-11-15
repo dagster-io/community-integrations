@@ -101,10 +101,34 @@ Per-run overrides with run tags:
 
 - Cloudflare Containers have instance size, disk, and concurrency limits; see
   [limits](https://developers.cloudflare.com/containers/platform-details/limits/).
-  Set `max_instances` in `wrangler.jsonc` and Dagster's run queue limits to match.
+  Set Dagster's run queue limit (`max_concurrent_runs`) to match. `max_instances`
+  is not accepted for `scheduling_policy: durable_object`; `wrangler` rejects it.
 - The image is fixed at `wrangler deploy` time. Deploy the Worker again when
   your code image changes.
 - Each run pays for container start time; short runs are dominated by it.
+
+## Try it locally
+
+`wrangler dev` runs the Worker and its containers on your machine with Docker, so
+you can test the whole path before you deploy:
+
+```sh
+cd worker
+printf 'DISPATCH_TOKEN=%s\n' "$DAGSTER_CLOUDFLARE_TOKEN" > .dev.vars
+npx wrangler dev --port 8787
+```
+
+Set `endpoint: http://localhost:8787` in `dagster.yaml`. Notes:
+
+- `wrangler dev` builds the image for `linux/amd64`, also on Apple silicon.
+- Instance sizes are not applied; the local container has no memory limit.
+- The run container reaches services on your machine through
+  `host.docker.internal` (Docker Desktop), not `localhost`. Set it for the run
+  only, for example `env_vars: [DAGSTER_PG_HOST=host.docker.internal]`.
+- On Linux, the local container runtime must reach `wrangler` on the host from
+  the Docker bridge. A host firewall that blocks this (for example `ufw` with
+  default rules) makes each start fail after about 20 seconds with
+  `Container failed to start`.
 
 ## Develop
 
