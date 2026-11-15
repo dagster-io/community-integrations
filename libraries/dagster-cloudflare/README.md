@@ -93,6 +93,8 @@ Per-run overrides with run tags:
   lost, it asks the Worker for the run's state before it reports a failure.
 - **Health.** Run monitoring reads the state from the Worker. A container that
   exits with code 137 (killed, usually for memory) is reported with that cause.
+  With the default multiprocess executor, an out-of-memory kill usually stops
+  only the step process, and Dagster itself reports the failed step.
 - **Terminate.** The Worker sends `SIGTERM`, so Dagster records the run as canceled,
   and stops the container after `STOP_TIMEOUT_MS` if it is still running.
 - **Retention.** The Worker deletes a finished run's state after `RETENTION_DAYS`.
