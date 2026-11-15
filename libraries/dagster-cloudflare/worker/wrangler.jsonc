@@ -1,0 +1,29 @@
+// Example configuration. Copy it next to your Dockerfile and change the names.
+{
+  "name": "dagster-runs",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-01",
+  "vars": {
+    // Used when the launcher sends no instance. Names: lite, standard-1 .. standard-4.
+    "DEFAULT_INSTANCE": "standard-1",
+    // Key in "images" below used when the launcher sends no image.
+    "DEFAULT_IMAGE": "default"
+    // Optional: "ENTRYPOINT_PREFIX": "[\"/opt/dagster-cloudflare/with-access-tunnel.sh\"]",
+    // Optional: "RETENTION_DAYS": "7", "STOP_TIMEOUT_MS": "30000", "HEARTBEAT_MS": "300000"
+  },
+  // Secrets (wrangler secret put): DISPATCH_TOKEN (required), RUN_ENV_JSON (optional,
+  // a JSON object of env vars for every run, for example database settings).
+  "durable_objects": {"bindings": [{"name": "RUNS", "class_name": "RunContainer"}]},
+  "migrations": [{"tag": "v1", "new_sqlite_classes": ["RunContainer"]}],
+  "containers": [
+    {
+      "class_name": "RunContainer",
+      "scheduling_policy": "durable_object",
+      "max_instances": 10,
+      "images": {
+        "default": {"dockerfile": "./Dockerfile", "build_context": "."}
+      }
+    }
+  ],
+  "observability": {"enabled": true}
+}
