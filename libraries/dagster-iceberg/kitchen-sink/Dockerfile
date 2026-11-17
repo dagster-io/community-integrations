@@ -42,20 +42,21 @@ ENV ICEBERG_SPARK_RUNTIME_VERSION=3.5_2.12
 ENV ICEBERG_VERSION=1.9.1
 ENV PYICEBERG_VERSION=0.9.1
 
-RUN curl --retry 5 -fSL https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz -o spark-${SPARK_VERSION}-bin-hadoop3.tgz \
- && tar xzf spark-${SPARK_VERSION}-bin-hadoop3.tgz --directory /opt/spark --strip-components 1 \
- && rm -rf spark-${SPARK_VERSION}-bin-hadoop3.tgz
+# The Spark distribution comes from the official apache/spark image, pinned by
+# digest, because archive.apache.org throttles large downloads to the point of
+# stalling a build.  SPARK_VERSION must match the image tag.
+COPY --from=apache/spark:3.5.8@sha256:1916d1d43a6ff0e4d7ac682c84c0412e4a609fca11dd56cfdae592dcde3a378c /opt/spark /opt/spark
 
 # Download iceberg spark runtime
-RUN curl --retry 5 -s https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-${ICEBERG_SPARK_RUNTIME_VERSION}/${ICEBERG_VERSION}/iceberg-spark-runtime-${ICEBERG_SPARK_RUNTIME_VERSION}-${ICEBERG_VERSION}.jar \
+RUN curl --retry 5 --fail --connect-timeout 20 --max-time 300 -sS https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-${ICEBERG_SPARK_RUNTIME_VERSION}/${ICEBERG_VERSION}/iceberg-spark-runtime-${ICEBERG_SPARK_RUNTIME_VERSION}-${ICEBERG_VERSION}.jar \
       -Lo /opt/spark/jars/iceberg-spark-runtime-${ICEBERG_SPARK_RUNTIME_VERSION}-${ICEBERG_VERSION}.jar
 
 
 # Download AWS bundle
-RUN curl --retry 5 -s https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-aws-bundle/${ICEBERG_VERSION}/iceberg-aws-bundle-${ICEBERG_VERSION}.jar \
+RUN curl --retry 5 --fail --connect-timeout 20 --max-time 300 -sS https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-aws-bundle/${ICEBERG_VERSION}/iceberg-aws-bundle-${ICEBERG_VERSION}.jar \
       -Lo /opt/spark/jars/iceberg-aws-bundle-${ICEBERG_VERSION}.jar
 
-COPY spark-defaults.conf /opt/spark/conf
+COPY spark-defaults.conf /opt/spark/conf/
 ENV PATH="/opt/spark/sbin:/opt/spark/bin:${PATH}"
 
 RUN chmod u+x /opt/spark/sbin/* && \
