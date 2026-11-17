@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM python:3.9-bullseye
+FROM python:3.11-bookworm
 
 RUN apt-get -qq update && \
     apt-get -qq install -y --no-install-recommends \
@@ -21,7 +21,7 @@ RUN apt-get -qq update && \
       curl \
       vim \
       unzip \
-      openjdk-11-jdk \
+      openjdk-17-jdk \
       build-essential \
       software-properties-common \
       ssh && \
@@ -42,7 +42,7 @@ ENV ICEBERG_SPARK_RUNTIME_VERSION=3.5_2.12
 ENV ICEBERG_VERSION=1.8.0
 ENV PYICEBERG_VERSION=0.8.1
 
-RUN curl --retry 5 -fSL https://dlcdn.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz -o spark-${SPARK_VERSION}-bin-hadoop3.tgz \
+RUN curl --retry 5 -fSL https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz -o spark-${SPARK_VERSION}-bin-hadoop3.tgz \
  && tar xzf spark-${SPARK_VERSION}-bin-hadoop3.tgz --directory /opt/spark --strip-components 1 \
  && rm -rf spark-${SPARK_VERSION}-bin-hadoop3.tgz
 
