@@ -651,15 +651,15 @@ wheels = [
 
 [[package]]
 name = "grpcio-health-checking"
-version = "1.78.2"
+version = "1.78.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "grpcio" },
     { name = "protobuf" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d2/f3/392df54cc62963f044969166091cee3be0b50dc5d14cbb680f2c10e85962/grpcio_health_checking-1.78.2.tar.gz", hash = "sha256:f82da969db0700d13d5a9ec929bbd2460982a8b62e61368eeb398991fd6d543e", size = 17178, upload-time = "2026-11-05T08:23:14.508Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8e/ac/8eb871f4e47b11abfe45497e6187a582ec680ccd7232706d228474a8c7a5/grpcio_health_checking-1.78.0.tar.gz", hash = "sha256:78526d5c60b9b99fd18954b89f86d70033c702e96ad6ccc9749baf16136979b3", size = 17008, upload-time = "2026-02-06T10:01:47.269Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1f/03/36139ae23c3cd4b0f7caa6f8ccd3010b951dc877550e1e25ca93135a4be8/grpcio_health_checking-1.78.2-py3-none-any.whl", hash = "sha256:14d8ac56daacc1ab05c1e351be62c55fc74efa0d76d6966bacef1a2acbc0c18a", size = 19166, upload-time = "2026-11-05T08:21:45.536Z" },
+    { url = "https://files.pythonhosted.org/packages/8e/30/dbaf47e2210697e2923b49eb62a6a2c07d5ee55bb40cff1e6cc0c5bb22e1/grpcio_health_checking-1.78.0-py3-none-any.whl", hash = "sha256:309798c098c5de72a9bff7172d788fdf309d246d231db9955b32e7c1c773fbeb", size = 19010, upload-time = "2026-02-06T10:01:37.949Z" },
 ]
 
 [[package]]
