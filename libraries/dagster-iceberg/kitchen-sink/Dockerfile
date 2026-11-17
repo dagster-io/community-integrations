@@ -56,7 +56,7 @@ RUN curl --retry 5 --fail --connect-timeout 20 --max-time 300 -sS https://repo1.
 RUN curl --retry 5 --fail --connect-timeout 20 --max-time 300 -sS https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-aws-bundle/${ICEBERG_VERSION}/iceberg-aws-bundle-${ICEBERG_VERSION}.jar \
       -Lo /opt/spark/jars/iceberg-aws-bundle-${ICEBERG_VERSION}.jar
 
-COPY spark-defaults.conf /opt/spark/conf
+COPY spark-defaults.conf /opt/spark/conf/
 ENV PATH="/opt/spark/sbin:/opt/spark/bin:${PATH}"
 
 RUN chmod u+x /opt/spark/sbin/* && \
