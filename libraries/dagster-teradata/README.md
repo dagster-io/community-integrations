@@ -11,6 +11,64 @@ source .venv/bin/activate
 pip install dagster-teradata
 ```
 
+To use the built-in pandas, polars or PySpark I/O managers, install the matching extra:
+
+```
+pip install "dagster-teradata[pandas]"   # TeradataPandasIOManager
+pip install "dagster-teradata[polars]"   # TeradataPolarsIOManager
+pip install "dagster-teradata[pyspark]"  # TeradataPySparkIOManager (JDBC, PySpark 3.4-3.5, classic sessions only)
+```
+
+## Documentation
+
+- **[Teradata I/O Manager — User Guide](docs/io-manager.md)** — store Dagster assets as
+  Teradata tables. Starts from "what is an I/O manager?" and covers quick start, table
+  naming, partitions, type handlers, troubleshooting and live testing.
+
+## I/O manager quick look
+
+`TeradataPandasIOManager` persists any asset that returns a `pandas.DataFrame` as a
+Teradata table, and loads it back for downstream assets — no SQL, no `CREATE TABLE`,
+no subclassing:
+
+```python
+import pandas as pd
+from dagster import Definitions, EnvVar, asset
+
+from dagster_teradata import TeradataPandasIOManager, TeradataResource
+
+
+@asset(key_prefix=["analytics"])
+def customers() -> pd.DataFrame:
+    """Stored as the Teradata table analytics.customers."""
+    return pd.DataFrame({"id": [1, 2, 3], "name": ["ada", "grace", "alan"]})
+
+
+@asset(key_prefix=["analytics"])
+def vip_customers(customers: pd.DataFrame) -> pd.DataFrame:
+    """Reads analytics.customers, writes analytics.vip_customers."""
+    return customers[customers["id"] > 1]
+
+
+defs = Definitions(
+    assets=[customers, vip_customers],
+    resources={
+        "io_manager": TeradataPandasIOManager(
+            teradata=TeradataResource(
+                host=EnvVar("TERADATA_HOST"),
+                user=EnvVar("TERADATA_USER"),
+                password=EnvVar("TERADATA_PASSWORD"),
+                database=EnvVar("TERADATA_DATABASE"),
+            ),
+        ),
+    },
+)
+```
+
+Storing another in-memory type? Subclass `TeradataIOManager` with your own
+`DbTypeHandler`. See the [user guide](docs/io-manager.md) for partitions, database
+resolution, the full pandas dtype mapping and troubleshooting.
+
 ## Example Usage
 
 This offers seamless integration with Teradata Vantage, facilitating efficient workflows for data processing, management,
@@ -30,6 +88,7 @@ td_resource = TeradataResource(
     password=EnvVar("TERADATA_PASSWORD"),
     database=EnvVar("TERADATA_DATABASE"),
 )
+
 
 def test_execute_query(tmp_path):
     @op(required_resource_keys={"teradata"})
@@ -58,6 +117,7 @@ td_resource = TeradataResource(
     database=EnvVar("TERADATA_DATABASE"),
 )
 
+
 def test_drop_table(tmp_path):
     @op(required_resource_keys={"teradata"})
     def example_test_drop_table(context):
@@ -79,6 +139,7 @@ import os
 import pytest
 from dagster import job, op, EnvVar
 from dagster_teradata import teradata_resource
+
 
 def test_create_teradata_compute_cluster(tmp_path):
     @op(required_resource_keys={"teradata"})
@@ -185,7 +246,7 @@ output = bteq_operator(
     file_path="script.sql",
     remote_host="example.com",
     remote_user="user",
-    ssh_key_path="/path/to/key.pem"
+    ssh_key_path="/path/to/key.pem",
 )
 ```
 
@@ -248,7 +309,7 @@ It supports both local and remote execution (via SSH), allowing you to manage Te
 return_code = ddl_operator(
     ddl=[
         "CREATE TABLE employees (id INT, name VARCHAR(100));",
-        "CREATE INDEX idx_name ON employees(name);"
+        "CREATE INDEX idx_name ON employees(name);",
     ]
 )
 ```
@@ -261,7 +322,7 @@ return_code = ddl_operator(
     remote_host="td-server.example.com",
     remote_user="td_admin",
     ssh_key_path="/home/td_admin/.ssh/id_rsa",
-    ddl_job_name="drop_sales_table"
+    ddl_job_name="drop_sales_table",
 )
 ```
 
@@ -274,7 +335,7 @@ return_code = ddl_operator(
     remote_user="teradata",
     remote_password="password123",
     error_list=[3807],  # Ignore 'database already exists' error
-    ddl_job_name="create_reporting_db"
+    ddl_job_name="create_reporting_db",
 )
 ```
 
@@ -286,12 +347,13 @@ The `ddl_operator` can be used within Dagster assets or ops to automate schema m
 from dagster import asset
 from dagster_teradata import DdlOperator
 
+
 @asset
 def create_tables(context):
     context.resources.teradata.ddl_operator(
         ddl=[
             "CREATE TABLE sales (id INTEGER, amount DECIMAL(10,2));",
-            "CREATE TABLE customers (cust_id INTEGER, name VARCHAR(100));"
+            "CREATE TABLE customers (cust_id INTEGER, name VARCHAR(100));",
         ]
     )
 ```
@@ -374,7 +436,7 @@ def file_to_table_load(context):
         source_file_name="/data/customers.csv",
         target_table="customers",
         source_format="Delimited",
-        source_text_delimiter="|"
+        source_text_delimiter="|",
     )
 ```
 
@@ -388,7 +450,7 @@ def table_to_file_export(context):
         source_table="sales",
         target_file_name="/data/sales_export.csv",
         target_format="Delimited",
-        target_text_delimiter=","
+        target_text_delimiter=",",
     )
 ```
 
@@ -401,7 +463,7 @@ def table_to_table_transfer(context):
     context.resources.teradata.tdload_operator(
         source_table="staging_sales",
         target_table="prod_sales",
-        insert_stmt="INSERT INTO prod_sales SELECT * FROM staging_sales WHERE amount > 1000"
+        insert_stmt="INSERT INTO prod_sales SELECT * FROM staging_sales WHERE amount > 1000",
     )
 ```
 
@@ -413,7 +475,7 @@ Export data using a custom SQL query.
 def custom_export(context):
     context.resources.teradata.tdload_operator(
         select_stmt="SELECT customer_id, SUM(amount) FROM sales GROUP BY customer_id",
-        target_file_name="/data/customer_totals.csv"
+        target_file_name="/data/customer_totals.csv",
     )
 ```
 
@@ -426,7 +488,7 @@ def custom_export(context):
 def use_job_var_file(context):
     context.resources.teradata.tdload_operator(
         tdload_job_var_file="/config/load_job_vars.txt",
-        tdload_options="-j my_load_job"
+        tdload_options="-j my_load_job",
     )
 ```
 
@@ -441,7 +503,7 @@ def remote_tpt_operation(context):
         remote_host="td-prod.company.com",
         remote_user="tdadmin",
         ssh_key_path="/home/user/.ssh/td_key",
-        remote_working_dir="/tmp/tpt_work"
+        remote_working_dir="/tmp/tpt_work",
     )
 ```
 
@@ -454,7 +516,7 @@ def custom_tpt_options(context):
         source_table="large_table",
         target_file_name="/data/export.csv",
         tdload_options="-f CSV -m 4 -s ,",  # Format: CSV, 4 streams, comma separator
-        tdload_job_name="custom_export_job"
+        tdload_job_name="custom_export_job",
     )
 ```
 
