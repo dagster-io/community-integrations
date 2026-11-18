@@ -12,23 +12,22 @@ from dagster_iceberg.io_manager.spark import SparkIcebergTypeHandler
 KEYS = ["plain", "it's", "back\\slash", "x') OR 1=1 --", "x\\') OR 1=1 --"]
 
 
+# The Spark Connect server in the compose stack runs the filter, so the test does
+# not depend on a JVM on the machine running pytest.
 @pytest.fixture(scope="module")
 def spark() -> Iterator[SparkSession]:
-    session = (
-        SparkSession.builder.master("local[1]")
-        .config("spark.ui.enabled", "false")
-        .getOrCreate()
-    )
+    session = SparkSession.builder.remote("sc://localhost").getOrCreate()
     session.createDataFrame(
         [(key,) for key in KEYS], ["key"]
-    ).createOrReplaceGlobalTempView("keys")
+    ).createOrReplaceGlobalTempView("partition_keys")
     yield session
+    session.catalog.dropGlobalTempView("partition_keys")
     session.stop()
 
 
 def keys_slice(*keys: str) -> TableSlice:
     return TableSlice(
-        table="keys",
+        table="partition_keys",
         schema="global_temp",
         partition_dimensions=[
             TablePartitionDimension(partition_expr="key", partitions=list(keys))
