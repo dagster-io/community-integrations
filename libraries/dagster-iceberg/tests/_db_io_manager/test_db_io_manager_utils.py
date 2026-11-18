@@ -124,14 +124,14 @@ def test_generate_partition_dimensions_color_varying(
         1,
         1,
         0,
-        tzinfo=dt.timezone.utc,
+        tzinfo=dt.UTC,
     )
     assert partition_dimensions[1].partitions.end == dt.datetime(
         2022,
         1,
         2,
         0,
-        tzinfo=dt.timezone.utc,
+        tzinfo=dt.UTC,
     )
     assert sorted(partition_dimensions[0].partitions) == ["blue", "red", "yellow"]
 
@@ -161,13 +161,13 @@ def test_generate_partition_dimensions_date_varying(
         1,
         1,
         0,
-        tzinfo=dt.timezone.utc,
+        tzinfo=dt.UTC,
     )
     assert partition_dimensions[1].partitions.end == dt.datetime(
         2022,
         1,
         4,
         0,
-        tzinfo=dt.timezone.utc,
+        tzinfo=dt.UTC,
     )
     assert partition_dimensions[0].partitions == ["red"]

@@ -5,7 +5,7 @@
   mkShell,
   ...
 }: let
-  python = pkgs.python310;
+  python = pkgs.python311;
 in
   mkShell {
     # Create your shell

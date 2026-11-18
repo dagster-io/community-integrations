@@ -2,7 +2,7 @@
 name = "example-integration"
 description = "<insert description here>"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "dagster>=1.8.0",
 ]

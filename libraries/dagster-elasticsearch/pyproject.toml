@@ -2,7 +2,7 @@
 name = "dagster-elasticsearch"
 description = "Dagster integration for Elasticsearch. Resource and IO manager with optional alias rollover."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "dagster>=1.13.0",
     # Loose pin: Elasticsearch 8, 9, and 10 use the same bulk + alias APIs

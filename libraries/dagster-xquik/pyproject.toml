@@ -2,7 +2,7 @@
 name = "dagster-xquik"
 description = "Dagster resource for read-only X/Twitter data workflows through Xquik."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "dagster>=1.8.0",
 ]
@@ -26,7 +26,7 @@ packages = ["dagster_xquik"]
 version = {attr = "dagster_xquik.__version__"}
 
 [tool.ty.environment]
-python-version = "3.10"
+python-version = "3.11"
 
 [tool.ty.src]
 include = ["dagster_xquik", "dagster_xquik_tests"]
