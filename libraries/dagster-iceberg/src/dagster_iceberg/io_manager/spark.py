@@ -240,6 +240,14 @@ def _time_window_where_clause(table_partition: TablePartitionDimension) -> str:
     return f"""{table_partition.partition_expr} >= TIMESTAMP '{start_dt_str}' AND {table_partition.partition_expr} < TIMESTAMP '{end_dt_str}'"""
 
 
+# Spark SQL unescapes backslash sequences inside string literals, so doubling quotes
+# is not enough: backslashes must be escaped too.
+_SPARK_LITERAL_ESCAPES = str.maketrans({"\\": "\\\\", "'": "\\'"})
+
+
 def _static_where_clause(table_partition: TablePartitionDimension) -> str:
-    partitions = ", ".join(f"'{partition}'" for partition in table_partition.partitions)
+    partitions = ", ".join(
+        f"'{partition.translate(_SPARK_LITERAL_ESCAPES)}'"
+        for partition in table_partition.partitions
+    )
     return f"""{table_partition.partition_expr} in ({partitions})"""

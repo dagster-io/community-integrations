@@ -14,3 +14,7 @@
 
 - Rename I/O managers from `<Storage><Engine>IOManager` to `<Engine><Storage>IOManager`.
 - Support for pyiceberg 0.10.0 (#241). Change behavior for how partition field names are calculated to address validation introduced in [pyiceberg #2505](https://github.com/apache/iceberg-python/pull/2305). Partition field names calculated for Dagster asset partitions now include a configurable prefix before the column name they reference. **Migration note**: When updating partition specs on existing tables, new partition field names will be generated using the configured prefix (default: `part_`). For example, a partition field previously named `timestamp` will become `part_timestamp`. Existing data remains accessible, but queries referencing partition fields will need to be updated to use the new naming convention. To maintain backward compatibility, existing tables with unchanged partition specs will retain their original field names until their partition specs are updated. 
+
+### Fixed
+
+- Static partition keys are now escaped in the SQL filters that the Spark, Polars, and Daft I/O managers build, so a key that contains a quote (or, for Spark, a backslash) matches only its own rows.
