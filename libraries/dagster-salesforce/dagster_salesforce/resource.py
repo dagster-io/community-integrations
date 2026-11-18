@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from simple_salesforce.api import Salesforce
+from simple_salesforce.format import format_soql
 from simple_salesforce.bulk2 import (
     ColumnDelimiter,
     LineEnding,
@@ -476,7 +477,10 @@ class SalesforceResource(dg.ConfigurableResource):
             # Get user info - if we have a username, use it to query
             if username:
                 user_info = self._sf_client.query(
-                    f"SELECT Id, Username, Name, Email FROM User WHERE Username = '{username}' LIMIT 1"
+                    format_soql(
+                        "SELECT Id, Username, Name, Email FROM User WHERE Username = {} LIMIT 1",
+                        username,
+                    )
                 )
                 current_user = user_info["records"][0] if user_info["records"] else {}
             else:
