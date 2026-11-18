@@ -14,7 +14,7 @@ Asset-centric OpenLineage emission for Dagster. Emits schema, column-lineage, da
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.11+
 - Dagster `>=1.11.6`
 
 ## Installation

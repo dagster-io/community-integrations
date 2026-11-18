@@ -3,7 +3,7 @@ name = "typescript_pipes_testing"
 version = "0.1.0"
 description = "Configuration for testing the typescript pipes implementation"
 readme = "README.md"
-requires-python = ">=3.10,<3.13" # for compatibility with the pipes golden tests
+requires-python = ">=3.11,<3.13" # for compatibility with the pipes golden tests
 dependencies = [
     "dagster",
     "dagster-cloud",
