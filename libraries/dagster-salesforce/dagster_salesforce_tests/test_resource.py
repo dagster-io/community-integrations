@@ -26,6 +26,7 @@ from dagster_salesforce import (
     SalesforceObject,
     SalesforceField,
 )
+from dagster_salesforce.credentials import SalesforceJWTOAuthCredentials
 from dagster_salesforce_tests.helpers import TestSalesforceResource
 
 
@@ -525,6 +526,37 @@ class TestSalesforceResourceConnectionInfo(TestSalesforceResource):
         assert result["organization_name"] == "Test Company"
         assert result["instance_type"] == "Production"
         assert result["is_sandbox"] is False
+
+    @pytest.mark.parametrize(
+        ("username", "soql_literal"),
+        [
+            ("plain@example.com", "'plain@example.com'"),
+            ("o'brien@example.com", r"'o\'brien@example.com'"),
+            ("back\\slash@example.com", r"'back\\slash@example.com'"),
+        ],
+    )
+    def test_check_connection_quotes_username(
+        self,
+        private_key_content: str,
+        username: str,
+        soql_literal: str,
+    ) -> None:
+        resource = SalesforceResource(
+            credentials=SalesforceJWTOAuthCredentials(
+                username=username,
+                consumer_key="test_consumer_key",
+                privatekey=private_key_content,
+            )
+        )
+        resource.client.query.return_value = {"records": []}
+
+        resource.check_connection()
+
+        user_query = resource.client.query.call_args_list[0].args[0]
+        assert user_query == (
+            "SELECT Id, Username, Name, Email FROM User "
+            f"WHERE Username = {soql_literal} LIMIT 1"
+        )
 
     def test_check_connection_failure(
         self, salesforce_resource: SalesforceResource
