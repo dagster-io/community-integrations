@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 try:
     from pyspark.sql.connect.dataframe import DataFrame
+    from pyspark.sql.connect.functions import expr
     from pyspark.sql.connect.session import SparkSession
     from pyspark.sql.functions import days, hours, months
 except ImportError as e:
@@ -74,7 +75,19 @@ class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
         self, table_slice: TableSlice, connection: SparkSession
     ) -> DataFrame:
         """Reads a PySpark dataframe from an Iceberg table."""
-        return connection.sql(SparkIcebergDbClient.get_select_statement(table_slice))
+        # Static partition keys are applied as column filters instead of being written
+        # into the SQL text. Spark sends them to the server as literal values, so no
+        # parser setting (such as spark.sql.parser.escapedStringLiterals) or ${...}
+        # variable substitution can change the key that the filter compares against.
+        frame = connection.sql(_time_window_select_statement(table_slice))
+        for partition_dimension in table_slice.partition_dimensions or []:
+            if not isinstance(partition_dimension.partitions, TimeWindow):
+                frame = frame.where(
+                    expr(partition_dimension.partition_expr).isin(
+                        list(partition_dimension.partitions)
+                    )
+                )
+        return frame.selectExpr(*table_slice.columns) if table_slice.columns else frame
 
     def load_input(
         self,
@@ -240,8 +253,24 @@ def _time_window_where_clause(table_partition: TablePartitionDimension) -> str:
     return f"""{table_partition.partition_expr} >= TIMESTAMP '{start_dt_str}' AND {table_partition.partition_expr} < TIMESTAMP '{end_dt_str}'"""
 
 
-# Spark SQL unescapes backslash sequences inside string literals, so doubling quotes
-# is not enough: backslashes must be escaped too.
+def _time_window_select_statement(table_slice: TableSlice) -> str:
+    query = f"SELECT * FROM {table_slice.schema}.{table_slice.table}"
+    time_windows = [
+        partition_dimension
+        for partition_dimension in table_slice.partition_dimensions or []
+        if isinstance(partition_dimension.partitions, TimeWindow)
+    ]
+    if time_windows:
+        query += " WHERE\n" + " AND\n".join(
+            _time_window_where_clause(partition_dimension)
+            for partition_dimension in time_windows
+        )
+    return query
+
+
+# get_select_statement's text is only recorded as the "Query" output metadata; reads
+# never run it. Keys are escaped for Spark's default parser settings so the text
+# reads as the query a user would type.
 _SPARK_LITERAL_ESCAPES = str.maketrans({"\\": "\\\\", "'": "\\'"})
 
 

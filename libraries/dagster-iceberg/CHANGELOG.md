@@ -17,4 +17,4 @@
 
 ### Fixed
 
-- Static partition keys are now escaped in the SQL filters that the Spark, Polars, and Daft I/O managers build, so a key that contains a quote (or, for Spark, a backslash) matches only its own rows.
+- A static partition key that contains a quote or a backslash now matches only its own rows. The Spark I/O manager passes keys to Spark as values instead of writing them into SQL, so this holds with `spark.sql.parser.escapedStringLiterals` on or off, and the Polars and Daft I/O managers escape quotes in the SQL filters they build.
