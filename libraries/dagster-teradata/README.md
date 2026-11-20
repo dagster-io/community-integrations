@@ -126,6 +126,8 @@ def test_create_teradata_compute_cluster(tmp_path):
 
 The BTEQ, DDL, and TdLoad operators verify the remote host's SSH key before they send credentials or scripts. They accept a host only if its key is in `/etc/ssh/ssh_known_hosts`, `~/.ssh/known_hosts`, or the file passed as `ssh_known_hosts_path`. An unknown host fails with a `DagsterError` that names the host and its key fingerprint.
 
+Earlier releases accepted any host key. After upgrading, remote execution against a host that is in none of those files fails until you trust the host in one of the ways below.
+
 To trust a new host, confirm its fingerprint with the host's administrator and add its key to `~/.ssh/known_hosts` (for example with `ssh-keyscan -p <port> <host>`), or pass a known_hosts file with `ssh_known_hosts_path`. Passing `ssh_accept_unknown_host_key=True` accepts any host whose key is in no known_hosts file, which leaves the connection open to man-in-the-middle attacks; a host whose key differs from a known_hosts entry is still rejected.
 
 ## BTEQ Operator
