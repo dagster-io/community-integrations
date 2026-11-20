@@ -1,0 +1,30 @@
+[project]
+name = "dagster-livetennisapi"
+description = "Dagster resource and asset factories for the Live Tennis API"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dagster>=1.8.0",
+    "livetennisapi>=1.3.2",
+]
+dynamic = ["version"]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "pytest",
+    "ty==0.0.37",
+    "httpx>=0.27",
+]
+
+# ty configuration is inherited from the repository root pyproject.toml.
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dagster_livetennisapi"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dagster_livetennisapi.__version__"}
