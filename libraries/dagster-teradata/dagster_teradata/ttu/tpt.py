@@ -20,6 +20,7 @@ from dagster_teradata.ttu.utils.tpt_util import (
     read_file,
 )
 
+from dagster_teradata.ttu.ssh import new_ssh_client
 from dagster_teradata.ttu.tpt_executer import (
     execute_ddl,
     _execute_tdload_via_ssh,
@@ -65,6 +66,8 @@ class DdlOperator:
         self.remote_user = None
         self.remote_remote_password = None
         self.ssh_key_path = None
+        self.ssh_known_hosts_path = None
+        self.ssh_accept_unknown_host_key = False
         self.remote_port = None
 
     def _setup_ssh_connection(
@@ -97,9 +100,9 @@ class DdlOperator:
             - Stores new credentials if successfully authenticated
         """
         try:
-            # Initialize SSH client with auto-add policy for host keys
-            self.ssh_client = paramiko.SSHClient()
-            self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            self.ssh_client = new_ssh_client(
+                self.ssh_known_hosts_path, self.ssh_accept_unknown_host_key
+            )
 
             # Authenticate using SSH key if provided
             if key_path:
@@ -139,6 +142,8 @@ class DdlOperator:
         remote_password: str | None = None,
         ssh_key_path: str | None = None,
         remote_port: int = 22,
+        ssh_known_hosts_path: str | None = None,
+        ssh_accept_unknown_host_key: bool = False,
     ) -> int | None:
         """Execute DDL operations on Teradata."""
         # Set instance variables from parameters
@@ -151,6 +156,8 @@ class DdlOperator:
         self.remote_remote_password = remote_password
         self.ssh_key_path = ssh_key_path
         self.remote_port = remote_port
+        self.ssh_known_hosts_path = ssh_known_hosts_path
+        self.ssh_accept_unknown_host_key = ssh_accept_unknown_host_key
 
         # Validate DDL input
         if (
@@ -288,6 +295,8 @@ class TdLoadOperator:
         self.remote_user = None
         self.remote_remote_password = None
         self.ssh_key_path = None
+        self.ssh_known_hosts_path = None
+        self.ssh_accept_unknown_host_key = False
         self.remote_port = None
 
     def _setup_ssh_connection(
@@ -320,9 +329,9 @@ class TdLoadOperator:
             - Stores new credentials if successfully authenticated
         """
         try:
-            # Initialize SSH client with auto-add policy for host keys
-            self.ssh_client = paramiko.SSHClient()
-            self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            self.ssh_client = new_ssh_client(
+                self.ssh_known_hosts_path, self.ssh_accept_unknown_host_key
+            )
 
             # Authenticate using SSH key if provided
             if key_path:
@@ -372,6 +381,8 @@ class TdLoadOperator:
         remote_password: str | None = None,
         ssh_key_path: str | None = None,
         remote_port: int = 22,
+        ssh_known_hosts_path: str | None = None,
+        ssh_accept_unknown_host_key: bool = False,
     ) -> int | None:
         """Execute TPT load operation based on configuration."""
         # Set instance variables from parameters
@@ -394,6 +405,8 @@ class TdLoadOperator:
         self.remote_remote_password = remote_password
         self.ssh_key_path = ssh_key_path
         self.remote_port = remote_port
+        self.ssh_known_hosts_path = ssh_known_hosts_path
+        self.ssh_accept_unknown_host_key = ssh_accept_unknown_host_key
 
         # Validate parameters and determine operation mode
         mode = self._validate_and_determine_mode()
