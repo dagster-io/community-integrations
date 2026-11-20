@@ -226,7 +226,9 @@ class DagsterPartitionToSqlPredicateMapper(DagsterPartitionToPredicateMapper[str
         partition_expr: str,
         partition_filters: Sequence[str],
     ) -> str:
-        predicates = [f"{partition_expr} = '{p}'" for p in partition_filters]
+        # Polars and Daft SQL treat backslashes literally; a doubled quote is the only escape.
+        quoted = [p.replace("'", "''") for p in partition_filters]
+        predicates = [f"{partition_expr} = '{p}'" for p in quoted]
         if len(predicates) > 1:
             return f"({' OR '.join(predicates)})"
         return predicates[0]
