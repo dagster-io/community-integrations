@@ -90,6 +90,7 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
         wrapped: EventLogStorage,
         *,
         namespace: Optional[str] = None,
+        job_namespace: Optional[str] = None,
         namespace_template: Optional[str] = None,
         timeout: float = DEFAULT_TIMEOUT_SECONDS,
         strict_assertion_mapping: bool = False,
@@ -100,6 +101,7 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
         self._inst_data = inst_data
         self._adapter = adapter or OpenLineageAdapter(
             namespace=namespace,
+            job_namespace=job_namespace,
             namespace_template=namespace_template,
             timeout=timeout,
             strict_assertion_mapping=strict_assertion_mapping,
@@ -128,6 +130,7 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
                 "config": Field(dict, is_required=False, default_value={}),
             },
             "namespace": Field(str, is_required=False),
+            "job_namespace": Field(str, is_required=False),
             # Supports {namespace} token only in Mechanism A. The {tag:KEY}
             # token is parsed and accepted but always resolves to an empty
             # string here because EventLogStorage has no access to RunStorage
@@ -158,6 +161,7 @@ class OpenLineageEventLogStorage(EventLogStorage, ConfigurableClass):
         return cls(
             wrapped=inner,
             namespace=config_value.get("namespace"),
+            job_namespace=config_value.get("job_namespace"),
             namespace_template=config_value.get("namespace_template"),
             timeout=config_value.get("timeout", DEFAULT_TIMEOUT_SECONDS),
             strict_assertion_mapping=config_value.get(

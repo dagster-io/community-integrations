@@ -57,6 +57,7 @@ event_log_storage:
           env: DAGSTER_PG_URL
     namespace: my-company
     # Optional:
+    # job_namespace: dagster
     # namespace_template: "{namespace}/{tag:tenant}"
     # timeout: 2.0
     # strict_assertion_mapping: false
@@ -83,6 +84,7 @@ Environment variables go on the process that runs the Dagster daemon:
 - `OPENLINEAGE_URL` (required)
 - `OPENLINEAGE_API_KEY` (optional)
 - `OPENLINEAGE_NAMESPACE` (optional, default `dagster`)
+- `OPENLINEAGE_JOB_NAMESPACE` (optional; falls back to the dataset namespace)
 
 ## Namespace templates
 
@@ -92,6 +94,8 @@ Provide `namespace_template` (wrapper) or let the adapter/sensor derive the defa
 - `{tag:KEY}` — the run tag named `KEY`, empty if unset
 
 Adjacent slashes collapse; trailing slashes strip. Unknown tokens raise `NamespaceTemplateError` at construction. `{code_location}` and `{repository}` are deferred to v0.3 — they do not reliably reach `store_event` time.
+
+Templates apply to **dataset** namespaces only; `namespace_template` does not apply to `job_namespace`.
 
 Example:
 

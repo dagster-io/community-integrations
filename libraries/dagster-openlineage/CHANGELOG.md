@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Features
+
+- **Independent job namespace.** `OpenLineageAdapter` and `OpenLineageEventLogStorage` accept a `job_namespace` argument — also read from the `OPENLINEAGE_JOB_NAMESPACE` environment variable and configurable in `instance.yaml` — that names the run/job independently of the dataset namespace. Datasets stay namespaced by where the data lives (so a backend can match them to catalogued tables); the job can be namespaced by the orchestrator. Falls back to the dataset namespace when unset, so existing callers are unaffected. `namespace_template` does not apply to it.
+
 ## 0.2.0
 
 ### Breaking

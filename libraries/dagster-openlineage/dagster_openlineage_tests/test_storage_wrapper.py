@@ -126,6 +126,23 @@ def test_from_config_value_rehydrates_inner_storage():
     assert wrapper._adapter._namespace == "multi_tenant"
 
 
+def test_from_config_value_passes_job_namespace_to_adapter():
+    wrapper = OpenLineageEventLogStorage.from_config_value(
+        inst_data=None,
+        config_value={
+            "wrapped": {
+                "module": "dagster._core.storage.event_log.in_memory",
+                "class": "InMemoryEventLogStorage",
+                "config": {},
+            },
+            "namespace": "postgres://db:5432",
+            "job_namespace": "dagster://local",
+        },
+    )
+    assert wrapper._adapter._job_namespace == "dagster://local"
+    assert wrapper._adapter._namespace == "postgres://db:5432"
+
+
 def test_inst_data_preserved_through_round_trip():
     from dagster._serdes import ConfigurableClassData
 
