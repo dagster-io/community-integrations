@@ -18,3 +18,4 @@
 ### Fixed
 
 - A static partition key that contains a quote or a backslash now matches only its own rows. The Spark I/O manager passes keys to Spark as values instead of writing them into SQL, so this holds with `spark.sql.parser.escapedStringLiterals` on or off, and the Polars and Daft I/O managers escape quotes in the SQL filters they build.
+- Table, column, and partition names can no longer change the query an I/O manager runs. The Spark I/O manager reads with `SparkSession.table` and filters and selects with `col()`, so `columns` and `partition_expr` must be column names rather than SQL expressions, and `ensure_schema_exists` quotes the schema name and refuses one containing `${`. The Polars and Daft I/O managers quote column and partition names in the SQL they build, so a name must not carry its own SQL quotes. The "Query" output metadata quotes names that are not plain identifiers.
