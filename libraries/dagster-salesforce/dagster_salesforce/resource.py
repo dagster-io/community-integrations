@@ -1,4 +1,7 @@
 import json
+import operator
+import re
+
 import dagster as dg
 
 from datetime import datetime, timedelta, timezone
@@ -22,6 +25,16 @@ from dagster_salesforce.credentials import SalesforceCredentials
 from dagster_salesforce.utils import datetime_to_soql_str, _wait_for_job
 
 logger = dg.get_dagster_logger(__name__)
+
+# SOQL has no quoting for object or field names, so a name that is not a plain API name
+# (letters, digits, underscores) could add clauses to the query.
+_API_NAME = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
+
+
+def _soql_name(name: str, kind: str) -> str:
+    if not all(_API_NAME.fullmatch(part) for part in name.split(".")):
+        raise ValueError(f"{kind} {name!r} is not a Salesforce API name")
+    return name
 
 
 @record
@@ -141,13 +154,17 @@ class SalesforceObject(DagsterModel):
         :type limit: int
         """
 
-        query = f"SELECT {', '.join(f.name for f in self.fields.values() if not f.is_compound)} FROM {self.name}"
+        field_names = ", ".join(
+            _soql_name(f.name, "Field name")
+            for f in self.fields.values()
+            if not f.is_compound
+        )
+        query = f"SELECT {field_names} FROM {_soql_name(self.name, 'Object name')}"
         if incremental_from and incremental_key:
-            query += (
-                f" WHERE {incremental_key} >= {datetime_to_soql_str(incremental_from)}"
-            )
+            key = _soql_name(incremental_key, "Incremental key")
+            query += f" WHERE {key} >= {datetime_to_soql_str(incremental_from)}"
         if limit:
-            query += f" LIMIT {limit}"
+            query += f" LIMIT {operator.index(limit)}"
         return query
 
     def query_to_csv(
