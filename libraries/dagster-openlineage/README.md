@@ -60,6 +60,7 @@ event_log_storage:
     # namespace_template: "{namespace}/{tag:tenant}"
     # timeout: 2.0
     # strict_assertion_mapping: false
+    # exclude_asset_keys: ["*dbt*"]
 ```
 
 Set `OPENLINEAGE_URL` (and optionally `OPENLINEAGE_API_KEY`) in the environment of any process that writes Dagster events — typically the run worker and the daemon.

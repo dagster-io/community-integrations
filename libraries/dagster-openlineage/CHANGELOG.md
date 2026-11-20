@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Features
+
+- **`exclude_asset_keys` on the storage wrapper.** Exclude specific assets out of OpenLineage emitting lineage events via fnmatch glob patterns matched against `AssetKey.to_user_string()`, set in code or `instance.yaml`. Useful when a dedicated connector is the better source of an asset's lineage.
+
 ## 0.2.0
 
 ### Breaking
