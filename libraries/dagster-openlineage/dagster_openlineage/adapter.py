@@ -19,7 +19,11 @@ from openlineage.client.event_v2 import (
     RunState,
     StaticDataset,
 )
-from openlineage.client.facet_v2 import parent_run as parent_run_facet
+from openlineage.client.facet_v2 import (
+    job_type_job,
+    ownership_job,
+    parent_run as parent_run_facet,
+)
 
 from dagster import (
     AssetCheckEvaluation,
@@ -57,6 +61,10 @@ _PRODUCER = (
 
 set_producer(_PRODUCER)
 
+# Constant jobType facet fields. BATCH because an asset run is bounded, not streaming.
+_INTEGRATION = "DAGSTER"
+_PROCESSING_TYPE = "BATCH"
+
 log = logging.getLogger(__name__)
 
 
@@ -73,6 +81,7 @@ class OpenLineageAdapter:
         *,
         namespace: Optional[str] = None,
         namespace_template: Optional[str] = None,
+        team: Optional[str] = None,
         timeout: float = DEFAULT_TIMEOUT_SECONDS,
         strict_assertion_mapping: bool = False,
         emitter: Optional[OpenLineageEmitter] = None,
@@ -82,6 +91,13 @@ class OpenLineageAdapter:
             parse_namespace_template(namespace_template) if namespace_template else None
         )
         self._strict_assertion_mapping = strict_assertion_mapping
+        # default team (from arg or OPENLINEAGE_TEAM env) for any job with no per-asset owners
+        self._team = team or os.getenv("OPENLINEAGE_TEAM")
+        # jobType is the same for every job; build it once
+        self._job_type_facet = job_type_job.JobTypeJobFacet(
+            processingType=_PROCESSING_TYPE, integration=_INTEGRATION, jobType="JOB"
+        )
+        self._default_owners: List[str] = [f"team:{self._team}"] if self._team else []
         self._client = OpenLineageClient()
         self._emitter = emitter or OpenLineageEmitter(
             timeout=timeout, client=self._client
@@ -258,6 +274,7 @@ class OpenLineageAdapter:
         run_id: str,
         timestamp: float,
         *,
+        owners: Optional[Sequence[str]] = None,
         run_tags: Optional[Mapping[str, str]] = None,
     ) -> None:
         namespace = self._resolve_namespace(run_tags)
@@ -267,7 +284,9 @@ class OpenLineageAdapter:
                 eventTime=to_utc_iso_8601(timestamp),
                 run=self._build_run(namespace=namespace, run_id=run_id),
                 job=self._build_job(
-                    namespace=namespace, job_name=asset_key.to_user_string()
+                    namespace=namespace,
+                    job_name=asset_key.to_user_string(),
+                    owners=owners,
                 ),
                 producer=_PRODUCER,
                 outputs=[
@@ -287,6 +306,7 @@ class OpenLineageAdapter:
         metadata: Optional[Mapping[str, Any]] = None,
         upstream_asset_keys: Optional[Sequence[AssetKey]] = None,
         partition_key: Optional[str] = None,
+        owners: Optional[Sequence[str]] = None,
         run_tags: Optional[Mapping[str, str]] = None,
     ) -> None:
         namespace = self._resolve_namespace(run_tags)
@@ -306,7 +326,9 @@ class OpenLineageAdapter:
                     namespace=namespace, run_id=run_id, run_facets=run_facets
                 ),
                 job=self._build_job(
-                    namespace=namespace, job_name=asset_key.to_user_string()
+                    namespace=namespace,
+                    job_name=asset_key.to_user_string(),
+                    owners=owners,
                 ),
                 producer=_PRODUCER,
                 inputs=inputs,
@@ -329,6 +351,7 @@ class OpenLineageAdapter:
         error_message: Optional[str] = None,
         stack_trace: Optional[str] = None,
         partition_key: Optional[str] = None,
+        owners: Optional[Sequence[str]] = None,
         run_tags: Optional[Mapping[str, str]] = None,
     ) -> None:
         namespace = self._resolve_namespace(run_tags)
@@ -345,7 +368,9 @@ class OpenLineageAdapter:
                     namespace=namespace, run_id=run_id, run_facets=run_facets
                 ),
                 job=self._build_job(
-                    namespace=namespace, job_name=asset_key.to_user_string()
+                    namespace=namespace,
+                    job_name=asset_key.to_user_string(),
+                    owners=owners,
                 ),
                 producer=_PRODUCER,
                 outputs=[
@@ -404,6 +429,7 @@ class OpenLineageAdapter:
         timestamp: float,
         *,
         standalone: bool,
+        owners: Optional[Sequence[str]] = None,
         run_tags: Optional[Mapping[str, str]] = None,
     ) -> None:
         # Only emit when a check runs in its own job (standalone). When the
@@ -419,7 +445,9 @@ class OpenLineageAdapter:
                 eventType=RunState.START,
                 eventTime=to_utc_iso_8601(timestamp),
                 run=self._build_run(namespace=namespace, run_id=run_id),
-                job=self._build_job(namespace=namespace, job_name=job_name),
+                job=self._build_job(
+                    namespace=namespace, job_name=job_name, owners=owners
+                ),
                 producer=_PRODUCER,
                 inputs=[
                     InputDataset(namespace=namespace, name="/".join(asset_key.path))
@@ -434,6 +462,7 @@ class OpenLineageAdapter:
         run_id: str,
         timestamp: float,
         *,
+        owners: Optional[Sequence[str]] = None,
         run_tags: Optional[Mapping[str, str]] = None,
     ) -> None:
         namespace = self._resolve_namespace(run_tags)
@@ -458,7 +487,9 @@ class OpenLineageAdapter:
                 eventType=RunState.COMPLETE,
                 eventTime=to_utc_iso_8601(timestamp),
                 run=run,
-                job=self._build_job(namespace=namespace, job_name=job_name),
+                job=self._build_job(
+                    namespace=namespace, job_name=job_name, owners=owners
+                ),
                 producer=_PRODUCER,
                 inputs=[input_ds],
             )
@@ -522,9 +553,22 @@ class OpenLineageAdapter:
             )
         return Run(runId=run_id, facets=facets)
 
-    @staticmethod
-    def _build_job(namespace: str, job_name: str) -> Job:
-        return Job(namespace=namespace, name=job_name, facets={})
+    def _job_facets(self, owners: Optional[Sequence[str]] = None) -> Dict[str, Any]:
+        """Job facets: the constant jobType facet plus an ownership facet. Ownership
+        prefers the passed per-asset ``owners`` and falls back to the default team; an
+        empty result emits no ownership facet."""
+        facets: Dict[str, Any] = {"jobType": self._job_type_facet}
+        effective_owners = list(owners) if owners else self._default_owners
+        if effective_owners:
+            facets["ownership"] = ownership_job.OwnershipJobFacet(
+                owners=[ownership_job.Owner(name=o) for o in effective_owners]
+            )
+        return facets
+
+    def _build_job(
+        self, namespace: str, job_name: str, owners: Optional[Sequence[str]] = None
+    ) -> Job:
+        return Job(namespace=namespace, name=job_name, facets=self._job_facets(owners))
 
 
 def _extract_schema(metadata: Mapping[str, Any]) -> Optional[TableSchema]:
