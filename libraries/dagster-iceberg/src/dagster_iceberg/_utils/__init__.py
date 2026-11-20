@@ -22,4 +22,7 @@ from dagster_iceberg._utils.partitions import (
 from dagster_iceberg._utils.partitions import (
     DagsterPartitionToPolarsSqlPredicateMapper as DagsterPartitionToPolarsSqlPredicateMapper,
 )
+from dagster_iceberg._utils.partitions import (
+    quote_sql_identifier as quote_sql_identifier,
+)
 from dagster_iceberg._utils.warnings import preview as preview

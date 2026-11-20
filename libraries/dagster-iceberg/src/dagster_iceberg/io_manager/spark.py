@@ -1,10 +1,12 @@
+import re
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, cast
 
 try:
+    from pyspark.sql.connect.column import Column
     from pyspark.sql.connect.dataframe import DataFrame
-    from pyspark.sql.connect.functions import expr
+    from pyspark.sql.connect.functions import col, lit
     from pyspark.sql.connect.session import SparkSession
     from pyspark.sql.functions import days, hours, months
 except ImportError as e:
@@ -75,19 +77,21 @@ class SparkIcebergTypeHandler(DbTypeHandler[DataFrame]):
         self, table_slice: TableSlice, connection: SparkSession
     ) -> DataFrame:
         """Reads a PySpark dataframe from an Iceberg table."""
-        # Static partition keys are applied as column filters instead of being written
-        # into the SQL text. Spark sends them to the server as literal values, so no
-        # parser setting (such as spark.sql.parser.escapedStringLiterals) or ${...}
-        # variable substitution can change the key that the filter compares against.
-        frame = connection.sql(_time_window_select_statement(table_slice))
+        # Spark parses the table name only as an identifier and receives columns and
+        # partition keys as column references and literal values, so none can add SQL.
+        frame = connection.table(f"{table_slice.schema}.{table_slice.table}")
         for partition_dimension in table_slice.partition_dimensions or []:
-            if not isinstance(partition_dimension.partitions, TimeWindow):
+            column = col(partition_dimension.partition_expr)
+            if isinstance(partition_dimension.partitions, TimeWindow):
+                start_dt, end_dt = partition_dimension.partitions
                 frame = frame.where(
-                    expr(partition_dimension.partition_expr).isin(
-                        list(partition_dimension.partitions)
-                    )
+                    (column >= _timestamp(start_dt)) & (column < _timestamp(end_dt))
                 )
-        return frame.selectExpr(*table_slice.columns) if table_slice.columns else frame
+            else:
+                frame = frame.where(column.isin(list(partition_dimension.partitions)))
+        if table_slice.columns:
+            return frame.select(*(col(column) for column in table_slice.columns))
+        return frame
 
     def load_input(
         self,
@@ -114,13 +118,20 @@ class SparkIcebergDbClient(DbClient[SparkSession]):
 
     @staticmethod
     def get_select_statement(table_slice: TableSlice) -> str:
-        col_str = ", ".join(table_slice.columns) if table_slice.columns else "*"
+        col_str = (
+            ", ".join(_display_name(column) for column in table_slice.columns)
+            if table_slice.columns
+            else "*"
+        )
+        table = (
+            f"{_display_name(table_slice.schema)}.{_display_name(table_slice.table)}"
+        )
 
         if table_slice.partition_dimensions:
-            query = f"SELECT {col_str} FROM {table_slice.schema}.{table_slice.table} WHERE\n"
+            query = f"SELECT {col_str} FROM {table} WHERE\n"
             return query + _partition_where_clause(table_slice.partition_dimensions)
 
-        return f"""SELECT {col_str} FROM {table_slice.schema}.{table_slice.table}"""
+        return f"""SELECT {col_str} FROM {table}"""
 
     @staticmethod
     def ensure_schema_exists(
@@ -134,7 +145,14 @@ class SparkIcebergDbClient(DbClient[SparkSession]):
             if table_slice.database
             else table_slice.schema
         )
-        connection.sql(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
+        # Spark has no DataFrame API for creating a namespace, so each part of the name
+        # is quoted. Spark expands ${...} even inside quotes, so such names are refused.
+        if "${" in schema_name:
+            raise ValueError(
+                f"Schema {schema_name!r} contains '${{', which Spark would substitute"
+            )
+        quoted = ".".join(_quote_name(part) for part in schema_name.split("."))
+        connection.sql(f"CREATE SCHEMA IF NOT EXISTS {quoted}")
 
     @staticmethod
     @contextmanager
@@ -250,22 +268,13 @@ def _time_window_where_clause(table_partition: TablePartitionDimension) -> str:
     start_dt, end_dt = partition
     start_dt_str = start_dt.isoformat()
     end_dt_str = end_dt.isoformat()
-    return f"""{table_partition.partition_expr} >= TIMESTAMP '{start_dt_str}' AND {table_partition.partition_expr} < TIMESTAMP '{end_dt_str}'"""
+    column = _display_name(table_partition.partition_expr)
+    return f"""{column} >= TIMESTAMP '{start_dt_str}' AND {column} < TIMESTAMP '{end_dt_str}'"""
 
 
-def _time_window_select_statement(table_slice: TableSlice) -> str:
-    query = f"SELECT * FROM {table_slice.schema}.{table_slice.table}"
-    time_windows = [
-        partition_dimension
-        for partition_dimension in table_slice.partition_dimensions or []
-        if isinstance(partition_dimension.partitions, TimeWindow)
-    ]
-    if time_windows:
-        query += " WHERE\n" + " AND\n".join(
-            _time_window_where_clause(partition_dimension)
-            for partition_dimension in time_windows
-        )
-    return query
+def _timestamp(value: Any) -> Column:
+    # Casting the ISO string matches how Spark reads a TIMESTAMP '...' literal.
+    return lit(value.isoformat()).cast("timestamp")
 
 
 # get_select_statement's text is only recorded as the "Query" output metadata; reads
@@ -279,4 +288,19 @@ def _static_where_clause(table_partition: TablePartitionDimension) -> str:
         f"'{partition.translate(_SPARK_LITERAL_ESCAPES)}'"
         for partition in table_partition.partitions
     )
-    return f"""{table_partition.partition_expr} in ({partitions})"""
+    return f"""{_display_name(table_partition.partition_expr)} in ({partitions})"""
+
+
+def _quote_name(name: str) -> str:
+    return "`" + name.replace("`", "``") + "`"
+
+
+_PLAIN_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
+def _display_name(name: str) -> str:
+    # Dots separate namespace and nested field names, as they do for Spark's col().
+    return ".".join(
+        part if _PLAIN_NAME.fullmatch(part) else _quote_name(part)
+        for part in name.split(".")
+    )

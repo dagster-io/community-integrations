@@ -373,6 +373,8 @@ class TeradataDagsterConnection:
         bteq_quit_rc: int | list[int] = 0,
         timeout: int | Literal[600] = 600,  # Default to 10 minutes
         timeout_rc: int | None = None,
+        ssh_known_hosts_path: str | None = None,
+        ssh_accept_unknown_host_key: bool = False,
     ) -> int | None:
         """
         Execute BTEQ commands either locally or on a remote machine via SSH.
@@ -392,6 +394,10 @@ class TeradataDagsterConnection:
             remote_password (Optional[str]): Password for remote authentication. Alternative to ssh_key_path.
             ssh_key_path (Optional[str]): Path to SSH private key for authentication. Alternative to remote_password.
             remote_port (int): SSH port for remote connection. Defaults to 22.
+            ssh_known_hosts_path (Optional[str]): Extra known_hosts file to verify the remote host key against,
+                in addition to /etc/ssh/ssh_known_hosts and ~/.ssh/known_hosts.
+            ssh_accept_unknown_host_key (bool): Accept and trust a remote host key that is in no known_hosts file.
+                This disables protection against man-in-the-middle attacks for new hosts. Defaults to False.
             remote_working_dir (str): Working directory on remote machine. Defaults to '/tmp'.
             bteq_script_encoding (Optional[str]): Encoding for BTEQ script file. Defaults to 'utf-8'.
             bteq_session_encoding (Optional[str]): Encoding for BTEQ session. Defaults to 'ASCII'.
@@ -492,6 +498,8 @@ class TeradataDagsterConnection:
             remote_password=remote_password,
             ssh_key_path=ssh_key_path,
             remote_port=remote_port,
+            ssh_known_hosts_path=ssh_known_hosts_path,
+            ssh_accept_unknown_host_key=ssh_accept_unknown_host_key,
             remote_working_dir=remote_working_dir,
             bteq_script_encoding=bteq_script_encoding,
             bteq_session_encoding=bteq_session_encoding,
@@ -512,6 +520,8 @@ class TeradataDagsterConnection:
         remote_password: str | None = None,
         ssh_key_path: str | None = None,
         remote_port: int = 22,
+        ssh_known_hosts_path: str | None = None,
+        ssh_accept_unknown_host_key: bool = False,
     ) -> int | None:
         """
         Execute one or more DDL (Data Definition Language) statements on Teradata.
@@ -532,6 +542,10 @@ class TeradataDagsterConnection:
             remote_password (Optional[str]): Password for remote authentication. Alternative to ssh_key_path.
             ssh_key_path (Optional[str]): Path to SSH private key for authentication. Alternative to remote_password.
             remote_port (int): SSH port for remote connection. Defaults to 22.
+            ssh_known_hosts_path (Optional[str]): Extra known_hosts file to verify the remote host key against,
+                in addition to /etc/ssh/ssh_known_hosts and ~/.ssh/known_hosts.
+            ssh_accept_unknown_host_key (bool): Accept and trust a remote host key that is in no known_hosts file.
+                This disables protection against man-in-the-middle attacks for new hosts. Defaults to False.
 
         Returns:
             Optional[int]: The return code of the DDL execution, or None if not applicable.
@@ -578,6 +592,8 @@ class TeradataDagsterConnection:
             remote_password=remote_password,
             ssh_key_path=ssh_key_path,
             remote_port=remote_port,
+            ssh_known_hosts_path=ssh_known_hosts_path,
+            ssh_accept_unknown_host_key=ssh_accept_unknown_host_key,
         )
 
     def tdload_operator(
@@ -601,6 +617,8 @@ class TeradataDagsterConnection:
         remote_password: str | None = None,
         ssh_key_path: str | None = None,
         remote_port: int = 22,
+        ssh_known_hosts_path: str | None = None,
+        ssh_accept_unknown_host_key: bool = False,
     ) -> int | None:
         """
         Execute a TDLoad operation with the provided parameters.
@@ -627,6 +645,10 @@ class TeradataDagsterConnection:
             remote_password (Optional[str]): Remote password for execution.
             ssh_key_path (Optional[str]): SSH key path for remote execution.
             remote_port (int): Remote port for SSH. Defaults to 22.
+            ssh_known_hosts_path (Optional[str]): Extra known_hosts file to verify the remote host key against,
+                in addition to /etc/ssh/ssh_known_hosts and ~/.ssh/known_hosts.
+            ssh_accept_unknown_host_key (bool): Accept and trust a remote host key that is in no known_hosts file.
+                This disables protection against man-in-the-middle attacks for new hosts. Defaults to False.
 
         Returns:
             int | None: Return code from the TDLoad operation.
@@ -669,6 +691,8 @@ class TeradataDagsterConnection:
             remote_password=remote_password,
             ssh_key_path=ssh_key_path,
             remote_port=remote_port,
+            ssh_known_hosts_path=ssh_known_hosts_path,
+            ssh_accept_unknown_host_key=ssh_accept_unknown_host_key,
         )
 
     def drop_database(self, databases: str | Sequence[str]) -> None:

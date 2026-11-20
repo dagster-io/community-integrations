@@ -11,7 +11,11 @@ from pyiceberg import table as ibt
 
 from dagster_iceberg import handler as _handler
 from dagster_iceberg import io_manager as _io_manager
-from dagster_iceberg._utils import DagsterPartitionToDaftSqlPredicateMapper, preview
+from dagster_iceberg._utils import (
+    DagsterPartitionToDaftSqlPredicateMapper,
+    preview,
+    quote_sql_identifier,
+)
 
 
 class _DaftIcebergTypeHandler(_handler.IcebergBaseTypeHandler[da.DataFrame]):
@@ -24,7 +28,9 @@ class _DaftIcebergTypeHandler(_handler.IcebergBaseTypeHandler[da.DataFrame]):
         target_type: type[da.DataFrame],
     ) -> da.DataFrame:
         selected_fields: str = (
-            ",".join(table_slice.columns) if table_slice.columns is not None else "*"
+            ",".join(quote_sql_identifier(column) for column in table_slice.columns)
+            if table_slice.columns is not None
+            else "*"
         )
         row_filter: str | None = None
         if table_slice.partition_dimensions:

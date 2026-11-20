@@ -1,4 +1,5 @@
 import os
+import shlex
 import socket
 import subprocess
 import tempfile
@@ -10,8 +11,10 @@ from dagster import DagsterError
 from paramiko.client import SSHClient
 from paramiko.ssh_exception import SSHException
 
+from dagster_teradata.ttu.ssh import new_ssh_client
 from dagster_teradata.ttu.utils.bteq_util import (
     prepare_bteq_command_for_local_execution,
+    prepare_bteq_logon,
     prepare_bteq_command_for_remote_execution,
     prepare_bteq_script_for_local_execution,
     prepare_bteq_script_for_remote_execution,
@@ -64,6 +67,8 @@ class Bteq:
         """
         self.remote_port = None
         self.ssh_key_path = None
+        self.ssh_known_hosts_path = None
+        self.ssh_accept_unknown_host_key = False
         self.remote_remote_password = None
         self.remote_user = None
         self.remote_host = None
@@ -98,6 +103,8 @@ class Bteq:
         timeout: int | Literal[600] = 600,
         timeout_rc: int | None = None,
         temp_file_read_encoding: str | None = "UTF-8",
+        ssh_known_hosts_path: str | None = None,
+        ssh_accept_unknown_host_key: bool = False,
     ) -> int | None:
         """
         Execute BTEQ commands either locally or remotely.
@@ -117,6 +124,8 @@ class Bteq:
             timeout: Maximum execution time in seconds (default: 600)
             timeout_rc: Specific return code for timeout cases
             temp_file_read_encoding: Encoding for reading temporary files
+            ssh_known_hosts_path: Extra known_hosts file to verify the SSH host key against
+            ssh_accept_unknown_host_key: Accept a host key missing from known_hosts
 
         Returns:
             int: Exit status code from BTEQ execution, or None if no execution occurred
@@ -139,6 +148,8 @@ class Bteq:
         self.timeout = timeout
         self.timeout_rc = timeout_rc
         self.temp_file_read_encoding = temp_file_read_encoding
+        self.ssh_known_hosts_path = ssh_known_hosts_path
+        self.ssh_accept_unknown_host_key = ssh_accept_unknown_host_key
 
         # Local execution
         if not self.remote_host:
@@ -493,7 +504,7 @@ class Bteq:
                 os.remove(encrypted_file_path)
             # Cleanup: Delete the remote temporary file
             if encrypted_file_path:
-                cleanup_en_command = f"rm -f {remote_encrypted_path}"
+                cleanup_en_command = f"rm -f {shlex.quote(remote_encrypted_path or '')}"
                 if self.ssh_client and self.connection:
                     if self.ssh_client is None:
                         raise DagsterError(
@@ -530,26 +541,29 @@ class Bteq:
             DagsterError: For execution failures or timeouts
         """
         verify_bteq_installed()
-        bteq_command_str = prepare_bteq_command_for_local_execution(
-            teradata_connection_resource=self.teradata_connection_resource,
+        bteq_command = prepare_bteq_command_for_local_execution(
             timeout=timeout,
             bteq_script_encoding=bteq_script_encoding or "",
             bteq_session_encoding=bteq_session_encoding or "",
             timeout_rc=timeout_rc or -1,
         )
-        self.log.debug("Executing BTEQ command: %s", bteq_command_str)
+        self.log.debug("Executing BTEQ command: %s", bteq_command)
 
+        # No shell, and the logon goes over stdin, so connection values can
+        # neither inject commands nor show up in the process list.
         process = subprocess.Popen(
-            bteq_command_str,
+            bteq_command,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            shell=True,
             preexec_fn=os.setsid,
         )
-        encode_bteq_script = bteq_script.encode(str(temp_file_read_encoding or "UTF-8"))
-        self.log.debug("encode_bteq_script : %s", encode_bteq_script)
-        stdout_data, _ = process.communicate(input=encode_bteq_script)
+        script_encoding = str(temp_file_read_encoding or "UTF-8")
+        self.log.debug("encode_bteq_script : %s", bteq_script.encode(script_encoding))
+        logon = prepare_bteq_logon(self.teradata_connection_resource)
+        stdout_data, _ = process.communicate(
+            input=f"{logon}\n{bteq_script}".encode(script_encoding)
+        )
         self.log.debug("stdout_data : %s", stdout_data)
         try:
             # https://docs.python.org/3.10/library/subprocess.html#subprocess.Popen.wait  timeout is in seconds
@@ -748,8 +762,9 @@ class Bteq:
             - Stores new credentials if successfully authenticated
         """
         try:
-            self.ssh_client = paramiko.SSHClient()
-            self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            self.ssh_client = new_ssh_client(
+                self.ssh_known_hosts_path, self.ssh_accept_unknown_host_key
+            )
 
             if key_path:
                 key = paramiko.RSAKey.from_private_key_file(key_path)

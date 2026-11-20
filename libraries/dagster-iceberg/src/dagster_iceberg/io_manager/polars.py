@@ -15,7 +15,11 @@ from pyiceberg.catalog import Catalog
 
 from dagster_iceberg import handler as _handler
 from dagster_iceberg import io_manager as _io_manager
-from dagster_iceberg._utils import DagsterPartitionToPolarsSqlPredicateMapper, preview
+from dagster_iceberg._utils import (
+    DagsterPartitionToPolarsSqlPredicateMapper,
+    preview,
+    quote_sql_identifier,
+)
 
 PolarsTypes = Union[pl.LazyFrame, pl.DataFrame]  # noqa: UP007, avoid `autodoc` failure
 
@@ -56,7 +60,9 @@ class _PolarsIcebergTypeHandler(_handler.IcebergBaseTypeHandler[PolarsTypes]):
         reader_override: Literal["native", "pyiceberg"] | None = None,
     ) -> PolarsTypes:
         selected_fields: str = (
-            ",".join(table_slice.columns) if table_slice.columns is not None else "*"
+            ",".join(quote_sql_identifier(column) for column in table_slice.columns)
+            if table_slice.columns is not None
+            else "*"
         )
         row_filter: str | None = None
         if table_slice.partition_dimensions:

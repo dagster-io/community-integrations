@@ -1,4 +1,5 @@
 import enum
+import re
 from abc import abstractmethod
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
@@ -73,16 +74,23 @@ class IcebergDbClient(DbClient):
         # The select statement here is just for illustrative purposes,
         # and is never actually executed. It does however logically correspond
         # the operation being executed.
-        col_str = ", ".join(table_slice.columns) if table_slice.columns else "*"
+        col_str = (
+            ", ".join(_display_name(column) for column in table_slice.columns)
+            if table_slice.columns
+            else "*"
+        )
+        table = (
+            f"{_display_name(table_slice.schema)}.{_display_name(table_slice.table)}"
+        )
 
         if (
             table_slice.partition_dimensions
             and len(table_slice.partition_dimensions) > 0
         ):
-            query = f"SELECT {col_str} FROM {table_slice.schema}.{table_slice.table} WHERE\n"
+            query = f"SELECT {col_str} FROM {table} WHERE\n"
             return query + _partition_where_clause(table_slice.partition_dimensions)
 
-        return f"""SELECT {col_str} FROM {table_slice.schema}.{table_slice.table}"""
+        return f"""SELECT {col_str} FROM {table}"""
 
     @staticmethod
     @contextmanager
@@ -302,9 +310,25 @@ def _time_window_where_clause(table_partition: TablePartitionDimension) -> str:
     start_dt, end_dt = partition
     start_dt_str = start_dt.isoformat()
     end_dt_str = end_dt.isoformat()
-    return f"""{table_partition.partition_expr} >= '{start_dt_str}' AND {table_partition.partition_expr} < '{end_dt_str}'"""
+    column = _display_name(table_partition.partition_expr)
+    return f"""{column} >= '{start_dt_str}' AND {column} < '{end_dt_str}'"""
 
 
 def _static_where_clause(table_partition: TablePartitionDimension) -> str:
-    partitions = ", ".join(f"'{partition}'" for partition in table_partition.partitions)
-    return f"""{table_partition.partition_expr} in ({partitions})"""
+    partitions = ", ".join(
+        "'" + partition.replace("'", "''") + "'"
+        for partition in table_partition.partitions
+    )
+    return f"""{_display_name(table_partition.partition_expr)} in ({partitions})"""
+
+
+_PLAIN_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
+def _display_name(name: str) -> str:
+    # get_select_statement's text is only recorded as the "Query" output metadata.
+    # Dots separate namespace and nested field names; other unusual names are quoted.
+    return ".".join(
+        part if _PLAIN_NAME.fullmatch(part) else '"' + part.replace('"', '""') + '"'
+        for part in name.split(".")
+    )

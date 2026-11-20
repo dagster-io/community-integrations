@@ -28,6 +28,23 @@ class CcDbStatus(Enum):
     RUNNING = "Running"
 
 
+# Compute group and profile names are written into DDL, where Teradata accepts no bound
+# parameters, so only names Teradata accepts unquoted are allowed through.
+_OBJECT_NAME = re.compile(r"(?:[^\W\d]|[$#])[\w$#]{0,127}")
+
+
+def _check_names(compute_profile_name: str | None, compute_group_name: str | None):
+    for kind, name in (
+        ("compute profile name", compute_profile_name),
+        ("compute group name", compute_group_name),
+    ):
+        if name and not _OBJECT_NAME.fullmatch(name):
+            raise DagsterError(
+                f"Invalid {kind} {name!r}: use letters, digits, _, $, or #, "
+                "not starting with a digit, at most 128 characters."
+            )
+
+
 class TeradataComputeClusterManager:
     def __init__(self, connection, log):
         self.connection = connection
@@ -112,6 +129,7 @@ class TeradataComputeClusterManager:
         compute_attribute: str | None = None,
         timeout: int = constants.CC_OPR_TIME_OUT,
     ):
+        _check_names(compute_profile_name, compute_group_name)
         self.verify_compute_cluster(compute_profile_name)
 
         if compute_group_name:
@@ -184,6 +202,7 @@ class TeradataComputeClusterManager:
         compute_group_name: str,
         delete_compute_group: bool = False,
     ):
+        _check_names(compute_profile_name, compute_group_name)
         self.verify_compute_cluster(compute_profile_name)
 
         cp_drop_query = "DROP COMPUTE PROFILE " + compute_profile_name
@@ -209,6 +228,7 @@ class TeradataComputeClusterManager:
         compute_group_name: str,
         timeout: int = constants.CC_OPR_TIME_OUT,
     ):
+        _check_names(compute_profile_name, compute_group_name)
         self.verify_compute_cluster(compute_profile_name)
 
         cc_status_query = (
@@ -256,6 +276,7 @@ class TeradataComputeClusterManager:
         compute_group_name: str,
         timeout: int = constants.CC_OPR_TIME_OUT,
     ):
+        _check_names(compute_profile_name, compute_group_name)
         self.verify_compute_cluster(compute_profile_name)
 
         sql = (
@@ -304,6 +325,7 @@ class TeradataComputeClusterSync:
         poll_interval: float | None = None,
         timeout: int = constants.CC_OPR_TIME_OUT,
     ):
+        _check_names(compute_profile_name, compute_group_name)
         self.connection = connection
         self.operation = operation
         self.compute_profile_name = compute_profile_name
