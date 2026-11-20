@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -621,7 +621,7 @@ dependencies = [
     { name = "dagster" },
     { name = "pendulum" },
     { name = "pydantic" },
-    { name = "pyiceberg", extra = ["pyarrow"] },
+    { name = "pyiceberg", extra = ["pyarrow", "pyiceberg-core"] },
     { name = "tenacity" },
 ]
 
@@ -672,7 +672,7 @@ requires-dist = [
     { name = "pendulum", specifier = ">=3.0.0" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=1.0.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
-    { name = "pyiceberg", extras = ["pyarrow"], specifier = ">=0.8,<0.12" },
+    { name = "pyiceberg", extras = ["pyarrow", "pyiceberg-core"], specifier = ">=0.8,<0.13" },
     { name = "pyspark", extras = ["connect"], marker = "extra == 'spark'", specifier = "~=3.4" },
     { name = "tenacity", specifier = ">=8.5.0" },
 ]
@@ -688,7 +688,7 @@ dev = [
     { name = "fsspec", extras = ["http"], specifier = ">=2025.2.0" },
     { name = "grpcio-status" },
     { name = "pandas", specifier = ">=2.0.0" },
-    { name = "pyiceberg", extras = ["sql-postgres"], specifier = "<0.12" },
+    { name = "pyiceberg", extras = ["sql-postgres"], specifier = "<0.13" },
     { name = "pytest", specifier = ">=8.3.2" },
     { name = "pytest-cov", specifier = ">=6.0.0" },
     { name = "ruff", specifier = ">=0.9.6" },
@@ -2446,6 +2446,9 @@ wheels = [
 [package.optional-dependencies]
 pyarrow = [
     { name = "pyarrow" },
+    { name = "pyiceberg-core" },
+]
+pyiceberg-core = [
     { name = "pyiceberg-core" },
 ]
 sql-postgres = [
