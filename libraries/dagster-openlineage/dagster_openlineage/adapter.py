@@ -293,10 +293,21 @@ class OpenLineageAdapter:
         output_facets = self._build_asset_output_facets(metadata, namespace)
         run_facets = self._build_asset_run_facets(partition_key)
 
-        inputs: List[InputDataset] = [
-            InputDataset(namespace=namespace, name="/".join(key.path))
-            for key in (upstream_asset_keys or [])
-        ]
+        # Inputs are the explicit upstream keys plus any keys from
+        # `dagster/column_lineage` metadata, deduplicated by dataset name.
+        input_by_name: Dict[str, InputDataset] = {}
+        for key in upstream_asset_keys or []:
+            name = "/".join(key.path)
+            input_by_name.setdefault(name, InputDataset(namespace=namespace, name=name))
+        col_lineage = _extract_column_lineage(metadata) if metadata else None
+        if col_lineage is not None:
+            for deps in col_lineage.deps_by_column.values():
+                for dep in deps:
+                    name = "/".join(dep.asset_key.path)
+                    input_by_name.setdefault(
+                        name, InputDataset(namespace=namespace, name=name)
+                    )
+        inputs: List[InputDataset] = list(input_by_name.values())
 
         self._emit(
             RunEvent(
