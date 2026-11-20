@@ -1,0 +1,31 @@
+name: dagster-nebius compatibility
+on:
+  pull_request:
+    paths:
+      - 'libraries/dagster-nebius/**'
+      - '.github/workflows/quality-check-dagster-nebius.yml'
+permissions:
+  contents: read
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.10', '3.12']
+    defaults:
+      run:
+        working-directory: libraries/dagster-nebius
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv python install '${{ matrix.python }}'
+      - run: uv sync --python '${{ matrix.python }}' --locked
+      - run: uv run pyright
+      - run: uv run pytest
+      - run: uv build
+      - name: Install built wheel in a clean environment
+        run: |
+          uv venv /tmp/wheel-check --python '${{ matrix.python }}'
+          uv pip install --python /tmp/wheel-check/bin/python dist/*.whl
+          cd /tmp
+          /tmp/wheel-check/bin/python -c 'from dagster_nebius import PipesNebiusClient, NebiusEndpointResource'
