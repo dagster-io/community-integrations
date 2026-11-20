@@ -261,6 +261,10 @@ class OpenLineageAdapter:
         run_tags: Optional[Mapping[str, str]] = None,
     ) -> None:
         namespace = self._resolve_namespace(run_tags)
+        # START (planned) has no inputs and no schema/column facets yet. Emitting a
+        # bare output here makes backends that build edges from every event create a
+        # spurious output edge with no input side, so emit START as a pure run-start
+        # signal; the COMPLETE event carries the inputs, outputs, and facets.
         self._emit(
             RunEvent(
                 eventType=RunState.START,
@@ -270,11 +274,6 @@ class OpenLineageAdapter:
                     namespace=namespace, job_name=asset_key.to_user_string()
                 ),
                 producer=_PRODUCER,
-                outputs=[
-                    OutputDataset(
-                        namespace=namespace, name="/".join(asset_key.path), facets={}
-                    )
-                ],
             )
         )
 
