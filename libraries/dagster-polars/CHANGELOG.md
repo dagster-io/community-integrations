@@ -7,9 +7,9 @@
   - **Breaking:** the BigQuery type of some columns changes. Appending (`WRITE_APPEND`) to a table created by an earlier version fails with `Provided Schema does not match Table` for these columns, until the table is recreated or the columns are cast to the old types.
   - `pl.Date` columns are written as `DATE` instead of `TIMESTAMP`. Closes [#253](https://github.com/dagster-io/community-integrations/issues/253).
   - Integer columns that contain nulls are written as `INTEGER` instead of `FLOAT`.
-  - `pl.Datetime("ns")` columns are written as `TIMESTAMP`, like `pl.Datetime("us")`, instead of `DATETIME`, or `INTEGER` when the DataFrame also had a column pandas could not map, such as a categorical or a struct.
+  - `pl.Datetime("ns")` columns, also inside structs, lists, arrays and maps, raise an error naming them instead of being written as `DATETIME`, or `INTEGER` when the DataFrame also had a column pandas could not map, such as a categorical or a struct. BigQuery stores timestamps in microseconds, so convert them first, for example with `pl.col(name).dt.cast_time_unit("us")`.
   - `pl.Map` columns can be written. They are loaded as BigQuery's representation of a Parquet map, a `RECORD` with a repeated `key_value` field of `key` and `value`.
-  - Nanosecond times and timestamps, also inside structs, lists, arrays and maps, are written in microseconds, the precision of BigQuery's `TIME` and `TIMESTAMP`. A value with digits below a microsecond raises an error naming its columns instead of being truncated. All other types are unchanged.
+  - Times, also inside structs, lists, arrays and maps, are written in microseconds, the precision of BigQuery's `TIME` (Polars stores `pl.Time` in nanoseconds). A time with digits below a microsecond raises an error naming its columns instead of being truncated. All other types are unchanged.
 
 ## 0.27.13
 

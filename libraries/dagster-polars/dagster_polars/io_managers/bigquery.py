@@ -18,12 +18,29 @@ except ImportError as e:
     ) from e
 
 
+def _has_nanosecond_timestamp(dtype: pa.DataType) -> bool:
+    """Whether ``dtype`` is a nanosecond timestamp or has one inside it."""
+    if pa.types.is_timestamp(dtype):
+        return dtype.unit == "ns"
+    if pa.types.is_struct(dtype):
+        return any(_has_nanosecond_timestamp(field.type) for field in dtype)
+    if pa.types.is_map(dtype):
+        return _has_nanosecond_timestamp(dtype.key_type) or _has_nanosecond_timestamp(
+            dtype.item_type
+        )
+    if (
+        pa.types.is_list(dtype)
+        or pa.types.is_large_list(dtype)
+        or pa.types.is_fixed_size_list(dtype)
+    ):
+        return _has_nanosecond_timestamp(dtype.value_type)
+    return False
+
+
 def _bigquery_arrow_type(dtype: pa.DataType) -> pa.DataType:
-    """Replaces nanosecond times and timestamps with microsecond ones, also inside nested types."""
+    """Replaces nanosecond times with microsecond ones, also inside nested types."""
     if pa.types.is_time64(dtype) and dtype.unit == "ns":
         return pa.time64("us")
-    if pa.types.is_timestamp(dtype) and dtype.unit == "ns":
-        return pa.timestamp("us", tz=dtype.tz)
     if pa.types.is_struct(dtype):
         return pa.struct(
             [field.with_type(_bigquery_arrow_type(field.type)) for field in dtype]
@@ -51,26 +68,41 @@ def _bigquery_arrow_type(dtype: pa.DataType) -> pa.DataType:
 
 
 def _to_bigquery_arrow_table(table: pa.Table) -> pa.Table:
-    """Converts nanosecond times and timestamps to microseconds, the precision BigQuery stores.
+    """Converts nanosecond times to microseconds, the precision BigQuery stores.
 
     BigQuery reads nanosecond Parquet times and timestamps as INTEGER, or stores wrong times.
-    Raises instead of truncating when a value has digits below a microsecond.
+    Raises for nanosecond datetime columns, which the user converts explicitly, and for times
+    with digits below a microsecond, instead of truncating them. ``pl.Time`` is always in
+    nanoseconds, so times whose values fit in microseconds are converted.
     """
-    fields, columns, lossy = [], [], []
+    fields, columns, nanosecond_datetimes, lossy_times = [], [], [], []
     for field, column in zip(table.schema, table.columns):
+        if _has_nanosecond_timestamp(field.type):
+            nanosecond_datetimes.append(field.name)
+            continue
         bigquery_type = _bigquery_arrow_type(field.type)
         try:
             columns.append(column.cast(bigquery_type, safe=True))
         except pa.ArrowInvalid:
-            lossy.append(field.name)
+            lossy_times.append(field.name)
         fields.append(field.with_type(bigquery_type))
-    if lossy:
+    problems = []
+    if nanosecond_datetimes:
+        problems.append(
+            f"these columns have nanosecond datetimes: {nanosecond_datetimes}. Convert them "
+            'to microseconds before writing, for example with `pl.col(name).dt.cast_time_unit("us")`'
+        )
+    if lossy_times:
+        problems.append(
+            f"these columns have times with nanoseconds that would be lost: {lossy_times}. "
+            "Round or truncate them to microseconds before writing, for example with "
+            "`pl.col(name).cast(pl.Int64) // 1_000 * 1_000` cast back to `pl.Time`"
+        )
+    if problems:
         raise ValueError(
-            "BigQuery stores times and timestamps with microsecond precision, and these "
-            f"columns have values with nanoseconds that would be lost: {lossy}. Round or "
-            "truncate them to microseconds before writing, for example with "
-            '`pl.col(name).dt.cast_time_unit("us")` for a datetime or '
-            "`pl.col(name).cast(pl.Int64) // 1_000 * 1_000` cast back to `pl.Time` for a time."
+            "BigQuery stores times and timestamps with microsecond precision, and "
+            + "; ".join(problems)
+            + "."
         )
     return pa.Table.from_arrays(
         columns, schema=pa.schema(fields, metadata=table.schema.metadata)

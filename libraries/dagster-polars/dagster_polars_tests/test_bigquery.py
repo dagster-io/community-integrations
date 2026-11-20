@@ -89,17 +89,11 @@ def test_polars_types_are_kept_in_the_uploaded_parquet():
     assert pa.types.is_struct(schema.field("point").type)
 
 
-def test_nanosecond_times_and_timestamps_are_written_in_microseconds():
-    """BigQuery reads nanosecond Parquet times and timestamps as INTEGER."""
+def test_nanosecond_times_are_written_in_microseconds():
+    """BigQuery reads nanosecond Parquet times as INTEGER."""
     df = pl.DataFrame(
         {
             "time": [dt.time(12, 30, 0, 123456)],
-            "moment_ns": pl.Series(
-                [dt.datetime(2024, 1, 1, 12, 0, 0, 123456)], dtype=pl.Datetime("ns")
-            ),
-            "moment_ns_utc": pl.Series(
-                [dt.datetime(2024, 1, 1, 12)], dtype=pl.Datetime("ns", "UTC")
-            ),
             "nested": [{"time": dt.time(1, 2), "times": [dt.time(3, 4)]}],
             "array": pl.Series([[dt.time(5, 6)]], dtype=pl.Array(pl.Time, 1)),
             "map": pl.from_arrow(
@@ -114,8 +108,6 @@ def test_nanosecond_times_and_timestamps_are_written_in_microseconds():
     _, schema = _handle_output(df)
 
     assert schema.field("time").type == pa.time64("us")
-    assert schema.field("moment_ns").type == pa.timestamp("us")
-    assert schema.field("moment_ns_utc").type == pa.timestamp("us", tz="UTC")
     nested = schema.field("nested").type
     assert nested.field("time").type == pa.time64("us")
     assert nested.field("times").type.value_type == pa.time64("us")
@@ -123,17 +115,8 @@ def test_nanosecond_times_and_timestamps_are_written_in_microseconds():
     assert schema.field("map").type.item_type == pa.time64("us")
 
 
-def test_values_with_nanoseconds_raise_instead_of_losing_precision():
-    df = pl.DataFrame(
-        {
-            "time": pl.Series([45000123456789]).cast(pl.Time),
-            "moment_ns": pl.Series([1704110400123456789]).cast(pl.Datetime("ns")),
-            "nested": pl.struct(
-                pl.Series("t", [45000123456789]).cast(pl.Time), eager=True
-            ),
-            "fine": pl.Series([45000123456000]).cast(pl.Time),
-        }
-    )
+def _assert_handle_output_raises(df: pl.DataFrame) -> str:
+    """Runs handle_output, checks it raised before uploading, and returns the error message."""
     connection = MagicMock(spec=bigquery.Client)
     context = MagicMock()
     context.definition_metadata = {}
@@ -144,8 +127,54 @@ def test_values_with_nanoseconds_raise_instead_of_losing_precision():
     with pytest.raises(ValueError, match="microsecond precision") as error:
         PolarsBigQueryTypeHandler().handle_output(context, table_slice, df, connection)
 
-    assert "['time', 'moment_ns', 'nested']" in str(error.value)
     connection.load_table_from_file.assert_not_called()
+    return str(error.value)
+
+
+def test_nanosecond_datetimes_raise_whatever_their_values():
+    """Nanosecond datetime columns raise even when their values fit in microseconds."""
+    moment = dt.datetime(2024, 1, 1, 12)
+    df = pl.DataFrame(
+        {
+            "moment_ns": pl.Series([moment], dtype=pl.Datetime("ns")),
+            "moment_ns_utc": pl.Series([moment], dtype=pl.Datetime("ns", "UTC")),
+            "nested": pl.struct(
+                pl.Series("m", [moment], dtype=pl.Datetime("ns")), eager=True
+            ),
+            "list": pl.Series([[moment]], dtype=pl.List(pl.Datetime("ns"))),
+            "map": pl.from_arrow(
+                pa.array(
+                    [[("k", moment)]], type=pa.map_(pa.string(), pa.timestamp("ns"))
+                )
+            ),
+            "moment_us": pl.Series([moment], dtype=pl.Datetime("us")),
+            "time": [dt.time(12, 30)],
+        }
+    )
+
+    message = _assert_handle_output_raises(df)
+
+    assert "['moment_ns', 'moment_ns_utc', 'nested', 'list', 'map']" in message
+    assert 'dt.cast_time_unit("us")' in message
+    assert "times with nanoseconds" not in message
+
+
+def test_times_with_nanoseconds_raise_instead_of_losing_precision():
+    df = pl.DataFrame(
+        {
+            "time": pl.Series([45000123456789]).cast(pl.Time),
+            "moment_ns": pl.Series([1704110400123456789]).cast(pl.Datetime("ns")),
+            "nested": pl.struct(
+                pl.Series("t", [45000123456789]).cast(pl.Time), eager=True
+            ),
+            "fine": pl.Series([45000123456000]).cast(pl.Time),
+        }
+    )
+
+    message = _assert_handle_output_raises(df)
+
+    assert "nanosecond datetimes: ['moment_ns']" in message
+    assert "times with nanoseconds that would be lost: ['time', 'nested']" in message
 
 
 def test_empty_dataframe_is_skipped():
