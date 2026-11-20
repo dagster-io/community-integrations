@@ -8,6 +8,7 @@
 name: release
 permissions:
   contents: read
+  id-token: write
 
 on:
   push:
