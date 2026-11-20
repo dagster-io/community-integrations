@@ -192,17 +192,39 @@ def executions():
 
 
 @pytest.fixture
-def mock_jobs_client(executions):
+def default_polls_before_success():
+    """Number of health-check polls before a mock execution automatically
+    transitions from reconciling to succeeded."""
+    return None
+
+
+@pytest.fixture
+def mock_jobs_client(executions, default_polls_before_success):
     with patch("google.cloud.run_v2.JobsClient") as MockJobsClient:
         mock_jobs_client = MockJobsClient.return_value
-        operation = Mock()
-        operation.metadata.name = "projects/test_project/locations/test_region/jobs/test_job_name/executions/test_execution_id"
-        mock_jobs_client.run_job.return_value = operation
+        counter = {"n": 0}
 
-        mock_execution = Mock(
-            reconciling=True, succeeded_count=0, failed_count=0, cancelled_count=0
-        )
-        executions["test_execution_id"] = mock_execution
+        def run_job(request):
+            counter["n"] += 1
+            # First call gets a fixed id; later calls get a unique suffix so
+            # multiple concurrent executions can be tracked independently.
+            execution_id = (
+                "test_execution_id"
+                if counter["n"] == 1
+                else f"test_execution_id_{counter['n']}"
+            )
+            operation = Mock()
+            operation.metadata.name = f"{request.name}/executions/{execution_id}"
+            executions[execution_id] = Mock(
+                reconciling=True,
+                succeeded_count=0,
+                failed_count=0,
+                cancelled_count=0,
+                _polls_remaining=default_polls_before_success,
+            )
+            return operation
+
+        mock_jobs_client.run_job.side_effect = run_job
         yield mock_jobs_client
 
 
@@ -218,7 +240,14 @@ def mock_executions_client(executions):
 
         def get_execution(request):
             execution_id = request.name.split("/")[-1]
-            return executions[execution_id]
+            execution = executions[execution_id]
+            if execution.reconciling and execution._polls_remaining is not None:
+                if execution._polls_remaining <= 0:
+                    execution.reconciling = False
+                    execution.succeeded_count = 1
+                else:
+                    execution._polls_remaining -= 1
+            return execution
 
         mock_executions_client.cancel_execution.side_effect = cancel_execution
         mock_executions_client.get_execution.side_effect = get_execution
