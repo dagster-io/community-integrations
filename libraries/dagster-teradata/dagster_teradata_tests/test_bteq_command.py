@@ -29,6 +29,7 @@ HOSTILE_VALUES = [
 def fake_bteq_fixture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Put a `bteq` on PATH that records its argv and stdin to bteq.json."""
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     record = tmp_path / "bteq.json"
