@@ -1,4 +1,4 @@
-"""Static partition keys reach the Polars and Daft SQL filters as literal values."""
+"""Polars and Daft filter static partition keys by their exact values."""
 
 from pathlib import Path
 
@@ -17,7 +17,17 @@ from pyiceberg.types import NestedField, StringType
 from dagster_iceberg.io_manager.daft import _DaftIcebergTypeHandler
 from dagster_iceberg.io_manager.polars import _PolarsIcebergTypeHandler
 
-KEYS = ["plain", "it's", "back\\slash", "x' OR '1'='1", "x\\' OR '1'='1"]
+KEYS = [
+    "plain",
+    "it's",
+    "back\\slash",
+    "x' OR '1'='1",
+    "x\\' OR '1'='1",
+    "line\nbreak' OR '1'='1",
+    "nul\x00byte",
+    "\u2019 OR \u20181\u2019=\u20181",
+    "*",
+]
 
 
 @pytest.fixture

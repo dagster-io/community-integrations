@@ -220,61 +220,6 @@ class DagsterPartitionToIcebergExpressionMapper(
         )
 
 
-def quote_sql_identifier(name: str) -> str:
-    """Quote a column name for Polars or Daft SQL, which match quoted names exactly."""
-    return '"' + name.replace('"', '""') + '"'
-
-
-class DagsterPartitionToSqlPredicateMapper(DagsterPartitionToPredicateMapper[str]):
-    def _partition_filters_to_predicates(
-        self,
-        partition_expr: str,
-        partition_filters: Sequence[str],
-    ) -> str:
-        # Polars and Daft SQL treat backslashes literally; a doubled quote is the only escape.
-        quoted = [p.replace("'", "''") for p in partition_filters]
-        column = quote_sql_identifier(partition_expr)
-        predicates = [f"{column} = '{p}'" for p in quoted]
-        if len(predicates) > 1:
-            return f"({' OR '.join(predicates)})"
-        return predicates[0]
-
-    @abstractmethod
-    def _time_window_partition_filters_to_predicates(
-        self,
-        partition_expr: str,
-        start_dt: dt.date | dt.datetime,
-        end_dt: dt.date | dt.datetime,
-    ) -> str: ...
-
-
-class DagsterPartitionToPolarsSqlPredicateMapper(DagsterPartitionToSqlPredicateMapper):
-    def _time_window_partition_filters_to_predicates(
-        self,
-        partition_expr: str,
-        start_dt: dt.date | dt.datetime,
-        end_dt: dt.date | dt.datetime,
-    ) -> str:
-        column = quote_sql_identifier(partition_expr)
-        return f"{column} >= '{start_dt.isoformat()}' AND {column} < '{end_dt.isoformat()}'"
-
-
-class DagsterPartitionToDaftSqlPredicateMapper(DagsterPartitionToSqlPredicateMapper):
-    def _time_window_partition_filters_to_predicates(
-        self,
-        partition_expr: str,
-        start_dt: dt.date | dt.datetime,
-        end_dt: dt.date | dt.datetime,
-    ) -> str:
-        # See https://docs.rs/chrono/latest/chrono/format/strftime/index.html
-        parse_fmt = "%+" if isinstance(start_dt, dt.datetime) else "%F"
-        column = quote_sql_identifier(partition_expr)
-        return (
-            f"{column} >= to_date('{start_dt.isoformat()}', '{parse_fmt}') "
-            f"AND {column} < to_date('{end_dt.isoformat()}', '{parse_fmt}')"
-        )
-
-
 def update_table_partition_spec(
     table: Table,
     table_slice: TableSlice,

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 import pytest
 
@@ -108,3 +108,43 @@ def test_get_query_rejects_an_incremental_key_that_is_not_an_api_name(
 def test_get_query_rejects_a_limit_that_is_not_an_integer(limit):
     with pytest.raises(TypeError):
         salesforce_object("Account", "Id").get_query(limit=limit)
+
+
+@pytest.mark.parametrize(
+    ("incremental_from", "literal"),
+    [
+        (datetime(2024, 1, 15, 10, 30, 45), "2024-01-15T10:30:45Z"),
+        (datetime(2024, 1, 15, 10, 30, 45, 999), "2024-01-15T10:30:45Z"),
+        (SINCE, "2024-01-15T10:30:45Z"),
+        (
+            datetime(2024, 1, 15, 10, 30, 45, tzinfo=timezone(timedelta(hours=5))),
+            "2024-01-15T10:30:45Z",
+        ),
+    ],
+)
+def test_get_query_writes_the_incremental_start_as_a_datetime_literal(
+    incremental_from: datetime, literal: str
+):
+    query = salesforce_object("Account", "Id").get_query(
+        incremental_key="SystemModstamp", incremental_from=incremental_from
+    )
+    assert query == f"SELECT Id FROM Account WHERE SystemModstamp >= {literal}"
+
+
+@pytest.mark.parametrize(
+    "incremental_from",
+    [
+        "2024-01-15T10:30:45Z OR Name != null",
+        "2024-01-15T10:30:45Z",
+        date(2024, 1, 15),
+        time(10, 30, 45),
+        1705314645,
+    ],
+)
+def test_get_query_rejects_an_incremental_start_that_is_not_a_datetime(
+    incremental_from,
+):
+    with pytest.raises(TypeError, match="datetime"):
+        salesforce_object("Account", "Id").get_query(
+            incremental_key="SystemModstamp", incremental_from=incremental_from
+        )

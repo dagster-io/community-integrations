@@ -21,8 +21,14 @@ def datetime_to_soql_str(dt: datetime | None) -> str | None:
     :type dt: Union[datetime, None]
     :return: The SOQL-compatible string representation of the datetime.
     :rtype: str
+    :raises TypeError: If ``dt`` is neither a datetime nor None.
     """
-    return dt.strftime("%Y-%m-%dT%H:%M:%SZ") if dt else None
+    if dt is None:
+        return None
+    # The result is written into SOQL unquoted, so only a datetime may produce it.
+    if not isinstance(dt, datetime):
+        raise TypeError(f"Expected a datetime, got {type(dt).__name__}")
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _wait_for_job(

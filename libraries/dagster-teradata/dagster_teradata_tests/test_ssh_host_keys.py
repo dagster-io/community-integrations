@@ -1,5 +1,7 @@
 """SSH host key verification against a real paramiko server on localhost."""
 
+import base64
+import hashlib
 import socket
 import threading
 from collections.abc import Iterator
@@ -116,6 +118,20 @@ def test_unknown_host_key_is_rejected(ssh_server: SSHServer, run_operator):
     with pytest.raises(DagsterError, match="not in known_hosts"):
         run_operator(ssh_server.port)
     assert ssh_server.authenticated_users == []
+
+
+def openssh_fingerprint(key: paramiko.PKey) -> str:
+    digest = hashlib.sha256(key.asbytes()).digest()
+    return "SHA256:" + base64.b64encode(digest).decode().rstrip("=")
+
+
+def test_unknown_host_key_error_shows_the_key_fingerprint(
+    ssh_server: SSHServer, host_key: paramiko.PKey
+):
+    with pytest.raises(DagsterError) as error:
+        run_bteq(ssh_server.port)
+    expected = f"({host_key.get_name()} {openssh_fingerprint(host_key)})"
+    assert expected in str(error.value)
 
 
 @pytest.mark.parametrize("run_operator", OPERATORS)

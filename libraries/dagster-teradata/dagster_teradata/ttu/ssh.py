@@ -1,5 +1,7 @@
 """SSH client construction shared by the BTEQ and TPT operators."""
 
+import base64
+import hashlib
 import os
 
 import paramiko
@@ -8,12 +10,19 @@ from paramiko.ssh_exception import SSHException
 SYSTEM_KNOWN_HOSTS = "/etc/ssh/ssh_known_hosts"
 
 
-class RejectUnknownHostKeyPolicy(paramiko.MissingHostKeyPolicy):
+def openssh_fingerprint(key: paramiko.PKey) -> str:
+    """Return the key's fingerprint as `ssh-keygen -l` prints it."""
+    # PKey.fingerprint needs paramiko 3.2, and any paramiko version is allowed.
+    digest = hashlib.sha256(key.asbytes()).digest()
+    return "SHA256:" + base64.b64encode(digest).decode().rstrip("=")
+
+
+class RejectUnknownHostKeyPolicy(paramiko.RejectPolicy):
     """Reject hosts missing from known_hosts, explaining how to trust them."""
 
     def missing_host_key(self, client, hostname, key):
         raise SSHException(
-            f"Host key for {hostname} ({key.get_name()} {key.fingerprint}) is not in "
+            f"Host key for {hostname} ({key.get_name()} {openssh_fingerprint(key)}) is not in "
             f"known_hosts ({SYSTEM_KNOWN_HOSTS} or ~/.ssh/known_hosts). After "
             "confirming the fingerprint with the host's administrator, add the key "
             "to ~/.ssh/known_hosts (for example with ssh-keyscan), or pass "
