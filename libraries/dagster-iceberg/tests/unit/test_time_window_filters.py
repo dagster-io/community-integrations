@@ -1,4 +1,4 @@
-"""Polars and Daft load exactly the rows inside a time window partition."""
+"""Polars, Daft, and PyIceberg load exactly the rows inside a time window partition."""
 
 import datetime as dt
 from collections.abc import Callable
@@ -18,8 +18,17 @@ from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import Schema
 from pyiceberg.table import Table
 from pyiceberg.transforms import DayTransform, HourTransform, IdentityTransform
-from pyiceberg.types import DateType, LongType, NestedField, StringType, TimestampType
+from pyiceberg.types import (
+    DateType,
+    LongType,
+    NestedField,
+    StringType,
+    TimestampType,
+    TimestamptzType,
+)
 
+from dagster_iceberg._utils.io import get_expression_row_filter, table_writer
+from dagster_iceberg.io_manager.arrow import _PyArrowIcebergTypeHandler
 from dagster_iceberg.io_manager.daft import _DaftIcebergTypeHandler
 from dagster_iceberg.io_manager.polars import _PolarsIcebergTypeHandler
 
@@ -36,6 +45,7 @@ SCHEMA = Schema(
     NestedField(2, "ts", TimestampType(), required=False),
     NestedField(3, "d", DateType(), required=False),
     NestedField(4, "category", StringType(), required=False),
+    NestedField(5, "tstz", TimestamptzType(), required=False),
 )
 
 
@@ -59,6 +69,10 @@ def partitioned_table(catalog: SqlCatalog, column_id: int, transform) -> Table:
                 "ts": pa.array(TIMES, pa.timestamp("us")),
                 "d": pa.array([t.date() for t in TIMES], pa.date32()),
                 "category": [CATEGORIES[i % 3] for i in range(len(TIMES))],
+                "tstz": pa.array(
+                    [t.replace(tzinfo=dt.UTC) for t in TIMES],
+                    pa.timestamp("us", tz="UTC"),
+                ),
             }
         )
     )
@@ -80,6 +94,11 @@ def catalog(tmp_path_factory: pytest.TempPathFactory) -> SqlCatalog:
 @pytest.fixture(scope="module")
 def timestamp_table(catalog: SqlCatalog) -> Table:
     return partitioned_table(catalog, 2, HourTransform())
+
+
+@pytest.fixture(scope="module")
+def timestamptz_table(catalog: SqlCatalog) -> Table:
+    return partitioned_table(catalog, 5, HourTransform())
 
 
 @pytest.fixture(scope="module")
@@ -105,8 +124,14 @@ def polars_loader(reader_override) -> Loader:
     return load
 
 
+def load_with_pyiceberg(table: Table, table_slice: TableSlice) -> list[int]:
+    frame = _PyArrowIcebergTypeHandler().to_data_frame(table, table_slice, pa.Table)
+    return sorted(frame["id"].to_pylist())
+
+
 LOADERS = {
     "daft": load_with_daft,
+    "pyiceberg": load_with_pyiceberg,
     "polars": polars_loader(None),
     "polars-pyiceberg": polars_loader("pyiceberg"),
 }
@@ -150,6 +175,15 @@ HOURLY_WINDOWS = {
         dt.datetime(2024, 3, 10, 2, tzinfo=dt.UTC),
     ),
     **DAILY_WINDOWS,
+}
+# Both 1 a.m. hours of the New York fall-back day have the same wall-clock time.
+REPEATED_HOURS = {
+    "first new york 1am on fall-back": NY_HOURLY.time_window_for_partition_key(
+        "2024-11-03-01:00"
+    ),
+    "second new york 1am on fall-back": NY_HOURLY.time_window_for_partition_key(
+        "2024-11-03-01:00-0500"
+    ),
 }
 CATEGORY_FILTERS = {"no category": None, "one category": ["A"], "two": ["A", "C"]}
 
@@ -207,3 +241,89 @@ def test_date_window_loads_rows_inside_it(
 ):
     loaded = load(date_table, window_slice("d", window, categories))
     assert loaded == expected_ids(lambda t: t.date(), window, categories)
+
+
+def expected_instant_ids(window: TimeWindow, categories: list[str] | None) -> list[int]:
+    return [
+        i
+        for i, t in enumerate(TIMES)
+        if window.start <= t.replace(tzinfo=dt.UTC) < window.end
+        and (categories is None or CATEGORIES[i % 3] in categories)
+    ]
+
+
+@pytest.mark.parametrize(
+    "categories", CATEGORY_FILTERS.values(), ids=list(CATEGORY_FILTERS)
+)
+@pytest.mark.parametrize(
+    "window",
+    [*HOURLY_WINDOWS.values(), *REPEATED_HOURS.values()],
+    ids=[*HOURLY_WINDOWS, *REPEATED_HOURS],
+)
+def test_timestamptz_window_loads_rows_inside_it(
+    timestamptz_table: Table,
+    load: Loader,
+    window: TimeWindow,
+    categories: list[str] | None,
+):
+    loaded = load(timestamptz_table, window_slice("tstz", window, categories))
+    assert loaded == expected_instant_ids(window, categories)
+
+
+def test_timestamp_window_that_repeats_a_wall_clock_hour_is_rejected_on_load(
+    timestamp_table: Table, load: Loader
+):
+    window = REPEATED_HOURS["first new york 1am on fall-back"]
+    with pytest.raises(ValueError, match=r"2024-11-03T01:00:00-04:00.*repeated"):
+        load(timestamp_table, window_slice("ts", window, None))
+
+
+def test_timestamp_window_that_repeats_a_wall_clock_hour_is_rejected_on_write(
+    timestamp_table: Table,
+):
+    window = REPEATED_HOURS["first new york 1am on fall-back"]
+    with pytest.raises(ValueError, match=r"2024-11-03T01:00:00-04:00.*repeated"):
+        get_expression_row_filter(
+            iceberg_table_schema=timestamp_table.schema(),
+            iceberg_partition_spec=timestamp_table.spec(),
+            dagster_partition_dimensions=window_slice(
+                "ts", window, None
+            ).partition_dimensions,
+        )
+
+
+@pytest.mark.parametrize("key", ["2024-11-03-01:00", "2024-11-03-01:00-0500"])
+def test_rewriting_a_timestamptz_partition_replaces_its_rows(
+    catalog: SqlCatalog, key: str
+):
+    window = NY_HOURLY.time_window_for_partition_key(key)
+    # Adding to a zoned datetime is wall-clock arithmetic, so step through UTC.
+    start = window.start.astimezone(dt.UTC)
+    table_slice = TableSlice(
+        table="rewrite_" + key.replace("-", "_").replace(":", ""),
+        schema="ns",
+        partition_dimensions=[
+            TablePartitionDimension(partition_expr="tstz", partitions=window)
+        ],
+    )
+    data = pa.table(
+        {
+            "id": pa.array([1, 2], pa.int64()),
+            "tstz": pa.array(
+                [start, start + dt.timedelta(minutes=30)],
+                pa.timestamp("us", tz="UTC"),
+            ),
+        }
+    )
+    for _ in range(2):
+        table_writer(
+            table_slice=table_slice,
+            data=data,
+            catalog=catalog,
+            schema_update_mode="update",
+            partition_spec_update_mode="update",
+            dagster_run_id="run",
+            dagster_partition_key=key,
+        )
+    table = catalog.load_table(f"ns.{table_slice.table}")
+    assert sorted(table.scan().to_arrow()["id"].to_pylist()) == [1, 2]
