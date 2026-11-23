@@ -112,7 +112,7 @@ OPERATORS = [run_bteq, run_ddl, run_tdload]
 
 
 @pytest.mark.parametrize("run_operator", OPERATORS)
-def test_unknown_host_key_is_rejected_by_default(ssh_server: SSHServer, run_operator):
+def test_unknown_host_key_is_rejected(ssh_server: SSHServer, run_operator):
     with pytest.raises(DagsterError, match="not in known_hosts"):
         run_operator(ssh_server.port)
     assert ssh_server.authenticated_users == []
@@ -141,16 +141,7 @@ def test_host_key_from_user_known_hosts_is_accepted(
 
 
 @pytest.mark.parametrize("run_operator", OPERATORS)
-def test_unknown_host_key_is_accepted_when_opted_in(
-    ssh_server: SSHServer, run_operator
-):
-    with pytest.raises(DagsterError):
-        run_operator(ssh_server.port, ssh_accept_unknown_host_key=True)
-    assert ssh_server.authenticated_users == ["dagster"]
-
-
-@pytest.mark.parametrize("run_operator", OPERATORS)
-def test_changed_host_key_is_rejected_even_when_opted_in(
+def test_changed_host_key_is_rejected(
     ssh_server: SSHServer, tmp_path: Path, run_operator
 ):
     other_key = paramiko.RSAKey.generate(2048)
@@ -158,9 +149,5 @@ def test_changed_host_key_is_rejected_even_when_opted_in(
         tmp_path / "known_hosts", ssh_server.port, other_key
     )
     with pytest.raises(DagsterError):
-        run_operator(
-            ssh_server.port,
-            ssh_known_hosts_path=known_hosts,
-            ssh_accept_unknown_host_key=True,
-        )
+        run_operator(ssh_server.port, ssh_known_hosts_path=known_hosts)
     assert ssh_server.authenticated_users == []

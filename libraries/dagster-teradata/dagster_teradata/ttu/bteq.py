@@ -68,7 +68,6 @@ class Bteq:
         self.remote_port = None
         self.ssh_key_path = None
         self.ssh_known_hosts_path = None
-        self.ssh_accept_unknown_host_key = False
         self.remote_remote_password = None
         self.remote_user = None
         self.remote_host = None
@@ -104,7 +103,6 @@ class Bteq:
         timeout_rc: int | None = None,
         temp_file_read_encoding: str | None = "UTF-8",
         ssh_known_hosts_path: str | None = None,
-        ssh_accept_unknown_host_key: bool = False,
     ) -> int | None:
         """
         Execute BTEQ commands either locally or remotely.
@@ -125,7 +123,6 @@ class Bteq:
             timeout_rc: Specific return code for timeout cases
             temp_file_read_encoding: Encoding for reading temporary files
             ssh_known_hosts_path: Extra known_hosts file to verify the SSH host key against
-            ssh_accept_unknown_host_key: Accept a host key missing from known_hosts
 
         Returns:
             int: Exit status code from BTEQ execution, or None if no execution occurred
@@ -149,7 +146,6 @@ class Bteq:
         self.timeout_rc = timeout_rc
         self.temp_file_read_encoding = temp_file_read_encoding
         self.ssh_known_hosts_path = ssh_known_hosts_path
-        self.ssh_accept_unknown_host_key = ssh_accept_unknown_host_key
 
         # Local execution
         if not self.remote_host:
@@ -762,9 +758,7 @@ class Bteq:
             - Stores new credentials if successfully authenticated
         """
         try:
-            self.ssh_client = new_ssh_client(
-                self.ssh_known_hosts_path, self.ssh_accept_unknown_host_key
-            )
+            self.ssh_client = new_ssh_client(self.ssh_known_hosts_path)
 
             if key_path:
                 key = paramiko.RSAKey.from_private_key_file(key_path)

@@ -67,7 +67,6 @@ class DdlOperator:
         self.remote_remote_password = None
         self.ssh_key_path = None
         self.ssh_known_hosts_path = None
-        self.ssh_accept_unknown_host_key = False
         self.remote_port = None
 
     def _setup_ssh_connection(
@@ -100,9 +99,7 @@ class DdlOperator:
             - Stores new credentials if successfully authenticated
         """
         try:
-            self.ssh_client = new_ssh_client(
-                self.ssh_known_hosts_path, self.ssh_accept_unknown_host_key
-            )
+            self.ssh_client = new_ssh_client(self.ssh_known_hosts_path)
 
             # Authenticate using SSH key if provided
             if key_path:
@@ -143,7 +140,6 @@ class DdlOperator:
         ssh_key_path: str | None = None,
         remote_port: int = 22,
         ssh_known_hosts_path: str | None = None,
-        ssh_accept_unknown_host_key: bool = False,
     ) -> int | None:
         """Execute DDL operations on Teradata."""
         # Set instance variables from parameters
@@ -157,7 +153,6 @@ class DdlOperator:
         self.ssh_key_path = ssh_key_path
         self.remote_port = remote_port
         self.ssh_known_hosts_path = ssh_known_hosts_path
-        self.ssh_accept_unknown_host_key = ssh_accept_unknown_host_key
 
         # Validate DDL input
         if (
@@ -296,7 +291,6 @@ class TdLoadOperator:
         self.remote_remote_password = None
         self.ssh_key_path = None
         self.ssh_known_hosts_path = None
-        self.ssh_accept_unknown_host_key = False
         self.remote_port = None
 
     def _setup_ssh_connection(
@@ -329,9 +323,7 @@ class TdLoadOperator:
             - Stores new credentials if successfully authenticated
         """
         try:
-            self.ssh_client = new_ssh_client(
-                self.ssh_known_hosts_path, self.ssh_accept_unknown_host_key
-            )
+            self.ssh_client = new_ssh_client(self.ssh_known_hosts_path)
 
             # Authenticate using SSH key if provided
             if key_path:
@@ -382,7 +374,6 @@ class TdLoadOperator:
         ssh_key_path: str | None = None,
         remote_port: int = 22,
         ssh_known_hosts_path: str | None = None,
-        ssh_accept_unknown_host_key: bool = False,
     ) -> int | None:
         """Execute TPT load operation based on configuration."""
         # Set instance variables from parameters
@@ -406,7 +397,6 @@ class TdLoadOperator:
         self.ssh_key_path = ssh_key_path
         self.remote_port = remote_port
         self.ssh_known_hosts_path = ssh_known_hosts_path
-        self.ssh_accept_unknown_host_key = ssh_accept_unknown_host_key
 
         # Validate parameters and determine operation mode
         mode = self._validate_and_determine_mode()

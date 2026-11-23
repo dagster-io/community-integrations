@@ -16,21 +16,17 @@ class RejectUnknownHostKeyPolicy(paramiko.MissingHostKeyPolicy):
             f"Host key for {hostname} ({key.get_name()} {key.fingerprint}) is not in "
             f"known_hosts ({SYSTEM_KNOWN_HOSTS} or ~/.ssh/known_hosts). After "
             "confirming the fingerprint with the host's administrator, add the key "
-            "to ~/.ssh/known_hosts (for example with ssh-keyscan), pass "
-            "ssh_known_hosts_path='/path/to/known_hosts', or pass "
-            "ssh_accept_unknown_host_key=True to skip host key verification."
+            "to ~/.ssh/known_hosts (for example with ssh-keyscan), or pass "
+            "ssh_known_hosts_path='/path/to/known_hosts'."
         )
 
 
-def new_ssh_client(
-    known_hosts_path: str | None = None, accept_unknown_host_key: bool = False
-) -> paramiko.SSHClient:
+def new_ssh_client(known_hosts_path: str | None = None) -> paramiko.SSHClient:
     """Create an SSH client that verifies the server's host key.
 
     Keys are loaded from the system and user known_hosts files and from
-    `known_hosts_path` when given. A host whose key does not match a loaded key
-    is always rejected; a host with no loaded key is rejected unless
-    `accept_unknown_host_key` is True.
+    `known_hosts_path` when given. A host is rejected when its key is not loaded
+    or does not match the loaded key.
     """
     client = paramiko.SSHClient()
     if os.path.isfile(SYSTEM_KNOWN_HOSTS):
@@ -38,8 +34,5 @@ def new_ssh_client(
     client.load_system_host_keys()
     if known_hosts_path:
         client.load_system_host_keys(os.path.expanduser(known_hosts_path))
-    if accept_unknown_host_key:
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    else:
-        client.set_missing_host_key_policy(RejectUnknownHostKeyPolicy())
+    client.set_missing_host_key_policy(RejectUnknownHostKeyPolicy())
     return client

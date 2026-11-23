@@ -128,7 +128,7 @@ The BTEQ, DDL, and TdLoad operators verify the remote host's SSH key before they
 
 Earlier releases accepted any host key. After upgrading, remote execution against a host that is in none of those files fails until you trust the host in one of the ways below.
 
-To trust a new host, confirm its fingerprint with the host's administrator and add its key to `~/.ssh/known_hosts` (for example with `ssh-keyscan -p <port> <host>`), or pass a known_hosts file with `ssh_known_hosts_path`. Passing `ssh_accept_unknown_host_key=True` accepts any host whose key is in no known_hosts file, which leaves the connection open to man-in-the-middle attacks; a host whose key differs from a known_hosts entry is still rejected.
+To trust a new host, confirm its fingerprint with the host's administrator and add its key to `~/.ssh/known_hosts` (for example with `ssh-keyscan -p <port> <host>`), or pass a known_hosts file with `ssh_known_hosts_path`. There is no way to skip host key verification.
 
 ## BTEQ Operator
 
@@ -160,7 +160,6 @@ It supports running commands either on the local machine or on a remote machine 
 - `ssh_key_path`: Path to the SSH private key used for authentication. Optional, and used as an alternative to `remote_password`.  
 - `remote_port`: SSH port number for the remote host. Defaults to `22` if not specified. *(optional)*
 - `ssh_known_hosts_path`: Extra known_hosts file used to verify the remote host key. See [SSH Host Key Verification](#ssh-host-key-verification). *(optional)*
-- `ssh_accept_unknown_host_key`: Accept a remote host key that is in no known_hosts file. Defaults to `False`. *(optional)*
 - `remote_working_dir`: Temporary directory location on the remote host (via SSH) where the BTEQ script will be transferred and executed. Defaults to `/tmp` if not specified. This is only applicable when `ssh_conn_id` is provided.
 - `bteq_script_encoding`: Character encoding for the BTEQ script file. Defaults to ASCII if not specified.
 - `bteq_session_encoding`: Character set encoding for the BTEQ session. Defaults to ASCII if not specified.
@@ -233,7 +232,6 @@ It supports both local and remote execution (via SSH), allowing you to manage Te
 | `ssh_key_path` | `str` | Path to the SSH private key file used for authentication. Used as an alternative to `remote_password`. | ❌ | — |
 | `remote_port` | `int` | SSH port for the remote host. Must be within range `1–65535`. | ❌ | `22` |
 | `ssh_known_hosts_path` | `str` | Extra known_hosts file used to verify the remote host key. See [SSH Host Key Verification](#ssh-host-key-verification). | ❌ | — |
-| `ssh_accept_unknown_host_key` | `bool` | Accept a remote host key that is in no known_hosts file. | ❌ | `False` |
 
 ### Returns
 
@@ -355,7 +353,6 @@ It provides a unified interface to run **TDLoad** operations either **locally** 
 | `ssh_key_path` | `str` | Path to SSH private key used for authentication. Alternative to `remote_password`. | ❌ | — |
 | `remote_port` | `int` | SSH port for the remote connection (1–65535). | ❌ | `22` |
 | `ssh_known_hosts_path` | `str` | Extra known_hosts file used to verify the remote host key. See [SSH Host Key Verification](#ssh-host-key-verification). | ❌ | — |
-| `ssh_accept_unknown_host_key` | `bool` | Accept a remote host key that is in no known_hosts file. | ❌ | `False` |
 
 
 ### Return Value
