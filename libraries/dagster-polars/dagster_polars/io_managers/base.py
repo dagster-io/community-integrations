@@ -155,7 +155,9 @@ class BasePolarsUPathIOManager(ConfigurableIOManager, UPathIOManager):
     ):
         type_router = resolve_type_router(context, context.dagster_type)
 
-        if self.type_router_is_eager(type_router):
+        # An output with no usable annotation (e.g. a LazyFrame returned inside a
+        # MaterializeResult) resolves as eager, so check the object itself.
+        if self.type_router_is_eager(type_router) and not isinstance(obj, pl.LazyFrame):
             dump_fn = self.write_df_to_path
         else:
             dump_fn = self.sink_df_to_path
