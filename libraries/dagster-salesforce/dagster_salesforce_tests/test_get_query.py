@@ -118,7 +118,11 @@ def test_get_query_rejects_a_limit_that_is_not_an_integer(limit):
         (SINCE, "2024-01-15T10:30:45Z"),
         (
             datetime(2024, 1, 15, 10, 30, 45, tzinfo=timezone(timedelta(hours=5))),
-            "2024-01-15T10:30:45Z",
+            "2024-01-15T05:30:45Z",
+        ),
+        (
+            datetime(2024, 1, 15, 22, 30, 45, tzinfo=timezone(timedelta(hours=-5))),
+            "2024-01-16T03:30:45Z",
         ),
     ],
 )

@@ -1,6 +1,6 @@
 import time
 import dagster as dg
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 from simple_salesforce.bulk2 import _Bulk2Client, JobState
@@ -28,6 +28,10 @@ def datetime_to_soql_str(dt: datetime | None) -> str | None:
     # The result is written into SOQL unquoted, so only a datetime may produce it.
     if not isinstance(dt, datetime):
         raise TypeError(f"Expected a datetime, got {type(dt).__name__}")
+    # SOQL reads a trailing Z as UTC, so an aware datetime is shifted to UTC before
+    # formatting. A naive datetime is taken to already be in UTC.
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc)
     return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
