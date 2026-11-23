@@ -60,7 +60,7 @@ RUN curl --retry 5 --fail --connect-timeout 20 --max-time 300 -sS https://repo1.
 RUN curl --retry 5 --fail --connect-timeout 20 --max-time 300 -sS https://jdbc.postgresql.org/download/postgresql-42.7.5.jar \
       -Lo /opt/spark/jars/postgresql-42.7.5.jar
 
-COPY spark-defaults.conf /opt/spark/conf
+COPY spark-defaults.conf /opt/spark/conf/
 ENV PATH="/opt/spark/sbin:/opt/spark/bin:${PATH}"
 
 RUN chmod u+x /opt/spark/sbin/* && \
