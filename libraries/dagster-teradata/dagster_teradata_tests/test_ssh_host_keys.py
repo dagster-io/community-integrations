@@ -13,6 +13,7 @@ import pytest
 from dagster import DagsterError
 
 from dagster_teradata import TeradataResource
+from dagster_teradata.ttu.ssh import RejectUnknownHostKeyPolicy
 
 
 @pytest.fixture(name="host_key", scope="module")
@@ -130,6 +131,26 @@ def test_unknown_host_key_error_shows_the_key_fingerprint(
 ):
     with pytest.raises(DagsterError) as error:
         run_bteq(ssh_server.port)
+    expected = f"({host_key.get_name()} {openssh_fingerprint(host_key)})"
+    assert expected in str(error.value)
+
+
+class KeyWithoutFingerprint(paramiko.RSAKey):
+    """An RSA key as paramiko before 3.2 builds it, with no `fingerprint`."""
+
+    @property
+    def fingerprint(self):
+        raise AttributeError("fingerprint")
+
+
+def test_unknown_host_key_error_shows_the_fingerprint_without_pkey_fingerprint(
+    host_key: paramiko.PKey,
+):
+    key = KeyWithoutFingerprint(key=host_key.key)
+    with pytest.raises(paramiko.SSHException) as error:
+        RejectUnknownHostKeyPolicy().missing_host_key(
+            paramiko.SSHClient(), "127.0.0.1", key
+        )
     expected = f"({host_key.get_name()} {openssh_fingerprint(host_key)})"
     assert expected in str(error.value)
 
