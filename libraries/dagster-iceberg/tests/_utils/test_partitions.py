@@ -510,9 +510,9 @@ def test_dagster_partition_to_polars_sql_predicate_mapper(
     predicates = mapper.partition_dimensions_to_filters()
     assert (
         predicates[0]
-        == "timestamp >= '2023-01-01T00:00:00' AND timestamp < '2023-01-01T01:00:00'"
+        == """"timestamp" >= '2023-01-01T00:00:00' AND "timestamp" < '2023-01-01T01:00:00'"""
     )
-    assert predicates[1] == "category = 'A'"
+    assert predicates[1] == """"category" = 'A'"""
 
 
 def test_dagster_partition_to_daft_sql_predicate_mapper(
@@ -531,9 +531,9 @@ def test_dagster_partition_to_daft_sql_predicate_mapper(
     predicates = mapper.partition_dimensions_to_filters()
     assert (
         predicates[0]
-        == "timestamp >= to_date('2023-01-01T00:00:00', '%+') AND timestamp < to_date('2023-01-01T01:00:00', '%+')"
+        == """"timestamp" >= to_date('2023-01-01T00:00:00', '%+') AND "timestamp" < to_date('2023-01-01T01:00:00', '%+')"""
     )
-    assert predicates[1] == "category = 'A'"
+    assert predicates[1] == """"category" = 'A'"""
 
 
 def test_dagster_partition_to_sql_predicate_mapper_with_multiple_categories(
@@ -554,9 +554,9 @@ def test_dagster_partition_to_sql_predicate_mapper_with_multiple_categories(
     predicates = mapper.partition_dimensions_to_filters()
     assert (
         predicates[0]
-        == "timestamp >= to_date('2023-01-01T00:00:00', '%+') AND timestamp < to_date('2023-01-01T01:00:00', '%+')"
+        == """"timestamp" >= to_date('2023-01-01T00:00:00', '%+') AND "timestamp" < to_date('2023-01-01T01:00:00', '%+')"""
     )
-    assert predicates[1] == "(category = 'A' OR category = 'B')"
+    assert predicates[1] == """("category" = 'A' OR "category" = 'B')"""
 
 
 def test_dagster_partition_to_pyiceberg_expression_mapper_with_multiple_categories(

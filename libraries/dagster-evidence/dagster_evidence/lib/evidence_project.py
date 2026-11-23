@@ -1,5 +1,7 @@
 import os
+import shlex
 import sys
+from string import Template
 from tempfile import TemporaryDirectory
 from dagster import Definitions, multi_asset
 from dagster.components import (
@@ -29,6 +31,8 @@ class EvidenceProject(Component, Resolvable):
         asset: The asset to expose.
         asset_post_processors: A list of asset post processors to apply to the asset.
         deploy_command: The command to run to deploy the static assets somewhere. The $EVIDENCE_BUILD_PATH environment variable will be set to the path of the build output.
+            The command is split into arguments with shell quoting rules and run without a shell, so `$VAR` and `${VAR}`
+            references are expanded but pipes, `&&`, redirection and globs are not. Wrap the command in `sh -c '...'` or a script to use them.
         npm_executable: The executable to use to run npm commands.
     """
 
@@ -63,15 +67,19 @@ class EvidenceProject(Component, Resolvable):
                 env = os.environ.copy()
                 env["EVIDENCE_BUILD_PATH"] = os.path.join(project_path, "build")
 
+                # No shell: config values must not be able to start extra commands.
+                deploy_argv = [
+                    Template(arg).safe_substitute(env)
+                    for arg in shlex.split(self.deploy_command)
+                ]
                 with TemporaryDirectory() as temp_dir:
-                    print(f"{temp_dir}$ {self.deploy_command}", file=sys.stderr)
+                    print(f"{temp_dir}$ {shlex.join(deploy_argv)}", file=sys.stderr)
                     subprocess.run(
-                        self.deploy_command,
+                        deploy_argv,
                         cwd=temp_dir,
                         check=True,
                         capture_output=False,
                         env=env,
-                        shell=True,
                     )
 
         defs = Definitions(assets=[evidence_project])

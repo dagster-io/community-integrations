@@ -220,6 +220,11 @@ class DagsterPartitionToIcebergExpressionMapper(
         )
 
 
+def quote_sql_identifier(name: str) -> str:
+    """Quote a column name for Polars or Daft SQL, which match quoted names exactly."""
+    return '"' + name.replace('"', '""') + '"'
+
+
 class DagsterPartitionToSqlPredicateMapper(DagsterPartitionToPredicateMapper[str]):
     def _partition_filters_to_predicates(
         self,
@@ -228,7 +233,8 @@ class DagsterPartitionToSqlPredicateMapper(DagsterPartitionToPredicateMapper[str
     ) -> str:
         # Polars and Daft SQL treat backslashes literally; a doubled quote is the only escape.
         quoted = [p.replace("'", "''") for p in partition_filters]
-        predicates = [f"{partition_expr} = '{p}'" for p in quoted]
+        column = quote_sql_identifier(partition_expr)
+        predicates = [f"{column} = '{p}'" for p in quoted]
         if len(predicates) > 1:
             return f"({' OR '.join(predicates)})"
         return predicates[0]
@@ -249,7 +255,8 @@ class DagsterPartitionToPolarsSqlPredicateMapper(DagsterPartitionToSqlPredicateM
         start_dt: dt.date | dt.datetime,
         end_dt: dt.date | dt.datetime,
     ) -> str:
-        return f"{partition_expr} >= '{start_dt.isoformat()}' AND {partition_expr} < '{end_dt.isoformat()}'"
+        column = quote_sql_identifier(partition_expr)
+        return f"{column} >= '{start_dt.isoformat()}' AND {column} < '{end_dt.isoformat()}'"
 
 
 class DagsterPartitionToDaftSqlPredicateMapper(DagsterPartitionToSqlPredicateMapper):
@@ -261,9 +268,10 @@ class DagsterPartitionToDaftSqlPredicateMapper(DagsterPartitionToSqlPredicateMap
     ) -> str:
         # See https://docs.rs/chrono/latest/chrono/format/strftime/index.html
         parse_fmt = "%+" if isinstance(start_dt, dt.datetime) else "%F"
+        column = quote_sql_identifier(partition_expr)
         return (
-            f"{partition_expr} >= to_date('{start_dt.isoformat()}', '{parse_fmt}') "
-            f"AND {partition_expr} < to_date('{end_dt.isoformat()}', '{parse_fmt}')"
+            f"{column} >= to_date('{start_dt.isoformat()}', '{parse_fmt}') "
+            f"AND {column} < to_date('{end_dt.isoformat()}', '{parse_fmt}')"
         )
 
 
