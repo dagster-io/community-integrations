@@ -1,4 +1,5 @@
 import datetime as dt
+import re
 from collections.abc import Sequence
 from typing import Literal, Union
 
@@ -46,6 +47,17 @@ def _get_polars_storage_options(table: ibt.Table) -> dict[str, str] | None:
     return storage_options or None
 
 
+def _column(name: str) -> pl.Expr:
+    """Refers to the column with exactly this name.
+
+    pl.col reads "*" as every column and a name that starts with "^" and ends with
+    "$" as a regular expression. An anchored pattern of the escaped name matches
+    only that name. polars.selectors.by_name matches names literally only from
+    Polars 1.38 on.
+    """
+    return pl.col(f"^{re.escape(name)}$")
+
+
 class DagsterPartitionToPolarsExpressionMapper(
     DagsterPartitionToPredicateMapper[pl.Expr]
 ):
@@ -54,7 +66,7 @@ class DagsterPartitionToPolarsExpressionMapper(
         partition_expr: str,
         partition_filters: Sequence[str],
     ) -> pl.Expr:
-        return pl.col(partition_expr).is_in(list(partition_filters))
+        return _column(partition_expr).is_in(list(partition_filters))
 
     def _time_window_partition_filters_to_predicates(
         self,
@@ -62,7 +74,7 @@ class DagsterPartitionToPolarsExpressionMapper(
         start_dt: dt.date | dt.datetime,
         end_dt: dt.date | dt.datetime,
     ) -> pl.Expr:
-        column = pl.col(partition_expr)
+        column = _column(partition_expr)
         return (column >= pl.lit(start_dt)) & (column < pl.lit(end_dt))
 
 
@@ -89,7 +101,14 @@ class _PolarsIcebergTypeHandler(_handler.IcebergBaseTypeHandler[PolarsTypes]):
             ).partition_dimensions_to_filters()
             pdf = pdf.filter(*predicates)
         if table_slice.columns is not None:
-            pdf = pdf.select(pl.col(column) for column in table_slice.columns)
+            # A pattern that matches no column selects nothing instead of raising.
+            names = set(pdf.collect_schema().names())
+            missing = [column for column in table_slice.columns if column not in names]
+            if missing:
+                raise pl.exceptions.ColumnNotFoundError(
+                    f"Columns {missing} are not in table {table.name()}."
+                )
+            pdf = pdf.select(_column(column) for column in table_slice.columns)
         return pdf if target_type == pl.LazyFrame else pdf.collect()
 
     def load_input(
