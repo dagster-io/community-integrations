@@ -33,13 +33,13 @@ path = "src/dagster_iceberg/version.py"
 
 [project.optional-dependencies]
 daft = [
-  "getdaft>=0.3.0",
+  "getdaft>=0.4.7",
 ]
 pandas = [
   "pandas>=2.0.0",
 ]
 polars = [
-  "polars>=1.0.0",
+  "polars>=1.32.0",
 ]
 spark = [
   "pyspark[connect]~=3.4",
