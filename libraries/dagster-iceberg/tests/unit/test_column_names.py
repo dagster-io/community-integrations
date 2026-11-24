@@ -1,4 +1,4 @@
-"""Column and partition names reach the Polars and Daft SQL as identifiers."""
+"""Polars and Daft select and filter columns by their exact names."""
 
 from pathlib import Path
 

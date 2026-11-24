@@ -1,3 +1,4 @@
+import datetime as dt
 from collections.abc import Sequence
 
 try:
@@ -11,11 +12,36 @@ from pyiceberg import table as ibt
 
 from dagster_iceberg import handler as _handler
 from dagster_iceberg import io_manager as _io_manager
-from dagster_iceberg._utils import (
-    DagsterPartitionToDaftSqlPredicateMapper,
-    preview,
-    quote_sql_identifier,
-)
+from dagster_iceberg._utils import DagsterPartitionToPredicateMapper, preview
+
+# daft.col("*") refers to every column, so to_data_frame renames a column named "*"
+# to this name while it filters and selects, and _column refers to it by this name.
+_STAR_COLUMN_NAME = "__dagster_iceberg_star__"
+
+
+def _column(name: str) -> da.Expression:
+    """Refers to the column with exactly this name."""
+    return da.col(_STAR_COLUMN_NAME if name == "*" else name)
+
+
+class DagsterPartitionToDaftExpressionMapper(
+    DagsterPartitionToPredicateMapper[da.Expression]
+):
+    def _partition_filters_to_predicates(
+        self,
+        partition_expr: str,
+        partition_filters: Sequence[str],
+    ) -> da.Expression:
+        return _column(partition_expr).is_in(list(partition_filters))
+
+    def _time_window_partition_filters_to_predicates(
+        self,
+        partition_expr: str,
+        start_dt: dt.date | dt.datetime,
+        end_dt: dt.date | dt.datetime,
+    ) -> da.Expression:
+        column = _column(partition_expr)
+        return (column >= da.lit(start_dt)) & (column < da.lit(end_dt))
 
 
 class _DaftIcebergTypeHandler(_handler.IcebergBaseTypeHandler[da.DataFrame]):
@@ -27,27 +53,28 @@ class _DaftIcebergTypeHandler(_handler.IcebergBaseTypeHandler[da.DataFrame]):
         table_slice: TableSlice,
         target_type: type[da.DataFrame],
     ) -> da.DataFrame:
-        selected_fields: str = (
-            ",".join(quote_sql_identifier(column) for column in table_slice.columns)
-            if table_slice.columns is not None
-            else "*"
-        )
-        row_filter: str | None = None
+        ddf = table.to_daft()
+        has_star_column = "*" in ddf.column_names
+        if has_star_column:
+            if _STAR_COLUMN_NAME in ddf.column_names:
+                raise ValueError(
+                    "Daft cannot read a table with columns named both '*' and "
+                    f"'{_STAR_COLUMN_NAME}'."
+                )
+            ddf = ddf.with_column_renamed("*", _STAR_COLUMN_NAME)
         if table_slice.partition_dimensions:
-            expressions = DagsterPartitionToDaftSqlPredicateMapper(
+            predicates = DagsterPartitionToDaftExpressionMapper(
                 partition_dimensions=table_slice.partition_dimensions,
                 table_schema=table.schema(),
                 table_partition_spec=table.spec(),
             ).partition_dimensions_to_filters()
-            row_filter = " AND ".join(expressions)
-
-        ddf = table.to_daft()  # noqa: F841, `daft.sql` detects `daft.DataFrame` objects
-
-        stmt = f"SELECT {selected_fields} FROM ddf"
-        if row_filter is not None:
-            stmt += f"\nWHERE {row_filter}"
-
-        return da.sql(stmt)
+            for predicate in predicates:
+                ddf = ddf.where(predicate)
+        if table_slice.columns is not None:
+            ddf = ddf.select(*(_column(column) for column in table_slice.columns))
+        if has_star_column:
+            ddf = ddf.with_column_renamed(_STAR_COLUMN_NAME, "*")
+        return ddf
 
     def to_arrow(self, obj: da.DataFrame) -> pa.Table:
         return obj.to_arrow()

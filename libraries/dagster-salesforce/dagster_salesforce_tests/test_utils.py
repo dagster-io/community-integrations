@@ -65,8 +65,7 @@ class TestDateTimeToSOQLStr:
             2024, 3, 15, 15, 45, 30, tzinfo=timezone(timedelta(hours=5))
         )
         result = datetime_to_soql_str(dt_offset)
-        # The format should still work, even though it doesn't adjust for timezone
-        assert result == "2024-03-15T15:45:30Z"
+        assert result == "2024-03-15T10:45:30Z"
 
 
 class TestWaitForJob:
