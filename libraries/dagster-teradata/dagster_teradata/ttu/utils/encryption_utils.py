@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import shlex
 import string
 import subprocess
 from datetime import datetime
@@ -240,7 +241,7 @@ def decrypt_remote_file_to_string(
     quoted_password = shell_quote_single(password)
 
     decrypt_cmd = (
-        f"openssl enc -d -aes-256-cbc -salt -pbkdf2 -pass pass:{quoted_password} -in {remote_enc_file} | "
+        f"openssl enc -d -aes-256-cbc -salt -pbkdf2 -pass pass:{quoted_password} -in {shlex.quote(remote_enc_file)} | "
         + bteq_command_str
     )
     stdin, stdout, stderr = ssh_client.exec_command(decrypt_cmd)

@@ -1,3 +1,5 @@
+import datetime as dt
+import re
 from collections.abc import Sequence
 from typing import Literal, Union
 
@@ -15,7 +17,7 @@ from pyiceberg.catalog import Catalog
 
 from dagster_iceberg import handler as _handler
 from dagster_iceberg import io_manager as _io_manager
-from dagster_iceberg._utils import DagsterPartitionToPolarsSqlPredicateMapper, preview
+from dagster_iceberg._utils import DagsterPartitionToPredicateMapper, preview
 
 PolarsTypes = Union[pl.LazyFrame, pl.DataFrame]  # noqa: UP007, avoid `autodoc` failure
 
@@ -45,6 +47,37 @@ def _get_polars_storage_options(table: ibt.Table) -> dict[str, str] | None:
     return storage_options or None
 
 
+def _column(name: str) -> pl.Expr:
+    """Refers to the column with exactly this name.
+
+    pl.col reads "*" as every column and a name that starts with "^" and ends with
+    "$" as a regular expression. An anchored pattern of the escaped name matches
+    only that name. polars.selectors.by_name matches names literally only from
+    Polars 1.38 on.
+    """
+    return pl.col(f"^{re.escape(name)}$")
+
+
+class DagsterPartitionToPolarsExpressionMapper(
+    DagsterPartitionToPredicateMapper[pl.Expr]
+):
+    def _partition_filters_to_predicates(
+        self,
+        partition_expr: str,
+        partition_filters: Sequence[str],
+    ) -> pl.Expr:
+        return _column(partition_expr).is_in(list(partition_filters))
+
+    def _time_window_partition_filters_to_predicates(
+        self,
+        partition_expr: str,
+        start_dt: dt.date | dt.datetime,
+        end_dt: dt.date | dt.datetime,
+    ) -> pl.Expr:
+        column = _column(partition_expr)
+        return (column >= pl.lit(start_dt)) & (column < pl.lit(end_dt))
+
+
 class _PolarsIcebergTypeHandler(_handler.IcebergBaseTypeHandler[PolarsTypes]):
     """Type handler that converts data between Iceberg tables and Polars DataFrames"""
 
@@ -55,28 +88,28 @@ class _PolarsIcebergTypeHandler(_handler.IcebergBaseTypeHandler[PolarsTypes]):
         target_type: type[PolarsTypes],
         reader_override: Literal["native", "pyiceberg"] | None = None,
     ) -> PolarsTypes:
-        selected_fields: str = (
-            ",".join(table_slice.columns) if table_slice.columns is not None else "*"
-        )
-        row_filter: str | None = None
-        if table_slice.partition_dimensions:
-            expressions = DagsterPartitionToPolarsSqlPredicateMapper(
-                partition_dimensions=table_slice.partition_dimensions,
-                table_schema=table.schema(),
-                table_partition_spec=table.spec(),
-            ).partition_dimensions_to_filters()
-            row_filter = " AND ".join(expressions)
-
         pdf = pl.scan_iceberg(
             source=table,
             storage_options=_get_polars_storage_options(table),
             reader_override=reader_override,
         )
-
-        stmt = f"SELECT {selected_fields} FROM self"
-        if row_filter is not None:
-            stmt += f"\nWHERE {row_filter}"
-        return pdf.sql(stmt) if target_type == pl.LazyFrame else pdf.sql(stmt).collect()
+        if table_slice.partition_dimensions:
+            predicates = DagsterPartitionToPolarsExpressionMapper(
+                partition_dimensions=table_slice.partition_dimensions,
+                table_schema=table.schema(),
+                table_partition_spec=table.spec(),
+            ).partition_dimensions_to_filters()
+            pdf = pdf.filter(*predicates)
+        if table_slice.columns is not None:
+            # A pattern that matches no column selects nothing instead of raising.
+            names = set(pdf.collect_schema().names())
+            missing = [column for column in table_slice.columns if column not in names]
+            if missing:
+                raise pl.exceptions.ColumnNotFoundError(
+                    f"Columns {missing} are not in table {table.name()}."
+                )
+            pdf = pdf.select(_column(column) for column in table_slice.columns)
+        return pdf if target_type == pl.LazyFrame else pdf.collect()
 
     def load_input(
         self,

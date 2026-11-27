@@ -2,7 +2,7 @@
 name = "dagster-adbc"
 description = "Dagster integration with ADBC"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "adbc-driver-manager>=1.11.0",
     "dagster>=1.13.0",

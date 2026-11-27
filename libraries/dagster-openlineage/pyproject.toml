@@ -2,7 +2,7 @@
 name = "dagster-openlineage"
 description = "Dagster integration for OpenLineage"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "dagster>=1.11.6",
     "openlineage-python>=1.7.0",

@@ -2,7 +2,7 @@
 name = "dagster-hf-datasets"
 description = "Dagster Integration with HF Datasets"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "dagster>=1.8.0",
     "huggingface_hub>=1.0.0",
@@ -31,8 +31,6 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "Intended Audience :: Information Technology",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Operating System :: OS Independent",
   "Topic :: Database",

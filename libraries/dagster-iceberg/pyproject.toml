@@ -4,7 +4,7 @@ description = "Package for PyIceberg-specific Dagster framework op and resource 
 authors = [
   {name="Jasper Ginn", email="jasperginn@gmail.com"}
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 readme = "README.md"
 dependencies = [
   "dagster>=1.8.2",
@@ -19,7 +19,6 @@ classifiers = [
   "Operating System :: OS Independent",
   "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12"
 ]
@@ -34,13 +33,13 @@ path = "src/dagster_iceberg/version.py"
 
 [project.optional-dependencies]
 daft = [
-  "getdaft>=0.3.0",
+  "getdaft>=0.4.7",
 ]
 pandas = [
   "pandas>=2.0.0",
 ]
 polars = [
-  "polars>=1.0.0",
+  "polars>=1.32.0",
 ]
 spark = [
   "pyspark[connect]~=3.4",

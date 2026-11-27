@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import {PipesContextData} from './types';
 import {DagsterPipesError} from './errors';
 
@@ -33,8 +34,7 @@ export class PipesDefaultContextLoader extends PipesContextLoader {
 
   public loadContext(contextParams: Record<string, any>): PipesContextData {
     if ('path' in contextParams) {
-      const contextFilePath = contextParams['path'] as string;
-      return JSON.parse(fs.readFileSync(contextFilePath, 'utf8'));
+      return readContextFile(contextParams['path']);
     } else if ('data' in contextParams) {
       return contextParams['data'];
     } else {
@@ -43,4 +43,47 @@ export class PipesDefaultContextLoader extends PipesContextLoader {
       );
     }
   }
+}
+
+/**
+ * Read the context file named by the `path` context param.
+ *
+ * The orchestration-side context injector chooses where the file lives, so any location is allowed,
+ * but the path must be a string naming a regular file that holds a JSON object.
+ */
+function readContextFile(rawPath: unknown): PipesContextData {
+  if (typeof rawPath !== 'string' || rawPath === '') {
+    throw new DagsterPipesError(
+      `context param 'path' must be a non-empty string - but received ${JSON.stringify(rawPath)}`,
+    );
+  }
+  const contextFilePath = path.resolve(rawPath);
+  let fd: number;
+  try {
+    // O_NONBLOCK keeps a named pipe from blocking the open; fstat on the open
+    // descriptor checks the same file that is then read.
+    fd = fs.openSync(contextFilePath, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK);
+  } catch (error) {
+    throw new DagsterPipesError(`could not open context file ${contextFilePath}: ${error}`);
+  }
+  let contents: string;
+  try {
+    if (!fs.fstatSync(fd).isFile()) {
+      throw new DagsterPipesError(`context file ${contextFilePath} is not a regular file`);
+    }
+    contents = fs.readFileSync(fd, 'utf8');
+  } finally {
+    fs.closeSync(fd);
+  }
+  let data: unknown;
+  try {
+    data = JSON.parse(contents);
+  } catch {
+    // The parse error quotes the file's text, which is not context data.
+    throw new DagsterPipesError(`context file ${contextFilePath} does not contain valid JSON`);
+  }
+  if (data === null || typeof data !== 'object' || Array.isArray(data)) {
+    throw new DagsterPipesError(`context file ${contextFilePath} does not contain a JSON object`);
+  }
+  return data as PipesContextData;
 }

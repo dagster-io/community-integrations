@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from pyiceberg.table import Table
     from pyiceberg.table.update.spec import UpdateSpec
 
-time_partition_dt_types = (T.TimestampType, T.DateType)
+time_partition_dt_types = (T.TimestampType, T.TimestamptzType, T.DateType)
 partition_types = T.StringType
 
 K = TypeVar("K")
@@ -132,9 +132,24 @@ class DagsterPartitionToPredicateMapper(Generic[K]):
         """
         partition = cast("TimeWindow", table_partition.partitions)
         start_dt, end_dt = partition
-        if isinstance(start_dt, dt.datetime):
+        if isinstance(iceberg_partition_spec_field_type, T.TimestamptzType):
+            # A timestamptz column stores instants, so the window's instants select
+            # exactly its rows, including on days with a repeated or skipped hour.
+            start_dt = start_dt.astimezone(dt.UTC)
+            end_dt = end_dt.astimezone(dt.UTC)
+        elif isinstance(start_dt, dt.datetime):
+            # A naive timestamp column holds wall-clock time in the window's timezone.
             start_dt = start_dt.replace(tzinfo=None)
             end_dt = end_dt.replace(tzinfo=None)
+            if start_dt >= end_dt:
+                raise ValueError(
+                    f"The time window partition from {partition.start.isoformat()} to "
+                    f"{partition.end.isoformat()} on column "
+                    f"'{table_partition.partition_expr}' is empty in wall-clock time. "
+                    "A timestamp column without a timezone cannot tell the two "
+                    "occurrences of a repeated hour apart; store the column as a "
+                    "timestamp with a timezone to partition it by this hour."
+                )
         if isinstance(iceberg_partition_spec_field_type, T.DateType):
             # Internally, PyIceberg uses dt.date.fromisoformat to parse dates.
             #  Dagster will pass dt.datetime objects in time window partitions.
@@ -167,7 +182,7 @@ class DagsterPartitionToPredicateMapper(Generic[K]):
                     f"'{field.field_id}'. Available partition fields: "
                     f"{partition_spec_fields}",
                 )
-            # TODO(JasperHG90): add timestamp tz type and time type
+            # TODO(JasperHG90): add time type
             predicate_: K
             if isinstance(field.field_type, time_partition_dt_types):
                 predicate_ = self._time_window_partition_filter(
@@ -217,51 +232,6 @@ class DagsterPartitionToIcebergExpressionMapper(
                     value=literal(end_dt.isoformat()),
                 ),
             ],
-        )
-
-
-class DagsterPartitionToSqlPredicateMapper(DagsterPartitionToPredicateMapper[str]):
-    def _partition_filters_to_predicates(
-        self,
-        partition_expr: str,
-        partition_filters: Sequence[str],
-    ) -> str:
-        predicates = [f"{partition_expr} = '{p}'" for p in partition_filters]
-        if len(predicates) > 1:
-            return f"({' OR '.join(predicates)})"
-        return predicates[0]
-
-    @abstractmethod
-    def _time_window_partition_filters_to_predicates(
-        self,
-        partition_expr: str,
-        start_dt: dt.date | dt.datetime,
-        end_dt: dt.date | dt.datetime,
-    ) -> str: ...
-
-
-class DagsterPartitionToPolarsSqlPredicateMapper(DagsterPartitionToSqlPredicateMapper):
-    def _time_window_partition_filters_to_predicates(
-        self,
-        partition_expr: str,
-        start_dt: dt.date | dt.datetime,
-        end_dt: dt.date | dt.datetime,
-    ) -> str:
-        return f"{partition_expr} >= '{start_dt.isoformat()}' AND {partition_expr} < '{end_dt.isoformat()}'"
-
-
-class DagsterPartitionToDaftSqlPredicateMapper(DagsterPartitionToSqlPredicateMapper):
-    def _time_window_partition_filters_to_predicates(
-        self,
-        partition_expr: str,
-        start_dt: dt.date | dt.datetime,
-        end_dt: dt.date | dt.datetime,
-    ) -> str:
-        # See https://docs.rs/chrono/latest/chrono/format/strftime/index.html
-        parse_fmt = "%+" if isinstance(start_dt, dt.datetime) else "%F"
-        return (
-            f"{partition_expr} >= to_date('{start_dt.isoformat()}', '{parse_fmt}') "
-            f"AND {partition_expr} < to_date('{end_dt.isoformat()}', '{parse_fmt}')"
         )
 
 
